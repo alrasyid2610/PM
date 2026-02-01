@@ -6,6 +6,7 @@
     {{-- Font Awesome --}}
     <link rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+      {{-- <link rel="stylesheet" href="{{ asset('assets/vendor/fontawesome/all.min.css') }}"> --}}
 
     
     {{-- Bootstrap --}}
@@ -27,6 +28,7 @@
     
     <link rel="shortcut icon" href="{{ asset('assets/images/favicon.svg') }}" type="image/x-icon">
     <!-- <link rel="shortcut icon" href="assets/images/favicon.svg" type="image/x-icon"> -->
+
 
     <link rel="stylesheet" href="{{ asset('assets/vendor/datatables/dataTables.bootstrap5.min.css') }}">
 </head>
