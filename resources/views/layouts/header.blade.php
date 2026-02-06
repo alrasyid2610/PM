@@ -31,4 +31,13 @@
 
 
     <link rel="stylesheet" href="{{ asset('assets/vendor/datatables/dataTables.bootstrap5.min.css') }}">
+
+
+    <style>
+      table.dataTable td,
+      table.dataTable th {
+          vertical-align: top !important;
+      }
+
+    </style>
 </head>

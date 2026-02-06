@@ -13,7 +13,7 @@
             </div>
 
             <div class="table-responsive">
-                <table id="brsTable" class="table table-striped table-bordered w-100">
+                <table id="brsTable" class="table table-striped table-sm table-bordered w-100">
                     <thead>
                         <tr>
                             <th>No</th>
@@ -22,7 +22,7 @@
                             <th>Tipe</th>
                             <th>Status</th>
                             <th>Created</th>
-                            <th width="120">Action</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                 </table>

@@ -17,39 +17,27 @@
 
             <div id="advanceSearchForm" class="collapse">
                 <div class="card-body">
-                    <form method="GET" action="">
+                    <form id="form-advance-search">
+
                         <div class="row g-3">
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label class="form-label">Nama Perusahaan</label>
-                                <input type="text" name="company_name" class="form-control"
-                                    value="{{ request('company_name') }}">
-                            </div>
-
-                            <div class="col-md-4">
-                                <label class="form-label">Jenis Relasi</label>
-                                <select name="relation_type" class="form-select">
+                                <select id="company_id" class="form-select select2" style="width:100%">
                                     <option value="">-- Semua --</option>
-                                    <option value="supplier">Supplier</option>
-                                    <option value="customer">Customer</option>
                                 </select>
-                            </div>
-
-                            <div class="col-md-4">
-                                <label class="form-label">Kontak</label>
-                                <input type="text" name="contact" class="form-control"
-                                    value="{{ request('contact') }}">
                             </div>
                         </div>
 
                         <div class="mt-3 d-flex gap-2">
-                            <button class="btn btn-primary">Search</button>
-                            <a href="" class="btn btn-secondary">
-                                Reset
-                            </a>
+                            <button type="button" class="btn btn-primary" id="btn-search">
+                                Search
+                            </button>
                         </div>
+
                     </form>
                 </div>
             </div>
+
         </div>
         
     </section>
@@ -243,7 +231,12 @@
 
 @section('custom-script')
 <script>
-    
+    let table;
+    let brFilter = {
+        id: null,
+        text: null
+    };
+
     // Advance Search Toggle
     document.addEventListener('DOMContentLoaded', function () {
         const advanceSearch = document.getElementById('advanceSearchForm');
@@ -262,30 +255,78 @@
         });
     });
 
-    // Trigger search
-    $('#advanceSearchForm').on('submit', function (e) {
-        e.preventDefault();
+
+    $('#company_id').on('change', function () {
+        const selected = $(this).select2('data')[0];
+
+        if (!selected) {
+            brFilter.value = null;
+            brFilter.type = null;
+            return;
+        }
+
+        if (!isNaN(selected.id)) {
+            // pilih BR existing
+            brFilter.value = selected.id;
+            brFilter.type = 'id';
+        } else {
+            // ketik BR baru / bebas
+            brFilter.value = selected.text;
+            brFilter.type = 'text';
+        }
+    });
+
+    $('#btn-search').on('click', function () {
         table.ajax.reload();
     });
 
-    // Reset search
-    $('#advanceSearchForm .btn-secondary').on('click', function () {
-        $('#advanceSearchForm')[0].reset();
-        table.ajax.reload();
-    });
 
-    
-    
-    
-    
-    
-    let table;
+
 
     $(document).ready(function () {
+        // table = $('#businessRelationTable').DataTable({
+        //     ajax: "{{ route('business-relations.data') }}",
+        //     columns: [
+        //         { data: 'DT_RowIndex', orderable: false, searchable: false },
+        //         { data: 'nama', name: 'nama' },
+        //         { data: 'entitas' },
+        //         { data: 'kepemilikan' },
+        //         { data: 'npwp' },
+        //         { data: 'npwp_alamat' },
+        //         { data: 'kategori_bisnis' },
+        //         { data: 'sub_kategori_bisnis' },
+        //         { data: 'website' },
+        //         { data: 'nomor_telepon' },
+        //         {
+        //             data: 'is_aktif',
+        //             render: function (data) {
+        //                 return data == 1
+        //                     ? '<span class="badge bg-success">Aktif</span>'
+        //                     : '<span class="badge bg-secondary">Non Aktif</span>';
+        //             }
+        //         },
+        //         { data: 'created_at' },
+        //         { data: 'updated_at' },
+        //         { data: 'action', orderable: false, searchable: false }
+        //     ]
+        // });
+
         table = $('#businessRelationTable').DataTable({
-            ajax: "{{ route('business-relations.data') }}",
+            processing: true,
+            serverSide: false, // sesuai kondisi terakhir kamu
+            ajax: {
+                url: "{{ route('business-relations.data') }}",
+                data: function (d) {
+                    d.filter_value = brFilter.value;
+                    d.filter_type  = brFilter.type;
+                }
+            },
             columns: [
-                { data: 'DT_RowIndex', orderable: false, searchable: false },
+                { 
+                    data: 'DT_RowIndex',
+                    orderable: false,
+                    searchable: false
+                },
                 { data: 'nama' },
                 { data: 'entitas' },
                 { data: 'kepemilikan' },
@@ -295,7 +336,7 @@
                 { data: 'sub_kategori_bisnis' },
                 { data: 'website' },
                 { data: 'nomor_telepon' },
-                {
+                { 
                     data: 'is_aktif',
                     render: function (data) {
                         return data == 1
@@ -305,9 +346,45 @@
                 },
                 { data: 'created_at' },
                 { data: 'updated_at' },
-                { data: 'action', orderable: false, searchable: false }
+                { 
+                    data: 'action',
+                    orderable: false,
+                    searchable: false
+                }
             ]
         });
+
+
+        $('#company_id').select2({
+            placeholder: '-- Semua --',
+            allowClear: true,
+            tags: true,
+            minimumInputLength: 2,
+            ajax: {
+                url: "{{ route('business-relations.select2') }}",
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return { q: params.term };
+                },
+                processResults: function (data) {
+                    return { results: data };
+                }
+            }
+        });
+        // simpan nilai SETIAP kali user memilih / mengetik
+        $('#company_id').on('change', function () {
+            const selected = $(this).select2('data')[0];
+
+            if (selected) {
+                brFilter.id   = selected.id;
+                brFilter.text = selected.text;
+            } else {
+                brFilter.id   = null;
+                brFilter.text = null;
+            }
+        });
+        
     });
 
      $(document).on('click', '.btn-edit', function () {
@@ -392,6 +469,7 @@
             }
         }
     });
+    
 });
 
 

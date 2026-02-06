@@ -23,32 +23,64 @@ class BusinessRelationController extends Controller
 
     public function data(Request $request)
     {
+        // =========================
+        // QUERY DASAR
+        // =========================
+        $query = DB::table('business_relations');
 
-        $data = DB::table('business_relations')->get();
+        // =========================
+        // FILTER DARI ADVANCE SEARCH
+        // =========================
+        if ($request->filter_type === 'id' && !empty($request->filter_value)) {
+            // Filter BR existing (berdasarkan ID)
+            $query->where('id_br', $request->filter_value);
+        }
 
-        return DataTables::of($data)
+        if ($request->filter_type === 'text' && !empty($request->filter_value)) {
+            // Filter BR berdasarkan teks ketikan
+            $query->where('nama', 'like', '%' . $request->filter_value . '%');
+        }
+
+        // =========================
+        // DATATABLE RESPONSE
+        // =========================
+        return DataTables::of($query)
             ->addIndexColumn()
+
+            ->editColumn('nama', function ($row) {
+                $prefix = match ($row->entitas) {
+                    'Perseroan Terbatas' => 'PT.',
+                    'Commanditaire Vennootschap' => 'CV.',
+                    'Firma' => 'FA.',
+                    'Koperasi' => 'KOP.',
+                    default => ''
+                };
+
+                return trim($prefix . ' ' . $row->nama);
+            })
+
             ->addColumn('action', function ($row) {
                 return '
-                    <div class="d-flex justify-content-center gap-1">
-                        <button class="btn btn-sm btn-warning btn-edit"
-                                data-id="' . $row->id_br . '"
-                                title="Edit">
-                            <i class="fa-solid fa-pen"></i>
-                        </button>
+                <div class="d-flex justify-content-center gap-1">
+                    <button class="btn btn-sm btn-warning btn-edit"
+                            data-id="' . $row->id_br . '"
+                            title="Edit">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
 
-                        <button class="btn btn-sm btn-danger btn-delete"
-                                data-id="' . $row->id_br . '"
-                                title="Delete">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </div>
-                ';
+                    <button class="btn btn-sm btn-danger btn-delete"
+                            data-id="' . $row->id_br . '"
+                            title="Delete">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            ';
             })
+
             ->rawColumns(['action'])
             ->make(true);
-        // Sample data - replace with actual data retrieval logic
     }
+
 
     public function store(Request $request)
     {
@@ -245,6 +277,7 @@ class BusinessRelationController extends Controller
 
     public function select2(Request $request)
     {
+
         $search = $request->q;
 
         $data = DB::table('business_relations')

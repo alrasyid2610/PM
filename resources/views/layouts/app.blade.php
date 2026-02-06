@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 @include('layouts.header')
-<head>
-    <link rel="stylesheet" href="{{ asset('assets/css/bootstrap.css') }}">
-</head>
+{{-- <head> --}}
+    {{-- <link rel="stylesheet" href="{{ asset('assets/css/bootstrap.css') }}"> --}}
+{{-- </head> --}}
 <body>
     <div id="app">
         @include('layouts.sidebar')
