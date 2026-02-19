@@ -60,31 +60,91 @@
                 </div>
                 {{-- End Header + Add Button --}}
                 
-                <div class="table-responsive">
-                    {{-- Table Business Relations --}}
-                    <table id="businessRelationTable"
-                        class="table table-striped table-hover table-sm table-bordered w-100">
-                        <thead>
-                            <tr>
-                                <th>No</th>
-                                <th>Nama Perusahaan</th>
-                                <th>Entitas</th>
-                                <th>Kepemilikan</th>
-                                <th>NPWP</th>
-                                <th>Alamat NPWP</th>
-                                <th>Kategori Bisnis</th>
-                                <th>Sub Kategori Bisnis</th>
-                                <th>Website</th>
-                                <th>No Telepon</th>
-                                <th>Aktif</th>
-                                <th>Created</th>
-                                <th>Updated</th>
-                                <th>Aksi</th>
-                            </tr>
-                        </thead>
-                    </table>
-                    {{-- End Table Business Relations --}}
+                <div class="row g-3 mb-4">
+                    <!-- Kantor Pusat -->
+                    <div class="col-md-6">
+                        <div class="summary-card summary-blue">
+                            <div class="summary-icon">
+                                <i class="fa-solid fa-building"></i>
+                            </div>
+                            <div class="summary-content">
+                                <span class="summary-title">Total Kantor Pusat</span>
+                                <h2 id="totalKantorPusat">0</h2>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Kantor Cabang -->
+                    <div class="col-md-6">
+                        <div class="summary-card summary-light-blue">
+                            <div class="summary-icon">
+                                <i class="fa-solid fa-sitemap"></i>
+                            </div>
+                            <div class="summary-content">
+                                <span class="summary-title">Total Kantor Cabang / Sites</span>
+                                <h2 id="totalKantorCabang">0</h2>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
+
+                <ul class="nav nav-tabs mb-3" id="brTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active"
+                                id="data-tab"
+                                data-bs-toggle="tab"
+                                data-bs-target="#tab-data"
+                                type="button">
+                            Data
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link"
+                                id="detail-tab"
+                                data-bs-toggle="tab"
+                                data-bs-target="#tab-detail"
+                                type="button">
+                            Detail
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+
+                    <!-- TAB DATA -->
+                    <div class="tab-pane fade show active" id="tab-data">
+                        <div class="table-responsive">
+                            {{-- Table Business Relations --}}
+                            <table id="businessRelationTable"
+                                class="table table-striped table-hover table-sm table-bordered w-100">
+                                <thead>
+                                    <th>No</th>
+                                    <th>Nama Perusahaan</th>
+                                    <th>Entitas</th>
+                                    <th>Nama Lokasi</th>
+                                    <th>Tipe Lokasi</th>
+                                    <th>Alamat Lengkap</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    {{-- <th>Aksi</th> --}}
+                                </thead>
+
+                                <tbody></tbody>
+                            </table>
+                            {{-- End Table Business Relations --}}
+                        </div>
+                    </div>
+
+                    <!-- TAB DETAIL -->
+                    <div class="tab-pane fade" id="tab-detail">
+                        <div id="detailContent" class="p-3 text-muted">
+                            Pilih data pada tab Data untuk melihat detail
+                        </div>
+                    </div>
+
+                </div>
+                
                 
             </div>
         </div>
@@ -224,6 +284,165 @@
     </div>
     {{-- End Edit Modal --}}
 
+    {{--  Edit Business Relation Site Modal --}}
+    <div class="modal fade" id="editBrsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+
+                <form id="editBrsForm">
+                    @csrf
+                    @method('PUT')
+
+                    <input type="hidden" id="edit_id_site" name="id_site">
+                    <input type="hidden" id="edit_id_br" name="id_br">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Business Relation Site</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="row g-3">
+
+                            {{-- Nama Lokasi --}}
+                            <div class="col-md-6">
+                                <label class="form-label">Nama Lokasi</label>
+                                <input type="text" class="form-control"
+                                    id="edit_nama_lokasi"
+                                    name="nama_lokasi" required>
+                            </div>
+
+                            {{-- Kantor Pusat --}}
+                            <div class="col-md-3">
+                                <label class="form-label">Tipe Lokasi</label>
+                                <select class="form-select"
+                                        id="edit_is_kantor_pusat"
+                                        name="is_kantor_pusat">
+                                    <option value="1">Kantor Pusat</option>
+                                    <option value="0">Cabang</option>
+                                </select>
+                            </div>
+
+                            {{-- Status --}}
+                            <div class="col-md-3">
+                                <label class="form-label">Status</label>
+                                <select class="form-select"
+                                        id="edit_is_aktif"
+                                        name="is_aktif">
+                                    <option value="1">Aktif</option>
+                                    <option value="0">Non Aktif</option>
+                                </select>
+                            </div>
+
+                            {{-- Alamat Lengkap --}}
+                            <div class="col-md-12">
+                                <label class="form-label">Alamat Lengkap</label>
+                                <textarea class="form-control"
+                                        id="edit_alamat_lengkap"
+                                        name="alamat_lengkap"
+                                        rows="2"></textarea>
+                            </div>
+
+                            {{-- Wilayah --}}
+                            <div class="col-md-4">
+                                <label class="form-label">Provinsi</label>
+                                <input type="text" class="form-control"
+                                    id="edit_provinsi"
+                                    name="provinsi">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Kota / Kabupaten</label>
+                                <input type="text" class="form-control"
+                                    id="edit_kota_kabupaten"
+                                    name="kota_kabupaten">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Kecamatan</label>
+                                <input type="text" class="form-control"
+                                    id="edit_kecamatan"
+                                    name="kecamatan">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Kelurahan</label>
+                                <input type="text" class="form-control"
+                                    id="edit_kelurahan"
+                                    name="kelurahan">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Kode Pos</label>
+                                <input type="text" class="form-control"
+                                    id="edit_kode_pos"
+                                    name="kode_pos">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Kawasan Bisnis</label>
+                                <input type="text" class="form-control"
+                                    id="edit_kawasan_bisnis"
+                                    name="kawasan_bisnis">
+                            </div>
+
+                            {{-- Gedung --}}
+                            <div class="col-md-6">
+                                <label class="form-label">Gedung</label>
+                                <input type="text" class="form-control"
+                                    id="edit_gedung"
+                                    name="gedung">
+                            </div>
+
+                            {{-- Alamat --}}
+                            <div class="col-md-6">
+                                <label class="form-label">Alamat (Ringkas)</label>
+                                <input type="text" class="form-control"
+                                    id="edit_alamat"
+                                    name="alamat">
+                            </div>
+
+                            {{-- NPWP Cabang --}}
+                            <div class="col-md-6">
+                                <label class="form-label">NPWP Cabang</label>
+                                <input type="text" class="form-control"
+                                    id="edit_npwp_cabang"
+                                    name="npwp_cabang">
+                            </div>
+
+                            {{-- Timestamp (readonly) --}}
+                            <div class="col-md-3">
+                                <label class="form-label">Created At</label>
+                                <input type="text" class="form-control"
+                                    id="edit_created_at" readonly>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Updated At</label>
+                                <input type="text" class="form-control"
+                                    id="edit_updated_at" readonly>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Batal
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            Simpan Perubahan
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+    {{--  End Edit Business Relation Site Modal --}}
+
 
     
 @endsection
@@ -231,248 +450,86 @@
 
 @section('custom-script')
 <script>
-    let table;
-    let brFilter = {
-        id: null,
-        text: null
-    };
-
-    // Advance Search Toggle
-    document.addEventListener('DOMContentLoaded', function () {
-        const advanceSearch = document.getElementById('advanceSearchForm');
-        const toggleBtn = document.getElementById('toggleAdvanceSearch');
-
-        if (!advanceSearch || !toggleBtn) return;
-
-        const bsCollapse = new bootstrap.Collapse(advanceSearch, { toggle: false });
-        bsCollapse.hide();
-        toggleBtn.textContent = 'Show';
-
-        toggleBtn.addEventListener('click', function () {
-            const isShown = advanceSearch.classList.contains('show');
-            isShown ? bsCollapse.hide() : bsCollapse.show();
-            toggleBtn.textContent = isShown ? 'Show' : 'Hide';
-        });
-    });
-
-
-    $('#company_id').on('change', function () {
-        const selected = $(this).select2('data')[0];
-
-        if (!selected) {
-            brFilter.value = null;
-            brFilter.type = null;
-            return;
-        }
-
-        if (!isNaN(selected.id)) {
-            // pilih BR existing
-            brFilter.value = selected.id;
-            brFilter.type = 'id';
-        } else {
-            // ketik BR baru / bebas
-            brFilter.value = selected.text;
-            brFilter.type = 'text';
-        }
-    });
-
-    $('#btn-search').on('click', function () {
-        table.ajax.reload();
-    });
-
-
-
-
-    $(document).ready(function () {
-        // table = $('#businessRelationTable').DataTable({
-        //     ajax: "{{ route('business-relations.data') }}",
-        //     columns: [
-        //         { data: 'DT_RowIndex', orderable: false, searchable: false },
-        //         { data: 'nama', name: 'nama' },
-        //         { data: 'entitas' },
-        //         { data: 'kepemilikan' },
-        //         { data: 'npwp' },
-        //         { data: 'npwp_alamat' },
-        //         { data: 'kategori_bisnis' },
-        //         { data: 'sub_kategori_bisnis' },
-        //         { data: 'website' },
-        //         { data: 'nomor_telepon' },
-        //         {
-        //             data: 'is_aktif',
-        //             render: function (data) {
-        //                 return data == 1
-        //                     ? '<span class="badge bg-success">Aktif</span>'
-        //                     : '<span class="badge bg-secondary">Non Aktif</span>';
-        //             }
-        //         },
-        //         { data: 'created_at' },
-        //         { data: 'updated_at' },
-        //         { data: 'action', orderable: false, searchable: false }
-        //     ]
-        // });
-
-        table = $('#businessRelationTable').DataTable({
-            processing: true,
-            serverSide: false, // sesuai kondisi terakhir kamu
-            ajax: {
-                url: "{{ route('business-relations.data') }}",
-                data: function (d) {
-                    d.filter_value = brFilter.value;
-                    d.filter_type  = brFilter.type;
-                }
-            },
-            columns: [
-                { 
-                    data: 'DT_RowIndex',
-                    orderable: false,
-                    searchable: false
-                },
-                { data: 'nama' },
-                { data: 'entitas' },
-                { data: 'kepemilikan' },
-                { data: 'npwp' },
-                { data: 'npwp_alamat' },
-                { data: 'kategori_bisnis' },
-                { data: 'sub_kategori_bisnis' },
-                { data: 'website' },
-                { data: 'nomor_telepon' },
-                { 
-                    data: 'is_aktif',
-                    render: function (data) {
-                        return data == 1
-                            ? '<span class="badge bg-success">Aktif</span>'
-                            : '<span class="badge bg-secondary">Non Aktif</span>';
-                    }
-                },
-                { data: 'created_at' },
-                { data: 'updated_at' },
-                { 
-                    data: 'action',
-                    orderable: false,
-                    searchable: false
-                }
-            ]
-        });
-
-
-        $('#company_id').select2({
-            placeholder: '-- Semua --',
-            allowClear: true,
-            tags: true,
-            minimumInputLength: 2,
-            ajax: {
-                url: "{{ route('business-relations.select2') }}",
-                dataType: 'json',
-                delay: 250,
-                data: function (params) {
-                    return { q: params.term };
-                },
-                processResults: function (data) {
-                    return { results: data };
-                }
-            }
-        });
-        // simpan nilai SETIAP kali user memilih / mengetik
-        $('#company_id').on('change', function () {
-            const selected = $(this).select2('data')[0];
-
-            if (selected) {
-                brFilter.id   = selected.id;
-                brFilter.text = selected.text;
-            } else {
-                brFilter.id   = null;
-                brFilter.text = null;
-            }
-        });
-        
-    });
-
-     $(document).on('click', '.btn-edit', function () {
-        const id = $(this).data('id');
-
-        $.get('/business-relations/' + id, function (res) {
-            $('#edit_id_br').val(res.id_br);
-            $('#edit_nama').val(res.nama);
-            $('#edit_entitas').val(res.entitas);
-            $('#edit_kepemilikan').val(res.kepemilikan);
-            $('#edit_npwp').val(res.npwp);
-            $('#edit_npwp_alamat').val(res.npwp_alamat);
-            $('#edit_kategori_bisnis').val(res.kategori_bisnis);
-            $('#edit_sub_kategori_bisnis').val(res.sub_kategori_bisnis);
-            $('#edit_website').val(res.website);
-            $('#edit_nomor_telepon').val(res.nomor_telepon);
-            $('#edit_is_aktif').val(res.is_aktif);
-            $('#edit_created_at').val(res.created_at);
-            $('#edit_updated_at').val(res.updated_at);
-
-            $('#editModal').modal('show');
-        });
-    });
-
-    $(document).on('click', '.btn-delete', function () {
-        const id = $(this).data('id');
-
-        Swal.fire({
-            title: 'Yakin?',
-            text: 'Data ini akan dihapus permanen',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Ya, hapus',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: '/business-relations/' + id,
-                    type: 'DELETE',
-                    data: {
-                        _token: '{{ csrf_token() }}'
-                    },
-                    success: function () {
-                        Swal.fire('Deleted!', 'Data berhasil dihapus', 'success');
-                        table.ajax.reload(null, false);
-                    },
-                    error: function (xhr) {
-                        Swal.fire(
-                            'Gagal',
-                            xhr.responseJSON?.message ?? 'Terjadi kesalahan',
-                            'error'
-                        );
-                    }
-                });
-            }
-        });
-    });
-
-    $('#editForm').on('submit', function (e) {
-    e.preventDefault();
-
-    const id = $('#edit_id_br').val();
-
-    $.ajax({
-        url: '/business-relations/' + id,
-        type: 'PUT',
-        data: $(this).serialize(),
-        success: function (res) {
-            Swal.fire('Berhasil', res.message, 'success');
-            $('#editModal').modal('hide');
-
-            // refresh table tanpa reset pagination
-            table.ajax.reload(null, false);
-        },
-        error: function (xhr) {
-            if (xhr.status === 422) {
-                let errors = xhr.responseJSON.errors;
-                let msg = Object.values(errors).map(e => e[0]).join('<br>');
-                Swal.fire('Validasi gagal', msg, 'error');
-            } else {
-                Swal.fire('Gagal', 'Terjadi kesalahan', 'error');
-            }
-        }
-    });
-    
-});
-
-
-
+    window.route = {
+        summary: "{{ route('business-relations.summary') }}",
+        data: "{{ route('business-relations.data') }}",
+        select2: "{{ route('business-relations.select2') }}",
+        site: "{{ url('business-relations/sites') }}/",
+        csrf: "{{ csrf_token() }}",
+    }
 </script>
+<script src="{{ asset('assets/js/business-relations/index.js') }}"></script>
+@endsection
+
+
+
+@section('style')
+
+    <style>
+        .summary-card {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 22px 26px;
+            border-radius: 14px;
+            color: #fff;
+            box-shadow: 0 10px 25px rgba(0, 123, 255, 0.15);
+            transition: all .25s ease;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(0, 123, 255, 0.25);
+        }
+
+        .summary-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .summary-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .summary-title {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .summary-content h2 {
+            margin: 0;
+            font-size: 34px;
+            font-weight: 700;
+            color: white !important;
+        }
+
+        /* Variants */
+        .summary-blue {
+            background: linear-gradient(135deg, #0d6efd, #0a58ca);
+        }
+
+        .summary-light-blue {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+            
+        td.dt-control {
+            cursor: pointer;
+        }
+
+        tr.shown td.dt-control i {
+            transform: rotate(90deg);
+            transition: transform .2s ease;
+        }
+
+    </style>
+
 @endsection

@@ -13,7 +13,7 @@
 
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
-                <h4 class="mb-1">Tambah Business Relation</h4>
+                <h4 class="mb-1">{{ session('mode') === 'Edit' ? 'Edit' : 'Tambah' }} Business Relation</h4>
                 <p class="text-muted mb-0">
                     Tambahkan business relation baru atau kantor cabang dari data yang sudah ada.
                 </p>
@@ -27,6 +27,7 @@
         <form id="createBusinessRelationForm">
             @csrf
             <input type="hidden" name="id_br" id="id_br">
+            <input type="hidden" name="nama_br" id="nama_br_hidden">
             <input type="hidden" name="site_id" id="site_id_hidden">
 
             <div class="card mb-4">
@@ -113,8 +114,6 @@
 
                 <div class="card-body">
                     
-                    
-                    
                     <div class="row g-3">
 
                         <div class="col-md-12">
@@ -170,14 +169,29 @@
                             <input type="text" name="kode_pos" class="form-control">
                         </div>
 
-                        <div class="col-md-4">
+                        {{-- <div class="col-md-4">
                             <label class="form-label">Kawasan Bisnis</label>
                             <input type="text" name="kawasan_bisnis" class="form-control">
+                        </div> --}}
+
+                        <div class="col-md-4">
+                            <label class="form-label">Kawasan Bisnis</label>
+                            <select name="kawasan_bisnis" id="kawasan_bisnis" class="select2 form-control">
+                                @foreach ($commercial_buildings as $value)
+                                    <option value="{{ $value->id_building }}">{{ $value->nama }}</option>
+                                @endforeach
+                            </select>
+                            {{-- <input type="text" name="gedung" class="form-control"> --}}
                         </div>
 
                         <div class="col-md-4">
                             <label class="form-label">Gedung</label>
-                            <input type="text" name="gedung" class="form-control">
+                            <select name="gedung" id="gedung" class="select2 form-control">
+                                @foreach ($bestate as $value)
+                                    <option value="{{ $value->id_bestate }}">{{ $value->nama }} - {{ $value->kode }}</option>
+                                @endforeach
+                            </select>
+                            {{-- <input type="text" name="gedung" class="form-control"> --}}
                         </div>
 
                         <div class="col-md-12">
@@ -218,38 +232,181 @@
 
 @section('custom-script')
 <script>
+    const EDIT_BR = @json($br ?? null);
+    const EDIT_SITE = @json($site ?? null);
+</script>
+
+<script>
     $(document).ready(function () {
-        // reset form ketika halaman dimuat
-        resetCreateForm();
-        destroySiteSelect2();
-    });
-    
-    $('#nama_br').select2({
-        placeholder: 'Pilih atau ketik Business Relation',
-        tags: true,                
-        allowClear: true,
-        minimumInputLength: 2,
-        ajax: {
-            url: "{{ route('business-relations.select2') }}",
-            dataType: 'json',
-            delay: 250,
-            data: function (params) {
-                return {
-                    q: params.term
-                };
-            },
-            processResults: function (data) {
-                return {
-                    results: data
-                };
-            }
+            // reset form ketika halaman dimuat
+            // INIT select2 selalu
+        initBrSelect2();
+
+        if (!EDIT_BR) {
+            // MODE CREATE
+            resetCreateForm();
+            destroySiteSelect2();
+        } else {
+            // MODE EDIT BR
+            initEditBr(EDIT_BR);
         }
+
+        if (EDIT_SITE) {
+            initEditSite(EDIT_SITE);
+        }
+        
+        // @if(isset($br) && $br)
+        //     // set hidden id_br
+        //     $('#id_br').val('{{ $br->id_br }}');
+
+        //     // inject option ke select2 BR
+        //     const brOption = new Option(
+        //         '{{ $br->nama }}',
+        //         '{{ $br->id_br }}',
+        //         true,
+        //         true
+        //     );
+        //     $('#nama_br').append(brOption).trigger('change');
+
+        //     // isi field BR
+        //     $('select[name="entitas"]').val('{{ $br->entitas }}').trigger('change');
+        //     $('select[name="kepemilikan"]').val('{{ $br->kepemilikan }}').trigger('change');
+        //     $('input[name="npwp"]').val('{{ $br->npwp }}');
+        //     $('textarea[name="npwp_alamat"]').val(`{!! addslashes($br->npwp_alamat) !!}`);
+        //     $('input[name="kategori_bisnis"]').val('{{ $br->kategori_bisnis }}');
+        //     $('input[name="sub_kategori_bisnis"]').val('{{ $br->sub_kategori_bisnis }}');
+        //     $('input[name="website"]').val('{{ $br->website }}');
+        //     $('input[name="nomor_telepon"]').val('{{ $br->nomor_telepon }}');
+        //     $('select[name="is_aktif"]').val('{{ $br->is_aktif }}').trigger('change');
+
+        //     // init site select2
+        //     destroySiteSelect2();
+        //     initSiteSelect2('{{ $br->id_br }}');
+        // @endif
+
+
+        // @if(isset($site) && $site)
+        //     // set hidden site id
+        //     $('#site_id_hidden').val('{{ $site->id_site }}');
+
+        //     // inject option ke select2 Site
+        //     const siteOption = new Option(
+        //         '{{ $site->nama_lokasi }}',
+        //         '{{ $site->id_site }}',
+        //         true,
+        //         true
+        //     );
+        //     $('#site_id').append(siteOption).trigger('change');
+
+        //     // isi field site
+        //     $('input[name="nama_lokasi"]').val('{{ $site->nama_lokasi }}');
+        //     $('textarea[name="alamat_lengkap"]').val(`{!! addslashes($site->alamat_lengkap) !!}`);
+        //     $('input[name="provinsi"]').val('{{ $site->provinsi }}');
+        //     $('input[name="kota_kabupaten"]').val('{{ $site->kota_kabupaten }}');
+        //     $('input[name="kecamatan"]').val('{{ $site->kecamatan }}');
+        //     $('input[name="kelurahan"]').val('{{ $site->kelurahan }}');
+        //     $('input[name="kode_pos"]').val('{{ $site->kode_pos }}');
+        //     $('input[name="kawasan_bisnis"]').val('{{ $site->kawasan_bisnis }}');
+        //     $('input[name="gedung"]').val('{{ $site->gedung }}');
+        //     $('input[name="alamat"]').val('{{ $site->alamat }}');
+        //     $('input[name="npwp_cabang"]').val('{{ $site->npwp_cabang }}');
+        // @endif
+
+        $("#gedung").select2({
+            placeholder: 'Pilih Business Estate',
+            allowClear: true
+        });
+
+            $("#kawasan_bisnis").select2({
+            placeholder: 'Pilih Kawasan Bisnis',
+            allowClear: true
+        });
+        
+        
     });
 
+    function initBrSelect2() {
+        console.log('Done init BR select2');
+        $('#nama_br').select2({
+            placeholder: 'Pilih atau ketik Business Relation',
+            tags: true,
+            allowClear: true,
+            minimumInputLength: 2,
+            ajax: {
+                url: "{{ route('business-relations.select2') }}",
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return { q: params.term };
+                },
+                processResults: function (data) {
+                    return { results: data };
+                }
+            }
+        });
+    }
+
+    function initEditBr(br) {
+
+        $('#id_br').val(br.id_br);
+
+        const brOption = new Option(
+            br.nama,
+            br.id_br,
+            true,
+            true
+        );
+
+        $('#nama_br').append(brOption).trigger('change');
+
+        $('select[name="entitas"]').val(br.entitas).trigger('change');
+        $('select[name="kepemilikan"]').val(br.kepemilikan).trigger('change');
+        $('input[name="npwp"]').val(br.npwp);
+        $('textarea[name="npwp_alamat"]').val(br.npwp_alamat);
+        $('input[name="kategori_bisnis"]').val(br.kategori_bisnis);
+        $('input[name="sub_kategori_bisnis"]').val(br.sub_kategori_bisnis);
+        $('input[name="website"]').val(br.website);
+        $('input[name="nomor_telepon"]').val(br.nomor_telepon);
+        $('select[name="is_aktif"]').val(br.is_aktif ?? 1).trigger('change');
+
+        destroySiteSelect2();
+        initSiteSelect2(br.id_br);
+    }
+
+    function initEditSite(site) {
+
+        $('#site_id_hidden').val(site.id_site);
+
+        const siteOption = new Option(
+            site.nama_lokasi,
+            site.id_site,
+            true,
+            true
+        );
+
+        $('#site_id').append(siteOption).trigger('change');
+
+        $('input[name="nama_lokasi"]').val(site.nama_lokasi);
+        $('textarea[name="alamat_lengkap"]').val(site.alamat_lengkap);
+        $('input[name="provinsi"]').val(site.provinsi);
+        $('input[name="kota_kabupaten"]').val(site.kota_kabupaten);
+        $('input[name="kecamatan"]').val(site.kecamatan);
+        $('input[name="kelurahan"]').val(site.kelurahan);
+        $('input[name="kode_pos"]').val(site.kode_pos);
+        $('input[name="kawasan_bisnis"]').val(site.kawasan_bisnis);
+        $('input[name="gedung"]').val(site.gedung);
+        $('input[name="alamat"]').val(site.alamat);
+        $('input[name="npwp_cabang"]').val(site.npwp_cabang);
+    }
+
+
     $('#nama_br').on('select2:select', function (e) {
+        console.log('BR selected:', e.params.data);
         const d = e.params.data;
-        if (d.id) {
+        if (d.id && !isNaN(d.id)) {
             $('#id_br').val(d.id);
+
+            $("#nama_br_hidden").val(d.text);
 
             // text input / textarea
             $('input[name="npwp"]').val(d.npwp ?? '');
@@ -271,26 +428,38 @@
         } else {
             // nama baru → belum ada BR
             $('#id_br').val('');
+            console.log('New BR name entered:', d);
+            $("#nama_br_hidden").val(d.text);
+            clearBrField();
             destroySiteSelect2();
+            clearSiteField();
         }
     });
 
+    
+    
+
 
     $('#nama_br').on('select2:clear', function () {
-        $('#createBusinessRelationForm')
-            .find('input:not([name="nama"]), textarea, select')
-            .val('')
-            .trigger('change');
+        console.log('BR cleared');
+        // $('#createBusinessRelationForm')
+        //     .find('input:not([name="nama"]), textarea, select')
+        //     .val('')
+        //     .trigger('change');
         
+        $("#nama_br").html('');
+        destroySiteSelect2();
         clearSiteField();
+        clearBrField();
     });
+
 
 
     function initSiteSelect2(idBr) {
         $('#site_id')
             .prop('disabled', false)
             .select2({
-                // placeholder: 'Pilih atau ketik lokasi / cabang',
+                placeholder: 'Pilih atau ketik lokasi / cabang',
                 tags: true,
                 allowClear: true,
                 // minimumInputLength: 1,
@@ -303,7 +472,7 @@
                 }
             });
     }
-
+    
     function destroySiteSelect2() {
         if ($('#site_id').hasClass('select2-hidden-accessible')) {
             $('#site_id').select2('destroy');
@@ -338,25 +507,97 @@
     }
 
 
-    $('#site_id').on('select2:select', function (e) {
-        const d = e.params.data;
+    function initSiteSelect2(idBr) {
+        console.log('Init Site select2 with BR id:', idBr);
+        $('#site_id')
+            .prop('disabled', false)
+            .select2({
+                placeholder: 'Pilih atau ketik lokasi / cabang',
+                tags: true,
+                // ... setting lainnya
+                createTag: function (params) {
+                    var term = $.trim(params.term);
+                    if (term === '') return null;
 
-        $('input[name="nama_lokasi"]').val(d.nama_lokasi ?? '');
-        $('textarea[name="alamat_lengkap"]').val(d.alamat_lengkap ?? '');
-        $('input[name="provinsi"]').val(d.provinsi ?? '');
-        $('input[name="kota_kabupaten"]').val(d.kota_kabupaten ?? '');
-        $('input[name="kecamatan"]').val(d.kecamatan ?? '');
-        $('input[name="kelurahan"]').val(d.kelurahan ?? '');
-        $('input[name="kode_pos"]').val(d.kode_pos ?? '');
-        $('input[name="kawasan_bisnis"]').val(d.kawasan_bisnis ?? '');
-        $('input[name="gedung"]').val(d.gedung ?? '');
-        $('input[name="alamat"]').val(d.alamat ?? '');
-        $('input[name="npwp_cabang"]').val(d.npwp_cabang ?? '');
-        $('select[name="is_aktif"]').val(d.is_aktif ?? 1).trigger('change');
-        $('#site_id_hidden').val(d.id);
-    });
+                    return {
+                        id: term,
+                        text: term,
+                        newTag: true // Penanda bahwa ini data baru
+                    };
+                },
+                allowClear: true,
+                ajax: {
+                    url: `/business-relations/${idBr}/sites`,
+                    dataType: 'json',
+                    delay: 250,
+                    data: params => ({ q: params.term }),
+                    processResults: data => ({ results: data })
+                }
+            });
+        console.log('Site select2 initialized');
+
+        // Tambahkan event listener DI SINI setelah select2 initialized
+        $('#site_id').on('select2:select', function (e) {
+            const d = e.params.data;
+            console.log('Data diterima:', d);
+
+            // Cek apakah d.id adalah angka (Data dari DB) atau String (Tag Baru)
+            const isExistingData = d.id && !isNaN(d.id) && !d.newTag;
+
+            if (isExistingData) {
+                // Logika untuk data dari database
+                $('input[name="nama_lokasi"]').val(d.nama_lokasi ?? '');
+                $('input[name="nama_lokasi"]').val(d.nama_lokasi ?? '');
+                $('textarea[name="alamat_lengkap"]').val(d.alamat_lengkap ?? '');
+                $('input[name="provinsi"]').val(d.provinsi ?? '');
+                $('input[name="kota_kabupaten"]').val(d.kota_kabupaten ?? '');
+                $('input[name="kecamatan"]').val(d.kecamatan ?? '');
+                $('input[name="kelurahan"]').val(d.kelurahan ?? '');
+                $('input[name="kode_pos"]').val(d.kode_pos ?? '');
+                $('input[name="kawasan_bisnis"]').val(d.kawasan_bisnis ?? '');
+                $('input[name="gedung"]').val(d.gedung ?? '');
+                $('input[name="alamat"]').val(d.alamat ?? '');
+                $('input[name="npwp_cabang"]').val(d.npwp_cabang ?? '');
+                $('select[name="is_aktif"]').val(d.is_aktif ?? 1).trigger('change');
+                $('#site_id_hidden').val(d.id);
+                // ... (sisanya sama)
+            } else {
+                // Logika untuk TAG BARU (ketikan user)
+                clearSiteField(); 
+                console.log('User mengetik data baru:', d.text);
+                $('input[name="nama_lokasi"]').val(d.text);
+                $('#site_id_hidden').val('');
+            }
+        });
+        
+        // $('#site_id').on('select2:select', function (e) {
+        //     const d = e.params.data;
+        //     console.log('Site selected:', d);
+        //     if(d.id && !isNaN(d.id)) {
+        //         $('input[name="nama_lokasi"]').val(d.nama_lokasi ?? '');
+        //         $('textarea[name="alamat_lengkap"]').val(d.alamat_lengkap ?? '');
+        //         $('input[name="provinsi"]').val(d.provinsi ?? '');
+        //         $('input[name="kota_kabupaten"]').val(d.kota_kabupaten ?? '');
+        //         $('input[name="kecamatan"]').val(d.kecamatan ?? '');
+        //         $('input[name="kelurahan"]').val(d.kelurahan ?? '');
+        //         $('input[name="kode_pos"]').val(d.kode_pos ?? '');
+        //         $('input[name="kawasan_bisnis"]').val(d.kawasan_bisnis ?? '');
+        //         $('input[name="gedung"]').val(d.gedung ?? '');
+        //         $('input[name="alamat"]').val(d.alamat ?? '');
+        //         $('input[name="npwp_cabang"]').val(d.npwp_cabang ?? '');
+        //         $('select[name="is_aktif"]').val(d.is_aktif ?? 1).trigger('change');
+        //         $('#site_id_hidden').val(d.id);
+        //     } else {
+        //         clearSiteField();
+        //         console.log('New Site name entered:', d);
+        //         $('input[name="nama_lokasi"]').val(d.text);
+        //         $('#site_id_hidden').val('');
+        //     }
+        // });
+    }
 
     $('#site_id').on('select2:clear', function () {
+        $("#site_id").html('');
         clearSiteField();
     });
 
@@ -373,6 +614,23 @@
         });
     }
 
+    function clearBrField() {
+        $('#id_br').val('');
+        const fields = [
+            'npwp','npwp_alamat','kategori_bisnis','sub_kategori_bisnis',
+            'website','nomor_telepon'
+        ];
+
+        fields.forEach(name => {
+            $(`[name="${name}"]`).val('');
+        });
+
+        // reset select
+        $('select[name="entitas"]').val('').trigger('change');
+        $('select[name="kepemilikan"]').val('').trigger('change');
+        $('select[name="is_aktif"]').val(1).trigger('change');
+    }
+
     $('#createBusinessRelationForm').on('submit', function (e) {
         e.preventDefault();
 
@@ -381,56 +639,41 @@
 
         btn.prop('disabled', true).text('Menyimpan...');
 
-        $.ajax({
-            url: "{{ route('business-relations.store') }}",
-            type: "POST",
-            data: form.serialize(),
-            success: function (res) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Berhasil',
-                    text: res.message,
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-
-                console.log(res);
-
-                // resetCreateForm(); // fungsi reset yang sudah kita buat
-            },
-            error: function (xhr) {
-
-                btn.prop('disabled', false).text('Simpan Data');
-
-                if (xhr.status === 422) {
-                    const errors = xhr.responseJSON.errors;
-                    let msg = Object.values(errors).map(e => e[0]).join('<br>');
-
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Validasi Gagal',
-                        html: msg
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Gagal',
-                        text: xhr.responseJSON?.message ?? 'Terjadi kesalahan'
-                    });
-                }
-            },
-            complete: function () {
-                btn.prop('disabled', false).text('Simpan Data');
-            }
-        });
-    });
-
-
-
+        
+        Notify.confirm('Simpan Data?', function() {
+            $.ajax({
+                url: "{{ route('business-relations.store') }}",
+                type: "POST",
+                data: form.serialize(),
+                success: function (res) {
+                    Notify.success('Data berhasil disimpan!');
+                    console.log(res);
     
+                    // resetCreateForm(); // fungsi reset yang sudah kita buat
+                },
+                error: function (xhr) {
+    
+                    btn.prop('disabled', false).text('Simpan Data');
+    
+                    if (xhr.status === 422) {
+                        const errors = xhr.responseJSON.errors;
+                        let msg = Object.values(errors).map(e => e[0]).join('<br>');
+    
+                        Notify.error(msg);
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal',
+                            text: xhr.responseJSON?.message ?? 'Terjadi kesalahan'
+                        });
+                    }
+                },
+                complete: function () {
+                    btn.prop('disabled', false).text('Simpan Data');
+                }
+            });
+        });
 
-
-
-
+    });
 </script>
 @endsection

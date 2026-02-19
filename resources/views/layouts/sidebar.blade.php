@@ -33,8 +33,15 @@
                         <li>
                             <a href="{{ route('business-relations.index') }}">Bussines Relation</a>
                         </li>
-                        <li>
+                        {{-- <li>
                             <a href="{{ route('business-relation-sites.index') }}">Bussines Relation Site</a>
+                        </li> --}}
+                        <li>
+                            <a href="{{ route('business-estates.index') }}">Bussines Estate</a>
+                        </li>
+
+                        <li>
+                            <a href="{{ route('commercial-buildings.index') }}">Bussines Commercial Buildings</a>
                         </li>
                     </ul>
 

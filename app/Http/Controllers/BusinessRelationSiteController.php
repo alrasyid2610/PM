@@ -119,6 +119,26 @@ class BusinessRelationSiteController extends Controller
             ->make(true);
     }
 
+
+    public function getDataSite(Request $request)
+    {
+        $id_site = $request->query('id_site');
+
+        $query = DB::table('business_relation_sites');
+
+        if (!empty($id_site)) {
+            $query->where('id_site', $id_site);
+        }
+
+        $site = $query->get();
+
+        if ($site->isEmpty()) {
+            return response()->json(['message' => 'Site tidak ditemukan'], 404);
+        }
+
+        return response()->json($site);
+    }
+
     public function show($id)
     {
         $data = DB::table('business_relation_sites')
