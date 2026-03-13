@@ -43,6 +43,62 @@
         
     </div>
 
+
+<div id="global-loader" style="display:none;">
+    <div class="loader-dots">
+        <span class="dot-red"></span>
+        <span class="dot-green"></span>
+        <span class="dot-blue"></span>
+    </div>
+</div>
+
+<div id="scientific-toolbar">
+
+    <div class="toolbar-header">
+    Scientific Symbols
+    </div>
+
+    <div class="toolbar-group">
+
+        <span data-symbol="²">²</span>
+        <span data-symbol="³">³</span>
+        <span data-symbol="µ">µ</span>
+        <span data-symbol="°C">°C</span>
+
+        <span data-symbol="CO₂">CO₂</span>
+        <span data-symbol="H₂O">H₂O</span>
+        <span data-symbol="H₂O₂">H₂O₂</span>
+        <span data-symbol="SO₂">SO₂</span>
+        <span data-symbol="NO₂">NO₂</span>
+
+        <span data-symbol="m²">m²</span>
+        <span data-symbol="m³">m³</span>
+
+        <span data-symbol="mg/L">mg/L</span>
+        <span data-symbol="µg/m³">µg/m³</span>
+        <span data-symbol="ppm">ppm</span>
+        <span data-symbol="ppb">ppb</span>
+        <span data-symbol="SO₄²-">SO₄²-</span>
+
+        
+
+    </div>
+
+</div>
+
+
+<div class="modal fade" id="imagePreviewModal">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <img id="previewImage" class="img-fluid">
+            </div>
+        </div>
+    </div>
+</div>
+    
+
+
     <!-- Scripts -->
     <script src="{{ asset('assets/vendor/jquery/jquery-3.7.1.min.js') }}"></script>
     <script src="{{ asset('assets/js/bootstrap.min.js') }}"></script>
@@ -62,6 +118,16 @@
 
     <script src="{{ asset('assets/js/pages/dashboard.js') }}"></script>
     <script src="{{ asset('assets/js/main.js') }}"></script>
+    <script>
+        let tableId = '{{ Str::lower(request()->segment(1)) }}-table';
+    </script>
+
+    <script src="https://unpkg.com/filepond/dist/filepond.min.js"></script>
+
+    
+    <script src="{{ asset('assets/js/pm.js') }}"></script>
+    <script src="{{ asset('assets/js/scientific-input.js') }}"></script>
+    <script src="{{ asset('assets/js/tableForm.js') }}"></script>
     
 
 

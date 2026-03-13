@@ -570,30 +570,6 @@
             }
         });
         
-        // $('#site_id').on('select2:select', function (e) {
-        //     const d = e.params.data;
-        //     console.log('Site selected:', d);
-        //     if(d.id && !isNaN(d.id)) {
-        //         $('input[name="nama_lokasi"]').val(d.nama_lokasi ?? '');
-        //         $('textarea[name="alamat_lengkap"]').val(d.alamat_lengkap ?? '');
-        //         $('input[name="provinsi"]').val(d.provinsi ?? '');
-        //         $('input[name="kota_kabupaten"]').val(d.kota_kabupaten ?? '');
-        //         $('input[name="kecamatan"]').val(d.kecamatan ?? '');
-        //         $('input[name="kelurahan"]').val(d.kelurahan ?? '');
-        //         $('input[name="kode_pos"]').val(d.kode_pos ?? '');
-        //         $('input[name="kawasan_bisnis"]').val(d.kawasan_bisnis ?? '');
-        //         $('input[name="gedung"]').val(d.gedung ?? '');
-        //         $('input[name="alamat"]').val(d.alamat ?? '');
-        //         $('input[name="npwp_cabang"]').val(d.npwp_cabang ?? '');
-        //         $('select[name="is_aktif"]').val(d.is_aktif ?? 1).trigger('change');
-        //         $('#site_id_hidden').val(d.id);
-        //     } else {
-        //         clearSiteField();
-        //         console.log('New Site name entered:', d);
-        //         $('input[name="nama_lokasi"]').val(d.text);
-        //         $('#site_id_hidden').val('');
-        //     }
-        // });
     }
 
     $('#site_id').on('select2:clear', function () {

@@ -5,10 +5,20 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use SebastianBergmann\Environment\Console;
+use Yajra\DataTables\Facades\DataTables;
+
 
 class SalesOrderController extends Controller
 {
     //
+    public function index()
+    {
+        return view('sales-order.index', [
+            'title' => 'Sales Orders',
+        ]);
+    }
+
+
     public function create()
     {
         return view('sales-order.create', [
@@ -86,10 +96,10 @@ class SalesOrderController extends Controller
 
     private function generateSoNumber()
     {
-        $year = now()->format('Y');
+        $year = now()->format('y');
         $month = now()->format('m');
 
-        $prefix = "SO-{$year}-{$month}-";
+        $prefix = "SO-{$year}-";
 
         $lastSo = DB::table('sales_orders')
             ->where('no_so', 'like', $prefix . '%')
@@ -129,6 +139,128 @@ class SalesOrderController extends Controller
         return response()->json($so);
     }
 
+    public function detail($id)
+    {
+
+        $so = DB::table('sales_orders as so')
+            ->leftJoin('business_relations as pelanggan', 'so.id_pelanggan', '=', 'pelanggan.id_br')
+            ->leftJoin('business_relation_sites as site_pelanggan', 'so.id_site_pelanggan', '=', 'site_pelanggan.id_site')
+            ->select('so.*', 'pelanggan.nama as nama_pelanggan', 'site_pelanggan.nama_lokasi as nama_site_pelanggan')
+            ->where('so.id_so', $id)
+            ->first();
+
+
+        if (!$so) {
+            return response()->json([
+                'message' => 'Sales Order tidak ditemukan'
+            ], 404);
+        }
+
+        return response()->json($so);
+    }
+
+    public function update(Request $request, $id)
+    {
+
+        // dd($request->all(), $id);
+        // =========================
+        // VALIDATION
+        // =========================
+        $validated = $request->validate([
+            'tanggal_so' => 'required|date',
+            'judul_order' => 'nullable|string|max:255',
+            'tidak_ada_po' => 'required|boolean',
+            'tanggal_po' => 'nullable|date',
+            'no_po' => 'nullable|string|max:100',
+            'tanggal_mulai' => 'nullable|date',
+            'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal_mulai',
+            'id_office' => 'nullable|integer',
+
+            'id_pelanggan' => 'required|integer',
+            'id_site_pelanggan' => 'nullable|integer',
+            'id_pic_pelanggan' => 'nullable|integer',
+
+            'id_pelanggan_delivery' => 'required|integer',
+            'id_site_pelanggan_delivery' => 'nullable|integer',
+            'id_pic_pelanggan_delivery' => 'nullable|integer',
+
+            'id_pelanggan_payment' => 'required|integer',
+            'id_site_pelanggan_payment' => 'nullable|integer',
+            'id_pic_pelanggan_payment' => 'nullable|integer',
+
+            'pic_input' => 'nullable|string|max:100',
+            'pic_order' => 'nullable|string|max:100',
+            'pic_marketing_internal' => 'nullable|string|max:100',
+            'pic_marketing_eksternal' => 'nullable|string|max:100',
+
+            'status' => 'required|string|max:50',
+            'keterangan_status' => 'nullable|string',
+            'keterangan' => 'nullable|string',
+        ]);
+
+        try {
+
+            // =========================
+            // LOGIC PO
+            // =========================
+            // if ($validated['tidak_ada_po']) {
+            //     $validated['no_po'] = null;
+            //     $validated['tanggal_po'] = null;
+            // }
+
+            // =========================
+            // UPDATE
+            // =========================
+            DB::table('sales_orders')
+                ->where('id_so', $id)
+                ->update([
+                    'tanggal_so' => $validated['tanggal_so'],
+                    'judul_order' => $validated['judul_order'],
+                    'tidak_ada_po' => $validated['tidak_ada_po'],
+                    'tanggal_po' => $validated['tanggal_po'],
+                    'no_po' => $validated['no_po'],
+                    'tanggal_mulai' => $validated['tanggal_mulai'],
+                    'tanggal_selesai' => $validated['tanggal_selesai'],
+                    'id_office' => $validated['id_office'],
+
+                    'id_pelanggan' => $validated['id_pelanggan'],
+                    'id_site_pelanggan' => $validated['id_site_pelanggan'],
+                    'id_pic_pelanggan' => $validated['id_pic_pelanggan'],
+
+                    'id_pelanggan_delivery' => $validated['id_pelanggan_delivery'],
+                    'id_site_pelanggan_delivery' => $validated['id_site_pelanggan_delivery'],
+                    'id_pic_pelanggan_delivery' => $validated['id_pic_pelanggan_delivery'],
+
+                    'id_pelanggan_payment' => $validated['id_pelanggan_payment'],
+                    'id_site_pelanggan_payment' => $validated['id_site_pelanggan_payment'],
+                    'id_pic_pelanggan_payment' => $validated['id_pic_pelanggan_payment'],
+
+                    'pic_input' => $validated['pic_input'],
+                    'pic_order' => $validated['pic_order'],
+                    'pic_marketing_internal' => $validated['pic_marketing_internal'],
+                    'pic_marketing_eksternal' => $validated['pic_marketing_eksternal'],
+
+                    'status' => $validated['status'],
+                    'keterangan_status' => $validated['keterangan_status'],
+                    'keterangan' => $validated['keterangan'],
+
+                    'updated_at' => now(),
+                ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sales Order berhasil diperbarui'
+            ]);
+        } catch (\Throwable $e) {
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan sistem',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function select2(Request $request)
     {
         $search = $request->q;
@@ -147,5 +279,32 @@ class SalesOrderController extends Controller
                 ];
             })
         );
+    }
+
+
+    public function data(Request $request)
+    {
+        // dd($request->all(), 'poke');
+        // =========================
+        // QUERY DASAR (JOIN BR + BRS)
+        // =========================
+        $query = DB::table('sales_orders as s')
+            ->leftJoin('business_relations as br', 's.id_pelanggan', '=', 'br.id_br')
+            ->leftJoin('business_relation_sites as brs', 's.id_site_pelanggan', '=', 'brs.id_site')
+            ->select([
+                's.id_so',
+                's.no_so',
+                'br.nama as Pelanggan',
+                'brs.nama_lokasi as Site Pelanggan',
+                's.judul_order',
+                's.id_pelanggan',
+                's.id_site_pelanggan',
+                's.status',
+                's.created_at',
+            ]);
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->make(true);
     }
 }

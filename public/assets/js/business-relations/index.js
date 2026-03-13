@@ -10,21 +10,6 @@ let selectedRow = {
 };
 
 $(document).ready(function () {
-    const advanceSearch = document.getElementById("advanceSearchForm");
-    const toggleBtn = document.getElementById("toggleAdvanceSearch");
-
-    if (!advanceSearch || !toggleBtn) return;
-
-    const bsCollapse = new bootstrap.Collapse(advanceSearch, { toggle: false });
-    bsCollapse.hide();
-    toggleBtn.textContent = "Show";
-
-    toggleBtn.addEventListener("click", function () {
-        const isShown = advanceSearch.classList.contains("show");
-        isShown ? bsCollapse.hide() : bsCollapse.show();
-        toggleBtn.textContent = isShown ? "Show" : "Hide";
-    });
-
     loadSummary();
 
     table = $("#businessRelationTable").DataTable({

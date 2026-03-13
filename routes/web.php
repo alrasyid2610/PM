@@ -9,13 +9,153 @@ use App\Http\Controllers\BusinessEstateController;
 use App\Http\Controllers\BusinessRelationContactController;
 use App\Http\Controllers\CommercialBuildingController;
 use App\Http\Controllers\SalesOrderController;
+use App\Http\Controllers\TestingItemController;
 use App\Http\Controllers\WorkOrderController;
+
+use App\Http\Controllers\TestingUnitController;
+use App\Http\Controllers\TestingParameterController;
+use App\Http\Controllers\TestingKelompokMatriksSampleController;
+use App\Http\Controllers\TestingStandardController;
+use App\Http\Controllers\TestingMatriksSampleController;
+use App\Http\Controllers\TestingPointController;
 
 // AUTH
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+
+Route::prefix('testing-units')->name('testing-units.')->group(function () {
+    Route::get('/select2byid', [TestingUnitController::class, 'select2byid'])
+        ->name('select2byid');
+    Route::get('/select2', [TestingUnitController::class, 'select2'])->name('select2');
+    Route::get('/', [TestingUnitController::class, 'index'])->name('index');
+    Route::get('/data', [TestingUnitController::class, 'data'])->name('data');
+    Route::get('/create', [TestingUnitController::class, 'create'])->name('create');
+    Route::post('/', [TestingUnitController::class, 'store'])->name('store');
+    Route::get('/{id}', [TestingUnitController::class, 'show'])->name('show');
+    Route::get('/{id}/edit', [TestingUnitController::class, 'edit'])->name('edit');
+    Route::put('/{id}', [TestingUnitController::class, 'update'])->name('update');
+    Route::delete('/{id}', [TestingUnitController::class, 'destroy'])->name('destroy');
+    Route::get('/{id}/detail', [TestingUnitController::class, 'detail'])
+        ->name('detail');
+});
+
+Route::prefix('testing-parameters')->name('testing-parameters.')->group(function () {
+
+    Route::post(
+        '/testing-parameters/delete-attachment',
+        [TestingParameterController::class, 'deleteAttachment']
+    )->name('delete-attachment');
+
+    Route::get('/', [TestingParameterController::class, 'index'])->name('index');
+    Route::get('/data', [TestingParameterController::class, 'data'])->name('data');
+    Route::get('/select2', [TestingParameterController::class, 'select2'])
+        ->name('select2');
+    Route::get('/select2byid', [TestingParameterController::class, 'select2byid'])
+        ->name('select2byid');
+
+    Route::get('/create', [TestingParameterController::class, 'create'])->name('create');
+    Route::post('/', [TestingParameterController::class, 'store'])->name('store');
+
+
+    Route::get('/{id}', [TestingParameterController::class, 'show'])->name('show')->whereNumber('id');
+    Route::get('/{id}/edit', [TestingParameterController::class, 'edit'])->name('edit')->whereNumber('id');
+    Route::put('/{id}', [TestingParameterController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [TestingParameterController::class, 'destroy'])->name('destroy')->whereNumber('id');
+});
+
+
+
+Route::prefix('testing-kelompok-matriks-samples')
+    ->name('testing-kelompok-matriks-samples.')
+    ->group(function () {
+
+        Route::get('/', [TestingKelompokMatriksSampleController::class, 'index'])->name('index');
+        Route::get('/data', [TestingKelompokMatriksSampleController::class, 'data'])->name('data');
+
+        Route::get('/create', [TestingKelompokMatriksSampleController::class, 'create'])->name('create');
+        Route::post('/', [TestingKelompokMatriksSampleController::class, 'store'])->name('store');
+
+        Route::get('/select2', [TestingKelompokMatriksSampleController::class, 'select2'])->name('select2');
+
+        Route::get('/{id}', [TestingKelompokMatriksSampleController::class, 'show'])->name('show')->whereNumber('id');
+        Route::put('/{id}', [TestingKelompokMatriksSampleController::class, 'update'])->name('update')->whereNumber('id');
+        Route::delete('/{id}', [TestingKelompokMatriksSampleController::class, 'destroy'])->name('destroy')->whereNumber('id');
+        Route::get(
+            '/{id}/detail',
+            [TestingKelompokMatriksSampleController::class, 'detail']
+        )->name('detail')->whereNumber('id');
+    });
+
+
+Route::prefix('testing-standards')
+    ->name('testing-standards.')
+    ->group(function () {
+
+        Route::get('/', [TestingStandardController::class, 'index'])->name('index');
+        Route::get('/data', [TestingStandardController::class, 'data'])->name('data');
+
+
+        Route::get('/create', [TestingStandardController::class, 'create'])->name('create');
+        Route::post('/', [TestingStandardController::class, 'store'])->name('store');
+
+        Route::get('/{id}/detail', [TestingStandardController::class, 'detail'])->name('detail');
+
+        Route::put('/{id}', [TestingStandardController::class, 'update'])->name('update');
+        Route::delete('/{id}', [TestingStandardController::class, 'destroy'])->name('destroy');
+    });
+
+
+Route::prefix('testing-points')
+    ->name('testing-points.')
+    ->group(function () {
+
+        Route::get('/', [TestingPointController::class, 'index'])->name('index');
+        Route::get('/data', [TestingPointController::class, 'data'])->name('data');
+
+        Route::get('/create', [TestingPointController::class, 'create'])->name('create');
+        Route::post('/', [TestingPointController::class, 'store'])->name('store');
+
+        Route::get('/{id}/detail', [TestingPointController::class, 'detail'])->name('detail');
+        Route::put('/{id}', [TestingPointController::class, 'update'])->name('update');
+        Route::delete('/{id}', [TestingPointController::class, 'destroy'])->name('destroy');
+    });
+
+
+
+Route::prefix('testing-matriks-samples')
+    ->name('testing-matriks-samples.')
+    ->group(function () {
+
+        Route::get('/', [TestingMatriksSampleController::class, 'index'])->name('index');
+        Route::get('/data', [TestingMatriksSampleController::class, 'data'])->name('data');
+
+        Route::get('/create', [TestingMatriksSampleController::class, 'create'])->name('create');
+        Route::post('/', [TestingMatriksSampleController::class, 'store'])->name('store');
+
+        Route::get('/{id}/detail', [TestingMatriksSampleController::class, 'detail'])->name('detail');
+        Route::put('/{id}', [TestingMatriksSampleController::class, 'update'])->name('update');
+        Route::delete('/{id}', [TestingMatriksSampleController::class, 'destroy'])->name('destroy');
+    });
+
+
+Route::prefix('testing-items')
+    ->name('testing-items.')
+    ->group(function () {
+
+        Route::get('/by-point/{id}', [TestingItemController::class, 'byPoint'])
+            ->name('testing-items.byPoint');
+        Route::get('/', [TestingItemController::class, 'index'])->name('index');
+        Route::get('/data', [TestingItemController::class, 'data'])->name('data');
+
+        Route::get('/create', [TestingItemController::class, 'create'])->name('create');
+        Route::post('/', [TestingItemController::class, 'store'])->name('store');
+
+        Route::get('/{id}/detail', [TestingItemController::class, 'detail'])->name('detail');
+        Route::put('/{id}', [TestingItemController::class, 'update'])->name('update');
+        Route::delete('/{id}', [TestingItemController::class, 'destroy'])->name('destroy');
+    });
 
 
 Route::prefix('business-relations')
@@ -79,6 +219,7 @@ Route::prefix('business-relation-sites')
 
     });
 
+
 Route::prefix('/commercial-buildings')
     ->name('commercial-buildings.')
     ->group(function () {
@@ -100,6 +241,7 @@ Route::prefix('/commercial-buildings')
         Route::get('/edit', [CommercialBuildingController::class, 'edit'])->name('edit');
         Route::put('/{id}', [CommercialBuildingController::class, 'update'])->name('update');
     });
+
 
 Route::prefix('/business-estates')
     ->name('business-estates.')
@@ -127,6 +269,7 @@ Route::prefix('/business-estates')
 
 
 
+
 Route::prefix('sales-orders')->name('sales-orders.')->group(function () {
 
     Route::get('/', [SalesOrderController::class, 'index'])->name('index');
@@ -137,6 +280,11 @@ Route::prefix('sales-orders')->name('sales-orders.')->group(function () {
 
     Route::get('/select2', [SalesOrderController::class, 'select2'])
         ->name('select2');
+
+    Route::get('/{id}/detail', [SalesOrderController::class, 'detail'])
+        ->name('detail')
+        ->whereNumber('id');
+
 
     Route::get('/{id}', [SalesOrderController::class, 'show'])->name('show');
     Route::get('/{id}/edit', [SalesOrderController::class, 'edit'])->name('edit');
@@ -152,6 +300,13 @@ Route::prefix('work-orders')->name('work-orders.')->group(function () {
     Route::get('/create', [WorkOrderController::class, 'create'])->name('create');
     Route::post('/', [WorkOrderController::class, 'store'])->name('store');
 
+    Route::get('/select2', [WorkOrderController::class, 'select2'])
+        ->name('select2');
+
+    Route::get('/{id}/detail', [WorkOrderController::class, 'detail'])
+        ->name('detail')
+        ->whereNumber('id');
+
     Route::get('/{id}', [WorkOrderController::class, 'show'])->name('show');
     Route::get('/{id}/edit', [WorkOrderController::class, 'edit'])->name('edit');
     Route::put('/{id}', [WorkOrderController::class, 'update'])->name('update');
@@ -165,6 +320,9 @@ Route::prefix('boq')->name('boq.')->group(function () {
 
     Route::get('/create', [BoqController::class, 'create'])->name('create');
     Route::post('/', [BoqController::class, 'store'])->name('store');
+
+    Route::get('/select2', [BoqController::class, 'select2'])
+        ->name('select2');
 
     Route::get('/{id}', [BoqController::class, 'show'])->name('show');
     Route::get('/{id}/edit', [BoqController::class, 'edit'])->name('edit');

@@ -6,6 +6,7 @@
         content: " *";
         color: red;
     }
+
 </style>
 
 
@@ -25,7 +26,7 @@
             </a>
         </div>
 
-        <form id="workOrderForm">
+        <form id="boqForm">
             @csrf
 
             {{-- ============================= --}}
@@ -36,16 +37,16 @@
                 <div class="card-body">
 
                     {{-- ================= INFORMASI ORDER ================= --}}
-                    <h6 class="fw-bold mb-3">Sales Order</h6>
+                    <h6 class="fw-bold mb-3">Work Order</h6>
                     <div class="row mb-4">
                         <div class="col-md-12 col-lg-3 mb-3">
-                            <label class="form-label required">Sales Order</label>
-                            <select name="id_sales_order" id="id_sales_order" class="form-select" style="width:100%" required>
-                                {{-- <option value="">Pilih Sales Order</option> --}}
+                            <label class="form-label required">Work Order</label>
+                            <select name="id_work_order" id="id_work_order" class="form-select" style="width:100%" required>
+                                {{-- <option value="">Pilih Work Order</option> --}}
                             </select>
                         </div>
 
-                        <div class="col-md-12 col-lg-3 mb-3">
+                        {{-- <div class="col-md-12 col-lg-3 mb-3">
                             <label class="form-label required">Tanggal SO</label>
                             <input type="date" name="tanggal_so" class="form-control" required>
                         </div>
@@ -58,14 +59,14 @@
                         <div class="col-md-4 col-lg-3 mb-3">
                             <label class="form-label required">Tanggal Selesai</label>
                             <input type="date" name="tanggal_selesai" class="form-control">
-                        </div>
+                        </div> --}}
 
                         <div class="col-md-12 col-lg-9 mb-3">
                             <label class="form-label required">Judul Order</label>
                             <input type="text" name="judul_order" class="form-control">
                         </div>
 
-                        <div class="col-md-12 col-lg-3 mb-3">
+                        {{-- <div class="col-md-12 col-lg-3 mb-3">
                             <label class="form-label">PIC Pekerjaan</label>
                             <input type="text" name="pic_pekerjaan" class="form-control">
                         </div>
@@ -82,11 +83,11 @@
                             <select name="id_site_pelanggan" class="form-select" required>
                                 <option value="">Pilih Pelanggan Site</option>
                             </select>
-                        </div>
+                        </div> --}}
                         
                     </div>
 
-                    <h6 class="fw-bold">PO</h6>
+                    {{-- <h6 class="fw-bold">PO</h6>
                     <div class="row mb-4 align-items-center">
                         <div class="col-md-4 col-lg-2">
                             <label class="form-label">Tidak Ada PO</label>
@@ -115,7 +116,64 @@
                             <label class="form-label">Keterangan</label>
                             <textarea name="keterangan" id="keterangan" cols="30" rows="6" class="form-control"></textarea>
                         </div>
+                    </div> --}}
+
+                    <h6 class="fw-bold">BOQ</h6>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm" id="boqTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="30%">Item Produk</th>
+                                    <th width="15%">Satuan</th>
+                                    <th width="20%">Harga Satuan</th>
+                                    <th width="25%">Keterangan</th>
+                                    <th width="10%">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Row awal -->
+                                <tr>
+                                    <td>
+                                        <input type="text" name="item_produk[]" class="form-control" required>
+                                    </td>
+                                    <td>
+                                        <select name="satuan_produk[]" class="form-select">
+                                            <option value="">Pilih Satuan</option>
+                                            <option value="Hari">Hari</option>
+                                            <option value="Orang">Orang</option>
+                                            <option value="pcs">pcs</option>
+                                            <option value="kg">kg</option>
+                                            <option value="m">m</option>
+                                            <option value="set">set</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select name="harga_satuan_produk[]" class="form-select">
+                                            <option value="">Pilih Harga Satuan</option>
+                                            <option value="10000">10.000</option>
+                                            <option value="50000">50.000</option>
+                                            <option value="100000">100.000</option>
+                                            <option value="500000">500.000</option>
+                                            <option value="1000000">1.000.000</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="text" name="keterangan[]" class="form-control">
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-danger btn-sm btn-remove">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
+
+                    <button type="button" id="btnAddItem" class="btn btn-primary btn-sm mt-2 disabled">
+                        <i class="fa-solid fa-plus"></i> Tambah Item
+                    </button>
+
 
                 </div>
 
@@ -136,43 +194,6 @@
     </div>
 </section>
 
-
-{{-- <div class="modal fade" id="modalSalesOrder" tabindex="-1" aria-labelledby="modalSalesOrderLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg"> <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalSalesOrderLabel">Cari Sales Order</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="input-group mb-3">
-          <input type="text" class="form-control" placeholder="Masukkan Nomor SO atau Nama Customer..." id="inputQuerySO">
-          <button class="btn btn-outline-secondary" type="button" id="btnFilterSO">Cari</button>
-        </div>
-
-        <div class="table-responsive">
-          <table class="table table-hover">
-            <thead>
-              <tr>
-                <th>No. SO</th>
-                <th>Tanggal</th>
-                <th>Customer</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="resultSalesOrder">
-              <tr>
-                <td colspan="4" class="text-center text-muted">Belum ada data.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-      </div>
-    </div>
-  </div>
-</div> --}}
 @endsection
 
 @section('custom-script')
@@ -185,36 +206,102 @@
     
     $(document).ready(function() {
         
+        // ===============================
+        // ADD ITEM
+        // ===============================
+        $('#btnAddItem').on('click', function() {
+
+            let newRow = `
+                <tr>
+                    <td>
+                        <input type="text" name="item_produk[]" class="form-control" required>
+                    </td>
+                    <td>
+                        <select name="satuan_produk[]" class="form-select">
+                            <option value="">Pilih Satuan</option>
+                            <option value="Hari">Hari</option>
+                            <option value="Orang">Orang</option>
+                            <option value="pcs">pcs</option>
+                            <option value="kg">kg</option>
+                            <option value="m">m</option>
+                            <option value="set">set</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select name="harga_satuan_produk[]" class="form-select">
+                            <option value="">Pilih Harga Satuan</option>
+                            <option value="10000">10.000</option>
+                            <option value="50000">50.000</option>
+                            <option value="100000">100.000</option>
+                            <option value="500000">500.000</option>
+                            <option value="1000000">1.000.000</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" name="keterangan[]" class="form-control">
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-danger btn-sm btn-remove">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+
+            $('#boqTable tbody').append(newRow);
+        });
+
+        // ===============================
+        // REMOVE ITEM
+        // ===============================
+        $('#boqTable').on('click', '.btn-remove', function() {
+
+            if ($('#boqTable tbody tr').length > 1) {
+                $(this).closest('tr').remove();
+            } else {
+                alert('Minimal harus ada 1 item.');
+            }
+
+        });
+        
+        
+        
+        
         loadPelangganDetails();
         initBrSelect2();
 
 
-        $('#id_sales_order').on('select2:select', function (e) {
+        $('#id_work_order').on('select2:select', function (e) {
             var data = e.params.data;
 
-            getSO(data).then(function(response) {
-                dataSO = response;
+            console.log('Work order dipilih:', data);
+            $("input[name='judul_order']").val(data.judul);
 
-                console.log('Data sales order berhasil dimuat:', dataSO);
+            
+            
+            // getSO(data).then(function(response) {
+            //     dataSO = response;
+
+            //     console.log('Data work order berhasil dimuat:', dataSO);
                 
-                if(dataSO) {
-                    // Isi field tanggal_so
-                    $("input[name='tanggal_so']").val(dataSO.tanggal_so);
-                    $("input[name='judul_order']").val(dataSO.judul_order);
-                    $("input[name='tanggal_mulai']").val(dataSO.tanggal_mulai);
-                    $("input[name='tanggal_selesai']").val(dataSO.tanggal_selesai);
-                    $("select[name='tidak_ada_po']").val(dataSO.tidak_ada_po);
-                    $("input[name='tanggal_po']").val(dataSO.tanggal_po);
-                    $("input[name='no_po']").val(dataSO.no_po);
-                    $("select[name='id_pelanggan']").val(dataSO.id_pelanggan).trigger('change');
-                    $("select[name='id_site_pelanggan']").val(dataSO.id_site_pelanggan).trigger('change');
-                }
+            //     if(dataSO) {
+            //         // Isi field tanggal_so
+            //         $("input[name='tanggal_so']").val(dataSO.tanggal_so);
+            //         $("input[name='judul_order']").val(dataSO.judul_order);
+            //         $("input[name='tanggal_mulai']").val(dataSO.tanggal_mulai);
+            //         $("input[name='tanggal_selesai']").val(dataSO.tanggal_selesai);
+            //         $("select[name='tidak_ada_po']").val(dataSO.tidak_ada_po);
+            //         $("input[name='tanggal_po']").val(dataSO.tanggal_po);
+            //         $("input[name='no_po']").val(dataSO.no_po);
+            //         $("select[name='id_pelanggan']").val(dataSO.id_pelanggan).trigger('change');
+            //         $("select[name='id_site_pelanggan']").val(dataSO.id_site_pelanggan).trigger('change');
+            //     }
                 
-            });
+            // });
         });
 
 
-        $("#id_sales_order").on('select2:clear', function (e) {
+        $("#id_work_order").on('select2:clear', function (e) {
             clearForm();
         });
 
@@ -222,13 +309,13 @@
 
 
     function clearForm() {
-        $('#workOrderForm')[0].reset();
-        $('#id_sales_order').val(null).trigger('change');
-        $('#id_pelanggan').val('').trigger('change');
-        $('#id_site_pelanggan').val('').trigger('change');
+        $('#boqForm')[0].reset();
+        // $('#id_work_order').val(null).trigger('change');
+        // $('#id_pelanggan').val('').trigger('change');
+        // $('#id_site_pelanggan').val('').trigger('change');
 
-        $("select[name='id_pelanggan']").val(null).trigger('change');
-        $("select[name='id_site_pelanggan']").val(null).trigger('change');
+        $("select[name='id_work_order']").val(null).trigger('change');
+        // $("select[name='id_site_pelanggan']").val(null).trigger('change');
     }
 
 
@@ -247,14 +334,14 @@
 
     
     function initBrSelect2() {
-        $('#id_sales_order').select2({
-            placeholder: 'Pilih atau ketik Sales Order',
+        $('#id_work_order').select2({
+            placeholder: 'Pilih atau ketik Work Order',
             // theme: 'bootstrap-5', // Tambahkan jika pakai Bootstrap 5 agar rapi
             // tags: true,
             allowClear: true,
             minimumInputLength: 2,
             ajax: {
-                url: "{{ route('sales-orders.select2') }}",
+                url: "{{ route('work-orders.select2') }}",
                 dataType: 'json',
                 delay: 250,
                 data: function (params) {

@@ -23,6 +23,9 @@
 
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
     
+    <link href="https://unpkg.com/filepond/dist/filepond.min.css" rel="stylesheet">
+
+    
     {{-- App --}}
     <link rel="stylesheet" href="{{ asset('assets/css/app.css') }}">
     
@@ -38,6 +41,114 @@
       table.dataTable th {
           vertical-align: top !important;
       }
+
+      .loader-dots span:nth-child(2) {
+          animation-delay: 0.2s;
+      }
+
+      .loader-dots span:nth-child(3) {
+          animation-delay: 0.4s;
+      }
+
+      #global-loader {
+          position: fixed;
+          inset: 0;
+          background: rgba(255, 255, 255, 0.65);
+          backdrop-filter: blur(2px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+      }
+
+      .loader-dots span {
+          width: 14px;
+          height: 14px;
+          margin: 0 8px;
+          border-radius: 50%;
+          display: inline-block;
+          animation: bounce 0.6s infinite alternate;
+      }
+
+      /* RGB Colors */
+      .dot-red {
+          background: #ea4335;
+      }
+
+      .dot-green {
+          background: #34a853;
+          animation-delay: 0.2s;
+      }
+
+      .dot-blue {
+          background: #4285f4;
+          animation-delay: 0.4s;
+      }
+
+      @keyframes bounce {
+          from {
+              transform: translateY(0);
+              opacity: 0.6;
+          }
+          to {
+              transform: translateY(-12px);
+              opacity: 1;
+          }
+      }
+
+        #scientific-toolbar{
+            position:absolute;
+            background:white;
+            border:1px solid #ddd;
+            border-radius:8px;
+            padding:10px;
+            display:none;
+            z-index:9999;
+            box-shadow:0 4px 12px rgba(0,0,0,0.15);
+            max-width:350px;
+        }
+
+        .toolbar-header{
+            font-size:12px;
+            font-weight:bold;
+            margin-bottom:5px;
+            color:#666;
+        }
+
+        .toolbar-group span{
+            display:inline-block;
+            padding:5px 7px;
+            margin:2px;
+            cursor:pointer;
+            border-radius:4px;
+            font-size:14px;
+        }
+
+        .toolbar-group span:hover{
+            background:#f2f2f2;
+        }
+
+        .attachment-card{
+
+         transition: all .2s;
+
+        }
+
+        .attachment-card:hover{
+
+            box-shadow:0 4px 10px rgba(0,0,0,0.1);
+
+        }
+
+        .attachment-icon{
+
+            height:120px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            flex-direction:column;
+
+        }
 
     </style>
 

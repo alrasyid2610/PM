@@ -38,7 +38,7 @@
                 <div class="card-body">
 
                     {{-- ================= INFORMASI ORDER ================= --}}
-                    <h6 class="fw-bold mb-3">Informasi Order</h6>
+                    <h6 class="fw-bold mb-1">Informasi Order</h6>
 
                     {{-- <div class="row mb-3 align-items-center">
                         <label class="form-label col-md-2 col-form-label required">No SO</label>
@@ -47,215 +47,172 @@
                         </div>
                     </div> --}}
 
-                    <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-form-label required">Tanggal SO</label>
-                        <div class="col-md-10">
+                    <div class="row mb-4">
+                        <div class="col-md-12 col-lg-3 mb-3">
+                            <label class="form-label required">Tanggal SO</label>
                             <input type="date" name="tanggal_so" class="form-control" required>
                         </div>
-                    </div>
 
-                    <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-form-label">Judul Order</label>
-                        <div class="col-md-10">
+
+                        <div class="col-md-12 col-lg-9 mb-3">
+                            <label class="form-label required">Judul Order</label>
                             <input type="text" name="judul_order" class="form-control">
                         </div>
-                    </div>
 
-                    <hr>
 
-                    <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-lg-2 col-form-label">Tidak Ada PO</label>
-                        <div class="col-md-2">
+                        <h6 class="fw-bold mb-1">PO</h6>
+                        <div class="col-md-12 col-lg-3 mb-3">
+                            <label class="form-label">Tidak Ada PO</label>
                             <select name="tidak_ada_po" class="form-select">
                                 <option value="1">Ada PO</option>
                                 <option value="0">Tidak Ada PO</option>
                             </select>
                         </div>
 
-                        <label class="form-label col-md-2 col-form-label">No PO</label>
-                        <div class="col-md-4">
-                            <input type="text" name="no_po" class="form-control">
-                        </div>
-                    </div>
-
-                    <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-form-label">Tanggal PO</label>
-                        <div class="col-md-4">
+                        <div class="col-md-12 col-lg-3 mb-3">
+                            <label class="form-label">Tanggal PO</label>
                             <input type="date" name="tanggal_po" class="form-control">
                         </div>
-                    </div>
 
-                    <hr>
+                        <div class="col-md-12 col-lg-6 mb-3">
+                            <label class="form-label">No PO</label>
+                            <input type="text" name="no_po" class="form-control">
+                        </div>
 
-                    {{-- ================= DELIVERY ================= --}}
-                    <h6 class="fw-bold mb-3">Delivery</h6>
+                        <h6 class="fw-bold mb-1">Delivery</h6>
 
-                    <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-form-label">Tanggal Mulai</label>
-                        <div class="col-md-4">
+                        <div class="col-md-12 col-lg-3 mb-3">
+                            <label class="form-label">Tanggal Mulai</label>
                             <input type="date" name="tanggal_mulai" class="form-control">
                         </div>
 
-                        <label class="form-label col-md-2 col-form-label">Tanggal Selesai</label>
-                        <div class="col-md-4">
+                        <div class="col-md-12 col-lg-3 mb-3">
+                            <label class="form-label">Tanggal Selesai</label>
                             <input type="date" name="tanggal_selesai" class="form-control">
                         </div>
-                    </div>
 
-                    <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-form-label">Office</label>
-                        <div class="col-md-4">
-                            <input type="number" name="id_office" class="form-control">
+                        <div class="col-md-12 col-lg-6 mb-3">
+                            <label class="form-label">Office</label>
+                            <select name="id_office" class="form-select">
+                                <option value="">Pilih Office</option>
+                                <option value="1">Pramatek Jakarta</option>
+                                <option value="2">Pramatek Bandung</option>
+                            </select>
                         </div>
-                    </div>
+                        
 
-                    <hr>
+                        <h6 class="fw-bold mb-1">Pelanggan</h6>
 
-                    {{-- ================= PELANGGAN ================= --}}
-                    <h6 class="fw-bold mb-3">Pelanggan</h6>
-
-                    <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-form-label required">Pelanggan</label>
-                        <div class="col-md-4">
+                        <div class="col-md-12 col-lg-3 mb-3">
+                            <label class="form-label required">Pelanggan</label>
                             <select name="id_pelanggan" id="id_pelanggan" class="form-select" required>
                                 <option value="">Pilih Pelanggan</option>
                             </select>
                         </div>
 
-                        <label class="form-label col-md-2 col-form-label">Site</label>
-                        <div class="col-md-4">
-                            {{-- <input type="number" name="id_site_pelanggan" class="form-control"> --}}
+                        <div class="col-md-12 col-lg-3 mb-3">
+                            <label class="form-label">Site</label>
                             <select name="id_site_pelanggan" id="id_site_pelanggan" class="form-select">
                                 <option value="">Pilih Site</option>
                             </select>
                         </div>
-                    </div>
 
-                    <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-form-label">PIC</label>
-                        <div class="col-md-4">
+                        <div class="col-md-12 col-lg-6 mb-3">
+                            <label class="form-label">PIC</label>
                             <select name="id_pic_pelanggan" id="id_pic_pelanggan" class="form-select">
                                 <option value="">Pilih PIC</option>
                             </select>
                         </div>
-                    </div>
 
-                    <hr>
+                        {{-- ================= Delivery ================= --}}
+                        <h6 class="fw-bold mb-1">Delivery</h6>
 
-                    {{-- ================= Delivery ================= --}}
-                    <h6 class="fw-bold mb-3">Delivery</h6>
-
-                    <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-form-label">Pelanggan</label>
-                        <div class="col-md-4">
+                        <div class="col-md-12 col-lg-4 mb-3">
+                            <label class="form-label">Pelanggan</label>
                             <select name="id_pelanggan_delivery" class="form-select" required>
                                 <option value="">Pilih Pelanggan</option>
                             </select>
                         </div>
 
-                        <label class="form-label col-md-2 col-form-label">Site</label>
-                        <div class="col-md-4">
-                            {{-- <input type="number" name="id_site_pelanggan_delivery" class="form-control"> --}}
-
+                        <div class="col-md-12 col-lg-4 mb-3">
+                            <label class="form-label">Site</label>
                             <select name="id_site_pelanggan_delivery" id="id_site_pelanggan_delivery" class="form-select">
                                 <option value="">Pilih Site</option>
                             </select>
                         </div>
-                    </div>
 
-                    <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-form-label">PIC</label>
-                        <div class="col-md-4">
+                        <div class="col-md-12 col-lg-4 mb-3">
+                            <label class="form-label">PIC</label>
                             <select name="id_pic_pelanggan_delivery" id="id_pic_pelanggan_delivery" class="form-select">
                                 <option value="">Pilih PIC</option>
                             </select>
                         </div>
-                    </div>
 
-                    <hr>
+                        {{-- ================= PAYMENT ================= --}}
+                        <h6 class="fw-bold mb-1">Payment</h6>
 
-                    {{-- ================= PAYMENT ================= --}}
-                    <h6 class="fw-bold mb-3">Payment</h6>
-
-                    <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-form-label">Pelanggan</label>
-                        <div class="col-md-4">
+                        <div class="col-md-12 col-lg-4 mb-3">
+                            <label class="form-label">Pelanggan</label>
                             <select name="id_pelanggan_payment" class="form-select" required>
                                 <option value="">Pilih Pelanggan</option>
                             </select>
                         </div>
 
-                        <label class="form-label col-md-2 col-form-label">Site</label>
-                        <div class="col-md-4">
-                            {{-- <input type="number" name="id_site_pelanggan_payment" class="form-control"> --}}
+                        <div class="col-md-12 col-lg-4 mb-3">
+                            <label class="form-label">Site</label>
                             <select name="id_site_pelanggan_payment" id="id_site_pelanggan_payment_select" class="form-select">
                                 <option value="">Pilih Site</option>
                             </select>
                         </div>
-                    </div>
 
-                    <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-form-label">PIC</label>
-                        <div class="col-md-4">
+                        <div class="col-md-12 col-lg-4 mb-3">
+                            <label class="form-label">PIC</label>
                             <select name="id_pic_pelanggan_payment" id="id_pic_pelanggan_payment" class="form-select">
                                 <option value="">Pilih PIC</option>
                             </select>
                         </div>
-                    </div>
 
-                    <hr>
+                        {{-- ================= PIC INTERNAL ================= --}}
+                        <h6 class="fw-bold mb-1">PIC</h6>
 
-                    {{-- ================= PIC INTERNAL ================= --}}
-                    <h6 class="fw-bold mb-3">PIC Internal</h6>
-
-                    <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-form-label">PIC Input</label>
-                        <div class="col-md-4">
+                        <div class="col-md-12 col-lg-3 mb-3">
+                            <label class="form-label">PIC Input</label>
                             <input type="text" name="pic_input" class="form-control">
                         </div>
 
-                        <label class="form-label col-md-2 col-form-label">PIC Order</label>
-                        <div class="col-md-4">
+                        <div class="col-md-12 col-lg-3 mb-3">
+                            <label class="form-label">PIC Order</label>
                             <input type="text" name="pic_order" class="form-control">
                         </div>
-                    </div>
 
-                    <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-form-label">Marketing Internal</label>
-                        <div class="col-md-4">
+                        <div class="col-md-12 col-lg-3 mb-3">
+                            <label class="form-label">Marketing Internal</label>
                             <input type="text" name="pic_marketing_internal" class="form-control">
                         </div>
 
-                        <label class="form-label col-md-2 col-form-label">Marketing Eksternal</label>
-                        <div class="col-md-4">
+                        <div class="col-md-12 col-lg-3 mb-3">
+                            <label class="form-label">Marketing Eksternal</label>
                             <input type="text" name="pic_marketing_eksternal" class="form-control">
                         </div>
-                    </div>
 
-                    <hr>
+                        {{-- ================= STATUS ================= --}}
+                        <h6 class="fw-bold mb-1">Status</h6>
 
-                    {{-- ================= STATUS ================= --}}
-                    <h6 class="fw-bold mb-3">Status</h6>
-
-                    <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-form-label">Status</label>
-                        <div class="col-md-4">
+                        <div class="col-md-12 col-lg-3 mb-3">
+                            <label class="form-label">Status</label>
                             <input type="text" name="status" class="form-control" value="Draft">
                         </div>
-                    </div>
 
-                    <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-form-label">Keterangan Status</label>
-                        <div class="col-md-10">
+                        <div class="col-md-12 col-lg-9 mb-3">
+                            <label class="form-label">Keterangan Status</label>
                             <textarea name="keterangan_status" class="form-control" rows="2"></textarea>
                         </div>
-                    </div>
 
-                    <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-form-label">Keterangan</label>
-                        <div class="col-md-10">
+                        <div class="col-md-12 col-lg-12 mb-3">
+                            <label class="form-label">Keterangan</label>
                             <textarea name="keterangan" class="form-control" rows="3"></textarea>
                         </div>
+                        
                     </div>
 
                 </div>
