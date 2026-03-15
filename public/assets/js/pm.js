@@ -130,7 +130,6 @@ $(document).on("click", ".attachment-image", function () {
 function renderAttachments(attachments) {
     let files = [];
 
-    // jika null / kosong
     if (!attachments) {
         $("#attachmentPreview").html(
             `<div class="text-muted">Tidak ada attachment</div>`,
@@ -138,7 +137,6 @@ function renderAttachments(attachments) {
         return;
     }
 
-    // jika string json
     try {
         files =
             typeof attachments === "string"
@@ -157,25 +155,25 @@ function renderAttachments(attachments) {
 
     let html = "";
 
-    let deleteBtn = "";
-
     files.forEach((file) => {
         let url = "/storage/" + file;
         let ext = file.split(".").pop().toLowerCase();
+        let name = file.split("/").pop();
+
+        let deleteBtn = "";
+
+        if ($(".btn-edit-context").hasClass("editing")) {
+            deleteBtn = `
+                <button 
+                    class="btn btn-sm btn-danger btn-delete-attachment"
+                    data-file="${file}">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            `;
+        }
 
         let preview = "";
 
-        console.log($(".btn-edit-context").hasClass("editing"), "kocak");
-        if ($(".btn-edit-context").hasClass("editing")) {
-            deleteBtn = `
-            <button 
-                class="btn btn-sm btn-danger btn-delete-attachment"
-                data-file="${file}">
-                <i class="fa-solid fa-trash"></i>
-            </button>`;
-        }
-
-        // preview gambar
         if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) {
             preview = `
                 <img src="${url}" 
@@ -183,16 +181,10 @@ function renderAttachments(attachments) {
                      style="height:120px;object-fit:cover;cursor:pointer;">
             `;
         } else {
-            // selain gambar hanya icon + download
             preview = `
                 <div class="attachment-icon">
-
                     <i class="fa-solid fa-file fa-2x text-secondary"></i>
-
-                    <div class="small mt-1">
-                        ${ext.toUpperCase()}
-                    </div>
-
+                    <div class="small mt-1">${ext.toUpperCase()}</div>
                 </div>
             `;
         }
@@ -200,19 +192,28 @@ function renderAttachments(attachments) {
         html += `
             <div class="col-md-3">
 
+                <input type="hidden" name="existing_attachments[]" value="${file}">
+
                 <div class="attachment-card border rounded p-2 text-center">
 
                     ${preview}
+
+                    <p class="small mt-2">${name}</p>
+
                     <div class="mt-2 d-flex justify-content-center gap-2">
 
                         <a href="${url}" 
-                            download
-                            class="btn btn-sm btn-primary">
-                            <i class="fa-solid fa-download"></i>
+                           download
+                           class="btn btn-sm btn-primary">
+                           <i class="fa-solid fa-download"></i>
                         </a>
+
                         ${deleteBtn}
+
                     </div>
+
                 </div>
+
             </div>
         `;
     });

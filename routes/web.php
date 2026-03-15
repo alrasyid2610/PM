@@ -250,11 +250,17 @@ Route::prefix('/business-estates')
             ->name('index');
         Route::get('/data', [BusinessEstateController::class, 'data'])
             ->name('data');
+
+        Route::get('/create', [BusinessEstateController::class, 'create'])
+            ->name('create');
+        Route::get('/{id}', [BusinessEstateController::class, 'show'])->name('show');
+
+
         Route::get('/{id}/detail', [BusinessEstateController::class, 'detail'])
             ->name('detail')
             ->whereNumber('id');
-        Route::get('/create', [BusinessEstateController::class, 'create'])
-            ->name('create');
+
+
 
         Route::post('/store', [BusinessEstateController::class, 'store'])
             ->name('store');

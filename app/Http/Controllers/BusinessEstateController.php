@@ -13,6 +13,10 @@ class BusinessEstateController extends Controller
     //
     public function index()
     {
+        return view('business-estates.index', [
+            'title' => 'Business Estate'
+        ]);
+
         return view('master.index', [
             'title' => 'Business Estate',
             'routePrefix' => 'business-estates',
@@ -39,10 +43,6 @@ class BusinessEstateController extends Controller
 
         $dt = DataTables::of($data)
             ->addIndexColumn()
-            ->addColumn('action', function ($row) {
-                return '<button>Edit</button>';
-            })
-            ->rawColumns(['action'])
             ->make(true)
             ->getData();
 
@@ -155,8 +155,10 @@ class BusinessEstateController extends Controller
         ]);
     }
 
-    public function update(Request $request)
+    public function update(Request $request, $id)
     {
+
+
         $validated = $request->validate([
             'nama'           => 'required|string|max:255',
             'kode'           => 'nullable|string|max:50',
@@ -166,40 +168,34 @@ class BusinessEstateController extends Controller
             'website'        => 'nullable|string|max:255',
             'pemilik'        => 'nullable|string|max:255',
             'pengurus'       => 'nullable|string|max:255',
-            'is_aktif'       => 'required|in:0,1',
         ]);
 
+        $validated['is_aktif'] = $request->is_aktif;
+
+
+
         $before = DB::table('business_estates')
-            ->where('id_bestate', $request->input('id_bestate'))
+            ->where('id_bestate', $id)
             ->get()->toJson();
 
-        // DB::table('audit_logs')
-        // ->insert();
-
         DB::table('business_estates')
-            ->where('id_bestate', $request->input('id_bestate'))
+            ->where('id_bestate', $id)
             ->update([
                 ...$validated,
                 'updated_at' => now()
             ]);
 
         $after = DB::table('business_estates')
-            ->where('id_bestate', $request->input('id_bestate'))
+            ->where('id_bestate', $id)
             ->get()->toJson();
 
-        DB::table('audit_logs')
-            ->insert(
-                [
-                    'nama_table' => 'business_estates',
-                    'row_id' => $request->input('id_bestate'),
-                    'action' => 'update',
-                    'old_value' => $before,
-                    'new_value' => $after,
-                    'created_by' => Auth::user()->id,
-                    'created_at' => now()
-                ]
-            );
-
+        saveAudit(
+            'business_estates',
+            $id,
+            'update',
+            $before,
+            $after
+        );
 
         session()->forget(['editing_bestate_id', 'mode']);
 
@@ -207,5 +203,19 @@ class BusinessEstateController extends Controller
             'success' => true,
             'message' => 'Business Estate berhasil diperbarui'
         ]);
+    }
+
+
+    public function show(Request $request)
+    {
+
+        $id = $request->id;
+
+        $data = DB::table('business_estates')->where('id_bestate', $id)->first();
+        if (!$data) {
+            return response()->json(['message' => 'Testing parameter tidak ditemukan'], 404);
+        }
+
+        return response()->json($data);
     }
 }

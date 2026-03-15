@@ -88,6 +88,13 @@ class TestingKelompokMatriksSampleController extends Controller
         ]);
 
         try {
+
+            $before = DB::table('testing_kelompok_matriks_samples')
+                ->where('id_testing_kelompok_matriks_sample', $id)
+                ->get()
+                ->toJson();
+
+
             DB::table('testing_kelompok_matriks_samples')
                 ->where('id_testing_kelompok_matriks_sample', $id)
                 ->update([
@@ -97,6 +104,19 @@ class TestingKelompokMatriksSampleController extends Controller
                     'keterangan' => $validated['keterangan'] ?? null,
                     'updated_at' => now(),
                 ]);
+
+            $after = DB::table('testing_kelompok_matriks_samples')
+                ->where('id_testing_kelompok_matriks_sample', $id)
+                ->get()
+                ->toJson();
+
+            saveAudit(
+                'testing_kelompok_matriks_samples',
+                $id,
+                'update',
+                $before,
+                $after
+            );
 
             return response()->json([
                 'success' => true,

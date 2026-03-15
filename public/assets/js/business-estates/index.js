@@ -1,5 +1,5 @@
 let selectedRow = {
-    id_testing_parameter: null,
+    id_bestate: null,
 };
 
 let table;
@@ -13,8 +13,8 @@ $(document).ready(function () {
             if ($(event.target).closest("button").length) return;
             const data = table.row(this).data();
             if (!data) return;
-            selectedRow.id_testing_parameter = data.id_testing_parameter;
-            loadDetail(data.id_testing_parameter);
+            selectedRow.id_bestate = data.id_bestate;
+            loadDetail(data.id_bestate);
             $(tableId + " tr").removeClass("table-active");
             $(this).addClass("table-active");
 
@@ -46,10 +46,10 @@ $(document).ready(function () {
 
 let attachmentData = [];
 
-function loadDetail(id_testing_parameter) {
+function loadDetail(id_bestate) {
     $("#detailContent").html("Loading...");
 
-    $.get(window.route.update + id_testing_parameter, function (res) {
+    $.get(window.route.update + id_bestate, function (res) {
         console.log(res);
         const html = `
             <form class="row g-3" id="detailForm">
@@ -57,81 +57,61 @@ function loadDetail(id_testing_parameter) {
                 <input type="hidden" name="_method" value="PUT">
                 <div class="col-md-12">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h3>Testing Parameter</h3>
+                        <h3>Business Estate</h3>
                         <div class="btn-group">
-                            <button class="btn btn-warning btn-sm btn-edit-context" title="Edit Testing Parameter">
+                            <button class="btn btn-warning btn-sm btn-edit-context" title="Edit Business Estate">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
                         </div>
                     </div>
 
-                    <div class="row mb-4">
-                        <div class="col-md-12 col-lg-3 mb-3">
-                            <label class="form-label">Kelompok</label>
-                            <select name="kelompok" id="detail_kelompok" class="form-select disabled">
+                    <div class="row mb-4 g-3">
+                        <div class="col-md-6">
+                            <label class="form-label required">Nama Estate</label>
+                            <input type="text" name="nama" class="form-control" value="${res.nama}" required>
+                        </div>
 
-                                <option value="Fisika" ${res.kelompok === "Fisika" ? "selected" : ""}>Fisika</option>
+                        <div class="col-md-3">
+                            <label class="form-label">Kode</label>
+                            <input type="text" name="kode" class="form-control" value="${res.kode}">
+                        </div>
 
-                                <option value="Kimia Logam" ${res.kelompok === "Kimia Logam" ? "selected" : ""}>Kimia Logam</option>
-
-                                <option value="Kimia Non Logam" ${res.kelompok === "Kimia Non Logam" ? "selected" : ""}>Kimia Non Logam</option>
-
-                                <option value="Kimia Organik" ${res.kelompok === "Kimia Organik" ? "selected" : ""}>Kimia Organik</option>
-
-                                <option value="Mikrobiologi" ${res.kelompok === "Mikrobiologi" ? "selected" : ""}>Mikrobiologi</option>
-
+                        <div class="col-md-3">
+                            <label class="form-label">Status</label>
+                            <select name="is_aktif" class="form-select">
+                                <option value="1" ${res.is_aktif == "1" ? "selected" : ""}>Aktif</option>
+                                <option value="0" ${res.is_aktif == "0" ? "selected" : ""}>Non Aktif</option>
                             </select>
                         </div>
 
-                        <div class="col-md-12 col-lg-3 mb-3">
-                            <label class="form-label required">Kode</label>
-                            <input type="text" name="kode" class="form-control disabled" value="${res.kode}" required>
+                        <div class="col-md-12">
+                            <label class="form-label required">Alamat</label>
+                            <textarea name="alamat" class="form-control" rows="3" value="${res.alamat ?? ""}" required></textarea>
                         </div>
 
-                        <div class="col-md-12 col-lg-3 mb-3">
-                            <label class="form-label required">Judul Indonesia</label>
-                            <input type="text" name="judul_indonesia" class="form-control disabled" value="${res.judul_indonesia}" required>
+                        <div class="col-md-4">
+                            <label class="form-label">Provinsi</label>
+                            <input type="text" name="provinsi" class="form-control" value="${res.provinsi}">
                         </div>
 
-                        <div class="col-md-12 col-lg-3 mb-3">
-                            <label class="form-label">Judul Inggris</label>
-                            <input type="text" name="judul_inggris" class="form-control disabled" value="${res.judul_inggris ?? ""}">
+                        <div class="col-md-4">
+                            <label class="form-label">Kota / Kabupaten</label>
+                            <input type="text" name="kota_kabupaten" class="form-control" value="${res.kota_kabupaten}">
                         </div>
 
-                        <div class="col-md-12 col-lg-4 mb-3">
-                            <label class="form-label">Rumus Empiris</label>
-                            <input type="text" name="rumus_empiris" class="form-control disabled" value="${res.rumus_empiris ?? ""}">
+                        <div class="col-md-4">
+                            <label class="form-label">Website</label>
+                            <input type="text" name="website" class="form-control" value="${res.website ?? ""}">
                         </div>
 
-                        <div class="col-md-12 col-lg-4 mb-3">
-                            <label class="form-label">Judul IUPAC</label>
-                            <input type="text" name="judul_iupac" class="form-control disabled" value="${res.judul_iupac ?? ""}">
+                        <div class="col-md-6">
+                            <label class="form-label">Pemilik</label>
+                            <input type="text" name="pemilik" class="form-control" value="${res.pemilik ?? ""}">
                         </div>
 
-                        <div class="col-md-12 col-lg-4 mb-3">
-                            <label class="form-label">Referensi</label>
-                            <input type="text" name="referensi" class="form-control disabled" value="${res.referensi ?? ""}">
-                        </div>
-
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label">Keterangan</label>
-                            <textarea name="keterangan" class="form-control disabled" rows="3">${res.keterangan ?? ""}</textarea>
-                        </div>
-
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label">Attachment</label>
-                            <div id="attachmentPreview" class="row g-3"></div>
-
-                            <div id="attachmentUploader" class="mt-3" style="display:none">
-
-                                <input 
-                                type="file"
-                                class="filepond-edit"
-                                name="attachments[]"
-                                multiple>
-
-                            </div>
-                            
+                        <div class="col-md-6">
+                            <label class="form-label">Pengurus</label>
+                            <input type="text" name="pengurus" class="form-control" value="${res.pengurus ?? ""}">
                         </div>
                     </div>
                 </div>
@@ -224,14 +204,14 @@ function submitForm() {
 
     Notify.confirm("Simpan Data?", function () {
         $.ajax({
-            url: window.route.update + selectedRow.id_testing_parameter,
+            url: window.route.update + selectedRow.id_bestate,
             method: "POST", // gunakan POST + spoof PUT
             data: formData,
             processData: false,
             contentType: false,
             success: function (response) {
                 Notify.success("Data berhasil diperbarui");
-                loadDetail(selectedRow.id_testing_parameter);
+                loadDetail(selectedRow.id_bestate);
             },
 
             error: function () {

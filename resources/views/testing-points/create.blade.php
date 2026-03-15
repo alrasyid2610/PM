@@ -13,7 +13,7 @@
             </div>
 
             <a href="{{ route('testing-points.index') }}"
-               class="btn btn-secondary btn-sm">
+                class="btn btn-secondary btn-sm">
                 Kembali
             </a>
         </div>
@@ -28,55 +28,57 @@
                     <div class="mb-3">
                         <label class="form-label required">Testing Standard</label>
                         <select id="id_testing_standard"
-                                name="id_testing_standard"
-                                class="form-select"
-                                required></select>
+                            name="id_testing_standard"
+                            class="form-select"
+                            required></select>
                     </div>
 
                     {{-- FK Matriks Sample --}}
                     <div class="mb-3">
                         <label class="form-label required">Testing Matriks Sample</label>
                         <select id="id_testing_matriks_sample"
-                                name="id_testing_matriks_sample"
-                                class="form-select"
-                                required></select>
+                            name="id_testing_matriks_sample"
+                            class="form-select"
+                            required></select>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label required">Nama</label>
                         <input type="text"
-                               class="form-control"
-                               name="nama"
-                               required>
+                            class="form-control"
+                            name="nama"
+                            required>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Deskripsi</label>
                         <textarea class="form-control"
-                                  name="deskripsi"
-                                  rows="3"></textarea>
+                            name="deskripsi"
+                            rows="3"></textarea>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Nomor Halaman</label>
                         <input type="text"
-                               class="form-control"
-                               name="nomor_halaman">
+                            class="form-control"
+                            name="nomor_halaman">
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Attachment</label>
-                        <input type="text"
-                               class="form-control"
-                               name="attachment"
-                               placeholder="Nama file / path file">
+
+                        <input
+                            type="file"
+                            class="filepond"
+                            name="attachments[]"
+                            multiple>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label required">Status</label>
                         <select name="is_aktif"
-                                class="form-select"
-                                required>
+                            class="form-select"
+                            required>
                             <option value="1">Aktif</option>
                             <option value="0">Tidak Aktif</option>
                         </select>
@@ -85,8 +87,8 @@
                     <div class="mb-3">
                         <label class="form-label">Keterangan</label>
                         <textarea class="form-control"
-                                  name="keterangan"
-                                  rows="3"></textarea>
+                            name="keterangan"
+                            rows="3"></textarea>
                     </div>
 
                 </div>
@@ -98,7 +100,7 @@
                 </button>
 
                 <a href="{{ route('testing-points.index') }}"
-                   class="btn btn-secondary btn-sm">
+                    class="btn btn-secondary btn-sm">
                     Batal
                 </a>
             </div>
@@ -111,70 +113,92 @@
 
 @section('custom-script')
 <script>
+    $(document).ready(function() {
 
-$(document).ready(function() {
+        FilePond.create(document.querySelector('.filepond'), {
 
-    // Select2 Testing Standard
-    $('#id_testing_standard').select2({
-        placeholder: 'Pilih Testing Standard...',
-        ajax: {
-            url: "{{ route('testing-standards.data') }}",
-            dataType: 'json',
-            processResults: function(data) {
-                return {
-                    results: data.data.map(item => ({
-                        id: item.id_testing_standard,
-                        text: item.nomor + ' - ' + item.judul
-                    }))
-                };
+            allowMultiple: true,
+
+            acceptedFileTypes: [
+                'image/*',
+                'application/pdf',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            ],
+
+            labelIdle: 'Drag & Drop file atau <span class="filepond--label-action">Browse</span>'
+
+        });
+
+        // Select2 Testing Standard
+        $('#id_testing_standard').select2({
+            placeholder: 'Pilih Testing Standard...',
+            ajax: {
+                url: "{{ route('testing-standards.data') }}",
+                dataType: 'json',
+                processResults: function(data) {
+                    return {
+                        results: data.data.map(item => ({
+                            id: item.id_testing_standard,
+                            text: item.nomor + ' - ' + item.judul
+                        }))
+                    };
+                }
             }
-        }
-    });
+        });
 
-    // Select2 Matriks Sample
-    $('#id_testing_matriks_sample').select2({
-        placeholder: 'Pilih Matriks Sample...',
-        ajax: {
-            url: "{{ route('testing-matriks-samples.data') }}",
-            dataType: 'json',
-            processResults: function(data) {
-                return {
-                    results: data.data.map(item => ({
-                        id: item.id_testing_matriks_sample,
-                        text: item.kode + ' - ' + item.judul_indonesia
-                    }))
-                };
-            }
-        }
-    });
-
-});
-
-
-$('#testingPointForm').submit(function(e) {
-
-    e.preventDefault();
-
-    Notify.confirm('Simpan Data?', function() {
-
-        $.ajax({
-            url: "{{ route('testing-points.store') }}",
-            method: "POST",
-            data: $('#testingPointForm').serialize(),
-
-            success: function(response) {
-                Notify.success('Testing point berhasil disimpan');
-                // Optional redirect
-                // window.location.href = "{{ route('testing-points.index') }}";
-            },
-
-            error: function(xhr) {
-                Notify.error('Gagal menyimpan testing point');
+        // Select2 Matriks Sample
+        $('#id_testing_matriks_sample').select2({
+            placeholder: 'Pilih Matriks Sample...',
+            ajax: {
+                url: "{{ route('testing-matriks-samples.data') }}",
+                dataType: 'json',
+                processResults: function(data) {
+                    return {
+                        results: data.data.map(item => ({
+                            id: item.id_testing_matriks_sample,
+                            text: item.kode + ' - ' + item.judul_indonesia
+                        }))
+                    };
+                }
             }
         });
 
     });
 
-});
+
+    $('#testingPointForm').submit(function(e) {
+        e.preventDefault();
+        let form = document.getElementById('testingPointForm');
+        let formData = new FormData(form);
+        FilePond
+            .find(document.querySelector('.filepond'))
+            .getFiles()
+            .forEach(fileItem => {
+
+                formData.append('attachments[]', fileItem.file);
+
+            });
+
+        Notify.confirm('Simpan Data?', function() {
+
+            $.ajax({
+                url: "{{ route('testing-points.store') }}",
+                method: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    Notify.success('Testing point berhasil disimpan');
+                },
+
+                error: function(xhr) {
+                    Notify.error('Gagal menyimpan testing point');
+                }
+            });
+
+        });
+
+    });
 </script>
 @endsection

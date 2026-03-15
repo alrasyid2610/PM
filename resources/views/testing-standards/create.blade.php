@@ -13,7 +13,7 @@
             </div>
 
             <a href="{{ route('testing-standards.index') }}"
-               class="btn btn-secondary btn-sm">
+                class="btn btn-secondary btn-sm">
                 Kembali
             </a>
         </div>
@@ -31,8 +31,7 @@
                             class="form-control"
                             id="nomor"
                             name="nomor"
-                            required
-                        >
+                            required>
                     </div>
 
                     <div class="mb-3">
@@ -42,8 +41,7 @@
                             class="form-control"
                             id="judul"
                             name="judul"
-                            required
-                        >
+                            required>
                     </div>
 
                     <div class="mb-3">
@@ -52,8 +50,7 @@
                             class="form-select"
                             id="is_aktif"
                             name="is_aktif"
-                            required
-                        >
+                            required>
                             <option value="1">Aktif</option>
                             <option value="0">Tidak Aktif</option>
                         </select>
@@ -66,8 +63,7 @@
                             type="file"
                             class="filepond"
                             name="attachments[]"
-                            multiple
-                        >
+                            multiple>
                     </div>
 
                 </div>
@@ -79,7 +75,7 @@
                 </button>
 
                 <a href="{{ route('testing-standards.index') }}"
-                   class="btn btn-secondary btn-sm">
+                    class="btn btn-secondary btn-sm">
                     Batal
                 </a>
             </div>
@@ -91,75 +87,60 @@
 @endsection
 @section('custom-script')
 <script>
+    $(document).ready(function() {
 
-$(document).ready(function () {
+        FilePond.create(document.querySelector('.filepond'), {
 
-    FilePond.create(document.querySelector('.filepond'), {
+            allowMultiple: true,
 
-        allowMultiple: true,
+            acceptedFileTypes: [
+                'image/*',
+                'application/pdf',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            ],
 
-        acceptedFileTypes: [
-            'image/*',
-            'application/pdf',
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        ],
-
-        labelIdle:
-            'Drag & Drop file atau <span class="filepond--label-action">Browse</span>'
-
-    });
-
-});
-
-
-$('#testingStandardForm').submit(function (e) {
-
-    e.preventDefault();
-
-    Notify.confirm('Simpan Data?', function () {
-
-        let form = document.getElementById('testingStandardForm');
-
-        let formData = new FormData(form);
-
-        FilePond
-            .find(document.querySelector('.filepond'))
-            .getFiles()
-            .forEach(fileItem => {
-
-                formData.append('attachments[]', fileItem.file);
-
-            });
-
-        $.ajax({
-
-            url: "{{ route('testing-standards.store') }}",
-
-            method: "POST",
-
-            data: formData,
-
-            processData: false,
-            contentType: false,
-
-            success: function (response) {
-
-                Notify.success('Testing standard berhasil disimpan');
-
-            },
-
-            error: function () {
-
-                Notify.error('Gagal menyimpan testing standard');
-
-            }
+            labelIdle: 'Drag & Drop file atau <span class="filepond--label-action">Browse</span>'
 
         });
 
     });
 
-});
 
+    $('#testingStandardForm').submit(function(e) {
+
+        e.preventDefault();
+
+        Notify.confirm('Simpan Data?', function() {
+
+            let form = document.getElementById('testingStandardForm');
+            let formData = new FormData(form);
+            FilePond
+                .find(document.querySelector('.filepond'))
+                .getFiles()
+                .forEach(fileItem => {
+
+                    formData.append('attachments[]', fileItem.file);
+
+                });
+
+            $.ajax({
+                url: "{{ route('testing-standards.store') }}",
+                method: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    Notify.success('Testing standard berhasil disimpan');
+                },
+                error: function() {
+                    Notify.error('Gagal menyimpan testing standard');
+                }
+
+            });
+
+        });
+
+    });
 </script>
 @endsection

@@ -190,6 +190,11 @@ class CommercialBuildingController extends Controller
             // =========================
             // UPDATE DATA
             // =========================
+            $before = DB::table('commercial_buildings')
+                ->where('id_building', $id)
+                ->get()
+                ->toJson();
+
             DB::table('commercial_buildings')
                 ->where('id_building', $id)
                 ->update([
@@ -204,6 +209,19 @@ class CommercialBuildingController extends Controller
                     'is_aktif'       => $validated['is_aktif'],
                     'updated_at'     => now(),
                 ]);
+
+            $after = DB::table('commercial_buildings')
+                ->where('id_building', $id)
+                ->get()
+                ->toJson();
+
+            saveAudit(
+                'commercial_buildings',
+                $id,
+                'update',
+                $before,
+                $after
+            );
 
             DB::commit();
 

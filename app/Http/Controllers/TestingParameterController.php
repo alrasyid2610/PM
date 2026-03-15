@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
+
 
 class TestingParameterController extends Controller
 {
@@ -46,6 +48,8 @@ class TestingParameterController extends Controller
 
     public function store(Request $request)
     {
+        $table = 'testing_parameters';
+
         $validated = $request->validate([
             'kelompok' => 'nullable|string|max:255',
             'kode' => 'required|string|max:100',
@@ -57,14 +61,9 @@ class TestingParameterController extends Controller
             'keterangan' => 'nullable|string',
         ]);
 
-        $files = [];
+        $upload = uploadAttachment($request->file('attachments'), $table);
+        $files = $upload['files'];
 
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $path = $file->store('attachments', 'public');
-                $files[] = $path;
-            }
-        }
 
         $id = DB::table('testing_parameters')->insertGetId([
             'kelompok' => $validated['kelompok'] ?? null,
@@ -105,6 +104,7 @@ class TestingParameterController extends Controller
 
     public function update(Request $request, $id)
     {
+
         $validated = $request->validate([
             'kelompok' => 'nullable|string|max:255',
             'kode' => 'required|string|max:100',
@@ -116,6 +116,8 @@ class TestingParameterController extends Controller
             'keterangan' => 'nullable|string'
         ]);
 
+
+
         try {
 
             // ambil data lama
@@ -123,18 +125,24 @@ class TestingParameterController extends Controller
                 ->where('id_testing_parameter', $id)
                 ->first();
 
-            $attachments = json_decode($data->attachment, true) ?? [];
-
-            // upload file baru
+            $existing = $request->existing_attachments ?? [];
+            $newFiles = [];
             if ($request->hasFile('attachments')) {
 
-                foreach ($request->file('attachments') as $file) {
+                $upload = uploadAttachment(
+                    $request->file('attachments'),
+                    'testing_parameters'
+                );
 
-                    $path = $file->store('attachments', 'public');
-
-                    $attachments[] = $path;
-                }
+                $newFiles = $upload['files'];
             }
+
+            $attachments = array_merge($existing, $newFiles);
+
+            $before = DB::table('testing_parameters')
+                ->where('id_testing_parameter', $id)
+                ->get()->toJson();
+
 
             DB::table('testing_parameters')
                 ->where('id_testing_parameter', $id)
@@ -153,12 +161,24 @@ class TestingParameterController extends Controller
                     'updated_at' => now(),
                 ]);
 
+            $after = DB::table('testing_parameters')
+                ->where('id_testing_parameter', $id)
+                ->get()->toJson();
+
+            saveAudit(
+                'testing_parameters',
+                $id,
+                'update',
+                $before,
+                $after
+            );
+
             return response()->json([
                 'success' => true,
                 'message' => 'Testing parameter berhasil diperbarui'
             ]);
         } catch (\Throwable $e) {
-
+            dd($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Terjadi kesalahan sistem',

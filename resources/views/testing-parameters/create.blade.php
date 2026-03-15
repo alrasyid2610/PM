@@ -54,12 +54,11 @@
                     <div class="mb-3">
                         <label class="form-label">Attachment</label>
 
-                        <input 
-                            type="file" 
+                        <input
+                            type="file"
                             class="filepond"
                             name="attachments[]"
-                            multiple
-                        >
+                            multiple>
                     </div>
                 </div>
             </div>
@@ -74,39 +73,37 @@
 @endsection
 @section('custom-script')
 <script>
+    $(document).ready(function() {
+        $('.select2').select2()
 
+        FilePond.create(document.querySelector('.filepond'), {
 
-$(document).ready(function() {
-    $('.select2').select2()
+            allowMultiple: true,
 
-    FilePond.create(document.querySelector('.filepond'), {
-        
-        allowMultiple: true,
+            acceptedFileTypes: [
+                'image/*',
+                'application/pdf',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            ],
 
-        acceptedFileTypes: [
-            'image/*',
-            'application/pdf',
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        ],
+            labelIdle: 'Drag & Drop file atau <span class="filepond--label-action">Browse</span>'
 
-        labelIdle: 'Drag & Drop file atau <span class="filepond--label-action">Browse</span>'
-
+        });
     });
-});
-    
+
     $('#testingParameterForm').submit(function(e) {
         e.preventDefault();
         Notify.confirm('Simpan Data?', function() {
-            
+
             let form = document.getElementById('testingParameterForm');
             let formData = new FormData(form);
             FilePond.find(document.querySelector('.filepond'))
-            .getFiles()
-            .forEach(fileItem => {
-                formData.append('attachments[]', fileItem.file);
-            });
-            
+                .getFiles()
+                .forEach(fileItem => {
+                    formData.append('attachments[]', fileItem.file);
+                });
+
             $.ajax({
                 url: "{{ route('testing-parameters.store') }}",
                 method: "POST",

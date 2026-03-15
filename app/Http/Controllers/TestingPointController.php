@@ -49,16 +49,22 @@ class TestingPointController extends Controller
 
     public function store(Request $request)
     {
+        $table = 'testing_points';
         $validated = $request->validate([
             'id_testing_standard' => 'required|integer',
             'id_testing_matriks_sample' => 'required|integer',
             'nama' => 'required|string|max:255',
             'deskripsi' => 'nullable|string',
             'nomor_halaman' => 'nullable|string|max:50',
-            'attachment' => 'nullable|string|max:255',
             'keterangan' => 'nullable|string',
             'is_aktif' => 'required|boolean',
         ]);
+
+        $upload = uploadAttachment($request->file('attachments'), $table);
+        $files = $upload['files'];
+
+
+        $validated['attachment'] = json_encode($files);
 
         $id = DB::table('testing_points')->insertGetId([
             ...$validated,
@@ -107,12 +113,48 @@ class TestingPointController extends Controller
             'is_aktif' => 'required|boolean',
         ]);
 
+        // ambil data lama
+        $data = DB::table('testing_points')
+            ->where('id_testing_point', $id)
+            ->get();
+
+        $before = $data->toJson();
+
+
+        $existing = $request->existing_attachments ?? [];
+        $newFiles = [];
+        if ($request->hasFile('attachments')) {
+
+            $upload = uploadAttachment(
+                $request->file('attachments'),
+                'testing_points'
+            );
+
+            $newFiles = $upload['files'];
+        }
+
+        $attachments = array_merge($existing, $newFiles);
+        $validated['attachment'] = json_encode($attachments);
+
+
         DB::table('testing_points')
             ->where('id_testing_point', $id)
             ->update([
                 ...$validated,
                 'updated_at' => now(),
             ]);
+
+        $after = DB::table('testing_points')
+            ->where('id_testing_point', $id)
+            ->get()->toJson();
+
+        saveAudit(
+            'testing_points',
+            $id,
+            'update',
+            $before,
+            $after
+        );
 
         return response()->json(['success' => true]);
     }

@@ -89,6 +89,12 @@ class TestingUnitController extends Controller
             'keterangan' => 'nullable|string',
         ]);
         try {
+
+            $before = DB::table('testing_units')
+                ->where('id_testing_unit', $id)
+                ->get()->toJson();
+
+
             DB::table('testing_units')->where('id_testing_unit', $id)->update([
                 'kode' => $validated['kode'],
                 'judul_indonesia' => $validated['judul_indonesia'],
@@ -96,6 +102,17 @@ class TestingUnitController extends Controller
                 'keterangan' => $validated['keterangan'] ?? null,
                 'updated_at' => now(),
             ]);
+
+            $after = DB::table('testing_units')->where('id_testing_unit', $id)
+                ->get()->toJson();
+
+            saveAudit(
+                'testing_units',
+                $id,
+                'update',
+                $before,
+                $after
+            );
 
             return response()->json([
                 'success' => true,

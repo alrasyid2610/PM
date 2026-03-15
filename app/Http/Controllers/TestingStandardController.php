@@ -44,6 +44,8 @@ class TestingStandardController extends Controller
     public function store(Request $request)
     {
 
+
+        $table = 'testing_standards';
         $validated = $request->validate([
             'nomor' => 'required|string|max:100',
             'judul' => 'required|string|max:255',
@@ -51,24 +53,14 @@ class TestingStandardController extends Controller
             'attachments.*' => 'nullable|file|max:5120'
         ]);
 
-        $attachments = [];
-
-        if ($request->hasFile('attachments')) {
-
-            foreach ($request->file('attachments') as $file) {
-
-                $path = $file->store('testing-standards', 'public');
-
-                $attachments[] = $path;
-            }
-        }
+        $upload = uploadAttachment($request->file('attachments'), $table);
+        $files = $upload['files'];
 
         $id = DB::table('testing_standards')->insertGetId([
-
             'nomor' => $request->nomor,
             'judul' => $request->judul,
             'is_aktif' => $request->is_aktif,
-            'attachment' => json_encode($attachments),
+            'attachment' => json_encode($files),
             'created_at' => now(),
             'updated_at' => now()
 
@@ -97,12 +89,35 @@ class TestingStandardController extends Controller
 
     public function update(Request $request, $id)
     {
+
         $validated = $request->validate([
             'nomor' => 'required|string|max:50',
             'judul' => 'required|string|max:255',
             'is_aktif' => 'required|boolean',
-            'attachment' => 'nullable|string|max:255',
         ]);
+
+
+
+        $data = DB::table('testing_standards')
+            ->where('id_testing_standard', $id)
+            ->get();
+
+        $before = $data->toJson();
+
+        $existing = $request->existing_attachments ?? [];
+        $newFiles = [];
+
+        if ($request->hasFile('attachments')) {
+
+            $upload = uploadAttachment(
+                $request->file('attachments'),
+                'testing_parameters'
+            );
+
+            $newFiles = $upload['files'];
+        }
+
+        $attachments = array_merge($existing, $newFiles);
 
         DB::table('testing_standards')
             ->where('id_testing_standard', $id)
@@ -110,9 +125,21 @@ class TestingStandardController extends Controller
                 'nomor' => $validated['nomor'],
                 'judul' => $validated['judul'],
                 'is_aktif' => $validated['is_aktif'],
-                'attachment' => $validated['attachment'] ?? null,
+                'attachment' => json_encode($attachments),
                 'updated_at' => now(),
             ]);
+
+        $after = DB::table('testing_standards')
+            ->where('id_testing_standard', $id)
+            ->get()->toJson();
+
+        saveAudit(
+            'testing_standards',
+            $id,
+            'update',
+            $before,
+            $after
+        );
 
         return response()->json([
             'success' => true,

@@ -98,6 +98,12 @@ class TestingMatriksSampleController extends Controller
             'keterangan' => 'nullable|string',
         ]);
 
+
+        $before = DB::table('testing_matriks_samples')
+            ->where('id_testing_matriks_sample', $id)
+            ->get()
+            ->toJson();
+
         DB::table('testing_matriks_samples')
             ->where('id_testing_matriks_sample', $id)
             ->update([
@@ -108,6 +114,21 @@ class TestingMatriksSampleController extends Controller
                 'keterangan' => $validated['keterangan'] ?? null,
                 'updated_at' => now(),
             ]);
+
+        $after = DB::table('testing_matriks_samples')
+            ->where('id_testing_matriks_sample', $id)
+            ->get()
+            ->toJson();
+
+        saveAudit(
+            'testing_matriks_samples',
+            $id,
+            'update',
+            $before,
+            $after
+        );
+
+
 
         return response()->json(['success' => true]);
     }

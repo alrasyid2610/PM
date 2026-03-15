@@ -38,6 +38,7 @@ function loadDetail(id) {
             <form id="detailForm" class="row g-3">
 
                 <input type="hidden" name="_token" value="${window.route.csrf}">
+                <input type="hidden" name="_method" value="PUT">
 
                 <div class="col-md-12">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -92,14 +93,6 @@ function loadDetail(id) {
                 </div>
 
                 <div class="col-md-12">
-                    <label class="form-label">Attachment</label>
-                    <input type="text"
-                           name="attachment"
-                           class="form-control"
-                           value="${res.attachment ?? ""}">
-                </div>
-
-                <div class="col-md-12">
                     <label class="form-label required">Status</label>
                     <select name="is_aktif" class="form-select">
                         <option value="1" ${res.is_aktif == 1 ? "selected" : ""}>Aktif</option>
@@ -113,10 +106,29 @@ function loadDetail(id) {
                               class="form-control">${res.keterangan ?? ""}</textarea>
                 </div>
 
+                <div class="col-md-12 mb-3">
+                    <label class="form-label">Attachment</label>
+                    <div id="attachmentPreview" class="row g-3"></div>
+
+                    <div id="attachmentUploader" class="mt-3" style="display:none">
+
+                        <input 
+                        type="file"
+                        class="filepond-edit"
+                        name="attachments[]"
+                        multiple>
+
+                    </div>
+                    
+                </div>
+
             </form>
         `;
 
         $("#detailContent").html(html);
+
+        attachmentData = res.attachment;
+        renderAttachments(attachmentData);
 
         // Init select2
         initDetailSelect2(res);
@@ -148,6 +160,10 @@ function loadDetail(id) {
                         <i class="fa-solid fa-check"></i>
                     </button>
                 `);
+
+                $("#attachmentUploader").show();
+                initFilepondEdit();
+                renderAttachments(attachmentData);
 
                 $(".btn-save-context").on("click", function (e) {
                     e.preventDefault();
@@ -224,14 +240,23 @@ function initDetailSelect2(res) {
 }
 
 function submitForm() {
-    const formData = $("#detailForm").serialize();
+    let form = document.getElementById("detailForm");
+    let formData = new FormData(form);
+
+    // ambil file dari FilePond
+    if (pondEdit) {
+        pondEdit.getFiles().forEach((fileItem) => {
+            formData.append("attachments[]", fileItem.file);
+        });
+    }
 
     Notify.confirm("Simpan Data?", function () {
         $.ajax({
             url: window.route.update + selectedRow.id,
-            method: "PUT",
+            method: "POST", // gunakan POST + spoof PUT
             data: formData,
-
+            processData: false,
+            contentType: false,
             success: function () {
                 Notify.success("Data berhasil diperbarui");
                 loadDetail(selectedRow.id);
@@ -241,5 +266,23 @@ function submitForm() {
                 Notify.error("Gagal memperbarui data");
             },
         });
+    });
+}
+
+let pondEdit;
+
+function initFilepondEdit() {
+    pondEdit = FilePond.create(document.querySelector(".filepond-edit"), {
+        allowMultiple: true,
+
+        acceptedFileTypes: [
+            "image/*",
+            "application/pdf",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ],
+
+        labelIdle:
+            'Drag & Drop file atau <span class="filepond--label-action">Browse</span>',
     });
 }
