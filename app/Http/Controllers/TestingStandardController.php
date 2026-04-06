@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use SebastianBergmann\Environment\Console;
 use Yajra\DataTables\Facades\DataTables;
 
 class TestingStandardController extends Controller
@@ -39,6 +41,42 @@ class TestingStandardController extends Controller
         return view('testing-standards.create', [
             'title' => 'Create Testing Standard'
         ]);
+    }
+
+    public function show($id)
+    {
+        $data = DB::table('testing_standards')
+            ->where('id_testing_standard', $id)
+            ->first();
+
+        if (!$data) {
+            return response()->json([
+                'message' => 'Data tidak ditemukan'
+            ], 404);
+        }
+
+        return response()->json($data);
+    }
+
+
+    public function select2(Request $request)
+    {
+        $search = $request->q;
+
+        $data = DB::table('testing_standards')
+            ->where('nomor', 'like', "%{$search}%")
+            ->orWhere('judul', 'like', "%{$search}%")
+            ->limit(10)
+            ->get();
+
+        return response()->json(
+            $data->map(function ($item) {
+                return [
+                    'id' => $item->id_testing_standard,
+                    'text' => $item->nomor . ' - ' . $item->judul,
+                ];
+            })
+        );
     }
 
     public function store(Request $request)
@@ -90,6 +128,8 @@ class TestingStandardController extends Controller
     public function update(Request $request, $id)
     {
 
+        // dd($request->all());
+
         $validated = $request->validate([
             'nomor' => 'required|string|max:50',
             'judul' => 'required|string|max:255',
@@ -111,7 +151,7 @@ class TestingStandardController extends Controller
 
             $upload = uploadAttachment(
                 $request->file('attachments'),
-                'testing_parameters'
+                'testing_standards'
             );
 
             $newFiles = $upload['files'];
@@ -156,6 +196,49 @@ class TestingStandardController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Data berhasil dihapus'
+        ]);
+    }
+
+
+    public function deleteAttachment(Request $request)
+    {
+
+        $id = $request->id;
+        $file = $request->file;
+
+        $data = DB::table('testing_standards')
+            ->where('id_testing_standard', $id)
+            ->first();
+
+        if (!$data) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data tidak ditemukan'
+            ]);
+        }
+
+        $attachments = json_decode($data->attachment, true) ?? [];
+
+
+        // hapus file dari array
+        $attachments = array_filter($attachments, function ($item) use ($file) {
+            return $item != $file;
+        });
+
+        // hapus file dari storage
+
+        Storage::disk('public')->delete($file);
+
+        // update database
+        DB::table('testing_standards')
+            ->where('id_testing_standard', $id)
+            ->update([
+                'attachment' => json_encode(array_values($attachments)),
+                'updated_at' => now()
+            ]);
+
+        return response()->json([
+            'success' => true
         ]);
     }
 }

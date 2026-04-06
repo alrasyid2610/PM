@@ -1,6 +1,5 @@
 class DynamicTable {
     constructor(options) {
-        console.log("init table form");
         this.table = $(options.table);
         this.wrapper = this.table.closest(".dynamic-table-wrapper");
         this.autoNumber = options.autoNumber ?? true;
@@ -9,10 +8,12 @@ class DynamicTable {
     }
 
     init() {
+        console.log("Init Dynamic Table Form");
         this.initPlugins(this.table);
         this.updateRowNumbers();
 
         this.wrapper.on("click", ".btn-add-row", () => {
+            console.log("add row in dynamic table");
             this.addRow();
         });
 
@@ -80,7 +81,7 @@ class DynamicTable {
     }
 
     loadData(data) {
-        // console.log(data);
+        console.log("load data for dynamic table");
         let tbody = this.table.find("tbody");
 
         tbody.empty();
@@ -92,17 +93,32 @@ class DynamicTable {
 
         data.forEach((item) => {
             let template = $("#row-template").html();
+            console.log(item);
             let row = $(template);
 
             Object.keys(item).forEach((key) => {
                 let input = row.find(`[name="${key}[]"]`);
-
                 if (!input.length) return;
 
                 if (input.is(":checkbox")) {
                     input.prop("checked", item[key] == 1);
                 } else if (input.is("select")) {
-                    this.setSelect2Value(input, item[key]);
+                    let id = "";
+                    let val = "";
+                    if (key == "parameter") {
+                        id = item.parameter; //id_parameter
+                        val =
+                            item.kode_parameter +
+                            " - " +
+                            item.judul_indonesia_parameter;
+                    } else {
+                        id = item.unit; //id_unit
+                        val =
+                            item.kode_unit + " - " + item.judul_indonesia_unit;
+                    }
+
+                    console.log(id, key);
+                    this.setSelect2Value(input, item[key], val);
                 } else {
                     input.val(item[key]);
                 }
@@ -111,30 +127,18 @@ class DynamicTable {
             tbody.append(row);
 
             this.initPlugins(row);
+
+            $(".dynamic-table-wrapper")
+                .find("input, select, textarea, button")
+                .prop("disabled", true);
         });
 
         this.updateRowNumbers();
     }
 
-    setSelect2Value(select, id) {
-        // console.log(select, id);
-
+    setSelect2Value(select, id, text) {
         if (!id) return;
-
-        $.ajax({
-            url: select.hasClass("parameter-select")
-                ? "/testing-parameters/select2byid"
-                : "/testing-units/select2byid",
-            data: { q: id },
-            success: (res) => {
-                if (!res || res.length === 0) return;
-
-                let item = res[0];
-
-                let option = new Option(item.text, item.id, true, true);
-
-                select.append(option).trigger("change");
-            },
-        });
+        let option = new Option(text, id, true, true);
+        select.append(option).trigger("change");
     }
 }

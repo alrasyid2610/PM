@@ -6,48 +6,6 @@
 </style>
 
 <section class="section">
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span>Advance Search</span>
-            <button id="toggleAdvanceSearch" class="btn btn-sm btn-link" type="button">Show</button>
-        </div>
-
-        <div id="advanceSearchForm" class="collapse">
-            <div class="card-body">
-                <form id="form-advance-search">
-                    <div class="row g-3">
-
-                        <div class="col-md-6">
-                            <label class="form-label">Nomor</label>
-                            <input type="text" id="nomor_search" class="form-control" placeholder="Cari nomor">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Judul</label>
-                            <input type="text" id="judul_search" class="form-control" placeholder="Cari judul">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Nilai</label>
-                            <input type="text" id="nilai_search" class="form-control" placeholder="Cari nilai">
-                        </div>
-
-                    </div>
-
-                    <div class="mt-3">
-                        <button type="button" class="btn btn-primary" id="btn-search">
-                            Search
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</section>
-
-<hr>
-
-<section class="section">
     <div class="card">
         <div class="card-body">
 

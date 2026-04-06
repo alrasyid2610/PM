@@ -13,7 +13,7 @@
             </div>
 
             <a href="{{ route('testing-items.index') }}"
-               class="btn btn-secondary btn-sm">
+                class="btn btn-secondary btn-sm">
                 Kembali
             </a>
         </div>
@@ -29,9 +29,9 @@
                         <div class="mb-3">
                             <label class="form-label required">Testing Point</label>
                             <select id="id_testing_point"
-                                    name="id_testing_point"
-                                    class="form-select"
-                                    required></select>
+                                name="id_testing_point"
+                                class="form-select"
+                                required></select>
                         </div>
 
                         <div class="mb-3">
@@ -66,7 +66,7 @@
                                 id="kelompok_matriks_sample_judul_indonesia"
                                 name="kelompok_matriks_sample_judul_indonesia" disabled>-</p>
                         </div>
-                        
+
                         <div class="mb-3 col-12 col-lg-4">
                             <label class="form-label required">Sample Kode</label>
                             <p type="text"
@@ -82,7 +82,7 @@
                                     name="id_testing_matriks_sample"
                                     class="form-select"
                                     required></select> --}}
-                            
+
                             <p type="text"
                                 step="any"
                                 class="form-control"
@@ -110,8 +110,8 @@
                                 name="matrik_standard_judul" disabled>-</p>
                         </div>
 
-                        
-                        
+
+
 
                     </div>
                     {{-- End Row --}}
@@ -201,7 +201,7 @@
                 </button>
 
                 <a href="{{ route('testing-items.index') }}"
-                   class="btn btn-secondary btn-sm">
+                    class="btn btn-secondary btn-sm">
                     Batal
                 </a>
             </div>
@@ -215,7 +215,7 @@
 @section('custom-script')
 <script type="text/template" id="row-template">
 
-<tr>
+    <tr>
 
     <td class="row-number"></td>
 
@@ -260,241 +260,170 @@
 
 
 <script>
+    let parameterData = [];
+    let unitData = [];
 
-let parameterData = [];
-let unitData = [];
+    function loadMasterData() {
 
-function loadMasterData() {
+        $.getJSON("/testing-parameters/data", function(res) {
 
-    $.getJSON("/testing-parameters/data", function (res) {
-
-        parameterData = res.data.map(function (item) {
-            return {
-                id: item.id_testing_parameter,
-                text: item.judul_indonesia
-            };
-        });
-
-    });
-
-    $.getJSON("/testing-units/data", function (res) {
-
-        unitData = res.data.map(function (item) {
-            return {
-                id: item.id_testing_unit,
-                text: item.kode + " - " + item.judul_indonesia
-            };
-        });
-
-    });
-
-}
-
-
-$(document).ready(function() {
-    setDynamicFormState(true);
-
-    // Testing Matrik Sample
-    $('#id_testing_matriks_sample').select2({
-        placeholder: 'Pilih Testing Point...',
-        allowClear: true,
-        ajax: {
-            url: "/testing-matriks-samples/data",
-            dataType: 'json',
-            processResults: function(data) {
+            parameterData = res.data.map(function(item) {
                 return {
-                    results: data.data.map(item => ({
-                        id: item.id_testing_matriks_sample,
-                        text: item.judul_indonesia,
-                        kelompok: item.kelompok_matrik_judul_indonesia
-                    }))
+                    id: item.id_testing_parameter,
+                    text: item.judul_indonesia
                 };
-            }
-        }
-    });
+            });
 
-    $('#id_testing_matriks_sample').on('select2:select', function (e) {
-        let data = e.params.data;
-        $('p[name="kelompok_matrik_judul_indonesia"]').text(data.kelompok);
-    });
-
-    let itemsTable = new DynamicTable({
-        table: "#itemsTable",
-        autoNumber: true
-    });
-
-
-    // Testing Point
-    $('#id_testing_point').select2({
-        placeholder: 'Pilih Testing Point...',
-        allowClear: true,
-        ajax: {
-            url: "/testing-points/data",
-            dataType: 'json',
-            processResults: function(data) {
-                return {
-                    results: data.data.map(item => (
-                        
-                        {
-                            id: item.id_testing_point,
-                            text: item.nama + ' - ' + item.testing_poin_deskripsi,
-                            nama_poin: item.nama,
-                            testing_poin_nomor_halaman: item.testing_poin_nomor_halaman,
-                            testing_poin_deskripsi: item.testing_poin_deskripsi,
-                            testing_poin_keterangan: item.testing_poin_keterangan,
-                            matrik_standard_nomor: item.matrik_standard_nomor,
-                            matrik_standard_judul: item.matrik_standard_judul,
-                            kelompok_matriks_sample_judul_indonesia: item.kelompok_matriks_sample_judul_indonesia,
-                            matriks_sample_kode: item.matriks_sample_kode,
-                            matriks_sample_judul_indonesia: item.matriks_sample_judul_indonesia,
-                        }
-                    ))
-                };
-            }
-        }
-    });
-
-    $('#id_testing_point').on('select2:select', function (e) {
-        let data = e.params.data;
-
-        let id = data.id;
-        $.get('/testing-items/by-point/' + id, function (res) {
-            itemsTable.loadData(res.data);
         });
-        
-        fillFormFromObject(data);
-        setDynamicFormState(false);
-    });
 
-    $('#id_testing_point').on('select2:clear', function () {
-        clearSiteField();
+        $.getJSON("/testing-units/data", function(res) {
+
+            unitData = res.data.map(function(item) {
+                return {
+                    id: item.id_testing_unit,
+                    text: item.kode + " - " + item.judul_indonesia
+                };
+            });
+
+        });
+
+    }
+
+
+    $(document).ready(function() {
         setDynamicFormState(true);
-    });
-    
-    // // Testing Parameter
-    // $('#id_testing_parameter').select2({
-    //     placeholder: 'Pilih Testing Parameter...',
-    //     ajax: {
-    //         url: "/testing-parameters/data",
-    //         dataType: 'json',
-    //         processResults: function(data) {
-    //             return {
-    //                 results: data.data.map(item => ({
-    //                     id: item.id_testing_parameter,
-    //                     text: item.kode + ' - ' + item.judul_indonesia
-    //                 }))
-    //             };
-    //         }
-    //     }
-    // });
 
-    // $('.parameter-select').select2({
-    //     placeholder: "Pilih Parameter",
-    //     ajax: {
-    //         url: "/testing-parameters/data",
-    //         dataType: "json",
-    //         processResults: function (data) {
-    //             return {
-    //                 results: data.data.map(function(item) {
-    //                     return {
-    //                         id: item.id_testing_parameter,
-    //                         text: item.judul_indonesia
-    //                     };
-    //                 })
-    //             };
-    //         }
-    //     }
-    // });
-    
-    // // Testing Unit
-    // $('#id_testing_unit').select2({
-    //     placeholder: 'Pilih Testing Unit...',
-    //     ajax: {
-    //         url: "/testing-units/data",
-    //         dataType: 'json',
-    //         processResults: function(data) {
-    //             return {
-    //                 results: data.data.map(item => ({
-    //                     id: item.id_testing_unit,
-    //                     text: item.kode + ' - ' + item.judul_indonesia
-    //                 }))
-    //             };
-    //         }
-    //     }
-    // });
-
-    // $('.unit-select').select2({
-    //     placeholder: "Pilih Unit",
-    //     ajax: {
-    //         url: "/testing-units/data",
-    //         dataType: "json",
-    //         processResults: function (data) {
-    //             return {
-    //                 results: data.data.map(function(item) {
-    //                     return {
-    //                         id: item.id_testing_unit,
-    //                         text: item.kode + ' - ' + item.judul_indonesia
-    //                     };
-    //                 })
-    //             };
-    //         }
-    //     }
-    // });
-
-});
-
-
-$('#testingItemForm').submit(function(e) {
-
-    e.preventDefault();
-
-    Notify.confirm('Simpan Data?', function() {
-
-        $.ajax({
-            url: "{{ route('testing-items.store') }}",
-            method: "POST",
-            data: $('#testingItemForm').serialize(),
-
-            success: function(response) {
-                Notify.success('Testing item berhasil disimpan');
-                // optional redirect
-                // window.location.href = "{{ route('testing-items.index') }}";
-            },
-
-            error: function(xhr) {
-                Notify.error('Gagal menyimpan testing item');
+        // Testing Matrik Sample
+        $('#id_testing_matriks_sample').select2({
+            placeholder: 'Pilih Testing Point...',
+            allowClear: true,
+            ajax: {
+                url: "/testing-matriks-samples/data",
+                dataType: 'json',
+                processResults: function(data) {
+                    return {
+                        results: data.data.map(item => ({
+                            id: item.id_testing_matriks_sample,
+                            text: item.judul_indonesia,
+                            kelompok: item.kelompok_matrik_judul_indonesia
+                        }))
+                    };
+                }
             }
+        });
+
+        $('#id_testing_matriks_sample').on('select2:select', function(e) {
+            let data = e.params.data;
+            $('p[name="kelompok_matrik_judul_indonesia"]').text(data.kelompok);
+        });
+
+        let itemsTable = new DynamicTable({
+            table: "#itemsTable",
+            autoNumber: true
+        });
+
+
+        // Testing Point
+        $('#id_testing_point').select2({
+            placeholder: 'Pilih Testing Point...',
+            allowClear: true,
+            ajax: {
+                url: "/testing-points/data",
+                dataType: 'json',
+                processResults: function(data) {
+                    return {
+                        results: data.data.map(item => (
+
+                            {
+                                id: item.id_testing_point,
+                                text: item.nama + ' - ' + item.testing_poin_deskripsi,
+                                nama_poin: item.nama,
+                                testing_poin_nomor_halaman: item.testing_poin_nomor_halaman,
+                                testing_poin_deskripsi: item.testing_poin_deskripsi,
+                                testing_poin_keterangan: item.testing_poin_keterangan,
+                                matrik_standard_nomor: item.matrik_standard_nomor,
+                                matrik_standard_judul: item.matrik_standard_judul,
+                                kelompok_matriks_sample_judul_indonesia: item.kelompok_matriks_sample_judul_indonesia,
+                                matriks_sample_kode: item.matriks_sample_kode,
+                                matriks_sample_judul_indonesia: item.matriks_sample_judul_indonesia,
+                            }
+                        ))
+                    };
+                }
+            }
+        });
+
+        $('#id_testing_point').on('select2:select', function(e) {
+            let data = e.params.data;
+
+            let id = data.id;
+            $.get('/testing-items/by-point/' + id, function(res) {
+                itemsTable.loadData(res.data);
+            });
+
+            fillFormFromObject(data);
+            setDynamicFormState(false);
+        });
+
+        $('#id_testing_point').on('select2:clear', function() {
+            clearSiteField();
+            setDynamicFormState(true);
         });
 
     });
 
-});
 
+    $('#testingItemForm').submit(function(e) {
 
-function clearSiteField() {
-    const fields = [
-        'id_testing_point','testing_poin_deskripsi','testing_poin_nomor_halaman',
-        'testing_poin_keterangan','kelompok_matriks_sample_judul_indonesia','matriks_sample_kode',
-        'matriks_sample_judul_indonesia','matrik_standard_nomor','matrik_standard_judul'
-    ];
-    
-    fields.forEach(name => {
-        $(`[name="${name}"]`).val('');
-        $(`p[name="${name}"]`).text('-');
+        e.preventDefault();
+
+        Notify.confirm('Simpan Data?', function() {
+
+            $.ajax({
+                url: "{{ route('testing-items.store') }}",
+                method: "POST",
+                data: $('#testingItemForm').serialize(),
+
+                success: function(response) {
+                    Notify.success('Testing item berhasil disimpan');
+                    // optional redirect
+                    // window.location.href = "{{ route('testing-items.index') }}";
+                },
+
+                error: function(xhr) {
+                    Notify.error('Gagal menyimpan testing item');
+                }
+            });
+
+        });
+
     });
-}
 
-function setDynamicFormState(disabled = true) {
 
-    let table = $('.dynamic-table-wrapper');
+    function clearSiteField() {
+        const fields = [
+            'id_testing_point', 'testing_poin_deskripsi', 'testing_poin_nomor_halaman',
+            'testing_poin_keterangan', 'kelompok_matriks_sample_judul_indonesia', 'matriks_sample_kode',
+            'matriks_sample_judul_indonesia', 'matrik_standard_nomor', 'matrik_standard_judul'
+        ];
 
-    table.find('input, select, button').prop('disabled', disabled);
+        fields.forEach(name => {
+            $(`[name="${name}"]`).val('');
+            $(`p[name="${name}"]`).text('-');
+        });
+    }
 
-    // khusus select2 harus trigger ulang
-    table.find('.parameter-select, .unit-select')
-        .prop('disabled', disabled)
-        .trigger('change.select2');
+    function setDynamicFormState(disabled = true) {
 
-}
+        let table = $('.dynamic-table-wrapper');
+
+        table.find('input, select, button').prop('disabled', disabled);
+
+        // khusus select2 harus trigger ulang
+        table.find('.parameter-select, .unit-select')
+            .prop('disabled', disabled)
+            .trigger('change.select2');
+
+    }
 </script>
 @endsection

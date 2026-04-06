@@ -178,14 +178,21 @@ class TestingItemController extends Controller
 
         $items = DB::table('testing_items')
             ->select([
-                'judul_indonesia',
-                'judul_inggris',
-                'id_testing_parameter as parameter',
-                'id_testing_unit as unit',
-                'keterangan',
+                'testing_items.id_testing_item',
+                'testing_items.judul_indonesia',
+                'testing_items.judul_inggris',
+                'testing_parameters.id_testing_parameter as parameter',
+                'testing_parameters.kode as kode_parameter',
+                'testing_parameters.judul_indonesia as judul_indonesia_parameter',
+                'testing_units.id_testing_unit as unit',
+                'testing_units.kode as kode_unit',
+                'testing_units.judul_indonesia as judul_indonesia_unit',
+                'testing_items.keterangan',
                 'nilai',
-                'is_aktif as status'
+                'testing_items.is_aktif as status'
             ])
+            ->leftJoin('testing_parameters', 'testing_items.id_testing_parameter', '=', 'testing_parameters.id_testing_parameter')
+            ->leftJoin('testing_units', 'testing_items.id_testing_unit', '=', 'testing_units.id_testing_unit')
             ->where('id_testing_point', $id)
             ->orderBy('nomor')
             ->get();

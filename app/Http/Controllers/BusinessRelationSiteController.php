@@ -8,7 +8,7 @@ use Yajra\DataTables\Facades\DataTables;
 
 class BusinessRelationSiteController extends Controller
 {
-    public function select2(Request $request, $id)
+    public function select2(Request $request, $id = '')
     {
         $search = trim($request->q);
 
@@ -29,8 +29,12 @@ class BusinessRelationSiteController extends Controller
                 'npwp_cabang',
                 'is_kantor_pusat',
                 'is_aktif',
-            ])
-            ->where('id_br', $id);
+            ]);
+
+        if (!empty($id)) {
+            $query->where('id_br', $id);
+        }
+
 
         // search hanya jika ada keyword
         if (!empty($search)) {

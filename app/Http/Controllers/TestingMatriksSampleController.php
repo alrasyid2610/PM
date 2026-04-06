@@ -70,6 +70,25 @@ class TestingMatriksSampleController extends Controller
         ]);
     }
 
+    public function select2(Request $request)
+    {
+        $search = $request->q;
+
+        $data = DB::table('testing_matriks_samples')
+            ->where('judul_indonesia', 'like', "%{$search}%")
+            ->limit(10)
+            ->get();
+
+        return response()->json(
+            $data->map(function ($item) {
+                return [
+                    'id' => $item->id_testing_matriks_sample,
+                    'text' => $item->kode . ' - ' . $item->judul_indonesia,
+                ];
+            })
+        );
+    }
+
     public function detail($id)
     {
         $data = DB::table('testing_matriks_samples as a')

@@ -69,11 +69,11 @@
                             </a>
                         </li>
 
-                        <li class="{{ request()->routeIs('testing-items.*') ? 'active' : '' }}">
+                        <!-- <li class="{{ request()->routeIs('testing-items.*') ? 'active' : '' }}">
                             <a href="{{ route('testing-items.index') }}">
                                 Testing Items
                             </a>
-                        </li>
+                        </li> -->
 
                         <li class="{{ request()->routeIs('testing-points.*') ? 'active' : '' }}">
                             <a href="{{ route('testing-points.index') }}">
@@ -83,7 +83,7 @@
 
                     </ul>
                 </li>
-                
+
                 <li class="sidebar-item  has-sub">
 
                     <a href="#" class='sidebar-link'>
@@ -108,7 +108,7 @@
                     </ul>
 
                 </li>
-                
+
 
             </ul>
         </div>

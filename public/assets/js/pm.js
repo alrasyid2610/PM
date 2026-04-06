@@ -1,6 +1,3 @@
-// Advance search
-tableId = "#" + tableId;
-
 $(document).ready(function () {
     if (
         document.getElementById("advanceSearchForm") &&
@@ -34,89 +31,6 @@ function toggleAdvanceSearch() {
         isShown ? bsCollapse.hide() : bsCollapse.show();
         toggleBtn.textContent = isShown ? "Show" : "Hide";
     });
-}
-
-function initDataTable(tableId) {
-    if ($(tableId).length > 0) {
-        var autoColumns = $(tableId).data("datatable-auto-columns");
-
-        if (autoColumns) {
-            console.log("Initializing Auto DataTable for:", tableId);
-
-            $.ajax({
-                url: window.route.data,
-                type: "GET",
-                dataType: "json",
-                success: function (json) {
-                    let dataRows = json.data ?? [];
-
-                    // Kalau kosong, kita tetap lanjut
-                    let keys = json.header ?? [];
-
-                    if (dataRows.length > 0) {
-                        keys = Object.keys(dataRows[0]);
-                        // filter
-                        keys = keys.filter(
-                            (key) =>
-                                key !== "DT_RowIndex" && !key.startsWith("id_"),
-                        );
-                    }
-
-                    // ===============================
-                    // BUILD HEADER
-                    // ===============================
-                    let thead = "<tr>";
-                    thead += "<th>No</th>";
-
-                    keys.forEach((key) => {
-                        let label = key
-                            .replaceAll("_", " ")
-                            .replace(/\b\w/g, (l) => l.toUpperCase());
-
-                        thead += `<th>${label}</th>`;
-                    });
-
-                    thead += "</tr>";
-
-                    $(tableId).find("thead").html(thead);
-
-                    // ===============================
-                    // BUILD COLUMN CONFIG
-                    // ===============================
-                    let columns = [
-                        {
-                            data: null,
-                            orderable: false,
-                            searchable: false,
-                            render: function (data, type, row, meta) {
-                                return meta.row + 1;
-                            },
-                        },
-                    ];
-
-                    keys.forEach((key) => {
-                        columns.push({ data: key });
-                    });
-
-                    // ===============================
-                    // INIT DATATABLE
-                    // ===============================
-                    table = $(tableId).DataTable({
-                        data: dataRows,
-                        columns: columns,
-                        processing: true,
-                        destroy: true,
-                        language: {
-                            emptyTable: "Data tidak ditemukan",
-                        },
-                    });
-                },
-                error: function (xhr) {
-                    console.error("Gagal load data:", xhr);
-                },
-            });
-        }
-    }
 }
 
 $(document).on("click", ".attachment-image", function () {
@@ -221,34 +135,6 @@ function renderAttachments(attachments) {
     $("#attachmentPreview").html(html);
 }
 
-$(document).on("click", ".btn-delete-attachment", function (e) {
-    e.preventDefault();
-    let file = $(this).data("file");
-
-    Notify.confirm("Hapus attachment ini?", function () {
-        $.ajax({
-            url: window.route.deleteAttachment,
-            method: "POST",
-
-            data: {
-                id: selectedRow.id_testing_parameter,
-                file: file,
-                _token: window.route.csrf,
-            },
-
-            success: function () {
-                Notify.success("Attachment berhasil dihapus");
-
-                loadDetail(selectedRow.id_testing_parameter);
-            },
-
-            error: function () {
-                Notify.error("Gagal menghapus attachment");
-            },
-        });
-    });
-});
-
 function fillFormFromObject(data) {
     Object.keys(data).forEach(function (key) {
         if (["id", "text", "selected"].includes(key)) {
@@ -269,5 +155,162 @@ function fillFormFromObject(data) {
             el.val(data[key]);
             el.text(data[key]);
         }
+    });
+}
+
+function setDynamicFormState(disabled = true) {
+    let table = $(".dynamic-table-wrapper");
+
+    table.find("input, select, button").prop("disabled", disabled);
+
+    // khusus select2 harus trigger ulang
+    table
+        .find(".parameter-select, .unit-select")
+        .prop("disabled", disabled)
+        .trigger("change.select2");
+}
+
+function getFormData(container) {
+    let data = {};
+
+    $(container)
+        .find("input, select, textarea")
+        .each(function () {
+            let name = $(this).attr("name");
+            if (!name) return;
+
+            if (name === "_token" || name === "_method") return;
+
+            name = name.replace("[]", "");
+
+            if ($(this).is(":checkbox")) {
+                data[name] = $(this).is(":checked") ? 1 : 0;
+            } else {
+                data[name] = $(this).val()?.trim();
+            }
+        });
+
+    return data;
+}
+
+function getForm1Data() {
+    let data = {};
+
+    $(".form-1")
+        .find("input, select, textarea")
+        .each(function () {
+            let name = $(this).attr("name");
+            if (!name) return;
+
+            if ($(this).is(":checkbox")) {
+                data[name] = $(this).is(":checked") ? 1 : 0;
+            } else {
+                data[name] = $(this).val();
+            }
+        });
+
+    return data;
+}
+
+function getAllFormsData() {
+    let result = {};
+
+    $('[class*="form-"]').each(function () {
+        let classes = $(this).attr("class").split(" ");
+
+        classes.forEach((cls) => {
+            if (cls.startsWith("form-")) {
+                result[cls] = getFormData(this);
+            }
+        });
+    });
+
+    return result;
+}
+
+function getDynamicTableData() {
+    let table = $(".dynamic-table");
+
+    // ❗ kalau tidak ada table → return kosong
+    if (!table.length) return [];
+
+    let items = [];
+
+    table.find("tbody tr").each(function () {
+        let row = {};
+
+        row.id = $(this).find('[name="id_testing_item[]"]').val();
+
+        row.judul_indonesia = $(this).find('[name="judul_indonesia[]"]').val();
+        row.judul_inggris = $(this).find('[name="judul_inggris[]"]').val();
+        row.parameter = $(this).find('[name="parameter[]"]').val();
+        row.unit = $(this).find('[name="unit[]"]').val();
+        row.nilai = $(this).find('[name="nilai[]"]').val();
+        row.keterangan = $(this).find('[name="keterangan[]"]').val();
+
+        row.status = $(this).find('[name="status[]"]').is(":checked") ? 1 : 0;
+
+        items.push(row);
+    });
+
+    return items;
+}
+
+function compareItems(initial, current) {
+    let result = {
+        inserted: [],
+        updated: [],
+        deleted: [],
+    };
+
+    // 🔹 map initial by id
+    let initialMap = {};
+    initial.forEach((item) => {
+        if (item.id) {
+            initialMap[item.id] = item;
+        }
+    });
+
+    // 🔹 current ids
+    let currentIds = [];
+
+    current.forEach((curr) => {
+        // INSERT
+        if (!curr.id) {
+            result.inserted.push(curr);
+            return;
+        }
+
+        currentIds.push(curr.id);
+
+        let old = initialMap[curr.id];
+
+        if (!old) return;
+
+        // UPDATE
+        if (JSON.stringify(old) !== JSON.stringify(curr)) {
+            result.updated.push(curr);
+        }
+    });
+
+    // 🔹 DELETE
+    initial.forEach((old) => {
+        if (old.id && !currentIds.includes(old.id)) {
+            result.deleted.push(old.id);
+        }
+    });
+
+    return result;
+}
+
+function loadItems(res, itemsTable) {
+    return new Promise((resolve) => {
+        $.get(
+            "/testing-items/by-point/" + res.id_testing_point,
+            function (res) {
+                itemsTable.loadData(res.data);
+                resolve(); // ✅ tandai selesai
+            },
+        );
     });
 }

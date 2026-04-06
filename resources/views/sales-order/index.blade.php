@@ -16,43 +16,6 @@
     </style>
 
     <section class="section">
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>Advance Search</span>
-                <button id="toggleAdvanceSearch" class="btn btn-sm btn-link" type="button">
-                    Show
-                </button>
-            </div>
-
-            <div id="advanceSearchForm" class="collapse">
-                <div class="card-body">
-                    <form id="form-advance-search">
-
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Nama Perusahaan</label>
-                                <select id="company_id" class="form-select select2" style="width:100%">
-                                    <option value="">-- Semua --</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="mt-3 d-flex gap-2">
-                            <button type="button" class="btn btn-primary" id="btn-search">
-                                Search
-                            </button>
-                        </div>
-
-                    </form>
-                </div>
-            </div>
-
-        </div>
-        
-    </section>
-    <hr>
-
-    <section class="section">
         
         <div class="card">
 

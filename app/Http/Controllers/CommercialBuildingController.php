@@ -11,16 +11,20 @@ class CommercialBuildingController extends Controller
     //
     public function index()
     {
-        return view('master.index', [
-            'title' => 'Commercial Building',
-            'routePrefix' => 'commercial-buildings',
-            'columns' => [
-                'nama_gedung' => 'Nama Gedung',
-                'alamat'      => 'Alamat',
-                'kota'        => 'Kota',
-                'is_aktif'    => 'Status',
-                'created_at'  => 'Created',
-            ]
+        // return view('master.index', [
+        //     'title' => 'Commercial Building',
+        //     'routePrefix' => 'commercial-buildings',
+        //     'columns' => [
+        //         'nama_gedung' => 'Nama Gedung',
+        //         'alamat'      => 'Alamat',
+        //         'kota'        => 'Kota',
+        //         'is_aktif'    => 'Status',
+        //         'created_at'  => 'Created',
+        //     ]
+        // ]);
+
+        return view('commercial-building.index', [
+            'titile' => 'Comercial Building'
         ]);
     }
 
@@ -37,10 +41,6 @@ class CommercialBuildingController extends Controller
 
         $dt = DataTables::of($data)
             ->addIndexColumn()
-            ->addColumn('action', function ($row) {
-                return '<button>Edit</button>';
-            })
-            ->rawColumns(['action'])
             ->make(true)
             ->getData();
 
@@ -50,7 +50,8 @@ class CommercialBuildingController extends Controller
         ]);
     }
 
-    public function detail($id)
+
+    public function show($id)
     {
         $building = DB::table('commercial_buildings')
             ->where('id_building', $id)
@@ -66,7 +67,7 @@ class CommercialBuildingController extends Controller
 
     public function create()
     {
-        return view('business-building.create');
+        return view('commercial-building.create');
     }
 
     public function store(Request $request)
@@ -241,5 +242,27 @@ class CommercialBuildingController extends Controller
                 'message' => 'Terjadi kesalahan sistem'
             ], 500);
         }
+    }
+
+    public function select2(Request $request)
+    {
+        $search = $request->q;
+
+        $data = DB::table('commercial_buildings')
+            ->where('is_aktif', 1)
+            ->when($search, function ($query) use ($search) {
+                $query->where('nama', 'like', "%{$search}%");
+            })
+            ->limit(50)
+            ->get();
+
+        return response()->json(
+            $data->map(function ($item) {
+                return [
+                    'id'   => $item->id_building,
+                    'text' => $item->nama,
+                ];
+            })
+        );
     }
 }

@@ -254,63 +254,6 @@
         if (EDIT_SITE) {
             initEditSite(EDIT_SITE);
         }
-        
-        // @if(isset($br) && $br)
-        //     // set hidden id_br
-        //     $('#id_br').val('{{ $br->id_br }}');
-
-        //     // inject option ke select2 BR
-        //     const brOption = new Option(
-        //         '{{ $br->nama }}',
-        //         '{{ $br->id_br }}',
-        //         true,
-        //         true
-        //     );
-        //     $('#nama_br').append(brOption).trigger('change');
-
-        //     // isi field BR
-        //     $('select[name="entitas"]').val('{{ $br->entitas }}').trigger('change');
-        //     $('select[name="kepemilikan"]').val('{{ $br->kepemilikan }}').trigger('change');
-        //     $('input[name="npwp"]').val('{{ $br->npwp }}');
-        //     $('textarea[name="npwp_alamat"]').val(`{!! addslashes($br->npwp_alamat) !!}`);
-        //     $('input[name="kategori_bisnis"]').val('{{ $br->kategori_bisnis }}');
-        //     $('input[name="sub_kategori_bisnis"]').val('{{ $br->sub_kategori_bisnis }}');
-        //     $('input[name="website"]').val('{{ $br->website }}');
-        //     $('input[name="nomor_telepon"]').val('{{ $br->nomor_telepon }}');
-        //     $('select[name="is_aktif"]').val('{{ $br->is_aktif }}').trigger('change');
-
-        //     // init site select2
-        //     destroySiteSelect2();
-        //     initSiteSelect2('{{ $br->id_br }}');
-        // @endif
-
-
-        // @if(isset($site) && $site)
-        //     // set hidden site id
-        //     $('#site_id_hidden').val('{{ $site->id_site }}');
-
-        //     // inject option ke select2 Site
-        //     const siteOption = new Option(
-        //         '{{ $site->nama_lokasi }}',
-        //         '{{ $site->id_site }}',
-        //         true,
-        //         true
-        //     );
-        //     $('#site_id').append(siteOption).trigger('change');
-
-        //     // isi field site
-        //     $('input[name="nama_lokasi"]').val('{{ $site->nama_lokasi }}');
-        //     $('textarea[name="alamat_lengkap"]').val(`{!! addslashes($site->alamat_lengkap) !!}`);
-        //     $('input[name="provinsi"]').val('{{ $site->provinsi }}');
-        //     $('input[name="kota_kabupaten"]').val('{{ $site->kota_kabupaten }}');
-        //     $('input[name="kecamatan"]').val('{{ $site->kecamatan }}');
-        //     $('input[name="kelurahan"]').val('{{ $site->kelurahan }}');
-        //     $('input[name="kode_pos"]').val('{{ $site->kode_pos }}');
-        //     $('input[name="kawasan_bisnis"]').val('{{ $site->kawasan_bisnis }}');
-        //     $('input[name="gedung"]').val('{{ $site->gedung }}');
-        //     $('input[name="alamat"]').val('{{ $site->alamat }}');
-        //     $('input[name="npwp_cabang"]').val('{{ $site->npwp_cabang }}');
-        // @endif
 
         $("#gedung").select2({
             placeholder: 'Pilih Business Estate',
@@ -442,11 +385,6 @@
 
     $('#nama_br').on('select2:clear', function () {
         console.log('BR cleared');
-        // $('#createBusinessRelationForm')
-        //     .find('input:not([name="nama"]), textarea, select')
-        //     .val('')
-        //     .trigger('change');
-        
         $("#nama_br").html('');
         destroySiteSelect2();
         clearSiteField();

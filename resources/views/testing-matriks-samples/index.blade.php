@@ -2,42 +2,10 @@
 
 @section('content')
 <style>
-    thead * { text-align: center }
+    thead * {
+        text-align: center
+    }
 </style>
-
-<section class="section">
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span>Advance Search</span>
-            <button id="toggleAdvanceSearch" class="btn btn-sm btn-link" type="button">Show</button>
-        </div>
-
-        <div id="advanceSearchForm" class="collapse">
-            <div class="card-body">
-                <form id="form-advance-search">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Kode</label>
-                            <input type="text" id="kode_search" class="form-control" placeholder="Cari kode">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Judul</label>
-                            <input type="text" id="judul_search" class="form-control" placeholder="Cari judul">
-                        </div>
-                    </div>
-
-                    <div class="mt-3">
-                        <button type="button" class="btn btn-primary" id="btn-search">
-                            Search
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</section>
-
-<hr>
 
 <section class="section">
     <div class="card">
@@ -46,7 +14,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="mb-0">Testing Matriks Samples</h5>
                 <a href="{{ route('testing-matriks-samples.create') }}"
-                   class="btn btn-primary">
+                    class="btn btn-primary">
                     Add Data
                 </a>
             </div>
@@ -54,20 +22,20 @@
             <ul class="nav nav-tabs mb-3">
                 <li class="nav-item">
                     <button class="nav-link active"
-                            id="data-tab"
-                            data-bs-toggle="tab"
-                            data-bs-target="#tab-data"
-                            type="button">
+                        id="data-tab"
+                        data-bs-toggle="tab"
+                        data-bs-target="#tab-data"
+                        type="button">
                         Data
                     </button>
                 </li>
 
                 <li class="nav-item">
                     <button class="nav-link"
-                            id="detail-tab"
-                            data-bs-toggle="tab"
-                            data-bs-target="#tab-detail"
-                            type="button">
+                        id="detail-tab"
+                        data-bs-toggle="tab"
+                        data-bs-target="#tab-detail"
+                        type="button">
                         Detail
                     </button>
                 </li>
@@ -78,8 +46,8 @@
                 <div class="tab-pane fade show active" id="tab-data">
                     <div class="table-responsive">
                         <table id="{{ request()->segment(1) }}-table"
-                               class="table table-striped table-hover table-sm table-bordered w-100"
-                               data-datatable-auto-columns="true">
+                            class="table table-striped table-hover table-sm table-bordered w-100"
+                            data-datatable-auto-columns="true">
                             <thead></thead>
                             <tbody></tbody>
                         </table>
@@ -101,13 +69,15 @@
 
 @section('custom-script')
 <script>
-window.route = {
-    data: "{{ route('testing-matriks-samples.data') }}",
-    update: "{{ url('testing-matriks-samples') }}/",
-    detail: "{{ url('testing-matriks-samples') }}/",
-    csrf: "{{ csrf_token() }}"
-}
+    window.route = {
+        data: "{{ route('testing-matriks-samples.data') }}",
+        update: "{{ url('testing-matriks-samples') }}/",
+        detail: "{{ url('testing-matriks-samples') }}/",
+        csrf: "{{ csrf_token() }}"
+    }
 </script>
 
+<script src="{{ asset('assets/js/testing-matriks-samples/form.js') }}"></script>
 <script src="{{ asset('assets/js/testing-matriks-samples/index.js') }}"></script>
+
 @endsection

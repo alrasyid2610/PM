@@ -218,4 +218,24 @@ class BusinessEstateController extends Controller
 
         return response()->json($data);
     }
+
+    public function select2(Request $request)
+    {
+        $search = $request->q;
+
+        $data = DB::table('business_estates')
+            ->where('kode', 'like', "%{$search}%")
+            ->orWhere('nama', 'like', "%{$search}%")
+            ->limit(10)
+            ->get();
+
+        return response()->json(
+            $data->map(function ($item) {
+                return [
+                    'id' => $item->id_bestate,
+                    'text' => $item->kode . ' - ' . $item->nama,
+                ];
+            })
+        );
+    }
 }
