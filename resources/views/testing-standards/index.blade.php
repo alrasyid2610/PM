@@ -1,5 +1,22 @@
 @extends('layouts.app')
 
+@section('page-title', 'Testing Standards')
+@section('page-descrip', 'Kelola data Standards pengujian laboratorium')
+
+@section('breadcrumb')
+    <li class="breadcrumb-item active" aria-current="page">Testing Standards</li>
+@endsection
+
+@section('page-icon')
+    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M28 8h4v28l-16 28h48L48 36V8h4" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M28 8h24" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="32" cy="56" r="3" fill="white"/>
+        <circle cx="44" cy="62" r="2" fill="white"/>
+        <circle cx="38" cy="52" r="2" fill="white"/>
+    </svg>
+@endsection
+
 @section('content')
 <style>
     thead * {
@@ -11,11 +28,15 @@
     <div class="card">
         <div class="card-body">
 
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0">Testing Standards</h5>
-                <a href="{{ route('testing-standards.create') }}"
-                    class="btn btn-primary">
-                    Add Testing Standard
+            {{-- Header --}}
+            <div class="card-datatable-header">
+                <div class="card-datatable-title">
+                    List of Testing Standard
+                    {{-- opsional: badge jumlah data --}}
+                    {{-- <span class="count-badge" id="totalData">0</span> --}}
+                </div>
+                <a href="{{ route('testing-standards.create') }}" class="btn btn-primary btn-sm">
+                    <i class="fa-solid fa-plus me-1"></i> Add Data
                 </a>
             </div>
 

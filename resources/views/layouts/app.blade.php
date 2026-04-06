@@ -26,20 +26,36 @@
             <div class="main-content container-fluid">
 
                 {{-- Page Title --}}
-                <div class="page-title">
-                    <div class="row">
-                        <div class="col-12 col-md-6 order-md-1 order-last">
-                            <h3>{{ Str::title(str_replace('-', ' ', request()->segment(1))); }}</h3>
-                            <p class="text-subtitle text-muted">@yield('page-descrip')</p>
-                        </div>
-                        <div class="col-12 col-md-6 order-md-2 order-first">
-                            <nav aria-label="breadcrumb" class='breadcrumb-header'>
-                                <ol class="breadcrumb">
-                                    <li class="breadcrumb-item"><a href="index.html">Dashboard</a></li>
-                                    <li class="breadcrumb-item active" aria-current="page">Bussines Relation</li>
-                                </ol>
-                            </nav>
-                        </div>
+                <div class="page-header-banner">
+                    <div class="header-bg"></div>
+                    <div class="header-circles">
+                        <div class="circle circle-1"></div>
+                        <div class="circle circle-2"></div>
+                        <div class="circle circle-3"></div>
+                        <div class="circle circle-4"></div>
+                    </div>
+                    <div class="header-accent"></div>
+                    <div class="header-line"></div>
+
+                    <div class="header-content">
+                        <nav aria-label="breadcrumb" class="header-breadcrumb">
+                            <ol class="breadcrumb mb-0">
+                                <li class="breadcrumb-item">
+                                    <a href="{{ url('/') }}">Dashboard</a>
+                                </li>
+                                @yield('breadcrumb')
+                            </ol>
+                        </nav>
+                        <h3 class="header-title">
+                            @yield('page-title', Str::title(str_replace('-', ' ', request()->segment(1))))
+                        </h3>
+                        <p class="header-subtitle">
+                            @yield('page-descrip')
+                        </p>
+                    </div>
+
+                    <div class="header-icon">
+                        @yield('page-icon')
                     </div>
                 </div>
                 {{-- End Page Title --}}
