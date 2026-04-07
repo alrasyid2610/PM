@@ -10,7 +10,7 @@ function renderForm(res) {
 
         <div class="d-flex justify-content-between align-items-center mb-2">
 
-            <h3>Testing Unit</h3>
+            <h3>Testing Standards</h3>
 
             <div class="btn-group">
                 <button class="btn btn-warning btn-sm btn-edit-context" title="Edit Testing Unit">

@@ -17,12 +17,21 @@
 
                     <ul class="submenu">
 
+                        <li class="sidebar-title mt-2">Business Relation</li>
                         <li class="{{ request()->routeIs('business-relations.*') ? 'active' : '' }}">
                             <a href="{{ route('business-relations.index') }}">
                                 Business Relation
                             </a>
                         </li>
 
+                        <li class="{{ request()->routeIs('business-relation-contacts.*') ? 'active' : '' }}">
+                            <a href="{{ route('business-relation-contacts.index') }}">
+                                Business Relation Contacts
+                            </a>
+                        </li>
+
+                        <li class="sidebar-title mt-2">Location</li>
+                        
                         <li class="{{ request()->routeIs('business-estates.*') ? 'active' : '' }}">
                             <a href="{{ route('business-estates.index') }}">
                                 Business Estate

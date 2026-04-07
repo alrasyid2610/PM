@@ -8,7 +8,7 @@ function renderParameterForm(res) {
             <div class="col-md-12">
                 <div class="d-flex justify-content-between align-items-center mb-2">
 
-                    <h3>Testing Unit</h3>
+                    <h3>Kelompok Matriks Samples</h3>
 
                     <div class="btn-group">
                         <button class="btn btn-warning btn-sm btn-edit-context" title="Edit Testing Unit">

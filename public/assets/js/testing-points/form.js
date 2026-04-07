@@ -9,7 +9,7 @@ function renderForm(res) {
                 <input type="hidden" name="id_testing_matriks_sample" value="${res.id_testing_matriks_sample}">
                 <div class="d-flex justify-content-between align-items-center mb-2">
 
-                    <h3>Testing Matriks Samples</h3>
+                    <h4>Testing Points</h4>
 
                     <div class="btn-group">
                         <button class="btn btn-warning btn-sm btn-edit-context" title="Edit Testing Unit">

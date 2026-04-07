@@ -1,8 +1,5 @@
 @extends('layouts.app')
 
-
-@extends('layouts.app')
-
 @section('page-title', 'Create Testing Parameters')
 @section('page-descrip', 'Kelola data Parameters laboratorium')
 
