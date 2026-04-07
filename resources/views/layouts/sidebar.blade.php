@@ -46,7 +46,7 @@
 
                         {{-- ===== Testing Section ===== --}}
 
-                        <li class="sidebar-title mt-2">Testing</li>
+                        <li class="sidebar-title mt-2">Product</li>
 
                         <li class="{{ request()->routeIs('testing-units.*') ? 'active' : '' }}">
                             <a href="{{ route('testing-units.index') }}">

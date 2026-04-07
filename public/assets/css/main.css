@@ -388,3 +388,7 @@ table.dataTable.table-striped tbody tr:nth-child(odd):hover {
     padding: 2px 8px;
     margin-left: 8px;
 }
+
+.sidebar-wrapper .menu .submenu.active {
+    overflow-y: scroll !important;
+}
