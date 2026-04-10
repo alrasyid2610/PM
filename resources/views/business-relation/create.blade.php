@@ -1,5 +1,25 @@
 @extends('layouts.app')
 
+@section('page-title', 'Business Relations')
+@section('page-descrip', 'Kelola data Business Relations')
+
+@section('breadcrumb')
+    <li class="breadcrumb-item" aria-current="page">
+          <a href="{{ route('business-relations.index') }}">Business Relations</a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Create</li>
+@endsection
+
+@section('page-icon')
+    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M28 8h4v28l-16 28h48L48 36V8h4" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M28 8h24" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="32" cy="56" r="3" fill="white"/>
+        <circle cx="44" cy="62" r="2" fill="white"/>
+        <circle cx="38" cy="52" r="2" fill="white"/>
+    </svg>
+@endsection
+
 @section('content')
 <style>
     .required::after {
@@ -10,19 +30,6 @@
 
 <section class="section">
     <div class="container-fluid">
-
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <h4 class="mb-1">{{ session('mode') === 'Edit' ? 'Edit' : 'Tambah' }} Business Relation</h4>
-                <p class="text-muted mb-0">
-                    Tambahkan business relation baru atau kantor cabang dari data yang sudah ada.
-                </p>
-            </div>
-
-            <a href="{{ route('business-relations.index') }}" class="btn btn-secondary btn-sm">
-                Kembali
-            </a>
-        </div>
 
         <form id="createBusinessRelationForm">
             @csrf
@@ -254,63 +261,6 @@
         if (EDIT_SITE) {
             initEditSite(EDIT_SITE);
         }
-        
-        // @if(isset($br) && $br)
-        //     // set hidden id_br
-        //     $('#id_br').val('{{ $br->id_br }}');
-
-        //     // inject option ke select2 BR
-        //     const brOption = new Option(
-        //         '{{ $br->nama }}',
-        //         '{{ $br->id_br }}',
-        //         true,
-        //         true
-        //     );
-        //     $('#nama_br').append(brOption).trigger('change');
-
-        //     // isi field BR
-        //     $('select[name="entitas"]').val('{{ $br->entitas }}').trigger('change');
-        //     $('select[name="kepemilikan"]').val('{{ $br->kepemilikan }}').trigger('change');
-        //     $('input[name="npwp"]').val('{{ $br->npwp }}');
-        //     $('textarea[name="npwp_alamat"]').val(`{!! addslashes($br->npwp_alamat) !!}`);
-        //     $('input[name="kategori_bisnis"]').val('{{ $br->kategori_bisnis }}');
-        //     $('input[name="sub_kategori_bisnis"]').val('{{ $br->sub_kategori_bisnis }}');
-        //     $('input[name="website"]').val('{{ $br->website }}');
-        //     $('input[name="nomor_telepon"]').val('{{ $br->nomor_telepon }}');
-        //     $('select[name="is_aktif"]').val('{{ $br->is_aktif }}').trigger('change');
-
-        //     // init site select2
-        //     destroySiteSelect2();
-        //     initSiteSelect2('{{ $br->id_br }}');
-        // @endif
-
-
-        // @if(isset($site) && $site)
-        //     // set hidden site id
-        //     $('#site_id_hidden').val('{{ $site->id_site }}');
-
-        //     // inject option ke select2 Site
-        //     const siteOption = new Option(
-        //         '{{ $site->nama_lokasi }}',
-        //         '{{ $site->id_site }}',
-        //         true,
-        //         true
-        //     );
-        //     $('#site_id').append(siteOption).trigger('change');
-
-        //     // isi field site
-        //     $('input[name="nama_lokasi"]').val('{{ $site->nama_lokasi }}');
-        //     $('textarea[name="alamat_lengkap"]').val(`{!! addslashes($site->alamat_lengkap) !!}`);
-        //     $('input[name="provinsi"]').val('{{ $site->provinsi }}');
-        //     $('input[name="kota_kabupaten"]').val('{{ $site->kota_kabupaten }}');
-        //     $('input[name="kecamatan"]').val('{{ $site->kecamatan }}');
-        //     $('input[name="kelurahan"]').val('{{ $site->kelurahan }}');
-        //     $('input[name="kode_pos"]').val('{{ $site->kode_pos }}');
-        //     $('input[name="kawasan_bisnis"]').val('{{ $site->kawasan_bisnis }}');
-        //     $('input[name="gedung"]').val('{{ $site->gedung }}');
-        //     $('input[name="alamat"]').val('{{ $site->alamat }}');
-        //     $('input[name="npwp_cabang"]').val('{{ $site->npwp_cabang }}');
-        // @endif
 
         $("#gedung").select2({
             placeholder: 'Pilih Business Estate',
@@ -442,11 +392,6 @@
 
     $('#nama_br').on('select2:clear', function () {
         console.log('BR cleared');
-        // $('#createBusinessRelationForm')
-        //     .find('input:not([name="nama"]), textarea, select')
-        //     .val('')
-        //     .trigger('change');
-        
         $("#nama_br").html('');
         destroySiteSelect2();
         clearSiteField();

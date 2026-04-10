@@ -34,6 +34,8 @@
 
 
     <link rel="stylesheet" href="{{ asset('assets/vendor/datatables/dataTables.bootstrap5.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/main.css') }}">
+
 
 
     <style>

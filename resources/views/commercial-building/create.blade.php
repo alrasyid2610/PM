@@ -1,22 +1,28 @@
 @extends('layouts.app')
 
+@section('page-title', 'Commercial Buildings')
+@section('page-descrip', 'Kelola data Commercial Buildings')
+
+@section('breadcrumb')
+    <li class="breadcrumb-item" aria-current="page">
+          <a href="{{ route('commercial-buildings.index') }}">Commercial Buildings</a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Create</li>
+@endsection
+
+@section('page-icon')
+    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M28 8h4v28l-16 28h48L48 36V8h4" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M28 8h24" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="32" cy="56" r="3" fill="white"/>
+        <circle cx="44" cy="62" r="2" fill="white"/>
+        <circle cx="38" cy="52" r="2" fill="white"/>
+    </svg>
+@endsection
+
 @section('content')
 <section class="section">
     <div class="container-fluid">
-
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <h4 class="mb-1">Tambah Commercial Building</h4>
-                <p class="text-muted mb-0">
-                    Tambahkan data gedung komersial baru.
-                </p>
-            </div>
-
-            <a href="{{ url('commercial-buildings') }}" class="btn btn-secondary btn-sm">
-                Kembali
-            </a>
-        </div>
-
         <form id="createCommercialBuildingForm">
             @csrf
 

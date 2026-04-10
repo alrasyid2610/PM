@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use SebastianBergmann\Environment\Console;
 use Yajra\DataTables\Facades\DataTables;
 
 class BusinessRelationController extends Controller
@@ -143,7 +144,6 @@ class BusinessRelationController extends Controller
 
     public function store(Request $request)
     {
-        // dd($request->all());
 
         // =========================
         // VALIDASI
@@ -292,6 +292,9 @@ class BusinessRelationController extends Controller
 
     public function update(Request $request)
     {
+
+        // dd($request->all(), $request->kawasan_bisnis, $request->id_site);
+
         $validated = $request->validate([
             'id_br'   => 'nullable|exists:business_relations,id_br',
             'nama_br' => 'required|string|max:255',
@@ -303,8 +306,8 @@ class BusinessRelationController extends Controller
             'sub_kategori_bisnis' => 'nullable|string|max:150',
             'website' => 'nullable|string|max:255',
             'nomor_telepon' => 'nullable|string|max:50',
-            'nama_lokasi' => 'required_if:site_id,null|string|max:255',
-            'alamat_lengkap' => 'required_if:site_id,null|string',
+            'nama_lokasi' => 'required_if:id_site,null|string|max:255',
+            'alamat_lengkap' => 'required_if:id_site,null|string',
         ]);
 
         DB::beginTransaction();
@@ -323,13 +326,13 @@ class BusinessRelationController extends Controller
                     'sub_kategori_bisnis' => $request->sub_kategori_bisnis,
                     'website'             => $request->website,
                     'nomor_telepon'       => $request->nomor_telepon,
-                    'is_aktif'            => $request->is_aktif_br ?? 1,
+                    'is_aktif'            => $request->br_is_aktif ?? 1,
                     'updated_at'          => now(),
                 ]);
 
 
             DB::table('business_relation_sites')
-                ->where('id_site', $request->site_id)
+                ->where('id_site', $request->id_site)
                 ->update([
                     'nama_lokasi'     => $request->nama_lokasi,
                     'alamat_lengkap'  => $request->alamat_lengkap,
@@ -342,7 +345,7 @@ class BusinessRelationController extends Controller
                     'gedung'          => $request->gedung,
                     'alamat'          => $request->alamat,
                     'npwp_cabang'     => $request->npwp_cabang,
-                    'is_aktif'        => $request->is_aktif_site ?? 1,
+                    'is_aktif'        => $request->s_is_aktif ?? 1,
                     'updated_at'      => now(),
                 ]);
 
@@ -449,6 +452,8 @@ class BusinessRelationController extends Controller
     {
         $data = DB::table('business_relation_sites as s')
             ->join('business_relations as br', 'br.id_br', '=', 's.id_br')
+            ->leftJoin('commercial_buildings as cb', 'cb.id_building', '=', 's.gedung')
+            ->leftJoin('business_estates as be', 'be.id_bestate', '=', 's.kawasan_bisnis')
             ->where('s.id_site', $id)
             ->select([
                 'br.id_br',
@@ -473,8 +478,10 @@ class BusinessRelationController extends Controller
                 's.kecamatan',
                 's.kelurahan',
                 's.kode_pos',
-                's.kawasan_bisnis',
-                's.gedung',
+                's.kawasan_bisnis as id_bestate',   // ← ID untuk value select2
+                'be.nama as nama_kawasan_bisnis',
+                's.gedung as id_building',    // ← ID untuk value select2
+                'cb.nama as nama_gedung',
                 's.alamat',
                 's.npwp_cabang',
                 's.is_aktif as s_is_aktif',

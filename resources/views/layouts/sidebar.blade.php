@@ -17,12 +17,21 @@
 
                     <ul class="submenu">
 
+                        <li class="sidebar-title mt-2">Business Relation</li>
                         <li class="{{ request()->routeIs('business-relations.*') ? 'active' : '' }}">
                             <a href="{{ route('business-relations.index') }}">
                                 Business Relation
                             </a>
                         </li>
 
+                        <li class="{{ request()->routeIs('business-relation-contacts.*') ? 'active' : '' }}">
+                            <a href="{{ route('business-relation-contacts.index') }}">
+                                Business Relation Contacts
+                            </a>
+                        </li>
+
+                        <li class="sidebar-title mt-2">Location</li>
+                        
                         <li class="{{ request()->routeIs('business-estates.*') ? 'active' : '' }}">
                             <a href="{{ route('business-estates.index') }}">
                                 Business Estate
@@ -37,7 +46,7 @@
 
                         {{-- ===== Testing Section ===== --}}
 
-                        <li class="sidebar-title mt-2">Testing</li>
+                        <li class="sidebar-title mt-2">Product</li>
 
                         <li class="{{ request()->routeIs('testing-units.*') ? 'active' : '' }}">
                             <a href="{{ route('testing-units.index') }}">
@@ -69,11 +78,11 @@
                             </a>
                         </li>
 
-                        <li class="{{ request()->routeIs('testing-items.*') ? 'active' : '' }}">
+                        <!-- <li class="{{ request()->routeIs('testing-items.*') ? 'active' : '' }}">
                             <a href="{{ route('testing-items.index') }}">
                                 Testing Items
                             </a>
-                        </li>
+                        </li> -->
 
                         <li class="{{ request()->routeIs('testing-points.*') ? 'active' : '' }}">
                             <a href="{{ route('testing-points.index') }}">
@@ -83,7 +92,7 @@
 
                     </ul>
                 </li>
-                
+
                 <li class="sidebar-item  has-sub">
 
                     <a href="#" class='sidebar-link'>
@@ -108,7 +117,7 @@
                     </ul>
 
                 </li>
-                
+
 
             </ul>
         </div>
