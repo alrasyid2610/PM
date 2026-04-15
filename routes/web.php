@@ -42,7 +42,10 @@ Route::prefix('testing-units')->name('testing-units.')->group(function () {
         ->name('detail');
 });
 
+//testing nana
+
 Route::prefix('testing-parameters')->name('testing-parameters.')->group(function () {
+
 
     Route::post(
         '/testing-parameters/delete-attachment',
