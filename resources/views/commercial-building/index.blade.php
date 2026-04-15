@@ -30,24 +30,12 @@
 <section class="section">
     <div class="card">
         <div class="card-body">
-             {{-- Header --}}
-            <div class="card-datatable-header">
-                <div class="card-datatable-title">
-                    List of Commercial Buildings
-                </div>
-                <a href="{{ route('commercial-buildings.create') }}" class="btn btn-primary btn-sm">
-                    <i class="fa-solid fa-plus me-1"></i> Add Data
-                </a>
-            </div>
+            <x-datatable-header
+                title="List of Commercial Buildings"
+                create-route="commercial-buildings.create"
+                add-label="Add Data"
+            />
 
-            <ul class="nav nav-tabs mb-3" id="brTabs" role="tablist">
-                <li class="nav-item">
-                    <button class="nav-link active" id="data-tab" data-bs-toggle="tab" data-bs-target="#tab-data" type="button">Data</button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" id="detail-tab" data-bs-toggle="tab" data-bs-target="#tab-detail" type="button">Detail</button>
-                </li>
-            </ul>
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="tab-data">
                     <div class="table-responsive">

@@ -20,6 +20,46 @@ const formGroup = {
         `;
     },
 
+    date(name, label, value = "", required = false, config = {}) {
+        let { className = "" } = config;
+        return `
+            <div class="${config.className + " mb-3" ?? "col-md-12 col-lg-3"}">
+                <label class="form-label ${required ? "required" : ""}">
+                    ${label}
+                </label>
+                <input 
+                    type="date"
+                    name="${name}"
+                    class="form-control disabled"
+                    value="${value ?? ""}"
+                    ${required ? "required" : ""}
+                >
+            </div>
+            `;
+    },
+
+    checkbox(name, label, value = 0, config = {}) {
+        let { className = "", checkLabel = "Aktif" } = config;
+        return `
+        <div class="${config.className + " mb-3" ?? "col-md-12"}">
+            <label class="form-label">${label}</label>
+            <div class="form-check form-switch">
+                <input
+                    type="checkbox"
+                    name="${name}"
+                    id="detail_${name}"
+                    class="form-check-input disabled"
+                    value="1"
+                    ${value == 1 ? "checked" : ""}
+                >
+                <label class="form-check-label" for="detail_${name}">
+                    ${checkLabel}
+                </label>
+            </div>
+        </div>
+        `;
+    },
+
     textarea(name, label, value = "", config = {}) {
         let { className = "" } = config;
         return `
@@ -39,42 +79,6 @@ const formGroup = {
         `;
     },
 
-    // select(name, label, value, options = [], classValue = "") {
-    //     res();
-
-    //     console.log("value select ", value);
-    //     let opts = options
-    //         .map((opt) => {
-    //             return `
-    //         <option
-    //             value="${opt.value}"
-    //             ${opt.value == value ? "selected" : ""}
-    //         >
-    //             ${opt.label}
-    //         </option>
-    //         `;
-    //         })
-    //         .join("");
-
-    //     return `
-    //     <div class="col-md-12 mb-3 ${classValue ?? ""}>
-
-    //         <label class="form-label">${label}</label>
-
-    //         <select
-    //             name="${name}"
-    //             class="form-select disabled }"
-    //             id="detail_${name}"
-    //         >
-
-    //             ${opts}
-
-    //         </select>
-
-    //     </div>
-    //     `;
-    // },
-
     select(name, label, value, options = [], config = {}) {
         let {
             className = "",
@@ -93,7 +97,7 @@ const formGroup = {
         // STATIC MODE
         // =========================
         if (mode === "static") {
-            opts += `<option value="">${placeholder}</option>`;
+            opts += `<option value="" selected>${placeholder}</option>`;
 
             opts += options
                 .map(
@@ -113,8 +117,8 @@ const formGroup = {
         // AJAX MODE
         // =========================
         if (mode === "ajax") {
-            console.log("cekcekcek : ", value, config.label);
-            // hanya set selected awal
+            // Selalu sertakan option kosong agar name tetap terkirim saat tidak ada pilihan
+            opts = `<option value=""></option>`;
             if (value && config.label) {
                 opts = `<option value="${value}" selected>${config.label}</option>`;
             }

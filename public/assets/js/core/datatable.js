@@ -63,6 +63,9 @@ function initDataTable(tableSelector, onReady) {
                 processing: true,
                 destroy: true,
                 scrollX: true,
+                scrollY: "500px", // ← tinggi area scroll, sesuaikan kebutuhan
+                scrollCollapse: true, // ← kalau data sedikit, tinggi menyesuaikan
+                fixedHeader: true, // ← header kolom fix saat scroll vertikal
 
                 language: {
                     emptyTable: "Data tidak ditemukan",

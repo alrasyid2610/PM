@@ -1,10 +1,16 @@
+.navbar {
+    padding-bottom: 0;
+}
+
 .page-header-banner {
     position: relative;
     width: 100%;
-    height: 150px;
+    /* height: 100px; */
     overflow: hidden;
-    border-radius: 12px;
-    margin-bottom: 24px;
+    /* border-radius: 12px; */
+    /* margin-bottom: 24px; */
+    margin-bottom: 1rem;
+    padding: 1rem 0;
 }
 
 .page-header-banner .header-bg {
@@ -370,7 +376,7 @@ table.dataTable.table-striped tbody tr:nth-child(odd):hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: 0.5rem;
 }
 
 .card-datatable-title {
@@ -391,4 +397,483 @@ table.dataTable.table-striped tbody tr:nth-child(odd):hover {
 
 .sidebar-wrapper .menu .submenu.active {
     overflow-y: scroll !important;
+}
+
+/* =====================
+   NAV TABS — BUTTON STYLE
+   ===================== */
+.nav-tabs {
+    border-bottom: none !important;
+    gap: 6px;
+}
+
+.nav-tabs .nav-item .nav-link {
+    border: 0.5px solid #d1d5db !important;
+    border-radius: 6px !important;
+    padding: 7px 20px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #6b7280 !important;
+    background: #fff !important;
+    transition: all 0.15s ease !important;
+}
+
+.nav-tabs .nav-item .nav-link:hover {
+    background: #f3f4f6 !important;
+    border-color: #9ca3af !important;
+    color: #374151 !important;
+}
+
+.nav-tabs .nav-item .nav-link.active {
+    background: #18386b !important;
+    border-color: #18386b !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(24, 56, 107, 0.25) !important;
+}
+
+.nav-tabs .nav-link.active::after {
+    content: none !important;
+}
+
+.card-datatable-header + hr {
+    margin-top: 0.2rem;
+    width: 120%;
+    transform: translateX(-10%);
+}
+
+section .card {
+    overflow: hidden;
+}
+
+/* Fix scroll datatable */
+.dataTables_scrollBody {
+    border-radius: 0 0 8px 8px !important;
+}
+
+.dataTables_scrollHead {
+    border-radius: 8px 8px 0 0 !important;
+    overflow: hidden !important;
+}
+
+.dataTables_scrollHead table thead th {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 2 !important;
+    background: #f9fafb !important;
+}
+
+/* Shadow subtle di header saat scroll */
+.dataTables_scrollHeadInner {
+    width: 100% !important;
+}
+
+.dataTables_scrollBody::-webkit-scrollbar {
+    height: 4px;
+    width: 4px;
+}
+
+.dataTables_scrollBody::-webkit-scrollbar-track {
+    background: #f3f4f6;
+}
+
+.dataTables_scrollBody::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 99px;
+}
+
+.dataTables_scrollBody::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+.sidebar-wrapper .menu {
+    margin-top: 0.5rem;
+}
+
+/* =====================
+   SO SECTION CARD
+   ===================== */
+.so-section-card {
+    background: #fff;
+    border: 0.5px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 0;
+}
+
+.so-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #fafafa;
+    border-bottom: 0.5px solid #f3f4f6;
+}
+
+.so-section-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 13px;
+}
+
+.so-section-icon.icon-navy {
+    background: #eef2f9;
+    color: #18386b;
+}
+.so-section-icon.icon-blue {
+    background: #e8f0fe;
+    color: #1a5fbe;
+}
+.so-section-icon.icon-green {
+    background: #dcfce7;
+    color: #166534;
+}
+.so-section-icon.icon-amber {
+    background: #fef3c7;
+    color: #92400e;
+}
+.so-section-icon.icon-purple {
+    background: #f3e8ff;
+    color: #7c3aed;
+}
+
+.so-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.so-section-sub {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-left: auto;
+}
+
+.so-section-body {
+    padding: 16px;
+}
+/* =====================
+   SO ACTION BAR
+   ===================== */
+.so-action-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    border: 0.5px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px 20px;
+}
+
+.so-number {
+    font-size: 18px;
+    font-weight: 700;
+    color: #18386b;
+    letter-spacing: -0.02em;
+}
+
+.so-date {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 2px;
+}
+
+/* =====================
+   SO STATUS BADGE
+   ===================== */
+.so-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 99px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.so-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.so-status-badge.so-status-draft {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+.so-status-badge.so-status-confirmed {
+    background: #e8f0fe;
+    color: #1a5fbe;
+}
+.so-status-badge.so-status-on-progress {
+    background: #fef3c7;
+    color: #92400e;
+}
+.so-status-badge.so-status-done {
+    background: #dcfce7;
+    color: #166534;
+}
+.so-status-badge.so-status-cancel {
+    background: #fee2e2;
+    color: #991b1b;
+}
+.so-status-badge.so-status-close {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+.so-status-badge.so-status-complete {
+    background: #dcfce7;
+    color: #166534;
+}
+
+/* =====================
+   SO SECTION CARD
+   ===================== */
+.so-section-card {
+    background: #fff;
+    border: 0.5px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.so-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #fafafa;
+    border-bottom: 0.5px solid #f3f4f6;
+}
+
+.so-section-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 13px;
+}
+
+.so-section-icon.icon-navy {
+    background: #eef2f9;
+    color: #18386b;
+}
+.so-section-icon.icon-blue {
+    background: #e8f0fe;
+    color: #1a5fbe;
+}
+.so-section-icon.icon-green {
+    background: #dcfce7;
+    color: #166534;
+}
+.so-section-icon.icon-amber {
+    background: #fef3c7;
+    color: #92400e;
+}
+.so-section-icon.icon-purple {
+    background: #f3e8ff;
+    color: #7c3aed;
+}
+
+.so-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.so-section-sub {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-left: auto;
+}
+
+.so-section-body {
+    padding: 16px;
+}
+
+/* =====================
+   SO PARTY HEADER
+   ===================== */
+.so-party-header {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+}
+
+.so-party-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding-bottom: 8px;
+    border-bottom: 1.5px solid #f3f4f6;
+}
+
+/* d-md-grid — Bootstrap tidak punya ini */
+@media (min-width: 768px) {
+    .d-md-grid {
+        display: grid !important;
+    }
+}
+
+/* =====================
+   SO MOBILE SECTION LABEL
+   ===================== */
+.so-mobile-section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 10px 0 6px;
+    border-top: 1.5px solid #f3f4f6;
+    margin-top: 4px;
+}
+
+/* =====================
+   FORM ELEMENTS
+   ===================== */
+.so-section-body .form-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.so-section-body .form-label.required::after {
+    content: " *";
+    color: #ef4444;
+}
+
+.so-section-body .form-control {
+    height: 36px;
+    font-size: 13px;
+    border: 0.5px solid #d1d5db;
+    border-radius: 6px;
+    color: #374151;
+    padding: 0 10px;
+}
+
+.so-section-body .form-control.disabled,
+.so-section-body .form-control:disabled {
+    background: #f9fafb;
+    color: #6b7280;
+    border-color: #e5e7eb;
+}
+
+.so-section-body textarea.form-control {
+    height: auto;
+    padding: 8px 10px;
+}
+
+.so-section-body .form-select {
+    height: 36px;
+    font-size: 13px;
+    border: 0.5px solid #d1d5db;
+    border-radius: 6px;
+    color: #374151;
+    padding: 0 10px;
+}
+
+.so-section-body .form-select.disabled,
+.so-section-body .form-select:disabled {
+    background: #f9fafb;
+    color: #6b7280;
+    border-color: #e5e7eb;
+}
+
+/* Select2 override */
+.so-section-body .select2-container--default .select2-selection--single {
+    height: 36px !important;
+    border: 0.5px solid #d1d5db !important;
+    border-radius: 6px !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.so-section-body
+    .select2-container--default
+    .select2-selection--single
+    .select2-selection__rendered {
+    font-size: 13px !important;
+    color: #374151 !important;
+    line-height: 36px !important;
+    padding-left: 10px !important;
+}
+
+.so-section-body
+    .select2-container--default
+    .select2-selection--single
+    .select2-selection__arrow {
+    height: 34px !important;
+}
+
+/* Disabled Select2 */
+.so-section-body
+    .select2-container--default.select2-container--disabled
+    .select2-selection--single {
+    background: #f9fafb !important;
+    border-color: #e5e7eb !important;
+}
+
+.so-section-body
+    .select2-container--default.select2-container--disabled
+    .select2-selection__rendered {
+    color: #6b7280 !important;
+}
+
+/* Checkbox / Switch */
+.so-section-body .form-check.form-switch {
+    padding-left: 2.5em;
+}
+
+.so-section-body .form-check-input {
+    cursor: pointer;
+}
+
+.so-section-body .form-check-label {
+    font-size: 13px;
+    color: #374151;
+}
+
+/* h6 section separator */
+.so-section-body h6.fw-bold {
+    font-size: 12px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding-bottom: 8px;
+    border-bottom: 1.5px solid #f3f4f6;
+    margin-top: 8px;
+    margin-bottom: 12px !important;
+    width: 100%;
+}
+
+/* =====================
+   RESPONSIVE
+   ===================== */
+@media (max-width: 767.98px) {
+    .so-action-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .so-section-sub {
+        display: none;
+    }
+
+    .so-section-body {
+        padding: 12px;
+    }
 }

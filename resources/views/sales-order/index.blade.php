@@ -1,4 +1,22 @@
 @extends('layouts.app')
+
+@section('page-title', 'Sales Orders')
+@section('page-descrip', 'Kelola data Sales Orders')
+
+@section('breadcrumb')
+    <li class="breadcrumb-item active" aria-current="page">Sales Orders</li>
+@endsection
+
+@section('page-icon')
+    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M28 8h4v28l-16 28h48L48 36V8h4" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M28 8h24" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="32" cy="56" r="3" fill="white"/>
+        <circle cx="44" cy="62" r="2" fill="white"/>
+        <circle cx="38" cy="52" r="2" fill="white"/>
+    </svg>
+@endsection
+
 @section('content')
     <style>
         thead * {
@@ -20,37 +38,12 @@
         <div class="card">
 
             <div class="card-body">
-                
-                 {{-- Header + Add Button --}}
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0">{{ Str::title(str_replace('-', ' ', request()->segment(1))); }}</h5>
 
-                    <a href="{{ route('sales-orders.create') }}"
-                    class="btn btn-primary">
-                        Add {{ Str::title(str_replace('-', ' ', request()->segment(1))); }}
-                    </a>
-                </div>
-
-                <ul class="nav nav-tabs mb-3" id="brTabs" role="tablist">
-                    <li class="nav-item">
-                        <button class="nav-link active"
-                                id="data-tab"
-                                data-bs-toggle="tab"
-                                data-bs-target="#tab-data"
-                                type="button">
-                            Data
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link"
-                                id="detail-tab"
-                                data-bs-toggle="tab"
-                                data-bs-target="#tab-detail"
-                                type="button">
-                            Detail
-                        </button>
-                    </li>
-                </ul>
+                <x-datatable-header
+                    title="List of Sales Orders"
+                    create-route="sales-orders.create"
+                    add-label="Add Data"
+                />
 
                 <div class="tab-content">
 
@@ -99,4 +92,5 @@
     }
 </script>
 <script src="{{ asset('assets/js/sales-order/index.js') }}"></script>
+<script src="{{ asset('assets/js/sales-order/form.js') }}"></script>
 @endsection
