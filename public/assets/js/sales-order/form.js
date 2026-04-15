@@ -295,7 +295,6 @@
 
 // `;
 // }
-
 function renderForm(res) {
     return `
 <form class="row g-3" id="detailForm">
@@ -305,16 +304,16 @@ function renderForm(res) {
 
     <!-- ACTION BAR -->
     <div class="col-md-12">
-        <div class="so-action-bar">
+        <div class="detail-action-bar">
             <div>
-                <div class="so-number">${res.no_so ?? "—"}</div>
-                <div class="so-date">
+                <div class="detail-number">${res.no_so ?? "—"}</div>
+                <div class="detail-date">
                     Dibuat ${res.created_at ?? "—"} &nbsp;·&nbsp; Diupdate ${res.updated_at ?? "—"}
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <span class="so-status-badge so-status-${(res.status ?? "draft").toString().toLowerCase().replace(/\s+/g, "-")}">
-                    <span class="so-status-dot"></span>
+                <span class="detail-status-badge detail-status-${(res.status ?? "draft").toString().toLowerCase().replace(/\s+/g, "-")}">
+                    <span class="detail-status-dot"></span>
                     ${res.status ?? "Draft"}
                 </span>
                 <button class="btn btn-warning btn-sm btn-edit-context" title="Edit SO">
@@ -326,15 +325,15 @@ function renderForm(res) {
 
     <!-- SECTION 1: INFORMASI ORDER -->
     <div class="col-md-12">
-        <div class="so-section-card">
-            <div class="so-section-header">
-                <div class="so-section-icon icon-navy">
+        <div class="detail-section-card">
+            <div class="detail-section-header">
+                <div class="detail-section-icon icon-navy">
                     <i class="fa-solid fa-file-lines"></i>
                 </div>
-                <div class="so-section-title">Informasi Order</div>
-                <div class="so-section-sub">Data utama sales order</div>
+                <div class="detail-section-title">Informasi Order</div>
+                <div class="detail-section-sub">Data utama sales order</div>
             </div>
-            <div class="so-section-body">
+            <div class="detail-section-body">
                 <div class="row g-3 form-1">
                     ${formGroup.date(
                         "tanggal_so",
@@ -389,15 +388,15 @@ function renderForm(res) {
 
     <!-- SECTION 2: PURCHASE ORDER -->
     <div class="col-md-12">
-        <div class="so-section-card">
-            <div class="so-section-header">
-                <div class="so-section-icon icon-amber">
+        <div class="detail-section-card">
+            <div class="detail-section-header">
+                <div class="detail-section-icon icon-amber">
                     <i class="fa-solid fa-receipt"></i>
                 </div>
-                <div class="so-section-title">Purchase Order (PO)</div>
-                <div class="so-section-sub">Referensi PO dari pelanggan</div>
+                <div class="detail-section-title">Purchase Order (PO)</div>
+                <div class="detail-section-sub">Referensi PO dari pelanggan</div>
             </div>
-            <div class="so-section-body">
+            <div class="detail-section-body">
                 <div class="row g-3 form-1">
                     ${formGroup.checkbox(
                         "tidak_ada_po",
@@ -427,25 +426,25 @@ function renderForm(res) {
 
     <!-- SECTION 3: DATA PELANGGAN -->
     <div class="col-md-12">
-        <div class="so-section-card">
-            <div class="so-section-header">
-                <div class="so-section-icon icon-blue">
+        <div class="detail-section-card">
+            <div class="detail-section-header">
+                <div class="detail-section-icon icon-blue">
                     <i class="fa-solid fa-building-user"></i>
                 </div>
-                <div class="so-section-title">Data Pelanggan</div>
-                <div class="so-section-sub">Billing, Delivery & Payment</div>
+                <div class="detail-section-title">Data Pelanggan</div>
+                <div class="detail-section-sub">Billing, Delivery & Payment</div>
             </div>
-            <div class="so-section-body">
+            <div class="detail-section-body">
 
                 <!-- Desktop: party header -->
-                <div class="so-party-header d-none d-md-grid">
-                    <div class="so-party-label">
+                <div class="detail-party-header d-none d-md-grid">
+                    <div class="detail-party-label">
                         <i class="fa-solid fa-file-invoice me-1"></i> Billing (Pemesan)
                     </div>
-                    <div class="so-party-label">
+                    <div class="detail-party-label">
                         <i class="fa-solid fa-truck me-1"></i> Delivery (Pengiriman)
                     </div>
-                    <div class="so-party-label">
+                    <div class="detail-party-label">
                         <i class="fa-solid fa-money-bill me-1"></i> Payment (Pembayaran)
                     </div>
                 </div>
@@ -453,7 +452,7 @@ function renderForm(res) {
                 <!-- Perusahaan -->
                 <div class="row g-3 form-1">
                     <div class="col-12 d-md-none">
-                        <div class="so-mobile-section-label">
+                        <div class="detail-mobile-section-label">
                             <i class="fa-solid fa-file-invoice me-1"></i> Billing (Pemesan)
                         </div>
                     </div>
@@ -471,7 +470,7 @@ function renderForm(res) {
                         },
                     )}
                     <div class="col-12 d-md-none">
-                        <div class="so-mobile-section-label">
+                        <div class="detail-mobile-section-label">
                             <i class="fa-solid fa-truck me-1"></i> Delivery (Pengiriman)
                         </div>
                     </div>
@@ -489,7 +488,7 @@ function renderForm(res) {
                         },
                     )}
                     <div class="col-12 d-md-none">
-                        <div class="so-mobile-section-label">
+                        <div class="detail-mobile-section-label">
                             <i class="fa-solid fa-money-bill me-1"></i> Payment (Pembayaran)
                         </div>
                     </div>
@@ -600,15 +599,15 @@ function renderForm(res) {
 
     <!-- SECTION 4: PIC INTERNAL -->
     <div class="col-md-12">
-        <div class="so-section-card">
-            <div class="so-section-header">
-                <div class="so-section-icon icon-green">
+        <div class="detail-section-card">
+            <div class="detail-section-header">
+                <div class="detail-section-icon icon-green">
                     <i class="fa-solid fa-users"></i>
                 </div>
-                <div class="so-section-title">PIC Internal</div>
-                <div class="so-section-sub">Penanggung jawab dari Pramatek</div>
+                <div class="detail-section-title">PIC Internal</div>
+                <div class="detail-section-sub">Penanggung jawab dari Pramatek</div>
             </div>
-            <div class="so-section-body">
+            <div class="detail-section-body">
                 <div class="row g-3 form-1">
                     ${formGroup.select(
                         "pic_input",
@@ -669,14 +668,14 @@ function renderForm(res) {
 
     <!-- SECTION 5: STATUS & KETERANGAN -->
     <div class="col-md-12">
-        <div class="so-section-card">
-            <div class="so-section-header">
-                <div class="so-section-icon icon-purple">
+        <div class="detail-section-card">
+            <div class="detail-section-header">
+                <div class="detail-section-icon icon-purple">
                     <i class="fa-solid fa-circle-info"></i>
                 </div>
-                <div class="so-section-title">Status & Keterangan</div>
+                <div class="detail-section-title">Status & Keterangan</div>
             </div>
-            <div class="so-section-body">
+            <div class="detail-section-body">
                 <div class="row g-3 form-1">
                     ${formGroup.select(
                         "status",

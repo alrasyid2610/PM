@@ -489,77 +489,11 @@ section .card {
     margin-top: 0.5rem;
 }
 
+/*  */
 /* =====================
-   SO SECTION CARD
+   DETAIL ACTION BAR
    ===================== */
-.so-section-card {
-    background: #fff;
-    border: 0.5px solid #e5e7eb;
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 0;
-}
-
-.so-section-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
-    background: #fafafa;
-    border-bottom: 0.5px solid #f3f4f6;
-}
-
-.so-section-icon {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    font-size: 13px;
-}
-
-.so-section-icon.icon-navy {
-    background: #eef2f9;
-    color: #18386b;
-}
-.so-section-icon.icon-blue {
-    background: #e8f0fe;
-    color: #1a5fbe;
-}
-.so-section-icon.icon-green {
-    background: #dcfce7;
-    color: #166534;
-}
-.so-section-icon.icon-amber {
-    background: #fef3c7;
-    color: #92400e;
-}
-.so-section-icon.icon-purple {
-    background: #f3e8ff;
-    color: #7c3aed;
-}
-
-.so-section-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #111827;
-}
-
-.so-section-sub {
-    font-size: 11px;
-    color: #9ca3af;
-    margin-left: auto;
-}
-
-.so-section-body {
-    padding: 16px;
-}
-/* =====================
-   SO ACTION BAR
-   ===================== */
-.so-action-bar {
+.detail-action-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -569,23 +503,23 @@ section .card {
     padding: 14px 20px;
 }
 
-.so-number {
+.detail-number {
     font-size: 18px;
     font-weight: 700;
     color: #18386b;
     letter-spacing: -0.02em;
 }
 
-.so-date {
+.detail-date {
     font-size: 12px;
     color: #9ca3af;
     margin-top: 2px;
 }
 
 /* =====================
-   SO STATUS BADGE
+   DETAIL STATUS BADGE
    ===================== */
-.so-status-badge {
+.detail-status-badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -595,53 +529,53 @@ section .card {
     font-weight: 500;
 }
 
-.so-status-dot {
+.detail-status-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
     background: currentColor;
 }
 
-.so-status-badge.so-status-draft {
+.detail-status-badge.detail-status-draft {
     background: #f3f4f6;
     color: #6b7280;
 }
-.so-status-badge.so-status-confirmed {
+.detail-status-badge.detail-status-confirmed {
     background: #e8f0fe;
     color: #1a5fbe;
 }
-.so-status-badge.so-status-on-progress {
+.detail-status-badge.detail-status-on-progress {
     background: #fef3c7;
     color: #92400e;
 }
-.so-status-badge.so-status-done {
+.detail-status-badge.detail-status-done {
     background: #dcfce7;
     color: #166534;
 }
-.so-status-badge.so-status-cancel {
+.detail-status-badge.detail-status-cancel {
     background: #fee2e2;
     color: #991b1b;
 }
-.so-status-badge.so-status-close {
+.detail-status-badge.detail-status-close {
     background: #f3f4f6;
     color: #6b7280;
 }
-.so-status-badge.so-status-complete {
+.detail-status-badge.detail-status-complete {
     background: #dcfce7;
     color: #166534;
 }
 
 /* =====================
-   SO SECTION CARD
+   DETAIL SECTION CARD
    ===================== */
-.so-section-card {
+.detail-section-card {
     background: #fff;
     border: 0.5px solid #e5e7eb;
     border-radius: 12px;
     overflow: hidden;
 }
 
-.so-section-header {
+.detail-section-header {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -650,7 +584,7 @@ section .card {
     border-bottom: 0.5px solid #f3f4f6;
 }
 
-.so-section-icon {
+.detail-section-icon {
     width: 30px;
     height: 30px;
     border-radius: 8px;
@@ -661,54 +595,54 @@ section .card {
     font-size: 13px;
 }
 
-.so-section-icon.icon-navy {
+.detail-section-icon.icon-navy {
     background: #eef2f9;
     color: #18386b;
 }
-.so-section-icon.icon-blue {
+.detail-section-icon.icon-blue {
     background: #e8f0fe;
     color: #1a5fbe;
 }
-.so-section-icon.icon-green {
+.detail-section-icon.icon-green {
     background: #dcfce7;
     color: #166534;
 }
-.so-section-icon.icon-amber {
+.detail-section-icon.icon-amber {
     background: #fef3c7;
     color: #92400e;
 }
-.so-section-icon.icon-purple {
+.detail-section-icon.icon-purple {
     background: #f3e8ff;
     color: #7c3aed;
 }
 
-.so-section-title {
+.detail-section-title {
     font-size: 13px;
     font-weight: 600;
     color: #111827;
 }
 
-.so-section-sub {
+.detail-section-sub {
     font-size: 11px;
     color: #9ca3af;
     margin-left: auto;
 }
 
-.so-section-body {
+.detail-section-body {
     padding: 16px;
 }
 
 /* =====================
-   SO PARTY HEADER
+   DETAIL PARTY HEADER
    ===================== */
-.so-party-header {
+.detail-party-header {
     grid-template-columns: 1fr 1fr 1fr;
     gap: 12px;
     margin-bottom: 8px;
     padding-bottom: 8px;
 }
 
-.so-party-label {
+.detail-party-label {
     font-size: 11px;
     font-weight: 600;
     color: #6b7280;
@@ -718,7 +652,6 @@ section .card {
     border-bottom: 1.5px solid #f3f4f6;
 }
 
-/* d-md-grid — Bootstrap tidak punya ini */
 @media (min-width: 768px) {
     .d-md-grid {
         display: grid !important;
@@ -726,9 +659,9 @@ section .card {
 }
 
 /* =====================
-   SO MOBILE SECTION LABEL
+   DETAIL MOBILE SECTION LABEL
    ===================== */
-.so-mobile-section-label {
+.detail-mobile-section-label {
     font-size: 11px;
     font-weight: 600;
     color: #6b7280;
@@ -742,19 +675,19 @@ section .card {
 /* =====================
    FORM ELEMENTS
    ===================== */
-.so-section-body .form-label {
+.detail-section-body .form-label {
     font-size: 12px;
     font-weight: 500;
     color: #6b7280;
     margin-bottom: 4px;
 }
 
-.so-section-body .form-label.required::after {
+.detail-section-body .form-label.required::after {
     content: " *";
     color: #ef4444;
 }
 
-.so-section-body .form-control {
+.detail-section-body .form-control {
     height: 36px;
     font-size: 13px;
     border: 0.5px solid #d1d5db;
@@ -763,19 +696,19 @@ section .card {
     padding: 0 10px;
 }
 
-.so-section-body .form-control.disabled,
-.so-section-body .form-control:disabled {
+.detail-section-body .form-control.disabled,
+.detail-section-body .form-control:disabled {
     background: #f9fafb;
     color: #6b7280;
     border-color: #e5e7eb;
 }
 
-.so-section-body textarea.form-control {
+.detail-section-body textarea.form-control {
     height: auto;
     padding: 8px 10px;
 }
 
-.so-section-body .form-select {
+.detail-section-body .form-select {
     height: 36px;
     font-size: 13px;
     border: 0.5px solid #d1d5db;
@@ -784,15 +717,15 @@ section .card {
     padding: 0 10px;
 }
 
-.so-section-body .form-select.disabled,
-.so-section-body .form-select:disabled {
+.detail-section-body .form-select.disabled,
+.detail-section-body .form-select:disabled {
     background: #f9fafb;
     color: #6b7280;
     border-color: #e5e7eb;
 }
 
 /* Select2 override */
-.so-section-body .select2-container--default .select2-selection--single {
+.detail-section-body .select2-container--default .select2-selection--single {
     height: 36px !important;
     border: 0.5px solid #d1d5db !important;
     border-radius: 6px !important;
@@ -800,7 +733,7 @@ section .card {
     align-items: center !important;
 }
 
-.so-section-body
+.detail-section-body
     .select2-container--default
     .select2-selection--single
     .select2-selection__rendered {
@@ -810,43 +743,42 @@ section .card {
     padding-left: 10px !important;
 }
 
-.so-section-body
+.detail-section-body
     .select2-container--default
     .select2-selection--single
     .select2-selection__arrow {
     height: 34px !important;
 }
 
-/* Disabled Select2 */
-.so-section-body
+.detail-section-body
     .select2-container--default.select2-container--disabled
     .select2-selection--single {
     background: #f9fafb !important;
     border-color: #e5e7eb !important;
 }
 
-.so-section-body
+.detail-section-body
     .select2-container--default.select2-container--disabled
     .select2-selection__rendered {
     color: #6b7280 !important;
 }
 
 /* Checkbox / Switch */
-.so-section-body .form-check.form-switch {
+.detail-section-body .form-check.form-switch {
     padding-left: 2.5em;
 }
 
-.so-section-body .form-check-input {
+.detail-section-body .form-check-input {
     cursor: pointer;
 }
 
-.so-section-body .form-check-label {
+.detail-section-body .form-check-label {
     font-size: 13px;
     color: #374151;
 }
 
 /* h6 section separator */
-.so-section-body h6.fw-bold {
+.detail-section-body h6.fw-bold {
     font-size: 12px;
     font-weight: 600;
     color: #9ca3af;
@@ -863,17 +795,17 @@ section .card {
    RESPONSIVE
    ===================== */
 @media (max-width: 767.98px) {
-    .so-action-bar {
+    .detail-action-bar {
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
     }
 
-    .so-section-sub {
+    .detail-section-sub {
         display: none;
     }
 
-    .so-section-body {
+    .detail-section-body {
         padding: 12px;
     }
 }
