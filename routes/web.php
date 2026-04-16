@@ -40,6 +40,9 @@ Route::prefix('testing-units')->name('testing-units.')->group(function () {
     Route::delete('/{id}', [TestingUnitController::class, 'destroy'])->name('destroy');
     Route::get('/{id}/detail', [TestingUnitController::class, 'detail'])
         ->name('detail');
+    Route::get('/{id}/history', [TestingUnitController::class, 'history'])
+        ->name('history')
+        ->whereNumber('id');
 });
 
 //testing nana
@@ -65,6 +68,9 @@ Route::prefix('testing-parameters')->name('testing-parameters.')->group(function
 
     Route::get('/{id}', [TestingParameterController::class, 'show'])->name('show')->whereNumber('id');
     Route::get('/{id}/edit', [TestingParameterController::class, 'edit'])->name('edit')->whereNumber('id');
+    Route::get('/{id}/history', [TestingParameterController::class, 'history'])
+        ->name('history')
+        ->whereNumber('id');
     Route::put('/{id}', [TestingParameterController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}', [TestingParameterController::class, 'destroy'])->name('destroy')->whereNumber('id');
 });

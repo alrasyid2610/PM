@@ -20,4 +20,14 @@
             data-bs-toggle="tab" data-bs-target="#tab-detail"
             type="button">Detail</button>
     </li>
+    @if($withHistory)
+    <li class="nav-item">
+        <button class="nav-link" id="history-tab"
+            data-bs-toggle="tab" data-bs-target="#tab-history"
+            type="button">
+            {{-- <i class="fa-solid fa-clock-rotate-left me-1"></i>  --}}
+            History
+        </button>
+    </li>
+    @endif
 </ul>

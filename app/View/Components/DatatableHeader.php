@@ -12,6 +12,7 @@ class DatatableHeader extends Component
         public string $title,
         public ?string $createRoute = null,
         public string $addLabel = 'Add Data',
+        public bool $withHistory = false,
     ) {}
 
     public function render(): View|Closure|string

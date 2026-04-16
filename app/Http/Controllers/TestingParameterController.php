@@ -7,10 +7,19 @@ use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use App\Traits\HasAuditHistory;
+
 
 
 class TestingParameterController extends Controller
 {
+    use HasAuditHistory;
+
+    protected function auditTable(): string
+    {
+        return 'testing_parameters'; // ← nama table di audit_logs
+    }
+
     public function index()
     {
         return view('testing-parameters.index', [
@@ -277,5 +286,10 @@ class TestingParameterController extends Controller
         return response()->json([
             'success' => true
         ]);
+    }
+
+    protected function auditExcludeFields(): array
+    {
+        return ['updated_at', 'created_at']; // ← field yang di-skip
     }
 }
