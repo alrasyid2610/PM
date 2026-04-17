@@ -435,3 +435,16 @@ Route::prefix('/api')
 Route::get('/', function () {
     return redirect('/business-relations');
 });
+
+use App\Http\Controllers\DashboardController;
+
+Route::prefix('dashboard')->name('dashboard.')->group(function () {
+    Route::get('/',             [DashboardController::class, 'index'])->name('index');
+    Route::get('/summary',      [DashboardController::class, 'summary'])->name('summary');
+    Route::get('/so-per-month', [DashboardController::class, 'soPerMonth'])->name('soPerMonth');
+});
+
+// Update redirect root ke dashboard
+Route::get('/', function () {
+    return redirect('/dashboard');
+});

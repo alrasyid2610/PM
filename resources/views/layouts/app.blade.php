@@ -171,9 +171,11 @@
     <script src="{{ asset('assets/js/pm.js') }}"></script>
     <script src="{{ asset('assets/js/scientific-input.js') }}"></script>
     <script src="{{ asset('assets/js/tableForm.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 
 
+    grep -n "custom-script" resources/views/layouts/app.blade.php
     @yield('custom-script')
 
 </body>
