@@ -2,7 +2,7 @@
     <div class="sidebar-wrapper active">
         <div class="sidebar-header">
             <!-- <h1></h1> -->
-            <!-- <img src="assets/images/logo.svg" alt="" srcset=""> -->
+            <img style="width: 100%; height: 60px;" src="assets/images/logo.png" alt="" srcset="">
         </div>
         <div class="sidebar-menu">
             <ul class="menu">

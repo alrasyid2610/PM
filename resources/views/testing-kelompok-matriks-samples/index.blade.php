@@ -31,45 +31,11 @@
     <div class="card">
         <div class="card-body">
 
-            {{-- <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0">Testing Kelompok Matriks Samples</h5>
-                <a href="{{ route('testing-kelompok-matriks-samples.create') }}"
-                    class="btn btn-primary">
-                    Add Data
-                </a>
-            </div> --}}
-
-            {{-- Header --}}
-            <div class="card-datatable-header">
-                <div class="card-datatable-title">
-                    List of Testing Kelompok Matriks Samples
-                </div>
-                <a href="{{ route('testing-kelompok-matriks-samples.create') }}"
-                    class="btn btn-primary btn-sm">
-                    <i class="fa-solid fa-plus me-1"></i> Add Data
-                </a>
-            </div>
-
-            <ul class="nav nav-tabs mb-3" id="tabs" role="tablist">
-                <li class="nav-item">
-                    <button class="nav-link active"
-                        id="data-tab"
-                        data-bs-toggle="tab"
-                        data-bs-target="#tab-data"
-                        type="button">
-                        Data
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link"
-                        id="detail-tab"
-                        data-bs-toggle="tab"
-                        data-bs-target="#tab-detail"
-                        type="button">
-                        Detail
-                    </button>
-                </li>
-            </ul>
+            <x-datatable-header
+                title="List of Kelompok Matriks Samples"
+                create-route="testing-kelompok-matriks-samples.create"
+                add-label="Add Data"
+            />
 
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="tab-data">

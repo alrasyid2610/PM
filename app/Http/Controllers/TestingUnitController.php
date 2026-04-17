@@ -5,9 +5,17 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
+use App\Traits\HasAuditHistory;
 
 class TestingUnitController extends Controller
 {
+    use HasAuditHistory;
+
+    protected function auditTable(): string
+    {
+        return 'testing_units'; // ← nama table di audit_logs
+    }
+
     public function index()
     {
         return view('testing-units.index', [
@@ -47,6 +55,7 @@ class TestingUnitController extends Controller
             'judul_inggris' => 'required|string|max:255',
             'keterangan' => 'nullable|string',
         ]);
+
         $id = DB::table('testing_units')->insertGetId([
             'kode' => $validated['kode'],
             'judul_indonesia' => $validated['judul_indonesia'],
@@ -55,6 +64,19 @@ class TestingUnitController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        $after = DB::table('testing_units')->where('id_testing_unit', $id)
+            ->get()->toJson();
+
+        saveAudit(
+            'testing_units',
+            $id,
+            'Create',
+            '',
+            $after
+        );
+
+
 
         return response()->json([
             'status' => 'success',
@@ -190,4 +212,89 @@ class TestingUnitController extends Controller
 
         return response()->json($data);
     }
+
+    protected function auditExcludeFields(): array
+    {
+        return ['updated_at', 'created_at', 'id_testing_unit']; // ← field yang di-skip
+    }
+
+
+    // public function history($id)
+    // {
+    //     $logs = DB::table('audit_logs as a')
+    //         ->leftJoin('users as u', 'u.id', '=', 'a.created_by')
+    //         ->where('a.nama_table', 'testing_units')
+    //         ->where('a.row_id', $id)
+    //         ->select([
+    //             'a.id',
+    //             'a.action',
+    //             'a.old_value',
+    //             'a.new_value',
+    //             'a.created_at',
+    //             'u.name as created_by_name',
+    //         ])
+    //         ->orderByDesc('a.created_at')
+    //         ->get()
+    //         ->map(function ($log) {
+
+    //             $old = $this->parseAuditValue($log->old_value);
+    //             $new = $this->parseAuditValue($log->new_value);
+
+    //             $changes = [];
+
+    //             if (is_array($old) && is_array($new)) {
+
+    //                 foreach ($new as $key => $newVal) {
+    //                     $excludeFields = ['updated_at', 'created_at', 'id_testing_unit'];
+    //                     if (in_array($key, $excludeFields)) continue;
+
+    //                     $oldVal = $old[$key] ?? null;
+    //                     if ((string)$oldVal !== (string)$newVal) {
+    //                         $changes[] = [
+    //                             'field'     => $key,
+    //                             'old_value' => $oldVal,
+    //                             'new_value' => $newVal,
+    //                         ];
+    //                     }
+    //                 }
+    //             }
+
+    //             return [
+    //                 'id'              => $log->id,
+    //                 'action'          => $log->action,
+    //                 'changes'         => $changes,
+    //                 'total_changes'   => count($changes),
+    //                 'created_by_name' => $log->created_by_name ?? 'System',
+    //                 'created_at'      => $log->created_at,
+    //             ];
+    //         });
+
+    //     return response()->json($logs);
+    // }
+
+    // // ← tambah helper method ini
+    // private function parseAuditValue($value)
+    // {
+    //     if (empty($value)) return [];
+
+    //     // Decode pertama
+    //     $decoded = json_decode($value, true);
+
+    //     // Kalau masih string (double encoded), decode lagi
+    //     if (is_string($decoded)) {
+    //         $decoded = json_decode($decoded, true);
+    //     }
+
+    //     // Kalau array dan ada index 0 (wrapped array), ambil index 0
+    //     if (is_array($decoded) && isset($decoded[0])) {
+    //         return is_array($decoded[0]) ? $decoded[0] : $decoded;
+    //     }
+
+    //     // Kalau sudah array langsung return
+    //     if (is_array($decoded)) {
+    //         return $decoded;
+    //     }
+
+    //     return [];
+    // }
 }

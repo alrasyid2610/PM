@@ -114,17 +114,17 @@ class BusinessRelationContactController extends Controller
     {
         $search = $request->q;
 
-        $data = DB::table('testing_kelompok_matriks_samples')
-            ->where('kode', 'like', "%{$search}%")
-            ->orWhere('judul_indonesia', 'like', "%{$search}%")
+        $data = DB::table('business_relation_contacts')
+            ->where('nama_pic', 'like', "%{$search}%")
+            ->orWhere('nomor_telepon_pic', 'like', "%{$search}%")
             ->limit(10)
             ->get();
 
         return response()->json(
             $data->map(function ($item) {
                 return [
-                    'id' => $item->id_testing_kelompok_matriks_sample,
-                    'text' => $item->kode . ' - ' . $item->judul_indonesia,
+                    'id' => $item->id_contact,
+                    'text' => $item->nama_pic . ' - ' . $item->nomor_telepon_pic,
                 ];
             })
         );

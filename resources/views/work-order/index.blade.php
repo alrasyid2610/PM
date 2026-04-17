@@ -22,36 +22,11 @@
 
             <div class="card-body">
                 
-                 {{-- Header + Add Button --}}
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0">{{ Str::title(str_replace('-', ' ', request()->segment(1))); }}</h5>
-
-                    <a href="{{ route('work-orders.create') }}"
-                    class="btn btn-primary">
-                        Add {{ Str::title(str_replace('-', ' ', request()->segment(1))); }}
-                    </a>
-                </div>
-
-                <ul class="nav nav-tabs mb-3" id="brTabs" role="tablist">
-                    <li class="nav-item">
-                        <button class="nav-link active"
-                                id="data-tab"
-                                data-bs-toggle="tab"
-                                data-bs-target="#tab-data"
-                                type="button">
-                            Data
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link"
-                                id="detail-tab"
-                                data-bs-toggle="tab"
-                                data-bs-target="#tab-detail"
-                                type="button">
-                            Detail
-                        </button>
-                    </li>
-                </ul>
+                <x-datatable-header
+                    title="List of Work Orders"
+                    create-route="work-orders.create"
+                    add-label="Add Data"
+                />
 
                 <div class="tab-content">
 

@@ -28,27 +28,15 @@
 <section class="section">
     <div class="card">
         <div class="card-body">
-            {{-- Header --}}
-            <div class="card-datatable-header">
-                <div class="card-datatable-title">
-                    List of Testing Parameters
-                    {{-- opsional: badge jumlah data --}}
-                    {{-- <span class="count-badge" id="totalData">0</span> --}}
-                </div>
-                <a href="{{ route('testing-parameters.create') }}" class="btn btn-primary btn-sm">
-                    <i class="fa-solid fa-plus me-1"></i> Add Testing Parameter
-                </a>
-            </div>
-            
-            
-            <ul class="nav nav-tabs mb-3" id="brTabs" role="tablist">
-                <li class="nav-item">
-                    <button class="nav-link active" id="data-tab" data-bs-toggle="tab" data-bs-target="#tab-data" type="button">Data</button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" id="detail-tab" data-bs-toggle="tab" data-bs-target="#tab-detail" type="button">Detail</button>
-                </li>
-            </ul>
+
+            <x-datatable-header
+                title="List of Parameters"
+                create-route="testing-parameters.create"
+                add-label="Add Data"
+                :with-history="true"
+            />
+
+
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="tab-data">
                     <div class="table-responsive">
@@ -60,6 +48,11 @@
                 </div>
                 <div class="tab-pane fade" id="tab-detail">
                     <div id="detailContent" class="p-3 text-muted">Pilih data pada tab Data untuk melihat detail</div>
+                </div>
+                <div class="tab-pane fade" id="tab-history">
+                    <div id="historyContent" class="p-3 text-muted">
+                        Pilih data pada tab Data untuk melihat history
+                    </div>
                 </div>
             </div>
         </div>
@@ -73,6 +66,7 @@
     window.route = {
         data: "{{ route('testing-parameters.data') }}",
         update: "{{ url('testing-parameters') }}/",
+        history: "{{ url('testing-parameters') }}/",
         deleteAttachment: "{{ route('testing-parameters.delete-attachment') }}",
         csrf: "{{ csrf_token() }}"
     }

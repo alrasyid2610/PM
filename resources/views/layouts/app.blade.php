@@ -22,10 +22,7 @@
         {{-- Main --}}
         <div id="main">
             @include('layouts.navbar')
-
-            <div class="main-content container-fluid">
-
-                {{-- Page Title --}}
+            {{-- Page Title --}}
                 <div class="page-header-banner">
                     <div class="header-bg"></div>
                     <div class="header-circles">
@@ -34,35 +31,34 @@
                         <div class="circle circle-3"></div>
                         <div class="circle circle-4"></div>
                     </div>
-                    <div class="header-accent"></div>
-                    <div class="header-line"></div>
+                    {{-- <div class="header-accent"></div> --}}
+                    {{-- <div class="header-line"></div> --}}
 
                     <div class="header-content">
-                        <nav aria-label="breadcrumb" class="header-breadcrumb">
+                        {{-- <nav aria-label="breadcrumb" class="header-breadcrumb">
                             <ol class="breadcrumb mb-0">
                                 <li class="breadcrumb-item">
                                     <a href="{{ url('/') }}">Dashboard</a>
                                 </li>
                                 @yield('breadcrumb')
                             </ol>
-                        </nav>
+                        </nav> --}}
                         <h3 class="header-title">
                             @yield('page-title', Str::title(str_replace('-', ' ', request()->segment(1))))
                         </h3>
-                        <p class="header-subtitle">
+                        {{-- <p class="header-subtitle">
                             @yield('page-descrip')
-                        </p>
+                        </p> --}}
                     </div>
 
                     <div class="header-icon">
                         @yield('page-icon')
                     </div>
                 </div>
-                {{-- End Page Title --}}
+            {{-- End Page Title --}}
 
-
+            <div class="main-content container-fluid">
                 @yield('content')
-
             </div>
 
         </div>
@@ -171,7 +167,7 @@
     <script src="{{ asset('assets/js/pm.js') }}"></script>
     <script src="{{ asset('assets/js/scientific-input.js') }}"></script>
     <script src="{{ asset('assets/js/tableForm.js') }}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 
 

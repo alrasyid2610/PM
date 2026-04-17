@@ -40,13 +40,6 @@
                     {{-- ================= INFORMASI ORDER ================= --}}
                     <h6 class="fw-bold mb-1">Informasi Order</h6>
 
-                    {{-- <div class="row mb-3 align-items-center">
-                        <label class="form-label col-md-2 col-form-label required">No SO</label>
-                        <div class="col-md-10">
-                            <input type="text" name="no_so" class="form-control" required>
-                        </div>
-                    </div> --}}
-
                     <div class="row mb-4">
                         <div class="col-md-12 col-lg-3 mb-3">
                             <label class="form-label required">Tanggal SO</label>

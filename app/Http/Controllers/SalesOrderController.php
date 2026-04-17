@@ -125,7 +125,39 @@ class SalesOrderController extends Controller
         $so = DB::table('sales_orders as so')
             ->leftJoin('business_relations as pelanggan', 'so.id_pelanggan', '=', 'pelanggan.id_br')
             ->leftJoin('business_relation_sites as site_pelanggan', 'so.id_site_pelanggan', '=', 'site_pelanggan.id_site')
-            ->select('so.*', 'pelanggan.nama as nama_pelanggan', 'site_pelanggan.nama_lokasi as nama_site_pelanggan')
+            ->leftJoin('office as o', 'o.id_office', '=', 'so.id_office')
+            ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'so.id_pic_pelanggan')
+            ->leftJoin('business_relations as del', 'so.id_pelanggan_delivery', '=', 'del.id_br')
+            ->leftJoin('business_relation_sites as site_del', 'so.id_site_pelanggan_delivery', '=', 'site_del.id_site')
+            ->leftJoin('business_relation_contacts as brc_del', 'brc_del.id_contact', '=', 'so.id_pic_pelanggan_delivery')
+            ->leftJoin('business_relations as pay', 'so.id_pelanggan_payment', '=', 'pay.id_br')
+            ->leftJoin('business_relation_sites as site_pay', 'so.id_site_pelanggan_payment', '=', 'site_pay.id_site')
+            ->leftJoin('business_relation_contacts as brc_pay', 'brc_pay.id_contact', '=', 'so.id_pic_pelanggan_payment')
+            ->leftJoin('business_relation_contacts as pic_i', 'pic_i.id_contact', '=', 'so.pic_input')
+            ->leftJoin('business_relation_contacts as pic_o', 'pic_o.id_contact', '=', 'so.pic_input')
+            ->leftJoin('business_relation_contacts as marketing_internal', 'marketing_internal.id_contact', '=', 'so.pic_marketing_internal')
+            ->leftJoin('business_relation_contacts as marketing_eksternal', 'marketing_eksternal.id_contact', '=', 'so.pic_marketing_eksternal')
+            ->select(
+                'so.*',
+                'pelanggan.nama as nama_pelanggan',
+                'site_pelanggan.nama_lokasi as nama_site_pelanggan',
+                'o.id_office',
+                'o.name as name_office',
+                'brc.nama_pic as pic_pelanggan',
+                'del.nama as pelanggan_delivery',
+                'site_del.nama_lokasi as pelanggan_site_delivery',
+                'brc_del.nama_pic as pic_pelanggan_del',
+                'pay.nama as pelanggan_pay',
+                'site_pay.nama_lokasi as pelanggan_site_pay',
+                'brc_pay.id_contact as id_pic_pelanggan_payment',
+                'brc_pay.nama_pic as pic_pelanggan_pay',
+                'pic_i.nama_pic as pic_input',
+                'pic_o.nama_pic as pic_ordername',
+                'marketing_internal.nama_pic as marketing_internal_name',
+                'marketing_internal.id_contact as marketing_internal_id',
+                'marketing_eksternal.nama_pic as marketing_eksternal_name',
+                'marketing_eksternal.id_contact as marketing_eksternal_id',
+            )
             ->where('so.id_so', $id)
             ->first();
 
@@ -295,7 +327,7 @@ class SalesOrderController extends Controller
                 's.id_so',
                 's.no_so',
                 'br.nama as Pelanggan',
-                'brs.nama_lokasi as Site Pelanggan',
+                'brs.nama_lokasi as Site Customer',
                 's.judul_order',
                 's.id_pelanggan',
                 's.id_site_pelanggan',

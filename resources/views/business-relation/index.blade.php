@@ -30,71 +30,45 @@
     </style>
 
     <section class="section">
+        <div class="row g-3 mb-4">
+            <!-- Kantor Pusat -->
+            <div class="col-md-6">
+                <div class="summary-card summary-blue">
+                    <div class="summary-icon">
+                        <i class="fa-solid fa-building"></i>
+                    </div>
+                    <div class="summary-content">
+                        <span class="summary-title">Total Kantor Pusat</span>
+                        <h2 id="totalKantorPusat">0</h2>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kantor Cabang -->
+            <div class="col-md-6">
+                <div class="summary-card summary-light-blue">
+                    <div class="summary-icon">
+                        <i class="fa-solid fa-sitemap"></i>
+                    </div>
+                    <div class="summary-content">
+                        <span class="summary-title">Total Kantor Cabang / Sites</span>
+                        <h2 id="totalKantorCabang">0</h2>
+                    </div>
+                </div>
+            </div>
+
+        </div>
         
         <div class="card">
 
             <div class="card-body">
                 
-                {{-- Header --}}
-                <div class="card-datatable-header">
-                    <div class="card-datatable-title">
-                        List of Business Relation
-                    </div>
-                    <a href="{{ route('business-relations.create') }}" class="btn btn-primary btn-sm">
-                        <i class="fa-solid fa-plus me-1"></i> Add Data
-                    </a>
-                </div>
+                <x-datatable-header
+                    title="List of Business Relations"
+                    create-route="business-relations.create"
+                    add-label="Add Data"
+                />
                 
-                <div class="row g-3 mb-4">
-                    <!-- Kantor Pusat -->
-                    <div class="col-md-6">
-                        <div class="summary-card summary-blue">
-                            <div class="summary-icon">
-                                <i class="fa-solid fa-building"></i>
-                            </div>
-                            <div class="summary-content">
-                                <span class="summary-title">Total Kantor Pusat</span>
-                                <h2 id="totalKantorPusat">0</h2>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Kantor Cabang -->
-                    <div class="col-md-6">
-                        <div class="summary-card summary-light-blue">
-                            <div class="summary-icon">
-                                <i class="fa-solid fa-sitemap"></i>
-                            </div>
-                            <div class="summary-content">
-                                <span class="summary-title">Total Kantor Cabang / Sites</span>
-                                <h2 id="totalKantorCabang">0</h2>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                <ul class="nav nav-tabs mb-3" id="brTabs" role="tablist">
-                    <li class="nav-item">
-                        <button class="nav-link active"
-                                id="data-tab"
-                                data-bs-toggle="tab"
-                                data-bs-target="#tab-data"
-                                type="button">
-                            Data
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link"
-                                id="detail-tab"
-                                data-bs-toggle="tab"
-                                data-bs-target="#tab-detail"
-                                type="button">
-                            Detail
-                        </button>
-                    </li>
-                </ul>
-
                 <div class="tab-content">
 
                     <!-- TAB DATA -->

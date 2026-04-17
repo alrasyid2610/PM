@@ -17,8 +17,8 @@ class CrudPageController {
     }
 
     init() {
-        console.log("cascascsa kocak");
         const self = this;
+        $("#history-tab").addClass("disabled").attr("disabled", true);
 
         new MasterCrudEngine({
             primaryKey: this.primaryKey,
@@ -31,10 +31,28 @@ class CrudPageController {
                 self.loadDetail(id); // 🔥 reload detail di sini
             },
         });
+
+        $(document).on("shown.bs.tab", "#history-tab", function () {
+            if (self.selectedRow.id) {
+                self.loadHistory(self.selectedRow.id);
+            }
+        });
     }
 
     loadDetail(id) {
         const self = this;
+
+        // Enable history tab setelah row diklik
+        $("#history-tab").removeClass("disabled").removeAttr("disabled");
+
+        // ← tambah ini — reset history dulu setiap row baru diklik
+        $("#historyContent").html(`
+            <div class="text-center text-muted py-4">
+                <i class="fa-solid fa-clock-rotate-left fa-2x mb-3 d-block"></i>
+                Klik tab History untuk melihat riwayat perubahan
+            </div>
+        `);
+
         var a = loadDetailEngine({
             id: id,
 
@@ -124,6 +142,163 @@ class CrudPageController {
                     filepond: self.pondEdit,
                 });
             },
+        });
+    }
+
+    loadHistory(id) {
+        if (!window.route.history) return;
+
+        $("#historyContent").html(`
+            <div class="text-center text-muted py-4">
+                <i class="fa-solid fa-spinner fa-spin me-2"></i> Memuat history...
+            </div>
+        `);
+
+        $.get(window.route.history + id + "/history", function (res) {
+            if (!res || res.length === 0) {
+                $("#historyContent").html(`
+                <div class="history-empty">
+                    <div class="history-empty-icon">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <div class="history-empty-text">Belum ada riwayat perubahan</div>
+                </div>
+            `);
+                return;
+            }
+
+            let html = `
+            <div class="history-wrap">
+                <div class="history-wrap-header">
+                    <div class="history-wrap-icon">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <div class="history-wrap-title">Riwayat Perubahan</div>
+                    <div class="history-wrap-count">${res.length} riwayat</div>
+                </div>
+                <div class="history-acc-list">
+        `;
+
+            res.forEach(function (log, index) {
+                const date = new Date(log.created_at).toLocaleString("id-ID", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                });
+
+                const action = log.action.toLowerCase();
+
+                const actionClass =
+                    {
+                        create: "badge-create",
+                        update: "badge-update",
+                        delete: "badge-delete",
+                    }[action] ?? "badge-update";
+
+                const actionLabel =
+                    {
+                        create: "Dibuat",
+                        update: "Diubah",
+                        delete: "Dihapus",
+                    }[action] ?? log.action;
+
+                const initials = (log.created_by_name ?? "SY")
+                    .split(" ")
+                    .map((w) => w[0])
+                    .join("")
+                    .substring(0, 2)
+                    .toUpperCase();
+
+                // Tabel perubahan
+                let tableHtml = "";
+                if (log.changes && log.changes.length > 0) {
+                    const rows = log.changes
+                        .map(
+                            (c) => `
+                    <tr>
+                        <td><span class="td-field">${c.field}</span></td>
+                        <td>
+                            <span class="td-old ${!c.old_value ? "empty" : ""}">
+                                ${c.old_value ?? "kosong"}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="td-new ${!c.new_value ? "empty" : ""}">
+                                ${c.new_value ?? "kosong"}
+                            </span>
+                        </td>
+                    </tr>
+                `,
+                        )
+                        .join("");
+
+                    tableHtml = `
+                    <div class="acc-body">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Nilai Lama</th>
+                                    <th>Nilai Baru</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                `;
+                }
+
+                // Open pertama secara default
+                const isOpen =
+                    index === 0 && log.changes && log.changes.length > 0
+                        ? "open"
+                        : "";
+
+                html += `
+                <div class="acc-item ${isOpen}">
+                    <div class="acc-header">
+                        <span class="acc-badge ${actionClass}">${actionLabel}</span>
+                        <div class="acc-by">
+                            <div class="acc-avatar">${initials}</div>
+                            ${log.created_by_name ?? "System"}
+                        </div>
+                        ${
+                            log.total_changes > 0
+                                ? `<span class="acc-count">${log.total_changes} field berubah</span>`
+                                : ""
+                        }
+                        <span class="acc-time">${date}</span>
+                        ${
+                            log.changes && log.changes.length > 0
+                                ? `<span class="acc-chevron"><i class="fa-solid fa-chevron-down"></i></span>`
+                                : ""
+                        }
+                    </div>
+                    ${tableHtml}
+                </div>
+            `;
+            });
+
+            html += `</div></div>`;
+            $("#historyContent").html(html);
+
+            // Bind accordion toggle
+            $("#historyContent").on("click", ".acc-header", function () {
+                const item = $(this).closest(".acc-item");
+                if (!item.find(".acc-body").length) return;
+                item.toggleClass("open");
+            });
+        }).fail(function () {
+            $("#historyContent").html(`
+            <div class="history-empty">
+                <div class="history-empty-icon">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div class="history-empty-text">Gagal memuat riwayat perubahan</div>
+            </div>
+        `);
         });
     }
 }
