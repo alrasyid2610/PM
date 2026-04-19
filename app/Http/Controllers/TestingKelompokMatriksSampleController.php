@@ -72,7 +72,7 @@ class TestingKelompokMatriksSampleController extends Controller
         saveAudit('testing_kelompok_matriks_samples', $id, 'Create', '', $after);
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'message' => 'Data berhasil dibuat',
             'id' => $id
         ]);
@@ -186,7 +186,7 @@ class TestingKelompokMatriksSampleController extends Controller
 
         if (!$data) {
             return response()->json([
-                'status' => 'error',
+                'success' => false,
                 'message' => 'Data tidak ditemukan'
             ], 404);
         }

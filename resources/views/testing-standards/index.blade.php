@@ -72,7 +72,6 @@
         data: "{{ route('testing-standards.data') }}",
         update: "{{ url('testing-standards') }}/",
         deleteAttachment: "{{ route('testing-standards.delete-attachment') }}",
-        detail: "{{ url('testing-standards') }}/",
         history: "{{ url('testing-standards') }}/",
         csrf: "{{ csrf_token() }}"
     }

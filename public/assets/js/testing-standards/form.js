@@ -13,9 +13,7 @@ function renderForm(res) {
                 </div>
                 <div class="detail-section-title">Testing Standards</div>
                 <div class="detail-section-sub">Data standar pengujian laboratorium</div>
-                <button class="btn btn-warning btn-sm btn-edit-context ms-2" title="Edit Testing Standard">
-                    <i class="fa-solid fa-pen"></i>
-                </button>
+                ${formGroup.editButton("Edit Testing Standard")}
             </div>
             <div class="detail-section-body">
                 <div class="row g-3 form-1">
@@ -57,20 +55,5 @@ function renderForm(res) {
     </div>
 
 </form>
-`;
-}
-
-function renderAttachmentSection() {
-    return `
-<div class="col-md-12">
-    <div id="attachmentPreview" class="row g-3"></div>
-    <div id="attachmentUploader" class="mt-3" style="display:none">
-        <input
-            type="file"
-            class="filepond-edit"
-            name="attachments[]"
-            multiple>
-    </div>
-</div>
 `;
 }

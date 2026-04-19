@@ -80,7 +80,7 @@ class TestingMatriksSampleController extends Controller
         saveAudit('testing_matriks_samples', $id, 'Create', '', $after);
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'id' => $id
         ]);
     }

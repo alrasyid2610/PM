@@ -13,9 +13,12 @@ function bindEditToggle(options) {
             const isEditing = $btn.hasClass("editing");
             console.log("Tombol edit diklik", isEditing);
 
+            const isModern = $btn.hasClass("btn-action-edit");
+
             if (!isEditing) {
                 $(container)
                     .find("input, select, textarea")
+                    .not("[data-no-disable]")
                     .prop("disabled", false)
                     .removeClass("disabled");
 
@@ -23,21 +26,33 @@ function bindEditToggle(options) {
                     .find("input, select, textarea, button")
                     .prop("disabled", false);
 
-                $btn.addClass("editing")
-                    .removeClass("btn-warning")
-                    .addClass("btn-secondary")
-                    .html('<i class="fa-solid fa-times"></i>');
+                if (isModern) {
+                    $btn.addClass("editing")
+                        .html('<i class="fa-solid fa-times"></i> Batal');
 
-                $btn.after(`
-                <button class="btn btn-success btn-sm btn-save-context ms-2">
-                    <i class="fa-solid fa-check"></i>
-                </button>
-            `);
+                    $btn.after(`
+                        <button class="btn-action-save btn-save-context ms-0">
+                            <i class="fa-solid fa-check"></i> Simpan
+                        </button>
+                    `);
+                } else {
+                    $btn.addClass("editing")
+                        .removeClass("btn-warning")
+                        .addClass("btn-secondary")
+                        .html('<i class="fa-solid fa-times"></i>');
+
+                    $btn.after(`
+                        <button class="btn btn-success btn-sm btn-save-context ms-2">
+                            <i class="fa-solid fa-check"></i>
+                        </button>
+                    `);
+                }
 
                 if (onEditStart) onEditStart();
             } else {
                 $(container)
                     .find("input, select, textarea")
+                    .not("[data-no-disable]")
                     .prop("disabled", true)
                     .addClass("disabled");
 
@@ -45,10 +60,15 @@ function bindEditToggle(options) {
                     .find("input, select, textarea, button")
                     .prop("disabled", true);
 
-                $btn.removeClass("editing")
-                    .addClass("btn-warning")
-                    .removeClass("btn-secondary")
-                    .html('<i class="fa-solid fa-pen"></i>');
+                if (isModern) {
+                    $btn.removeClass("editing")
+                        .html('<i class="fa-solid fa-pen"></i> Edit');
+                } else {
+                    $btn.removeClass("editing")
+                        .addClass("btn-warning")
+                        .removeClass("btn-secondary")
+                        .html('<i class="fa-solid fa-pen"></i>');
+                }
 
                 $(".btn-save-context").remove();
 

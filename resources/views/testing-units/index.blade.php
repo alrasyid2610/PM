@@ -71,8 +71,6 @@
         update: "{{ url('testing-units') }}/",
         csrf: "{{ csrf_token() }}",
         history: "{{ url('testing-units') }}/",
-        detail: "{{ url('testing-units') }}/",
-
     }
 </script>
 

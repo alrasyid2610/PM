@@ -10,6 +10,7 @@ use App\Http\Controllers\BusinessRelationContactController;
 use App\Http\Controllers\CommercialBuildingController;
 use App\Http\Controllers\SalesOrderController;
 use App\Http\Controllers\TestingItemController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkOrderController;
 
 use App\Http\Controllers\TestingUnitController;
@@ -438,13 +439,17 @@ Route::prefix('/api')
     ->name('api.')
     ->group(function () {
         Route::get('/get-data-site', [BusinessRelationSiteController::class, 'getDataSite'])
-            ->name('get-data-site'); // ok - select2 ajax
+            ->name('get-data-site');
 
         Route::get('/get-contact-site/{id}', [BusinessRelationContactController::class, 'getDataContactSite'])
-            ->name('get-data-contact-site'); // ok - select2 ajax
+            ->name('get-data-contact-site');
 
         Route::get('/get-data-br', [BusinessRelationController::class, 'getDataBR'])
             ->name('get-data-br');
+
+        Route::get('/menus', function () {
+            return response()->json(config('menus'));
+        })->name('menus');
     });
 
 
@@ -455,6 +460,41 @@ Route::get('/', function () {
 });
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MenuGroupController;
+
+Route::prefix('menu-groups')->name('menu-groups.')->group(function () {
+    Route::get('/',             [MenuGroupController::class, 'index'])->name('index');
+    Route::get('/data',         [MenuGroupController::class, 'data'])->name('data');
+    Route::get('/create',       [MenuGroupController::class, 'create'])->name('create');
+    Route::post('/',            [MenuGroupController::class, 'store'])->name('store');
+    Route::get('/{id}',         [MenuGroupController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}',         [MenuGroupController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}',      [MenuGroupController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/history', [MenuGroupController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::get('/api/menus', function () {
+    return response()->json(config('menus'));
+});
+
+Route::get('/api/menu-groups', function () {
+    $groups = \Illuminate\Support\Facades\DB::table('menu_groups')
+        ->select('id', 'name')
+        ->orderBy('name')
+        ->get();
+    return response()->json($groups);
+});
+
+Route::prefix('users')->name('users.')->group(function () {
+    Route::get('/',           [UserController::class, 'index'])->name('index');
+    Route::get('/data',       [UserController::class, 'data'])->name('data');
+    Route::get('/create',     [UserController::class, 'create'])->name('create');
+    Route::post('/',          [UserController::class, 'store'])->name('store');
+    Route::get('/{id}',       [UserController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}',       [UserController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}',    [UserController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/history', [UserController::class, 'history'])->name('history')->whereNumber('id');
+});
 
 Route::prefix('dashboard')->name('dashboard.')->group(function () {
     Route::get('/',             [DashboardController::class, 'index'])->name('index');

@@ -108,52 +108,16 @@
 @endsection
 @section('custom-script')
 <script>
-    $(document).ready(function() {
-        $('.select2').select2()
-
-        FilePond.create(document.querySelector('.filepond'), {
-
-            allowMultiple: true,
-
-            acceptedFileTypes: [
-                'image/*',
-                'application/pdf',
-                'application/vnd.ms-excel',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            ],
-
-            labelIdle: 'Drag & Drop file atau <span class="filepond--label-action">Browse</span>'
-
-        });
+    $(document).ready(function () {
+        $(".select2").select2();
+        createFileUploader(".filepond");
     });
 
-    $('#testingParameterForm').submit(function(e) {
-        e.preventDefault();
-        Notify.confirm('Simpan Data?', function() {
-
-            let form = document.getElementById('testingParameterForm');
-            let formData = new FormData(form);
-            FilePond.find(document.querySelector('.filepond'))
-                .getFiles()
-                .forEach(fileItem => {
-                    formData.append('attachments[]', fileItem.file);
-                });
-
-            $.ajax({
-                url: "{{ route('testing-parameters.store') }}",
-                method: "POST",
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    Notify.success('Testing parameter berhasil disimpan');
-                    // window.location.href = "{{ route('testing-parameters.index') }}";
-                },
-                error: function(xhr) {
-                    Notify.error('Gagal menyimpan testing parameter');
-                }
-            });
-        });
+    submitCreateForm({
+        formId: "#testingParameterForm",
+        url: "{{ route('testing-parameters.store') }}",
+        redirect: "{{ route('testing-parameters.index') }}",
+        filepond: ".filepond",
     });
 </script>
 @endsection

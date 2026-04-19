@@ -257,24 +257,10 @@
         });
     }
 
-    $('#workOrderForm').submit(function(e) {
-        e.preventDefault();
-
-        Notify.confirm('Simpan Data?', function() {
-            $.ajax({
-                url: "{{ url('work-orders') }}",
-                method: "POST",
-                data: $('#workOrderForm').serialize(),
-                success: function(response) {
-                    Notify.success('Work order berhasil disimpan');
-                    // window.location.href = "{{ url('work-orders') }}";
-                },
-                error: function(xhr) {
-                    Notify.error('Gagal menyimpan work order');
-                }
-            });
-        });
-
+    submitCreateForm({
+        formId: "#workOrderForm",
+        url: "{{ url('work-orders') }}",
+        redirect: "{{ url('work-orders') }}",
     });
 
 </script>

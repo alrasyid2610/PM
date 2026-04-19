@@ -69,29 +69,10 @@
 
 @section('custom-script')
 <script>
-    $('#testingKelompokMatriksSampleForm').submit(function(e) {
-        e.preventDefault();
-
-        Notify.confirm('Simpan Data?', function() {
-
-            $.ajax({
-                url: "{{ route('testing-kelompok-matriks-samples.store') }}",
-                method: "POST",
-                data: $('#testingKelompokMatriksSampleForm').serialize(),
-
-                success: function(response) {
-                    Notify.success('Data berhasil disimpan');
-
-                    // optional redirect
-                    // window.location.href = "{{ route('testing-kelompok-matriks-samples.index') }}";
-                },
-
-                error: function(xhr) {
-                    Notify.error('Gagal menyimpan data');
-                }
-            });
-
-        });
+    submitCreateForm({
+        formId: "#testingKelompokMatriksSampleForm",
+        url: "{{ route('testing-kelompok-matriks-samples.store') }}",
+        redirect: "{{ route('testing-kelompok-matriks-samples.index') }}",
     });
 </script>
 @endsection

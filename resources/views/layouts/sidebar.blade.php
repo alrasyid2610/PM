@@ -1,7 +1,6 @@
 <div id="sidebar" class='active'>
     <div class="sidebar-wrapper active">
         <div class="sidebar-header">
-            <!-- <h1></h1> -->
             <a href="/">
                 <img style="width: 100%; height: 60px;" src="/assets/images/logo.png" alt="" srcset="">
             </a>
@@ -9,117 +8,63 @@
         <div class="sidebar-menu">
             <ul class="menu">
 
+                @foreach(config('menus') as $group)
+                    @if(($group['show_in_sidebar'] ?? true) === false)
+                        @continue
+                    @endif
 
-                <li class='sidebar-title'>Main Menu</li>
+                    @php
+                        $hasAccess = collect($group['items'])->contains(fn($item) => userCan($item['slug']));
+                    @endphp
 
-                <li class="sidebar-item has-sub {{ request()->routeIs('testing-*', 'business-relations.*', 'business-relation-contacts.*', 'business-estates.*', 'commercial-buildings.*') ? 'active' : '' }}">
-                    <a href="#" class='sidebar-link'>
-                        <span>Master Data</span>
-                    </a>
+                    @if(!$hasAccess)
+                        @continue
+                    @endif
 
-                    <ul class="submenu">
+                    @if(isset($group['divider']))
+                        <li class='sidebar-title'>{{ $group['divider'] }}</li>
+                    @endif
 
-                        <li class="sidebar-title mt-2">Business Relation</li>
-                        <li class="{{ request()->routeIs('business-relations.*') ? 'active' : '' }}">
-                            <a href="{{ route('business-relations.index') }}">
-                                Business Relation
+                    @if($group['type'] === 'submenu')
+                        @php
+                            $patterns = collect($group['items'])->pluck('slug')->map(fn($s) => $s . '.*')->toArray();
+                            $isActive = request()->routeIs($patterns);
+                        @endphp
+                        <li class="sidebar-item has-sub {{ $isActive ? 'active' : '' }}">
+                            <a href="#" class='sidebar-link'>
+                                <span>{{ $group['group'] }}</span>
                             </a>
+                            <ul class="submenu">
+                                @php $lastSection = null; @endphp
+                                @foreach($group['items'] as $item)
+                                    @if(!userCan($item['slug']))
+                                        @continue
+                                    @endif
+                                    @if(isset($item['section']) && $item['section'] !== $lastSection)
+                                        @php $lastSection = $item['section']; @endphp
+                                        <li class="sidebar-title mt-2">{{ $item['section'] }}</li>
+                                    @endif
+                                    <li class="{{ request()->routeIs($item['slug'] . '.*') ? 'active' : '' }}">
+                                        <a href="{{ route($item['slug'] . '.index') }}">{{ $item['label'] }}</a>
+                                    </li>
+                                @endforeach
+                            </ul>
                         </li>
+                    @else
+                        @foreach($group['items'] as $item)
+                            @if(!userCan($item['slug']))
+                                @continue
+                            @endif
+                            <li class="sidebar-item {{ request()->routeIs($item['slug'] . '.*') ? 'active' : '' }}">
+                                <a href="{{ route($item['slug'] . '.index') }}" class='sidebar-link'>
+                                    <i class="fa-solid {{ $group['icon'] }}"></i>
+                                    <span>{{ $item['label'] }}</span>
+                                </a>
+                            </li>
+                        @endforeach
+                    @endif
 
-                        <li class="{{ request()->routeIs('business-relation-contacts.*') ? 'active' : '' }}">
-                            <a href="{{ route('business-relation-contacts.index') }}">
-                                Business Relation Contacts
-                            </a>
-                        </li>
-
-                        <li class="sidebar-title mt-2">Location</li>
-                        
-                        <li class="{{ request()->routeIs('business-estates.*') ? 'active' : '' }}">
-                            <a href="{{ route('business-estates.index') }}">
-                                Business Estate
-                            </a>
-                        </li>
-
-                        <li class="{{ request()->routeIs('commercial-buildings.*') ? 'active' : '' }}">
-                            <a href="{{ route('commercial-buildings.index') }}">
-                                Commercial Buildings
-                            </a>
-                        </li>
-
-                        {{-- ===== Testing Section ===== --}}
-
-                        <li class="sidebar-title mt-2">Product</li>
-
-                        <li class="{{ request()->routeIs('testing-units.*') ? 'active' : '' }}">
-                            <a href="{{ route('testing-units.index') }}">
-                                Testing Units
-                            </a>
-                        </li>
-
-                        <li class="{{ request()->routeIs('testing-parameters.*') ? 'active' : '' }}">
-                            <a href="{{ route('testing-parameters.index') }}">
-                                Testing Parameters
-                            </a>
-                        </li>
-
-                        <li class="{{ request()->routeIs('testing-kelompok-matriks-samples.*') ? 'active' : '' }}">
-                            <a href="{{ route('testing-kelompok-matriks-samples.index') }}">
-                                Kelompok Matriks Sample
-                            </a>
-                        </li>
-
-                        <li class="{{ request()->routeIs('testing-matriks-samples.*') ? 'active' : '' }}">
-                            <a href="{{ route('testing-matriks-samples.index') }}">
-                                Matriks Sample
-                            </a>
-                        </li>
-
-                        <li class="{{ request()->routeIs('testing-standards.*') ? 'active' : '' }}">
-                            <a href="{{ route('testing-standards.index') }}">
-                                Testing Standards
-                            </a>
-                        </li>
-
-                        <!-- <li class="{{ request()->routeIs('testing-items.*') ? 'active' : '' }}">
-                            <a href="{{ route('testing-items.index') }}">
-                                Testing Items
-                            </a>
-                        </li> -->
-
-                        <li class="{{ request()->routeIs('testing-points.*') ? 'active' : '' }}">
-                            <a href="{{ route('testing-points.index') }}">
-                                Testing Points
-                            </a>
-                        </li>
-
-                    </ul>
-                </li>
-
-                <li class="sidebar-item has-sub {{ request()->routeIs('sales-orders.*', 'work-orders.*', 'boq.*') ? 'active' : '' }}">
-
-                    <a href="#" class='sidebar-link'>
-                        <!-- <i data-feather="triangle" width="20"></i> -->
-                        <span>Menu</span>
-                    </a>
-
-
-                    <ul class="submenu">
-
-                        <li class="{{ request()->routeIs('sales-orders.*') ? 'active' : '' }}">
-                            <a href="{{ route('sales-orders.index') }}">Sales Order</a>
-                        </li>
-
-                        <li class="{{ request()->routeIs('work-orders.*') ? 'active' : '' }}">
-                            <a href="{{ route('work-orders.index') }}">Work Order</a>
-                        </li>
-
-                        <li class="{{ request()->routeIs('boq.*') ? 'active' : '' }}">
-                            <a href="{{ route('boq.index') }}">BOQ</a>
-                        </li>
-                    </ul>
-
-                </li>
-
+                @endforeach
 
             </ul>
         </div>

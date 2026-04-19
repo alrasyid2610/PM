@@ -72,7 +72,6 @@
     window.route = {
         data: "{{ route('testing-kelompok-matriks-samples.data') }}",
         update: "{{ url('testing-kelompok-matriks-samples') }}/",
-        detail: "{{ url('testing-kelompok-matriks-samples') }}/",
         history: "{{ url('testing-kelompok-matriks-samples') }}/",
         csrf: "{{ csrf_token() }}"
     }

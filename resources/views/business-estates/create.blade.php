@@ -110,55 +110,10 @@
 
 @section('custom-script')
 <script>
-$(document).ready(function () {
-
-    $('#createBusinessEstateForm').on('submit', function (e) {
-        e.preventDefault();
-
-        const form = $(this);
-        const btn  = form.find('button[type="submit"]');
-
-        btn.prop('disabled', true).text('Menyimpan...');
-
-        Notify.confirm('Simpan Data?', function() {
-            $.ajax({
-                url: "{{ route('business-estates.store') }}",
-                type: "POST",
-                data: form.serialize(),
-                success: function (res) {
-
-                    Notify.success('Data berhasil disimpan!');
-                    window.location.href = "{{ route('business-estates.index') }}";
-                    form[0].reset();
-                },
-                error: function (xhr) {
-
-                    if (xhr.status === 422) {
-                        let errors = xhr.responseJSON.errors;
-                        let msg = Object.values(errors).map(e => e[0]).join('<br>');
-
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Validasi Gagal',
-                            html: msg
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Gagal',
-                            text: xhr.responseJSON?.message ?? 'Terjadi kesalahan'
-                        });
-                    }
-                },
-                complete: function () {
-                    btn.prop('disabled', false).text('Simpan Data');
-                }
-            });
-        });
-
-
+    submitCreateForm({
+        formId: "#createBusinessEstateForm",
+        url: "{{ route('business-estates.store') }}",
+        redirect: "{{ route('business-estates.index') }}",
     });
-
-});
 </script>
 @endsection

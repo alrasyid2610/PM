@@ -13,9 +13,7 @@ function renderForm(res) {
                 </div>
                 <div class="detail-section-title">Informasi Work Order</div>
                 <div class="detail-section-sub">Data pekerjaan lapangan</div>
-                <button class="btn btn-warning btn-sm btn-edit-context ms-2" title="Edit Work Order">
-                    <i class="fa-solid fa-pen"></i>
-                </button>
+                ${formGroup.editButton("Edit Work Order")}
             </div>
             <div class="detail-section-body">
                 <div class="row g-3 form-1">

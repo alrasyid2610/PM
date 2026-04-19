@@ -246,6 +246,12 @@ const formGroup = {
         </div>
         `;
     },
+
+    editButton(title = "Edit") {
+        return `<button class="btn-edit-context btn-action-edit ms-0" title="${title}">
+            <i class="fa-solid fa-pen"></i> Edit
+        </button>`;
+    },
 };
 
 function initDynamicSelect(scope = document) {
@@ -300,4 +306,15 @@ function initDynamicSelect(scope = document) {
                 },
             });
         });
+}
+
+function renderAttachmentSection() {
+    return `
+<div class="col-md-12">
+    <div id="attachmentPreview" class="row g-3"></div>
+    <div id="attachmentUploader" class="mt-3" style="display:none">
+        <input type="file" class="filepond-edit" name="attachments[]" multiple>
+    </div>
+</div>
+`;
 }

@@ -642,6 +642,69 @@ section .card {
 }
 
 /* =====================
+   ACTION BUTTONS (modern style)
+   ===================== */
+
+.btn-action-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 13px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1.5px solid #d97706;
+    color: #92400e;
+    background: #fef9ee;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+
+.btn-action-edit:hover {
+    background: #f59e0b;
+    border-color: #f59e0b;
+    color: #fff;
+}
+
+.btn-action-edit.editing {
+    border-color: #d1d5db;
+    color: #6b7280;
+    background: #f9fafb;
+}
+
+.btn-action-edit.editing:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #374151;
+}
+
+.btn-action-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    border: none;
+    color: #fff;
+    background: linear-gradient(135deg, #059669, #10b981);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+    line-height: 1.4;
+}
+
+.btn-action-save:hover {
+    background: linear-gradient(135deg, #047857, #059669);
+    box-shadow: 0 3px 10px rgba(16, 185, 129, 0.35);
+    transform: translateY(-1px);
+    color: #fff;
+}
+
+/* =====================
    DETAIL PARTY HEADER
    ===================== */
 .detail-party-header {

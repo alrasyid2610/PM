@@ -231,7 +231,6 @@ function getAllFormsData() {
 function getDynamicTableData() {
     let table = $(".dynamic-table");
 
-    // ❗ kalau tidak ada table → return kosong
     if (!table.length) return [];
 
     let items = [];
@@ -239,16 +238,23 @@ function getDynamicTableData() {
     table.find("tbody tr").each(function () {
         let row = {};
 
-        row.id = $(this).find('[name="id_testing_item[]"]').val();
+        $(this)
+            .find("[name]")
+            .each(function () {
+                let name = $(this).attr("name");
+                let key = name.replace(/\[\]$/, "");
+                if ($(this).attr("type") === "checkbox") {
+                    row[key] = $(this).is(":checked") ? 1 : 0;
+                } else {
+                    row[key] = $(this).val();
+                }
+            });
 
-        row.judul_indonesia = $(this).find('[name="judul_indonesia[]"]').val();
-        row.judul_inggris = $(this).find('[name="judul_inggris[]"]').val();
-        row.parameter = $(this).find('[name="parameter[]"]').val();
-        row.unit = $(this).find('[name="unit[]"]').val();
-        row.nilai = $(this).find('[name="nilai[]"]').val();
-        row.keterangan = $(this).find('[name="keterangan[]"]').val();
-
-        row.status = $(this).find('[name="status[]"]').is(":checked") ? 1 : 0;
+        // Ambil id dari hidden field pertama untuk keperluan compareItems
+        let firstHidden = $(this).find("input[type='hidden'][name]").first();
+        if (firstHidden.length) {
+            row.id = firstHidden.val();
+        }
 
         items.push(row);
     });

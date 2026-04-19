@@ -83,60 +83,15 @@
 @endsection
 @section('custom-script')
 <script>
-    $(document).ready(function() {
-
-        FilePond.create(document.querySelector('.filepond'), {
-
-            allowMultiple: true,
-
-            acceptedFileTypes: [
-                'image/*',
-                'application/pdf',
-                'application/vnd.ms-excel',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            ],
-
-            labelIdle: 'Drag & Drop file atau <span class="filepond--label-action">Browse</span>'
-
-        });
-
+    $(document).ready(function () {
+        createFileUploader(".filepond");
     });
 
-
-    $('#testingStandardForm').submit(function(e) {
-
-        e.preventDefault();
-
-        Notify.confirm('Simpan Data?', function() {
-
-            let form = document.getElementById('testingStandardForm');
-            let formData = new FormData(form);
-            FilePond
-                .find(document.querySelector('.filepond'))
-                .getFiles()
-                .forEach(fileItem => {
-
-                    formData.append('attachments[]', fileItem.file);
-
-                });
-
-            $.ajax({
-                url: "{{ route('testing-standards.store') }}",
-                method: "POST",
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    Notify.success('Testing standard berhasil disimpan');
-                },
-                error: function() {
-                    Notify.error('Gagal menyimpan testing standard');
-                }
-
-            });
-
-        });
-
+    submitCreateForm({
+        formId: "#testingStandardForm",
+        url: "{{ route('testing-standards.store') }}",
+        redirect: "{{ route('testing-standards.index') }}",
+        filepond: ".filepond",
     });
 </script>
 @endsection

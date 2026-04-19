@@ -82,73 +82,24 @@
 
 @section('custom-script')
 <script>
-$(document).ready(function () {
-
-    $('#id_br').select2({
-        placeholder: 'Pilih Kelompok...',
-        ajax: {
-            url: "{{ route('business-relation-sites.select2') }}",
-            dataType: 'json',
-            delay: 250,
-            data: function (params) {
-                return { q: params.term };
+    $(document).ready(function () {
+        $("#id_br").select2({
+            placeholder: "Pilih Business Relation Site...",
+            ajax: {
+                url: "{{ route('business-relation-sites.select2') }}",
+                dataType: "json",
+                delay: 250,
+                data: (params) => ({ q: params.term }),
+                processResults: (data) => ({ results: data }),
+                cache: true,
             },
-            processResults: function (data) {
-                return {
-                    results: data
-                };
-            },
-            cache: true
-        }
-    });
-
-    $('#createBusinesRelationContact').on('submit', function (e) {
-        e.preventDefault();
-
-        const form = $(this);
-        const btn  = form.find('button[type="submit"]');
-
-        btn.prop('disabled', true).text('Menyimpan...');
-
-        Notify.confirm('Simpan Data?', function() {
-            $.ajax({
-                url: "{{ route('business-relation-contacts.store') }}",
-                type: "POST",
-                data: form.serialize(),
-                success: function (res) {
-
-                    Notify.success('Data berhasil disimpan!');
-                    window.location.href = "{{ route('business-relation-contacts.index') }}";
-                    form[0].reset();
-                },
-                error: function (xhr) {
-
-                    if (xhr.status === 422) {
-                        let errors = xhr.responseJSON.errors;
-                        let msg = Object.values(errors).map(e => e[0]).join('<br>');
-
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Validasi Gagal',
-                            html: msg
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Gagal',
-                            text: xhr.responseJSON?.message ?? 'Terjadi kesalahan'
-                        });
-                    }
-                },
-                complete: function () {
-                    btn.prop('disabled', false).text('Simpan Data');
-                }
-            });
         });
-
-
     });
 
-});
+    submitCreateForm({
+        formId: "#createBusinesRelationContact",
+        url: "{{ route('business-relation-contacts.store') }}",
+        redirect: "{{ route('business-relation-contacts.index') }}",
+    });
 </script>
 @endsection

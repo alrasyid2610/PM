@@ -68,7 +68,6 @@
         data: "{{ route('business-relation-contacts.data') }}",
         update: "{{ url('business-relation-contacts') }}/",
         csrf: "{{ csrf_token() }}",
-        detail: "{{ url('business-relation-contacts') }}/",
         history: "{{ url('business-relation-contacts') }}/",
     }
 </script>

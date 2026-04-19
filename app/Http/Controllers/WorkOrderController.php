@@ -98,22 +98,31 @@ class WorkOrderController extends Controller
         // ==========================
         $before = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
 
-        DB::table('work_orders')
-            ->where('id_wo', $id)
-            ->update([
-                'id_pelanggan_pekerjaan' => $request->id_pelanggan,
-                'id_site_pelanggan_pekerjaan' => $request->id_site_pelanggan,
-                'id_pic_pelanggan_pekerjaan' => $request->pic_pekerjaan,
-                'judul_pekerjaan' => $request->judul_order,
-                'keterangan' => $request->keterangan,
-                'updated_at' => now(),
-            ]);
+        try {
+            DB::beginTransaction();
 
-        $after = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
-        saveAudit('work_orders', $id, 'update', $before, $after);
+            DB::table('work_orders')
+                ->where('id_wo', $id)
+                ->update([
+                    'id_pelanggan_pekerjaan'      => $request->id_pelanggan,
+                    'id_site_pelanggan_pekerjaan' => $request->id_site_pelanggan,
+                    'id_pic_pelanggan_pekerjaan'  => $request->pic_pekerjaan,
+                    'judul_pekerjaan'             => $request->judul_order,
+                    'keterangan'                  => $request->keterangan,
+                    'updated_at'                  => now(),
+                ]);
+
+            $after = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
+            saveAudit('work_orders', $id, 'update', $before, $after);
+
+            DB::commit();
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan server'], 500);
+        }
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'message' => 'Work Order berhasil diperbarui',
         ]);
     }

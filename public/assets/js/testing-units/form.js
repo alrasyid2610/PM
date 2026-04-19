@@ -12,9 +12,7 @@ function renderUnitForm(res) {
                 </div>
                 <div class="detail-section-title">Informasi Unit</div>
                 <div class="detail-section-sub">Data satuan pengujian laboratorium</div>
-                <button class="btn btn-warning btn-sm btn-edit-context ms-2" title="Edit Testing Unit">
-                    <i class="fa-solid fa-pen"></i>
-                </button>
+                ${formGroup.editButton("Edit Testing Unit")}
             </div>
             <div class="detail-section-body">
                 <div class="row g-3 form-1">

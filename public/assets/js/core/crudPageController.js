@@ -6,6 +6,7 @@ class CrudPageController {
         this.useAttachment = options.useAttachment || false;
         this.initDynamicTable = options.initDynamicTable || null;
         this.historyConfig = options.historyConfig || null;
+        this.onSave = options.onSave || null;
 
         this.selectedRow = { id: null };
 
@@ -66,6 +67,7 @@ class CrudPageController {
             afterRender: async function (res) {
                 $("#detailContent")
                     .find("input, select, textarea")
+                    .not("[data-no-disable]")
                     .prop("disabled", true);
 
                 if (self.initSelect) {
@@ -133,15 +135,15 @@ class CrudPageController {
             },
 
             onSave: function () {
-                console.log("lah kocak");
-
-                submitCrudForm({
-                    id: self.selectedRow.id,
-
-                    reload: self.loadDetail.bind(self),
-
-                    filepond: self.pondEdit,
-                });
+                if (self.onSave) {
+                    self.onSave(self.selectedRow.id);
+                } else {
+                    submitCrudForm({
+                        id: self.selectedRow.id,
+                        reload: self.loadDetail.bind(self),
+                        filepond: self.pondEdit,
+                    });
+                }
             },
         });
     }

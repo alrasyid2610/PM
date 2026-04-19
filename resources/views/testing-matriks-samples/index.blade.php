@@ -73,7 +73,6 @@
     window.route = {
         data: "{{ route('testing-matriks-samples.data') }}",
         update: "{{ url('testing-matriks-samples') }}/",
-        detail: "{{ url('testing-matriks-samples') }}/",
         history: "{{ url('testing-matriks-samples') }}/",
         csrf: "{{ csrf_token() }}"
     }

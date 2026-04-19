@@ -125,7 +125,6 @@
         data: "{{ route('testing-points.data') }}",
         update: "{{ url('testing-points') }}/",
         deleteAttachment: "{{ route('testing-points.delete-attachment') }}",
-        detail: "{{ url('testing-points') }}/",
         history: "{{ url('testing-points') }}/",
         csrf: "{{ csrf_token() }}"
     }

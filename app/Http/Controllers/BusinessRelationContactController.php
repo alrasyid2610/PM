@@ -84,8 +84,9 @@ class BusinessRelationContactController extends Controller
 
     public function show($id)
     {
-        $testingUnit = DB::table('business_relation_contacts')
-            ->leftJoin('business_relation_sites', 'business_relation_contacts.id_br', '=', 'business_relation_sites.id_site')
+        $testingUnit = DB::table('business_relation_contacts as brc')
+            ->leftJoin('business_relations as br', 'br.id_br', '=', 'brc.id_br')
+            ->select(['brc.*', 'br.nama as nama_br'])
             ->where('id_contact', $id)->first();
         if (!$testingUnit) {
             return response()->json(['message' => 'Testing unit tidak ditemukan'], 404);
@@ -200,7 +201,7 @@ class BusinessRelationContactController extends Controller
         saveAudit('business_relation_contacts', $id, 'Create', '', $after);
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'id' => $id
         ]);
     }

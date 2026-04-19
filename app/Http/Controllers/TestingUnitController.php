@@ -79,7 +79,7 @@ class TestingUnitController extends Controller
 
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'message' => 'Testing unit berhasil dibuat',
             'id' => $id
         ]);
@@ -205,7 +205,7 @@ class TestingUnitController extends Controller
 
         if (!$data) {
             return response()->json([
-                'status' => 'error',
+                'success' => false,
                 'message' => 'Testing Unit tidak ditemukan'
             ], 404);
         }

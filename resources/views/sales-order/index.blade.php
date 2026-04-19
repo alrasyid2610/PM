@@ -90,12 +90,8 @@
 @section('custom-script')
 <script>
     window.route = {
-        summary: "{{ route('business-relations.summary') }}",
         data: "{{ route('sales-orders.data') }}",
-        select2: "{{ route('business-relations.select2') }}",
-        detail: "{{ url('sales-orders') }}/",
         history: "{{ url('sales-orders') }}/",
-        site: "{{ url('business-relations/sites') }}/",
         csrf: "{{ csrf_token() }}",
         update: "{{ url('sales-orders') }}/"
     }

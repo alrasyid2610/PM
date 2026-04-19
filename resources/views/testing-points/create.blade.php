@@ -173,59 +173,38 @@
 
 @section('custom-script')
 <script>
-    $(document).ready(function() {
+    $(document).ready(function () {
+        createFileUploader(".filepond");
 
-        FilePond.create(document.querySelector('.filepond'), {
-
-            allowMultiple: true,
-
-            acceptedFileTypes: [
-                'image/*',
-                'application/pdf',
-                'application/vnd.ms-excel',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            ],
-
-            labelIdle: 'Drag & Drop file atau <span class="filepond--label-action">Browse</span>'
-
-        });
-
-        // Select2 Testing Standard
-        $('#id_testing_standard').select2({
-            placeholder: 'Pilih Testing Standard...',
+        $("#id_testing_standard").select2({
+            placeholder: "Pilih Testing Standard...",
             ajax: {
                 url: "{{ route('testing-standards.data') }}",
-                dataType: 'json',
-                processResults: function(data) {
-                    return {
-                        results: data.data.map(item => ({
-                            id: item.id_testing_standard,
-                            text: item.nomor + ' - ' + item.judul
-                        }))
-                    };
-                }
-            }
+                dataType: "json",
+                processResults: (data) => ({
+                    results: data.data.map((item) => ({
+                        id: item.id_testing_standard,
+                        text: item.nomor + " - " + item.judul,
+                    })),
+                }),
+            },
         });
 
-        // Select2 Matriks Sample
-        $('#id_testing_matriks_sample').select2({
-            placeholder: 'Pilih Matriks Sample...',
+        $("#id_testing_matriks_sample").select2({
+            placeholder: "Pilih Matriks Sample...",
             ajax: {
                 url: "{{ route('testing-matriks-samples.data') }}",
-                dataType: 'json',
-                processResults: function(data) {
-                    return {
-                        results: data.data.map(item => ({
-                            id: item.id_testing_matriks_sample,
-                            text: item.kode + ' - ' + item.judul_indonesia
-                        }))
-                    };
-                }
-            }
+                dataType: "json",
+                processResults: (data) => ({
+                    results: data.data.map((item) => ({
+                        id: item.id_testing_matriks_sample,
+                        text: item.kode + " - " + item.judul_indonesia,
+                    })),
+                }),
+            },
         });
 
-        // Tambah baris
-        $('.btn-add-row').on('click', function() {
+        $(".btn-add-row").on("click", function () {
             let newRow = `
                 <tr>
                     <input type="hidden" name="id_testing_item[]" value="">
@@ -243,59 +222,29 @@
                         </button>
                     </td>
                 </tr>`;
-            $('#Table tbody').append(newRow);
+            $("#Table tbody").append(newRow);
             updateRowNumbers();
         });
 
-        // Hapus baris
-        $(document).on('click', '.btn-remove', function() {
-            $(this).closest('tr').remove();
+        $(document).on("click", ".btn-remove", function () {
+            $(this).closest("tr").remove();
             updateRowNumbers();
         });
 
         function updateRowNumbers() {
-            $('#Table tbody tr').each(function(i) {
-                $(this).find('.row-number').text(i + 1);
+            $("#Table tbody tr").each(function (i) {
+                $(this).find(".row-number").text(i + 1);
             });
         }
 
         updateRowNumbers();
-
     });
 
-
-    $('#testingPointForm').submit(function(e) {
-        e.preventDefault();
-        let form = document.getElementById('testingPointForm');
-        let formData = new FormData(form);
-        FilePond
-            .find(document.querySelector('.filepond'))
-            .getFiles()
-            .forEach(fileItem => {
-
-                formData.append('attachments[]', fileItem.file);
-
-            });
-
-        Notify.confirm('Simpan Data?', function() {
-
-            $.ajax({
-                url: "{{ route('testing-points.store') }}",
-                method: "POST",
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    Notify.success('Testing point berhasil disimpan');
-                },
-
-                error: function(xhr) {
-                    Notify.error('Gagal menyimpan testing point');
-                }
-            });
-
-        });
-
+    submitCreateForm({
+        formId: "#testingPointForm",
+        url: "{{ route('testing-points.store') }}",
+        redirect: "{{ route('testing-points.index') }}",
+        filepond: ".filepond",
     });
 </script>
 @endsection

@@ -67,7 +67,6 @@
         data: "{{ route('commercial-buildings.data') }}",
         update: "{{ url('commercial-buildings') }}/",
         csrf: "{{ csrf_token() }}",
-        detail: "{{ url('commercial-buildings') }}/",
         history: "{{ url('commercial-buildings') }}/",
     }
 </script>

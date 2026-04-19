@@ -404,22 +404,10 @@
         });
     }
 
-    $('#salesOrderForm').submit(function (e) {
-        e.preventDefault();
-        Notify.confirm('Simpan Data?', function () {
-            $.ajax({
-                url: "{{ url('sales-orders') }}",
-                method: "POST",
-                data: $('#salesOrderForm').serialize(),
-                success: function () {
-                    Notify.success('Sales order berhasil disimpan');
-                    window.location.href = "{{ url('sales-orders') }}";
-                },
-                error: function () {
-                    Notify.error('Gagal menyimpan sales order');
-                }
-            });
-        });
+    submitCreateForm({
+        formId: "#salesOrderForm",
+        url: "{{ url('sales-orders') }}",
+        redirect: "{{ url('sales-orders') }}",
     });
 </script>
 @endsection

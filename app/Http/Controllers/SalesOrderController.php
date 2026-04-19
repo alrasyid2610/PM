@@ -102,7 +102,7 @@ class SalesOrderController extends Controller
         saveAudit('sales_orders', $id, 'Create', '', $after);
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'message' => 'Sales Order berhasil dibuat',
             'id_so' => $id
         ]);

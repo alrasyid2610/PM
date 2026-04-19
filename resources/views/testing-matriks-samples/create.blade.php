@@ -78,55 +78,24 @@
 
 @section('custom-script')
 <script>
-
-$(document).ready(function() {
-
-    // SELECT2 FK
-    $('#id_testing_kelompok_matriks_sample').select2({
-        placeholder: 'Pilih Kelompok...',
-        ajax: {
-            url: "{{ route('testing-kelompok-matriks-samples.select2') }}",
-            dataType: 'json',
-            delay: 250,
-            data: function (params) {
-                return { q: params.term };
+    $(document).ready(function () {
+        $("#id_testing_kelompok_matriks_sample").select2({
+            placeholder: "Pilih Kelompok...",
+            ajax: {
+                url: "{{ route('testing-kelompok-matriks-samples.select2') }}",
+                dataType: "json",
+                delay: 250,
+                data: (params) => ({ q: params.term }),
+                processResults: (data) => ({ results: data }),
+                cache: true,
             },
-            processResults: function (data) {
-                return {
-                    results: data
-                };
-            },
-            cache: true
-        }
-    });
-
-});
-
-
-$('#testingMatriksSampleForm').submit(function(e) {
-
-    e.preventDefault();
-
-    Notify.confirm('Simpan Data?', function() {
-
-        $.ajax({
-            url: "{{ route('testing-matriks-samples.store') }}",
-            method: "POST",
-            data: $('#testingMatriksSampleForm').serialize(),
-
-            success: function(response) {
-                Notify.success('Data berhasil disimpan');
-                // optional redirect
-                // window.location.href = "{{ route('testing-matriks-samples.index') }}";
-            },
-
-            error: function(xhr) {
-                Notify.error('Gagal menyimpan data');
-            }
         });
-
     });
 
-});
+    submitCreateForm({
+        formId: "#testingMatriksSampleForm",
+        url: "{{ route('testing-matriks-samples.store') }}",
+        redirect: "{{ route('testing-matriks-samples.index') }}",
+    });
 </script>
 @endsection

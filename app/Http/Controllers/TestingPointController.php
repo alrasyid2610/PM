@@ -4,13 +4,16 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistoryWithLines;
+use App\Traits\HasAttachment;
 
 class TestingPointController extends Controller
 {
-    use HasAuditHistoryWithLines;
+    use HasAuditHistoryWithLines, HasAttachment;
+
+    protected function attachmentTable(): string      { return 'testing_points'; }
+    protected function attachmentPrimaryKey(): string { return 'id_testing_point'; }
 
     protected function auditTable(): string { return 'testing_points'; }
     protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_testing_point', '_lines']; }
@@ -104,6 +107,9 @@ class TestingPointController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        $after = DB::table('testing_points')->where('id_testing_point', $id)->get()->toJson();
+        saveAudit('testing_points', $id, 'Create', '', $after);
 
         return response()->json([
             'status' => 'success',
@@ -238,8 +244,7 @@ class TestingPointController extends Controller
             DB::commit();
         } catch (\Throwable $th) {
             DB::rollBack();
-            dd($th);
-            throw $th;
+            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan server'], 500);
         }
 
         return response()->json(['success' => true]);
@@ -255,45 +260,4 @@ class TestingPointController extends Controller
     }
 
 
-    public function deleteAttachment(Request $request)
-    {
-
-        $id = $request->id;
-        $file = $request->file;
-
-        $data = DB::table('testing_points')
-            ->where('id_testing_point', $id)
-            ->first();
-
-        if (!$data) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Data tidak ditemukan'
-            ]);
-        }
-
-        $attachments = json_decode($data->attachment, true) ?? [];
-
-
-        // hapus file dari array
-        $attachments = array_filter($attachments, function ($item) use ($file) {
-            return $item != $file;
-        });
-
-        // hapus file dari storage
-
-        Storage::disk('public')->delete($file);
-
-        // update database
-        DB::table('testing_points')
-            ->where('id_testing_point', $id)
-            ->update([
-                'attachment' => json_encode(array_values($attachments)),
-                'updated_at' => now()
-            ]);
-
-        return response()->json([
-            'success' => true
-        ]);
-    }
 }

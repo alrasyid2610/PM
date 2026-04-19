@@ -109,46 +109,10 @@
 
 @section('custom-script')
 <script>
-$('#createCommercialBuildingForm').on('submit', function (e) {
-    e.preventDefault();
-
-    const form = $(this);
-    const btn  = $('#btnSubmit');
-
-    btn.prop('disabled', true).text('Menyimpan...');
-
-    Notify.confirm('Simpan Data?', function() {
-        $.ajax({
-            url: "{{ route('commercial-buildings.store') }}",
-            type: "POST",
-            data: form.serialize(),
-            success: function (res) {
-                Notify.success('Data berhasil disimpan!');
-                window.location.href = "{{ url('commercial-buildings') }}";
-            },
-            error: function (xhr) {
-                btn.prop('disabled', false).text('Simpan Data');
-
-                if (xhr.status === 422) {
-                    let msg = Object.values(xhr.responseJSON.errors)
-                        .map(e => e[0])
-                        .join('<br>');
-
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Validasi Gagal',
-                        html: msg
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Gagal',
-                        text: xhr.responseJSON?.message ?? 'Terjadi kesalahan'
-                    });
-                }
-            }
-        });
+    submitCreateForm({
+        formId: "#createCommercialBuildingForm",
+        url: "{{ route('commercial-buildings.store') }}",
+        redirect: "{{ route('commercial-buildings.index') }}",
     });
-});
 </script>
 @endsection

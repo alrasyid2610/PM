@@ -70,7 +70,6 @@
 window.route = {
     data: "{{ route('testing-items.data') }}",
     update: "{{ url('testing-items') }}/",
-    detail: "{{ url('testing-items') }}/",
     csrf: "{{ csrf_token() }}"
 }
 </script>

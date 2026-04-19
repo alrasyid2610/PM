@@ -72,22 +72,10 @@
 
 @section('custom-script')
 <script>
-    $('#testingUnitForm').submit(function(e) {
-        e.preventDefault();
-        Notify.confirm('Simpan Data?', function() {
-            $.ajax({
-                url: "{{ route('testing-units.store') }}",
-                method: "POST",
-                data: $('#testingUnitForm').serialize(),
-                success: function(response) {
-                    Notify.success('Testing unit berhasil disimpan');
-                    // window.location.href = "{{ route('testing-units.index') }}";
-                },
-                error: function(xhr) {
-                    Notify.error('Gagal menyimpan testing unit');
-                }
-            });
-        });
+    submitCreateForm({
+        formId: "#testingUnitForm",
+        url: "{{ route('testing-units.store') }}",
+        redirect: "{{ route('testing-units.index') }}",
     });
 </script>
 @endsection

@@ -70,7 +70,6 @@
         update: "{{ url('business-estates') }}/",
         csrf: "{{ csrf_token() }}",
         history: "{{ url('business-estates') }}/",
-        detail: "{{ url('business-estates') }}/",
     }
 </script>
 <script src="{{ asset('assets/js/business-estates/index.js') }}"></script>

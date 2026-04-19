@@ -133,222 +133,83 @@
 
 @section('custom-script')
 <script>
+    $(document).ready(function () {
 
-    var dataPelanggan = '';
-    var dataSO = '';
-
-    
-    
-    $(document).ready(function() {
-        
-        // ===============================
-        // ADD ITEM
-        // ===============================
-        $('#btnAddItem').on('click', function() {
-
-            let newRow = `
-                <tr>
-                    <td>
-                        <input type="text" name="item_produk[]" class="form-control" required>
-                    </td>
-                    <td>
-                        <select name="satuan_produk[]" class="form-select">
-                            <option value="">Pilih Satuan</option>
-                            <option value="Hari">Hari</option>
-                            <option value="Orang">Orang</option>
-                            <option value="pcs">pcs</option>
-                            <option value="kg">kg</option>
-                            <option value="m">m</option>
-                            <option value="set">set</option>
-                        </select>
-                    </td>
-                    <td>
-                        <select name="harga_satuan_produk[]" class="form-select">
-                            <option value="">Pilih Harga Satuan</option>
-                            <option value="10000">10.000</option>
-                            <option value="50000">50.000</option>
-                            <option value="100000">100.000</option>
-                            <option value="500000">500.000</option>
-                            <option value="1000000">1.000.000</option>
-                        </select>
-                    </td>
-                    <td>
-                        <input type="text" name="keterangan[]" class="form-control">
-                    </td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-danger btn-sm btn-remove">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-
-            $('#boqTable tbody').append(newRow);
-        });
-
-        // ===============================
-        // REMOVE ITEM
-        // ===============================
-        $('#boqTable').on('click', '.btn-remove', function() {
-
-            if ($('#boqTable tbody tr').length > 1) {
-                $(this).closest('tr').remove();
-            } else {
-                alert('Minimal harus ada 1 item.');
-            }
-
-        });
-        
-        
-        
-        
-        loadPelangganDetails();
-        initBrSelect2();
-
-
-        $('#id_work_order').on('select2:select', function (e) {
-            var data = e.params.data;
-            console.log('Work order dipilih:', data);
-            $("input[name='judul_order']").val(data.judul);
-
-        });
-
-
-        $("#id_work_order").on('select2:clear', function (e) {
-            clearForm();
-        });
-
-    });
-
-
-    function clearForm() {
-        $('#boqForm')[0].reset();
-        $("select[name='id_work_order']").val(null).trigger('change');
-    }
-
-
-    function getSO(data) {
-        return $.ajax({
-                url: "{{ url('sales-orders') }}/" + data.id,
-                type: "GET",
-                success: function(response) {
-                    result = response;
-                },
-                error: function(xhr) {
-                    Notify.error('Gagal mengambil data sales order');
-                }
-            })
-    }
-
-    
-    function initBrSelect2() {
-        $('#id_work_order').select2({
-            placeholder: 'Pilih atau ketik Work Order',
-            // theme: 'bootstrap-5', // Tambahkan jika pakai Bootstrap 5 agar rapi
-            // tags: true,
+        $("#id_work_order").select2({
+            placeholder: "Pilih atau ketik Work Order",
             allowClear: true,
             minimumInputLength: 2,
             ajax: {
                 url: "{{ route('work-orders.select2') }}",
-                dataType: 'json',
+                dataType: "json",
                 delay: 250,
-                data: function (params) {
-                    return { q: params.term };
-                },
-                processResults: function (data) {
-                    // Jika backend sudah mengirim 'id' dan 'text', ini sudah cukup:
-                    return { results: data };
-                },
-                cache: true
-            }
-        });
-    }
-
-
-    function loadPelangganDetails() {
-
-        // Console log untuk memastikan fungsi dipanggil
-        console.log('Memuat data pelanggan...');
-        
-        $.ajax({
-            url: "{{ route('api.get-data-br') }}",
-            method: "GET",
-            success: function(response) {
-                dataPelanggan = response;
-                console.log('Data pelanggan busines relation berhasil dimuat dan select2 diisi.');
-                console.log('init select2');
-                // Populate select2 for pelanggan
-                $.each(dataPelanggan, function(index, item) {
-                    $("select[name='id_pelanggan']")
-                        .append(new Option(item.text, item.id));
-                });
-                // Initialize select2 for delivery and payment
-                // Baru init select2 TANPA data:
-                 $("select[name='id_pelanggan']").select2({
-                    placeholder: "Pilih Pelanggan",
-                    allowClear: true
-                });
-
-                console.log('Select2 berhasil diinisialisasi dengan data pelanggan.');
+                data: (params) => ({ q: params.term }),
+                processResults: (data) => ({ results: data }),
+                cache: true,
             },
-            error: function(xhr) {
-                Notify.error('Gagal memuat detail pelanggan');
+        });
+
+        $("#id_work_order").on("select2:select", function (e) {
+            $("input[name='judul_order']").val(e.params.data.judul);
+        });
+
+        $("#id_work_order").on("select2:clear", function () {
+            $("#boqForm")[0].reset();
+            $("#id_work_order").val(null).trigger("change");
+        });
+
+        $("#btnAddItem").on("click", function () {
+            const newRow = $("#boqRowTemplate").html();
+            $("#boqTable tbody").append(newRow);
+        });
+
+        $("#boqTable").on("click", ".btn-remove", function () {
+            if ($("#boqTable tbody tr").length > 1) {
+                $(this).closest("tr").remove();
+            } else {
+                Notify.warning("Minimal harus ada 1 item.");
             }
         });
-        
-        
-        $.ajax({
-            url: "{{ route('api.get-data-site') }}",
-            method: "GET",
-            success: function(response) {
-                dataPelanggan = response;
-                console.log('Data pelanggan berhasil dimuat dan select2 diisi.');
-
-                console.log('init select2', response);
-                
-                // Populate select2 for pelanggan
-                // Populate select2 for pelanggan
-                $.each(dataPelanggan, function(index, item) {
-                    $("select[name='id_site_pelanggan']")
-                        .append(new Option(item.nama_lokasi, item.id_site));
-                });
-
-                // Initialize select2 for delivery and payment
-                // Baru init select2 TANPA data:
-                 $("select[name='id_site_pelanggan']").select2({
-                    placeholder: "Pilih Pelanggan",
-                    allowClear: true
-                });
-                
-                console.log('Select2 berhasil diinisialisasi dengan data pelanggan.');
-            },
-            error: function(xhr) {
-                Notify.error('Gagal memuat detail pelanggan');
-            }
-        });
-
-    }
-
-    $('#workOrderForm').submit(function(e) {
-        e.preventDefault();
-        
-        Notify.confirm('Simpan Data?', function() {
-            $.ajax({
-                url: "{{ url('work-orders') }}",
-                method: "POST",
-                data: $('#workOrderForm').serialize(),
-                success: function(response) {
-                    Notify.success('Work order berhasil disimpan');
-                    // window.location.href = "{{ url('work-orders') }}";
-                },
-                error: function(xhr) {
-                    Notify.error('Gagal menyimpan work order');
-                }
-            });
-        });
-
     });
-    
+
+    submitCreateForm({
+        formId: "#boqForm",
+        url: "{{ url('boq') }}",
+        redirect: "{{ url('work-orders') }}",
+    });
 </script>
+
+<template id="boqRowTemplate">
+    <tr>
+        <td><input type="text" name="item_produk[]" class="form-control" required></td>
+        <td>
+            <select name="satuan_produk[]" class="form-select">
+                <option value="">Pilih Satuan</option>
+                <option value="Hari">Hari</option>
+                <option value="Orang">Orang</option>
+                <option value="pcs">pcs</option>
+                <option value="kg">kg</option>
+                <option value="m">m</option>
+                <option value="set">set</option>
+            </select>
+        </td>
+        <td>
+            <select name="harga_satuan_produk[]" class="form-select">
+                <option value="">Pilih Harga Satuan</option>
+                <option value="10000">10.000</option>
+                <option value="50000">50.000</option>
+                <option value="100000">100.000</option>
+                <option value="500000">500.000</option>
+                <option value="1000000">1.000.000</option>
+            </select>
+        </td>
+        <td><input type="text" name="keterangan[]" class="form-control"></td>
+        <td class="text-center">
+            <button type="button" class="btn btn-danger btn-sm btn-remove">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </td>
+    </tr>
+</template>
 @endsection
 
