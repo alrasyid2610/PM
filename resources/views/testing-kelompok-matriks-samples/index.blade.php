@@ -35,6 +35,7 @@
                 title="List of Kelompok Matriks Samples"
                 create-route="testing-kelompok-matriks-samples.create"
                 add-label="Add Data"
+                :with-history="true"
             />
 
             <div class="tab-content">
@@ -54,6 +55,11 @@
                         Pilih data pada tab Data untuk melihat detail
                     </div>
                 </div>
+                <div class="tab-pane fade" id="tab-history">
+                    <div id="historyContent" class="p-3 text-muted">
+                        Pilih data pada tab Data untuk melihat history
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -67,6 +73,7 @@
         data: "{{ route('testing-kelompok-matriks-samples.data') }}",
         update: "{{ url('testing-kelompok-matriks-samples') }}/",
         detail: "{{ url('testing-kelompok-matriks-samples') }}/",
+        history: "{{ url('testing-kelompok-matriks-samples') }}/",
         csrf: "{{ csrf_token() }}"
     }
 </script>

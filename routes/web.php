@@ -96,6 +96,7 @@ Route::prefix('testing-kelompok-matriks-samples')
             '/{id}/detail',
             [TestingKelompokMatriksSampleController::class, 'detail']
         )->name('detail')->whereNumber('id');
+        Route::get('/{id}/history', [TestingKelompokMatriksSampleController::class, 'history'])->name('history')->whereNumber('id');
     });
 
 
@@ -122,6 +123,7 @@ Route::prefix('testing-standards')
 
         Route::get('/{id}/detail', [TestingStandardController::class, 'detail'])->name('detail');
         Route::delete('/{id}', [TestingStandardController::class, 'destroy'])->name('destroy');
+        Route::get('/{id}/history', [TestingStandardController::class, 'history'])->name('history')->whereNumber('id');
     });
 
 
@@ -144,6 +146,7 @@ Route::prefix('testing-points')
         Route::get('/select2', [TestingPointController::class, 'select2'])->name('select2');
         Route::get('/{id}', [TestingPointController::class, 'detail'])->name('detail');
         Route::get('/{id}/detail', [TestingPointController::class, 'detail'])->name('detail');
+        Route::get('/{id}/history', [TestingPointController::class, 'history'])->name('history')->whereNumber('id');
         Route::delete('/{id}', [TestingPointController::class, 'destroy'])->name('destroy');
     });
 
@@ -164,6 +167,7 @@ Route::prefix('testing-matriks-samples')
         Route::get('/{id}/detail', [TestingMatriksSampleController::class, 'detail'])->name('detail');
         Route::put('/{id}', [TestingMatriksSampleController::class, 'update'])->name('update');
         Route::delete('/{id}', [TestingMatriksSampleController::class, 'destroy'])->name('destroy');
+        Route::get('/{id}/history', [TestingMatriksSampleController::class, 'history'])->name('history')->whereNumber('id');
     });
 
 
@@ -221,6 +225,7 @@ Route::prefix('business-relations')
             ->whereNumber('id');  // ok - select2 ajax
 
         Route::get('/{id}', [BusinessRelationController::class, 'detail'])->name('detail');
+        Route::get('/{id}/history', [BusinessRelationController::class, 'history'])->name('history')->whereNumber('id');
 
         Route::put('/{id}', [BusinessRelationController::class, 'update'])
             ->name('update'); // ok - update
@@ -287,6 +292,7 @@ Route::prefix('/commercial-buildings')
             ->name('set-edit-context');
         Route::get('/edit', [CommercialBuildingController::class, 'edit'])->name('edit');
         Route::put('/{id}', [CommercialBuildingController::class, 'update'])->name('update');
+        Route::get('/{id}/history', [CommercialBuildingController::class, 'history'])->name('history')->whereNumber('id');
     });
 
 
@@ -319,6 +325,9 @@ Route::prefix('/business-estates')
         // 👉 EDIT
         Route::get('/edit', [BusinessEstateController::class, 'edit'])->name('edit');
         Route::put('/{id}', [BusinessEstateController::class, 'update'])->name('update');
+        Route::get('/{id}/history', [BusinessEstateController::class, 'history'])
+            ->name('history')
+            ->whereNumber('id');
     });
 
 
@@ -355,6 +364,7 @@ Route::prefix('/business-relation-contacts')
         // 👉 EDIT
         Route::get('/edit', [BusinessRelationContactController::class, 'edit'])->name('edit');
         Route::put('/{id}', [BusinessRelationContactController::class, 'update'])->name('update');
+        Route::get('/{id}/history', [BusinessRelationContactController::class, 'history'])->name('history')->whereNumber('id');
     });
 
 
@@ -381,6 +391,7 @@ Route::prefix('sales-orders')->name('sales-orders.')->group(function () {
     Route::get('/{id}/edit', [SalesOrderController::class, 'edit'])->name('edit');
     Route::put('/{id}', [SalesOrderController::class, 'update'])->name('update');
     Route::delete('/{id}', [SalesOrderController::class, 'destroy'])->name('destroy');
+    Route::get('/{id}/history', [SalesOrderController::class, 'history'])->name('history')->whereNumber('id');
 });
 
 Route::prefix('work-orders')->name('work-orders.')->group(function () {
@@ -402,6 +413,7 @@ Route::prefix('work-orders')->name('work-orders.')->group(function () {
     Route::get('/{id}/edit', [WorkOrderController::class, 'edit'])->name('edit');
     Route::put('/{id}', [WorkOrderController::class, 'update'])->name('update');
     Route::delete('/{id}', [WorkOrderController::class, 'destroy'])->name('destroy');
+    Route::get('/{id}/history', [WorkOrderController::class, 'history'])->name('history')->whereNumber('id');
 });
 
 Route::prefix('boq')->name('boq.')->group(function () {

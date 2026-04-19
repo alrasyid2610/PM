@@ -67,6 +67,7 @@
                     title="List of Business Relations"
                     create-route="business-relations.create"
                     add-label="Add Data"
+                    :with-history="true"
                 />
                 
                 <div class="tab-content">
@@ -92,6 +93,13 @@
                         </div>
                     </div>
 
+                    <!-- TAB HISTORY -->
+                    <div class="tab-pane fade" id="tab-history">
+                        <div id="historyContent" class="p-3 text-muted">
+                            Pilih data pada tab Data untuk melihat history
+                        </div>
+                    </div>
+
                 </div>
                 
                 
@@ -109,6 +117,7 @@
         data: "{{ route('business-relations.data') }}",
         detail: "{{ url('business-relations') }}/",
         update: "{{ url('business-relations') }}/",
+        history: "{{ url('business-relations') }}/",
         select2: "{{ route('business-relations.select2') }}",
         site: "{{ url('business-relations/sites') }}/",
         csrf: "{{ csrf_token() }}",

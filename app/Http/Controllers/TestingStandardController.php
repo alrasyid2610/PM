@@ -7,9 +7,21 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use SebastianBergmann\Environment\Console;
 use Yajra\DataTables\Facades\DataTables;
+use App\Traits\HasAuditHistory;
 
 class TestingStandardController extends Controller
 {
+    use HasAuditHistory;
+
+    protected function auditTable(): string
+    {
+        return 'testing_standards';
+    }
+
+    protected function auditExcludeFields(): array
+    {
+        return ['updated_at', 'created_at', 'id_testing_standard'];
+    }
     public function index()
     {
         return view('testing-standards.index', [
@@ -101,8 +113,10 @@ class TestingStandardController extends Controller
             'attachment' => json_encode($files),
             'created_at' => now(),
             'updated_at' => now()
-
         ]);
+
+        $after = DB::table('testing_standards')->where('id_testing_standard', $id)->get()->toJson();
+        saveAudit('testing_standards', $id, 'Create', '', $after);
 
         return response()->json([
             'status' => 'success',

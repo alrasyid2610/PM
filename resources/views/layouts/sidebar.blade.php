@@ -2,7 +2,9 @@
     <div class="sidebar-wrapper active">
         <div class="sidebar-header">
             <!-- <h1></h1> -->
-            <img style="width: 100%; height: 60px;" src="assets/images/logo.png" alt="" srcset="">
+            <a href="/">
+                <img style="width: 100%; height: 60px;" src="/assets/images/logo.png" alt="" srcset="">
+            </a>
         </div>
         <div class="sidebar-menu">
             <ul class="menu">
@@ -10,7 +12,7 @@
 
                 <li class='sidebar-title'>Main Menu</li>
 
-                <li class="sidebar-item has-sub {{ request()->is('testing-*') ? 'active' : '' }}">
+                <li class="sidebar-item has-sub {{ request()->routeIs('testing-*', 'business-relations.*', 'business-relation-contacts.*', 'business-estates.*', 'commercial-buildings.*') ? 'active' : '' }}">
                     <a href="#" class='sidebar-link'>
                         <span>Master Data</span>
                     </a>
@@ -93,7 +95,7 @@
                     </ul>
                 </li>
 
-                <li class="sidebar-item  has-sub">
+                <li class="sidebar-item has-sub {{ request()->routeIs('sales-orders.*', 'work-orders.*', 'boq.*') ? 'active' : '' }}">
 
                     <a href="#" class='sidebar-link'>
                         <!-- <i data-feather="triangle" width="20"></i> -->
@@ -101,17 +103,17 @@
                     </a>
 
 
-                    <ul class="submenu ">
+                    <ul class="submenu">
 
-                        <li>
+                        <li class="{{ request()->routeIs('sales-orders.*') ? 'active' : '' }}">
                             <a href="{{ route('sales-orders.index') }}">Sales Order</a>
                         </li>
 
-                        <li>
+                        <li class="{{ request()->routeIs('work-orders.*') ? 'active' : '' }}">
                             <a href="{{ route('work-orders.index') }}">Work Order</a>
                         </li>
 
-                        <li>
+                        <li class="{{ request()->routeIs('boq.*') ? 'active' : '' }}">
                             <a href="{{ route('boq.index') }}">BOQ</a>
                         </li>
                     </ul>

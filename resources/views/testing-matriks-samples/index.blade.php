@@ -34,6 +34,7 @@
                 title="List of Testing Matriks Samples"
                 create-route="testing-matriks-samples.create"
                 add-label="Add Data"
+                :with-history="true"
             />
 
             <div class="tab-content">
@@ -54,6 +55,11 @@
                         Pilih data pada tab Data untuk melihat detail
                     </div>
                 </div>
+                <div class="tab-pane fade" id="tab-history">
+                    <div id="historyContent" class="p-3 text-muted">
+                        Pilih data pada tab Data untuk melihat history
+                    </div>
+                </div>
 
             </div>
 
@@ -68,6 +74,7 @@
         data: "{{ route('testing-matriks-samples.data') }}",
         update: "{{ url('testing-matriks-samples') }}/",
         detail: "{{ url('testing-matriks-samples') }}/",
+        history: "{{ url('testing-matriks-samples') }}/",
         csrf: "{{ csrf_token() }}"
     }
 </script>

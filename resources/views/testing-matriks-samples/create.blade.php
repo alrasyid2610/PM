@@ -22,73 +22,57 @@
 
 @section('content')
 <section class="section">
-    <div class="container-fluid">
-        <form id="testingMatriksSampleForm">
-            @csrf
+    <form id="testingMatriksSampleForm">
+        @csrf
 
-            <div class="card mb-4">
-                <div class="card-body">
-
-                    {{-- FK Kelompok --}}
-                    <div class="mb-3">
-                        <label class="form-label required">
-                            Kelompok Matriks Sample
-                        </label>
-
+        <div class="detail-section-card mb-3">
+            <div class="detail-section-header">
+                <div class="detail-section-icon icon-teal">
+                    <i class="fa-solid fa-vials"></i>
+                </div>
+                <div class="detail-section-title">Testing Matriks Samples</div>
+                <div class="detail-section-sub">Data matriks sampel pengujian</div>
+            </div>
+            <div class="detail-section-body">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label required">Kelompok Matriks Sample</label>
                         <select id="id_testing_kelompok_matriks_sample"
                                 name="id_testing_kelompok_matriks_sample"
                                 class="form-select"
                                 required>
                         </select>
                     </div>
-
-                    <div class="mb-3">
+                    <div class="col-md-4 col-12">
                         <label class="form-label required">Kode</label>
-                        <input type="text"
-                               class="form-control"
-                               name="kode"
-                               required>
+                        <input type="text" class="form-control" name="kode" required>
                     </div>
-
-                    <div class="mb-3">
+                    <div class="col-md-4 col-12">
                         <label class="form-label required">Judul Indonesia</label>
-                        <input type="text"
-                               class="form-control"
-                               name="judul_indonesia"
-                               required>
+                        <input type="text" class="form-control" name="judul_indonesia" required>
                     </div>
-
-                    <div class="mb-3">
+                    <div class="col-md-4 col-12">
                         <label class="form-label required">Judul Inggris</label>
-                        <input type="text"
-                               class="form-control"
-                               name="judul_inggris"
-                               required>
+                        <input type="text" class="form-control" name="judul_inggris" required>
                     </div>
-
-                    <div class="mb-3">
+                    <div class="col-md-12">
                         <label class="form-label">Keterangan</label>
-                        <textarea class="form-control"
-                                  name="keterangan"></textarea>
+                        <textarea class="form-control" name="keterangan" rows="3"></textarea>
                     </div>
-
                 </div>
             </div>
+        </div>
 
-            <div class="d-flex justify-content-end gap-2">
-                <button type="submit" class="btn btn-primary">
-                    Simpan Data
-                </button>
+        <div class="d-flex justify-content-between align-items-center">
+            <a href="{{ route('testing-matriks-samples.index') }}" class="btn btn-secondary btn-sm">
+                <i class="fa-solid fa-arrow-left me-1"></i> Kembali
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Data
+            </button>
+        </div>
 
-                <a href="{{ route('testing-matriks-samples.index') }}"
-                   class="btn btn-secondary btn-sm">
-                    Batal
-                </a>
-            </div>
-
-        </form>
-
-    </div>
+    </form>
 </section>
 @endsection
 

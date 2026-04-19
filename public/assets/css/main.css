@@ -399,6 +399,15 @@ table.dataTable.table-striped tbody tr:nth-child(odd):hover {
     overflow-y: scroll !important;
 }
 
+.sidebar-wrapper .menu .submenu li.active > a {
+    color: #18386b !important;
+    font-weight: 700 !important;
+    background: #e8f0fe;
+    border-radius: 6px;
+    margin-left: 0.3rem;
+    padding-left: 2.7rem;
+}
+
 /* =====================
    NAV TABS — BUTTON STYLE
    ===================== */
@@ -693,7 +702,7 @@ section .card {
     border: 0.5px solid #d1d5db;
     border-radius: 6px;
     color: #374151;
-    padding: 0 10px;
+    /* padding: 0 10px; */
 }
 
 .detail-section-body .form-control.disabled,
@@ -1036,6 +1045,27 @@ section .card {
     background: #fafafa;
 }
 
+.history-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #9ca3af;
+    margin-bottom: 6px;
+    margin-top: 4px;
+}
+
+.acc-body .history-table {
+    table-layout: fixed;
+    word-break: break-word;
+}
+
+.acc-body .history-table td,
+.acc-body .history-table th {
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+
 .history-table tbody td {
     padding: 8px 12px;
     vertical-align: middle;
@@ -1084,6 +1114,26 @@ section .card {
     font-style: italic;
     font-weight: 400;
 }
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    border: 0.5px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    table-layout: fixed; /* ← tambah ini */
+}
+
+.history-table thead th:nth-child(1) {
+    width: 15%;
+} /* Field */
+.history-table thead th:nth-child(2) {
+    width: 37.5%;
+} /* Nilai Lama */
+.history-table thead th:nth-child(3) {
+    width: 37.5%;
+} /* Nilai Baru */
 
 /* Responsive */
 @media (max-width: 767.98px) {

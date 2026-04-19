@@ -1,13 +1,10 @@
 @extends('layouts.app')
 
-@section('page-title', 'Business Relation Contacts')
-@section('page-descrip', 'Kelola data Business Relation Contacts')
+@section('page-title', 'BoQ')
+@section('page-descrip', 'Data BOQ')
 
 @section('breadcrumb')
-    <li class="breadcrumb-item active" aria-current="page">Business Relation Contacts</li>
-    {{-- <li class="breadcrumb-item" aria-current="page">
-          <a href="{{ route('testing-units.index') }}">Testing Units</a>
-    </li> --}}
+    <li class="breadcrumb-item active" aria-current="page">BOQ</li>
 @endsection
 
 @section('page-icon')
@@ -20,6 +17,7 @@
     </svg>
 @endsection
 
+
 @section('content')
 <style>
     thead * {
@@ -27,21 +25,25 @@
     }
 </style>
 
+
+
 <section class="section">
     <div class="card">
         <div class="card-body">
 
             <x-datatable-header
-                title="List of Business Relation Contacts"
-                create-route="business-relation-contacts.create"
+                title="List of Units"
+                create-route="boq.create"
                 add-label="Add Data"
                 :with-history="true"
             />
-            
+
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="tab-data">
                     <div class="table-responsive">
-                        <table id="business-relation-contacts-table" class="table table-striped table-hover table-sm table-bordered w-100" data-datatable-auto-columns="true">
+                        <table id="{{ request()->segment(1) }}-table"
+                            class="table table-hover table-striped table-sm w-100"
+                            data-datatable-auto-columns="true">
                             <thead></thead>
                             <tbody></tbody>
                         </table>
@@ -65,13 +67,15 @@
 @section('custom-script')
 <script>
     window.route = {
-        data: "{{ route('business-relation-contacts.data') }}",
-        update: "{{ url('business-relation-contacts') }}/",
+        data: "{{ route('boq.data') }}",
+        update: "{{ url('boq') }}/",
         csrf: "{{ csrf_token() }}",
-        detail: "{{ url('business-relation-contacts') }}/",
-        history: "{{ url('business-relation-contacts') }}/",
+        history: "{{ url('boq') }}/",
+        detail: "{{ url('boq') }}/",
+
     }
 </script>
-<script src="{{ asset('assets/js/business-relation-contact/index.js') }}"></script>
-<script src="{{ asset('assets/js/business-relation-contact/form.js') }}"></script>
+
+<script src="{{ asset('assets/js/testing-units/form.js') }}"></script>
+<script src="{{ asset('assets/js/testing-units/index.js') }}"></script>
 @endsection

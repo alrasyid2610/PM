@@ -5,10 +5,22 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
+use App\Traits\HasAuditHistory;
 
 
 class WorkOrderController extends Controller
 {
+    use HasAuditHistory;
+
+    protected function auditTable(): string
+    {
+        return 'work_orders';
+    }
+
+    protected function auditExcludeFields(): array
+    {
+        return ['updated_at', 'created_at', 'id_wo'];
+    }
 
     public function index()
     {
@@ -26,9 +38,9 @@ class WorkOrderController extends Controller
         // ==========================
         $request->validate([
             'id_sales_order' => 'required|integer',
-            'tanggal_so' => 'required|date',
-            'tanggal_mulai' => 'required|date',
-            'tanggal_selesai' => 'required|date',
+            // 'tanggal_so' => 'required|date',
+            // 'tanggal_mulai' => 'required|date',
+            // 'tanggal_selesai' => 'required|date',
             'judul_order' => 'required|string',
             'id_pelanggan' => 'required|string',
             'id_site_pelanggan' => 'required|string',
@@ -50,6 +62,9 @@ class WorkOrderController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        $after = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
+        saveAudit('work_orders', $id, 'Create', '', $after);
 
         return response()->json([
             'status' => 'success',
@@ -81,6 +96,8 @@ class WorkOrderController extends Controller
         // ==========================
         // UPDATE
         // ==========================
+        $before = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
+
         DB::table('work_orders')
             ->where('id_wo', $id)
             ->update([
@@ -91,6 +108,9 @@ class WorkOrderController extends Controller
                 'keterangan' => $request->keterangan,
                 'updated_at' => now(),
             ]);
+
+        $after = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
+        saveAudit('work_orders', $id, 'update', $before, $after);
 
         return response()->json([
             'status' => 'success',
@@ -136,15 +156,15 @@ class WorkOrderController extends Controller
                 'wo.id_wo',
                 's.id_so',
                 's.no_so',
-                's.tanggal_so',
                 'wo.no_wo',
                 's.judul_order',
-                's.tanggal_mulai',
-                's.tanggal_selesai',
                 'wo.id_pelanggan_pekerjaan',
                 'wo.id_site_pelanggan_pekerjaan',
                 'br.nama as Pelanggan',
                 'brs.nama_lokasi as Site Pelanggan',
+                's.tanggal_so',
+                's.tanggal_mulai',
+                's.tanggal_selesai',
                 'wo.keterangan',
                 's.created_at',
             ]);
@@ -185,7 +205,7 @@ class WorkOrderController extends Controller
             return $prefix . '0001';
         }
 
-        $number = (int) substr($latest->no_wo, 3) + 1;
+        $number = (int) explode('-', $latest->no_wo)[2] + 1;
         return $prefix . str_pad($number, 4, '0', STR_PAD_LEFT);
     }
 
@@ -226,5 +246,41 @@ class WorkOrderController extends Controller
         }
 
         return response()->json($wo);
+    }
+
+    public function show($id)
+    {
+
+        $testingUnit = DB::table('work_orders as wo')
+            ->leftJoin('sales_orders as so', 'so.id_so', '=', 'wo.id_so')
+            ->leftJoin('business_relations as br', 'br.id_br', '=', 'wo.id_pelanggan_pekerjaan')
+            ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
+            ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'wo.id_pic_pelanggan_pekerjaan')
+            ->where('wo.id_wo', $id)
+            ->select([
+                'wo.id_wo',
+                'wo.no_wo',
+                'wo.id_so',
+                'so.no_so',                         // ← label SO
+                'wo.judul_pekerjaan',
+                'wo.keterangan',
+                'wo.id_pelanggan_pekerjaan',
+                'br.nama as nama_pelanggan_pekerjaan', // ← label pelanggan
+                'wo.id_site_pelanggan_pekerjaan',
+                'brs.nama_lokasi as nama_site_pelanggan_pekerjaan', // ← label site
+                'wo.id_pic_pelanggan_pekerjaan',
+                'brc.nama_pic as nama_pic_pelanggan_pekerjaan',     // ← label PIC
+                'wo.created_at',
+                'wo.updated_at',
+            ])
+            ->first();
+
+
+
+        if (!$testingUnit) {
+            return response()->json(['message' => 'Testing unit tidak ditemukan'], 404);
+        }
+
+        return response()->json($testingUnit);
     }
 }

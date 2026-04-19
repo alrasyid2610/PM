@@ -142,6 +142,12 @@
     <script src="{{ asset('assets/js/pages/dashboard.js') }}"></script>
     <script src="{{ asset('assets/js/main.js') }}"></script>
     <script>
+        document.querySelectorAll('.sidebar-item.has-sub.active').forEach(function(item) {
+            var submenu = item.querySelector('.submenu');
+            if (submenu) submenu.classList.add('active');
+        });
+    </script>
+    <script>
         let resource = '{{ request()->segment(1) }}';
 
         let tableId = resource + '-table';

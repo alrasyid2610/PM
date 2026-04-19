@@ -6,11 +6,22 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTables;
 use Illuminate\Support\Facades\Auth;
+use App\Traits\HasAuditHistory;
 
 
 class BusinessEstateController extends Controller
 {
-    //
+    use HasAuditHistory;
+
+    protected function auditTable(): string
+    {
+        return 'business_estates';
+    }
+
+    protected function auditExcludeFields(): array
+    {
+        return ['updated_at', 'created_at', 'id_bestate'];
+    }
     public function index()
     {
         return view('business-estates.index', [
@@ -90,7 +101,7 @@ class BusinessEstateController extends Controller
         // =========================
         // INSERT DATA
         // =========================
-        DB::table('business_estates')->insert([
+        $id = DB::table('business_estates')->insertGetId([
             'nama'           => $validated['nama'],
             'kode'           => $validated['kode'] ?? null,
             'alamat'         => $validated['alamat'],
@@ -103,6 +114,10 @@ class BusinessEstateController extends Controller
             'created_at'     => now(),
             'updated_at'     => now(),
         ]);
+
+        $after = DB::table('business_estates')->where('id_bestate', $id)->get()->toJson();
+
+        saveAudit('business_estates', $id, 'Create', '', $after);
 
         return response()->json([
             'success' => true,

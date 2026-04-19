@@ -5,9 +5,21 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
+use App\Traits\HasAuditHistory;
 
 class TestingMatriksSampleController extends Controller
 {
+    use HasAuditHistory;
+
+    protected function auditTable(): string
+    {
+        return 'testing_matriks_samples';
+    }
+
+    protected function auditExcludeFields(): array
+    {
+        return ['updated_at', 'created_at', 'id_testing_matriks_sample'];
+    }
     public function index()
     {
         return view('testing-matriks-samples.index', [
@@ -63,6 +75,9 @@ class TestingMatriksSampleController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        $after = DB::table('testing_matriks_samples')->where('id_testing_matriks_sample', $id)->get()->toJson();
+        saveAudit('testing_matriks_samples', $id, 'Create', '', $after);
 
         return response()->json([
             'status' => 'success',

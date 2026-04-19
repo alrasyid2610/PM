@@ -398,5 +398,10 @@ $(document).ready(function () {
                 allowClear: true,
             });
         },
+        historyConfig: {
+            masterLabel: "Business Relation",
+            linesLabel: "Sites",
+            linesDisplayFields: ["nama_lokasi", "provinsi", "kota_kabupaten"],
+        },
     });
 });

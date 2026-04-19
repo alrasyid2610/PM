@@ -46,77 +46,12 @@
                             </select>
                         </div>
 
-                        {{-- <div class="col-md-12 col-lg-3 mb-3">
-                            <label class="form-label required">Tanggal SO</label>
-                            <input type="date" name="tanggal_so" class="form-control" required>
-                        </div>
-                        
-                        <div class="col-md-4 col-lg-3 mb-3">
-                            <label class="form-label required">Tanggal Mulai</label>
-                            <input type="date" name="tanggal_mulai" class="form-control">
-                        </div>
-
-                        <div class="col-md-4 col-lg-3 mb-3">
-                            <label class="form-label required">Tanggal Selesai</label>
-                            <input type="date" name="tanggal_selesai" class="form-control">
-                        </div> --}}
-
                         <div class="col-md-12 col-lg-9 mb-3">
                             <label class="form-label required">Judul Order</label>
                             <input type="text" name="judul_order" class="form-control">
                         </div>
 
-                        {{-- <div class="col-md-12 col-lg-3 mb-3">
-                            <label class="form-label">PIC Pekerjaan</label>
-                            <input type="text" name="pic_pekerjaan" class="form-control">
-                        </div>
-
-                        <div class="col-md-12 col-lg-6 mb-3">
-                            <label class="form-label required">Pelanggan</label>
-                            <select name="id_pelanggan" class="form-select" required>
-                                <option value="">Pilih Pelanggan</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-12 col-lg-6 mb-3">
-                            <label class="form-label required">Pelanggan Site</label>
-                            <select name="id_site_pelanggan" class="form-select" required>
-                                <option value="">Pilih Pelanggan Site</option>
-                            </select>
-                        </div> --}}
-                        
                     </div>
-
-                    {{-- <h6 class="fw-bold">PO</h6>
-                    <div class="row mb-4 align-items-center">
-                        <div class="col-md-4 col-lg-2">
-                            <label class="form-label">Tidak Ada PO</label>
-                            <select name="tidak_ada_po" class="form-select">
-                                <option value="" selected>Pilih</option>
-                                <option value="1">Ada PO</option>
-                                <option value="0">Tidak Ada PO</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-4 col-lg-4">
-                            <label class="form-label">Tanggal PO</label>
-                            <input type="date" name="tanggal_po" class="form-control">
-                        </div>
-
-                        <div class="col-md-4 col-lg-6 mb-3">
-                            <label class="form-label">No PO</label>
-                            <input type="text" name="no_po" class="form-control">
-                        </div>
-
-                    </div>
-
-                    <h6 class="fw-bold">Lainnya</h6>
-                    <div class="row mb-4">
-                        <div class="col-md-12 col-lg-12 mb-3">
-                            <label class="form-label">Keterangan</label>
-                            <textarea name="keterangan" id="keterangan" cols="30" rows="6" class="form-control"></textarea>
-                        </div>
-                    </div> --}}
 
                     <h6 class="fw-bold">BOQ</h6>
                     <div class="table-responsive">
@@ -273,31 +208,9 @@
 
         $('#id_work_order').on('select2:select', function (e) {
             var data = e.params.data;
-
             console.log('Work order dipilih:', data);
             $("input[name='judul_order']").val(data.judul);
 
-            
-            
-            // getSO(data).then(function(response) {
-            //     dataSO = response;
-
-            //     console.log('Data work order berhasil dimuat:', dataSO);
-                
-            //     if(dataSO) {
-            //         // Isi field tanggal_so
-            //         $("input[name='tanggal_so']").val(dataSO.tanggal_so);
-            //         $("input[name='judul_order']").val(dataSO.judul_order);
-            //         $("input[name='tanggal_mulai']").val(dataSO.tanggal_mulai);
-            //         $("input[name='tanggal_selesai']").val(dataSO.tanggal_selesai);
-            //         $("select[name='tidak_ada_po']").val(dataSO.tidak_ada_po);
-            //         $("input[name='tanggal_po']").val(dataSO.tanggal_po);
-            //         $("input[name='no_po']").val(dataSO.no_po);
-            //         $("select[name='id_pelanggan']").val(dataSO.id_pelanggan).trigger('change');
-            //         $("select[name='id_site_pelanggan']").val(dataSO.id_site_pelanggan).trigger('change');
-            //     }
-                
-            // });
         });
 
 
@@ -310,12 +223,7 @@
 
     function clearForm() {
         $('#boqForm')[0].reset();
-        // $('#id_work_order').val(null).trigger('change');
-        // $('#id_pelanggan').val('').trigger('change');
-        // $('#id_site_pelanggan').val('').trigger('change');
-
         $("select[name='id_work_order']").val(null).trigger('change');
-        // $("select[name='id_site_pelanggan']").val(null).trigger('change');
     }
 
 

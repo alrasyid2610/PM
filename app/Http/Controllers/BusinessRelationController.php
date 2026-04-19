@@ -8,9 +8,27 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use SebastianBergmann\Environment\Console;
 use Yajra\DataTables\Facades\DataTables;
+use App\Traits\HasAuditHistoryWithLines;
 
 class BusinessRelationController extends Controller
 {
+    use HasAuditHistoryWithLines;
+
+    protected function auditTable(): string { return 'business_relations'; }
+    protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_br', '_lines']; }
+    protected function auditLinesTable(): string { return 'business_relation_sites'; }
+    protected function auditLinesForeignKey(): string { return 'id_br'; }
+    protected function auditLinesPrimaryKey(): string { return 'id_site'; }
+    protected function auditLinesExcludeFields(): array { return ['updated_at', 'created_at', 'id_site', 'id_br']; }
+    protected function auditLinesLabelField(): string { return 'nama_lokasi'; }
+
+    public function history($id)
+    {
+        $site = DB::table('business_relation_sites')->where('id_site', $id)->first();
+        if (!$site) return response()->json([]);
+        return $this->historyById($site->id_br);
+    }
+
     public function index()
     {
         return view('business-relation.index');
@@ -310,12 +328,17 @@ class BusinessRelationController extends Controller
             'alamat_lengkap' => 'required_if:id_site,null|string',
         ]);
 
+        // Capture BEFORE state
+        $id_br = $request->id_br;
+        $beforeBr = (array) DB::table('business_relations')->where('id_br', $id_br)->first();
+        $beforeSites = DB::table('business_relation_sites')->where('id_br', $id_br)->get()->map(fn($r) => (array)$r)->toArray();
+        $beforeBr['_lines'] = $beforeSites;
+
         DB::beginTransaction();
 
         try {
-            //code...
             DB::table('business_relations')
-                ->where('id_br', $request->id_br)
+                ->where('id_br', $id_br)
                 ->update([
                     'nama'                => $request->nama_br,
                     'entitas'             => $request->entitas,
@@ -349,11 +372,20 @@ class BusinessRelationController extends Controller
                     'updated_at'      => now(),
                 ]);
 
+            // Capture AFTER state
+            $afterBr = (array) DB::table('business_relations')->where('id_br', $id_br)->first();
+            $afterSites = DB::table('business_relation_sites')->where('id_br', $id_br)->get()->map(fn($r) => (array)$r)->toArray();
+            $afterBr['_lines'] = $afterSites;
+
+            saveAudit('business_relations', $id_br, 'update', json_encode($beforeBr), json_encode($afterBr));
 
             DB::commit();
+
+            return response()->json(['success' => true, 'message' => 'Data berhasil diperbarui']);
         } catch (\Throwable $th) {
-            //throw $th;
             DB::rollBack();
+            Log::error($th);
+            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan sistem'], 500);
         }
     }
 

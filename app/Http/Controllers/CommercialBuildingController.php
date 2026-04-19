@@ -5,10 +5,21 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
+use App\Traits\HasAuditHistory;
 
 class CommercialBuildingController extends Controller
 {
-    //
+    use HasAuditHistory;
+
+    protected function auditTable(): string
+    {
+        return 'commercial_buildings';
+    }
+
+    protected function auditExcludeFields(): array
+    {
+        return ['updated_at', 'created_at', 'id_building'];
+    }
     public function index()
     {
         // return view('master.index', [
@@ -90,7 +101,7 @@ class CommercialBuildingController extends Controller
         // =========================
         // INSERT DATA
         // =========================
-        DB::table('commercial_buildings')->insert([
+        $id = DB::table('commercial_buildings')->insertGetId([
             'nama'           => $validated['nama'],
             'alamat'         => $validated['alamat'],
             'provinsi'       => $validated['provinsi'] ?? null,
@@ -103,6 +114,9 @@ class CommercialBuildingController extends Controller
             'created_at'     => now(),
             'updated_at'     => now(),
         ]);
+
+        $after = DB::table('commercial_buildings')->where('id_building', $id)->get()->toJson();
+        saveAudit('commercial_buildings', $id, 'Create', '', $after);
 
         return response()->json([
             'success' => true,

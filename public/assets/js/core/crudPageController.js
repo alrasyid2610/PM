@@ -5,6 +5,7 @@ class CrudPageController {
         this.initSelect = options.initSelect || null;
         this.useAttachment = options.useAttachment || false;
         this.initDynamicTable = options.initDynamicTable || null;
+        this.historyConfig = options.historyConfig || null;
 
         this.selectedRow = { id: null };
 
@@ -154,7 +155,12 @@ class CrudPageController {
             </div>
         `);
 
-        $.get(window.route.history + id + "/history", function (res) {
+        $.get(window.route.history + id + "/history", (res) => {
+            if (this.historyConfig) {
+                this._renderMasterDetailHistory(res);
+                return;
+            }
+
             if (!res || res.length === 0) {
                 $("#historyContent").html(`
                 <div class="history-empty">
@@ -285,7 +291,7 @@ class CrudPageController {
             $("#historyContent").html(html);
 
             // Bind accordion toggle
-            $("#historyContent").on("click", ".acc-header", function () {
+            $("#historyContent").off("click", ".acc-header").on("click", ".acc-header", function () {
                 const item = $(this).closest(".acc-item");
                 if (!item.find(".acc-body").length) return;
                 item.toggleClass("open");
@@ -299,6 +305,141 @@ class CrudPageController {
                 <div class="history-empty-text">Gagal memuat riwayat perubahan</div>
             </div>
         `);
+        });
+    }
+
+    _renderMasterDetailHistory(res) {
+        const cfg = this.historyConfig;
+        const masterLabel = cfg.masterLabel ?? "Master";
+        const linesLabel  = cfg.linesLabel  ?? "Lines";
+        const displayFields = cfg.linesDisplayFields ?? [];
+
+        if (!res || res.length === 0) {
+            $("#historyContent").html(`
+                <div class="history-empty">
+                    <div class="history-empty-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                    <div class="history-empty-text">Belum ada riwayat perubahan</div>
+                </div>`);
+            return;
+        }
+
+        let html = `
+            <div class="history-wrap">
+                <div class="history-wrap-header">
+                    <div class="history-wrap-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                    <div class="history-wrap-title">Riwayat Perubahan</div>
+                    <div class="history-wrap-count">${res.length} riwayat</div>
+                </div>
+                <div class="history-acc-list">`;
+
+        res.forEach((log, index) => {
+            const date = new Date(log.created_at).toLocaleString("id-ID", {
+                day: "2-digit", month: "short", year: "numeric",
+                hour: "2-digit", minute: "2-digit",
+            });
+
+            const action      = (log.action ?? "").toLowerCase();
+            const actionClass = { create: "badge-create", update: "badge-update", delete: "badge-delete" }[action] ?? "badge-update";
+            const actionLabel = { create: "Dibuat", update: "Diubah", delete: "Dihapus" }[action] ?? log.action;
+
+            const initials = (log.created_by_name ?? "SY")
+                .split(" ").map(w => w[0]).join("").substring(0, 2).toUpperCase();
+
+            const masterChanges = log.master_changes ?? [];
+            const linesDiff     = log.lines_diff ?? { added: [], removed: [], modified: [] };
+            const hasContent    = masterChanges.length > 0
+                || linesDiff.added.length > 0
+                || linesDiff.removed.length > 0
+                || linesDiff.modified.length > 0;
+
+            // --- Master section ---
+            let masterHtml = "";
+            if (masterChanges.length > 0) {
+                const rows = masterChanges.map(c => `
+                    <tr>
+                        <td><span class="td-field">${c.field}</span></td>
+                        <td><span class="td-old ${!c.old_value ? "empty" : ""}">${c.old_value ?? "kosong"}</span></td>
+                        <td><span class="td-new ${!c.new_value ? "empty" : ""}">${c.new_value ?? "kosong"}</span></td>
+                    </tr>`).join("");
+
+                masterHtml = `
+                    <div class="history-section-label">${masterLabel}</div>
+                    <table class="history-table mb-3">
+                        <thead><tr><th>Field</th><th>Nilai Lama</th><th>Nilai Baru</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>`;
+            }
+
+            // --- Lines section ---
+            let linesHtml = "";
+            const { added, removed, modified } = linesDiff;
+
+            if (added.length > 0 || removed.length > 0 || modified.length > 0) {
+                let linesRows = "";
+
+                added.forEach(row => {
+                    const summary = displayFields.map(f => row[f] != null ? `<span class="td-field">${row[f]}</span>` : "").filter(Boolean).join(" · ");
+                    linesRows += `<tr><td><span class="badge-create px-2 py-1 rounded">+</span></td><td colspan="3">${summary || "Baris baru ditambahkan"}</td></tr>`;
+                });
+
+                removed.forEach(row => {
+                    const summary = displayFields.map(f => row[f] != null ? `<span class="td-field">${row[f]}</span>` : "").filter(Boolean).join(" · ");
+                    linesRows += `<tr><td><span class="badge-delete px-2 py-1 rounded">−</span></td><td colspan="3">${summary || "Baris dihapus"}</td></tr>`;
+                });
+
+                modified.forEach(item => {
+                    item.changes.forEach((c, ci) => {
+                        const label = ci === 0
+                            ? `<span class="badge-update px-2 py-1 rounded">~</span> ${item.label ?? ""}`
+                            : "";
+                        linesRows += `
+                            <tr>
+                                <td>${label}</td>
+                                <td><span class="td-field">${c.field}</span></td>
+                                <td><span class="td-old ${!c.old_value ? "empty" : ""}">${c.old_value ?? "kosong"}</span></td>
+                                <td><span class="td-new ${!c.new_value ? "empty" : ""}">${c.new_value ?? "kosong"}</span></td>
+                            </tr>`;
+                    });
+                });
+
+                linesHtml = `
+                    <div class="history-section-label">${linesLabel}</div>
+                    <table class="history-table">
+                        <thead><tr><th>Aksi</th><th>Field</th><th>Nilai Lama</th><th>Nilai Baru</th></tr></thead>
+                        <tbody>${linesRows}</tbody>
+                    </table>`;
+            }
+
+            const bodyContent = (masterHtml || linesHtml)
+                ? `${masterHtml}${linesHtml}`
+                : `<p class="text-muted mb-0" style="font-size:12px;">Tidak ada perubahan yang terdeteksi.</p>`;
+
+            const bodyHtml = `<div class="acc-body">${bodyContent}</div>`;
+            const isOpen = index === 0 ? "open" : "";
+
+            html += `
+                <div class="acc-item ${isOpen}">
+                    <div class="acc-header">
+                        <span class="acc-badge ${actionClass}">${actionLabel}</span>
+                        <div class="acc-by">
+                            <div class="acc-avatar">${initials}</div>
+                            ${log.created_by_name ?? "System"}
+                        </div>
+                        ${log.total_changes > 0 ? `<span class="acc-count">${log.total_changes} perubahan</span>` : ""}
+                        <span class="acc-time">${date}</span>
+                        <span class="acc-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+                    </div>
+                    ${bodyHtml}
+                </div>`;
+        });
+
+        html += `</div></div>`;
+        $("#historyContent").html(html);
+
+        $("#historyContent").off("click", ".acc-header").on("click", ".acc-header", function () {
+            const item = $(this).closest(".acc-item");
+            if (!item.find(".acc-body").length) return;
+            item.toggleClass("open");
         });
     }
 }

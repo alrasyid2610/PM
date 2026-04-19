@@ -36,6 +36,7 @@
                 title="List of Estate"
                 create-route="business-estates.create"
                 add-label="Add Data"
+                :with-history="true"
             />
 
             <div class="tab-content">
@@ -50,6 +51,11 @@
                 <div class="tab-pane fade" id="tab-detail">
                     <div id="detailContent" class="p-3 text-muted">Pilih data pada tab Data untuk melihat detail</div>
                 </div>
+                <div class="tab-pane fade" id="tab-history">
+                    <div id="historyContent" class="p-3 text-muted">
+                        Pilih data pada tab Data untuk melihat history
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -62,7 +68,9 @@
     window.route = {
         data: "{{ route('business-estates.data') }}",
         update: "{{ url('business-estates') }}/",
-        csrf: "{{ csrf_token() }}"
+        csrf: "{{ csrf_token() }}",
+        history: "{{ url('business-estates') }}/",
+        detail: "{{ url('business-estates') }}/",
     }
 </script>
 <script src="{{ asset('assets/js/business-estates/index.js') }}"></script>

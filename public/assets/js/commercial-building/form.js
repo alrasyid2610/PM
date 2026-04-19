@@ -81,7 +81,7 @@ function renderUnitForm(res) {
                 <div class="detail-section-sub">Data pemilik & pengurus gedung</div>
             </div>
             <div class="detail-section-body">
-                <div class="row g-3 form-1">
+                <div class="row g-3 form-2">
                     ${formGroup.text("pemilik", "Pemilik", res.pemilik, false, {
                         className: "col-md-6 col-12",
                     })}
