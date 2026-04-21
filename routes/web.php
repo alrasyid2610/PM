@@ -471,7 +471,7 @@ Route::prefix('/api')
 
 
 Route::get('/', function () {
-    return redirect('/business-relations');
+    return redirect('/dashboard');
 });
 
 use App\Http\Controllers\DashboardController;
