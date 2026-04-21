@@ -25,6 +25,12 @@ class TestingUnitController extends Controller
 
     public function data()
     {
+// dd(
+//     DB::table('business_relation_sites')
+// ->where('is_aktif',"=","0")
+//     ->count());
+// dd(DB::table('testing_units')->select('kode', 'judul_indonesia')->get(), DB::table('testing_units')->count());
+
         $query = DB::table('testing_units')->select([
             'id_testing_unit',
             'kode',

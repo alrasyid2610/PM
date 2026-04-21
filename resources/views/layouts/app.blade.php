@@ -171,7 +171,7 @@
 
 
 
-    grep -n "custom-script" resources/views/layouts/app.blade.php
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     @yield('custom-script')
 
 </body>

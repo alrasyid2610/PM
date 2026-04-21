@@ -20,8 +20,9 @@
 <section class="section">
 
     {{-- STAT CARDS --}}
-    <div class="row g-3 mb-4" id="statCards">
-        <div class="col-md-3">
+    <p class="section-label mb-2">Ringkasan Bisnis</p>
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
             <div class="stat-card">
                 <div class="stat-icon icon-navy">
                     <i class="fa-solid fa-building"></i>
@@ -33,7 +34,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3 col-6">
             <div class="stat-card">
                 <div class="stat-icon icon-blue">
                     <i class="fa-solid fa-sitemap"></i>
@@ -45,7 +46,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3 col-6">
             <div class="stat-card">
                 <div class="stat-icon icon-green">
                     <i class="fa-solid fa-file-lines"></i>
@@ -57,7 +58,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3 col-6">
             <div class="stat-card">
                 <div class="stat-icon icon-amber">
                     <i class="fa-solid fa-clock"></i>
@@ -71,31 +72,31 @@
         </div>
     </div>
 
-    {{-- SO STATUS CARDS --}}
+    {{-- SO STATUS --}}
     <p class="section-label mb-2">Status Sales Order</p>
     <div class="row g-3 mb-4">
-        <div class="col-md-3">
+        <div class="col-md-3 col-6">
             <div class="so-card draft">
                 <div class="so-status">Draft</div>
                 <div class="so-value" id="soDraft">—</div>
                 <div class="so-desc">Belum dikonfirmasi</div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3 col-6">
             <div class="so-card confirmed">
                 <div class="so-status">Confirmed</div>
                 <div class="so-value" id="soConfirmed">—</div>
                 <div class="so-desc">Sudah dikonfirmasi</div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3 col-6">
             <div class="so-card on-progress">
                 <div class="so-status">On Progress</div>
                 <div class="so-value" id="soOnProgress">—</div>
                 <div class="so-desc">Sedang dikerjakan</div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3 col-6">
             <div class="so-card done">
                 <div class="so-status">Done</div>
                 <div class="so-value" id="soDone">—</div>
@@ -109,15 +110,17 @@
     <div class="row g-3">
         <div class="col-md-8">
             <div class="chart-card">
-                <div class="chart-header d-flex justify-content-between align-items-start mb-3">
+                <div class="d-flex justify-content-between align-items-start mb-3">
                     <div>
                         <div class="chart-title">Jumlah Sales Order per Bulan</div>
-                        <div class="chart-sub text-muted" style="font-size:12px;">Tren SO sepanjang tahun</div>
+                        <div class="text-muted" style="font-size:12px;">
+                            Tren SO sepanjang tahun
+                        </div>
                     </div>
-                    <select class="year-select form-select form-select-sm w-auto" id="yearSelect">
-                        <option value="2026">2026</option>
-                        <option value="2025">2025</option>
-                        <option value="2024">2024</option>
+                    <select class="form-select form-select-sm w-auto" id="yearSelect">
+                        <option value="{{ now()->year }}">{{ now()->year }}</option>
+                        <option value="{{ now()->year - 1 }}">{{ now()->year - 1 }}</option>
+                        <option value="{{ now()->year - 2 }}">{{ now()->year - 2 }}</option>
                     </select>
                 </div>
                 <canvas id="barChart" height="100"></canvas>
@@ -125,9 +128,11 @@
         </div>
         <div class="col-md-4">
             <div class="chart-card">
-                <div class="chart-header mb-3">
+                <div class="mb-3">
                     <div class="chart-title">Distribusi Status SO</div>
-                    <div class="chart-sub text-muted" style="font-size:12px;">Proporsi per status</div>
+                    <div class="text-muted" style="font-size:12px;">
+                        Proporsi per status
+                    </div>
                 </div>
                 <div class="d-flex justify-content-center mb-3">
                     <canvas id="pieChart" width="160" height="160"></canvas>
