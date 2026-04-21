@@ -34,6 +34,7 @@
                 title="List of Commercial Buildings"
                 create-route="commercial-buildings.create"
                 add-label="Add Data"
+                :with-history="true"
             />
 
             <div class="tab-content">
@@ -48,6 +49,11 @@
                 <div class="tab-pane fade" id="tab-detail">
                     <div id="detailContent" class="p-3 text-muted">Pilih data pada tab Data untuk melihat detail</div>
                 </div>
+                <div class="tab-pane fade" id="tab-history">
+                    <div id="historyContent" class="p-3 text-muted">
+                        Pilih data pada tab Data untuk melihat history
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -61,8 +67,7 @@
         data: "{{ route('commercial-buildings.data') }}",
         update: "{{ url('commercial-buildings') }}/",
         csrf: "{{ csrf_token() }}",
-        detail: "{{ url('commercial-buildings') }}/",
-
+        history: "{{ url('commercial-buildings') }}/",
     }
 </script>
 

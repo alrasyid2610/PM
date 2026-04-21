@@ -399,6 +399,15 @@ table.dataTable.table-striped tbody tr:nth-child(odd):hover {
     overflow-y: scroll !important;
 }
 
+.sidebar-wrapper .menu .submenu li.active > a {
+    color: #18386b !important;
+    font-weight: 700 !important;
+    background: #e8f0fe;
+    border-radius: 6px;
+    margin-left: 0.3rem;
+    padding-left: 2.7rem;
+}
+
 /* =====================
    NAV TABS — BUTTON STYLE
    ===================== */
@@ -633,6 +642,69 @@ section .card {
 }
 
 /* =====================
+   ACTION BUTTONS (modern style)
+   ===================== */
+
+.btn-action-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 13px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1.5px solid #d97706;
+    color: #92400e;
+    background: #fef9ee;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+
+.btn-action-edit:hover {
+    background: #f59e0b;
+    border-color: #f59e0b;
+    color: #fff;
+}
+
+.btn-action-edit.editing {
+    border-color: #d1d5db;
+    color: #6b7280;
+    background: #f9fafb;
+}
+
+.btn-action-edit.editing:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #374151;
+}
+
+.btn-action-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    border: none;
+    color: #fff;
+    background: linear-gradient(135deg, #059669, #10b981);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+    line-height: 1.4;
+}
+
+.btn-action-save:hover {
+    background: linear-gradient(135deg, #047857, #059669);
+    box-shadow: 0 3px 10px rgba(16, 185, 129, 0.35);
+    transform: translateY(-1px);
+    color: #fff;
+}
+
+/* =====================
    DETAIL PARTY HEADER
    ===================== */
 .detail-party-header {
@@ -693,7 +765,7 @@ section .card {
     border: 0.5px solid #d1d5db;
     border-radius: 6px;
     color: #374151;
-    padding: 0 10px;
+    /* padding: 0 10px; */
 }
 
 .detail-section-body .form-control.disabled,
@@ -1036,6 +1108,27 @@ section .card {
     background: #fafafa;
 }
 
+.history-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #9ca3af;
+    margin-bottom: 6px;
+    margin-top: 4px;
+}
+
+.acc-body .history-table {
+    table-layout: fixed;
+    word-break: break-word;
+}
+
+.acc-body .history-table td,
+.acc-body .history-table th {
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+
 .history-table tbody td {
     padding: 8px 12px;
     vertical-align: middle;
@@ -1084,6 +1177,26 @@ section .card {
     font-style: italic;
     font-weight: 400;
 }
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    border: 0.5px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    table-layout: fixed; /* ← tambah ini */
+}
+
+.history-table thead th:nth-child(1) {
+    width: 15%;
+} /* Field */
+.history-table thead th:nth-child(2) {
+    width: 37.5%;
+} /* Nilai Lama */
+.history-table thead th:nth-child(3) {
+    width: 37.5%;
+} /* Nilai Baru */
 
 /* Responsive */
 @media (max-width: 767.98px) {

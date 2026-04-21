@@ -11,8 +11,8 @@ if (!function_exists('saveAudit')) {
             'nama_table' => $table,
             'row_id' => $rowId,
             'action' => $action,
-            'old_value' => $before ? json_encode($before) : null,
-            'new_value' => $after ? json_encode($after) : null,
+            'old_value' => $before ?: null,
+            'new_value' => $after ?: null,
             'created_by' => Auth::id(),
             'created_at' => now()
         ]);

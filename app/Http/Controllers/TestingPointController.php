@@ -4,11 +4,24 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Yajra\DataTables\Facades\DataTables;
+use App\Traits\HasAuditHistoryWithLines;
+use App\Traits\HasAttachment;
 
 class TestingPointController extends Controller
 {
+    use HasAuditHistoryWithLines, HasAttachment;
+
+    protected function attachmentTable(): string      { return 'testing_points'; }
+    protected function attachmentPrimaryKey(): string { return 'id_testing_point'; }
+
+    protected function auditTable(): string { return 'testing_points'; }
+    protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_testing_point', '_lines']; }
+    protected function auditLinesTable(): string { return 'testing_items'; }
+    protected function auditLinesForeignKey(): string { return 'id_testing_point'; }
+    protected function auditLinesPrimaryKey(): string { return 'id_testing_item'; }
+    protected function auditLinesExcludeFields(): array { return ['updated_at', 'created_at', 'id_testing_item', 'id_testing_point']; }
+
     public function index()
     {
         return view('testing-points.index');
@@ -95,6 +108,9 @@ class TestingPointController extends Controller
             'updated_at' => now(),
         ]);
 
+        $after = DB::table('testing_points')->where('id_testing_point', $id)->get()->toJson();
+        saveAudit('testing_points', $id, 'Create', '', $after);
+
         return response()->json([
             'status' => 'success',
             'id' => $id
@@ -135,7 +151,7 @@ class TestingPointController extends Controller
                 'deskripsi' => 'nullable|string',
                 'nomor_halaman' => 'nullable|string|max:50',
                 'attachment' => 'nullable|string|max:255',
-                // 'keterangan' => 'nullable|string',
+                'keterangan_point' => 'nullable|string',
                 'is_aktif' => 'required|boolean',
             ]);
 
@@ -144,20 +160,24 @@ class TestingPointController extends Controller
             dd($th);
         }
 
+        // Capture BEFORE state (point + lines)
+        $beforePoint = (array) DB::table('testing_points')->where('id_testing_point', $id)->first();
+        $beforeLines = DB::table('testing_items')->where('id_testing_point', $id)->get()->map(fn($r) => (array)$r)->toArray();
+        $beforePoint['_lines'] = $beforeLines;
+
         DB::beginTransaction();
 
         try {
 
-
-
-            $ids = $request->id_testing_item ?? [];
+            $ids            = $request->id_testing_item ?? [];
             $judul_indonesia = $request->judul_indonesia ?? [];
-            $judul_inggris = $request->judul_inggris ?? [];
-            $parameter = $request->parameter ?? [];
-            $unit = $request->unit ?? [];
-            $nilai = $request->nilai ?? [];
-            $keterangan = $request->keterangan ?? [];
-            $status = $request->status ?? [];
+            $judul_inggris  = $request->judul_inggris ?? [];
+            $parameter      = $request->parameter ?? [];
+            $unit           = $request->unit ?? [];
+            $nilai          = $request->nilai ?? [];
+            $keterangan     = $request->keterangan ?? [];
+            $status         = $request->status ?? [];
+            $nomor          = $request->nomor ?? [];
 
             $existingIds = DB::table('testing_items')
                 ->where('id_testing_point', $id)
@@ -171,95 +191,60 @@ class TestingPointController extends Controller
                 $itemId = $ids[$i] ?? null;
 
                 $dataItem = [
-                    'id_testing_point' => $id,
-                    'judul_indonesia' => $judul_indonesia[$i] ?? null,
-                    'judul_inggris' => $judul_inggris[$i] ?? null,
+                    'id_testing_point'   => $id,
+                    'nomor'              => $nomor[$i] ?? ($i + 1),
+                    'judul_indonesia'    => $judul_indonesia[$i] ?? null,
+                    'judul_inggris'      => $judul_inggris[$i] ?? null,
                     'id_testing_parameter' => $parameter[$i] ?? null,
-                    'id_testing_unit' => $unit[$i] ?? null,
-                    'nilai' => $nilai[$i] ?? null,
-                    'keterangan' => $keterangan[$i] ?? null,
-                    'is_aktif' => isset($status[$i]) ? $status[$i] : 0,
-                    'updated_at' => now(),
+                    'id_testing_unit'    => $unit[$i] ?? null,
+                    'nilai'              => $nilai[$i] ?? null,
+                    'keterangan'         => $keterangan[$i] ?? null,
+                    'is_aktif'           => isset($status[$i]) ? $status[$i] : 0,
+                    'updated_at'         => now(),
                 ];
 
                 if ($itemId) {
-                    // UPDATE
-                    DB::table('testing_items')
-                        ->where('id_testing_item', $itemId)
-                        ->update($dataItem);
-
+                    DB::table('testing_items')->where('id_testing_item', $itemId)->update($dataItem);
                     $currentIds[] = $itemId;
                 } else {
-                    // INSERT
-                    $newId = DB::table('testing_items')->insertGetId([
-                        ...$dataItem,
-                        'created_at' => now(),
-                    ]);
-
+                    $newId = DB::table('testing_items')->insertGetId([...$dataItem, 'created_at' => now()]);
                     $currentIds[] = $newId;
                 }
             }
 
             $idsToDelete = array_diff($existingIds, $currentIds);
-
             if (!empty($idsToDelete)) {
-                DB::table('testing_items')
-                    ->whereIn('id_testing_item', $idsToDelete)
-                    ->delete();
+                DB::table('testing_items')->whereIn('id_testing_item', $idsToDelete)->delete();
             }
-
-
-            // ambil data lama
-            $data = DB::table('testing_points')
-                ->where('id_testing_point', $id)
-                ->get();
-
-            $before = $data->toJson();
-
 
             $existing = $request->existing_attachments ?? [];
             $newFiles = [];
             if ($request->hasFile('attachments')) {
-
-                $upload = uploadAttachment(
-                    $request->file('attachments'),
-                    'testing_points'
-                );
-
+                $upload   = uploadAttachment($request->file('attachments'), 'testing_points');
                 $newFiles = $upload['files'];
             }
 
             $attachments = array_merge($existing, $newFiles);
             $validated['attachment'] = json_encode($attachments);
 
+            $validated['keterangan'] = $validated['keterangan_point'] ?? null;
+            unset($validated['keterangan_point']);
 
             DB::table('testing_points')
                 ->where('id_testing_point', $id)
-                ->update([
-                    ...$validated,
-                    'updated_at' => now(),
-                ]);
+                ->update([...$validated, 'updated_at' => now()]);
 
-            $after = DB::table('testing_points')
-                ->where('id_testing_point', $id)
-                ->get()->toJson();
+            // Capture AFTER state (point + lines)
+            $afterPoint = (array) DB::table('testing_points')->where('id_testing_point', $id)->first();
+            $afterLines = DB::table('testing_items')->where('id_testing_point', $id)->get()->map(fn($r) => (array)$r)->toArray();
+            $afterPoint['_lines'] = $afterLines;
 
-            saveAudit(
-                'testing_points',
-                $id,
-                'update',
-                $before,
-                $after
-            );
-
-            // update master
-            // sync items
+            saveAudit('testing_points', $id, 'update', json_encode($beforePoint), json_encode($afterPoint));
 
             DB::commit();
         } catch (\Throwable $th) {
             DB::rollBack();
-            dd($th);
-            throw $th;
+            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan server'], 500);
         }
 
         return response()->json(['success' => true]);
@@ -275,45 +260,4 @@ class TestingPointController extends Controller
     }
 
 
-    public function deleteAttachment(Request $request)
-    {
-
-        $id = $request->id;
-        $file = $request->file;
-
-        $data = DB::table('testing_points')
-            ->where('id_testing_point', $id)
-            ->first();
-
-        if (!$data) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Data tidak ditemukan'
-            ]);
-        }
-
-        $attachments = json_decode($data->attachment, true) ?? [];
-
-
-        // hapus file dari array
-        $attachments = array_filter($attachments, function ($item) use ($file) {
-            return $item != $file;
-        });
-
-        // hapus file dari storage
-
-        Storage::disk('public')->delete($file);
-
-        // update database
-        DB::table('testing_points')
-            ->where('id_testing_point', $id)
-            ->update([
-                'attachment' => json_encode(array_values($attachments)),
-                'updated_at' => now()
-            ]);
-
-        return response()->json([
-            'success' => true
-        ]);
-    }
 }

@@ -186,16 +186,17 @@ class BusinessRelationSiteController extends Controller
 
         if (!$site) {
             return response()->json([
+                'success' => false,
                 'message' => 'Data tidak ditemukan'
             ], 404);
         }
 
         // =========================
         // RULE: KANTOR PUSAT
-        // (tidak boleh dimatikan)
         // =========================
-        if ($site->is_kantor_pusat == 1 && $request->is_aktif == 0) {
+        if ($site->is_kantor_pusat == 1 && $validated['is_aktif'] == 0) {
             return response()->json([
+                'success' => false,
                 'message' => 'Kantor pusat tidak boleh dinonaktifkan'
             ], 422);
         }
@@ -203,26 +204,21 @@ class BusinessRelationSiteController extends Controller
         // =========================
         // UPDATE DATA
         // =========================
-        DB::table('business_relation_sites')
-            ->where('id_site', $id)
-            ->update([
-                'nama_lokasi'     => $request->nama_lokasi,
-                'alamat_lengkap'  => $request->alamat_lengkap,
-                'provinsi'        => $request->provinsi,
-                'kota_kabupaten'  => $request->kota_kabupaten,
-                'kecamatan'       => $request->kecamatan,
-                'kelurahan'       => $request->kelurahan,
-                'kode_pos'        => $request->kode_pos,
-                'kawasan_bisnis'  => $request->kawasan_bisnis,
-                'gedung'          => $request->gedung,
-                'alamat'          => $request->alamat,
-                'npwp_cabang'     => $request->npwp_cabang,
-                'is_kantor_pusat' => $request->is_kantor_pusat,
-                'is_aktif'        => $request->is_aktif,
-                'updated_at'      => now(),
-            ]);
+        try {
+            DB::beginTransaction();
+
+            DB::table('business_relation_sites')
+                ->where('id_site', $id)
+                ->update([...$validated, 'updated_at' => now()]);
+
+            DB::commit();
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan server'], 500);
+        }
 
         return response()->json([
+            'success' => true,
             'message' => 'BRS berhasil diperbarui'
         ]);
     }
@@ -234,6 +230,6 @@ class BusinessRelationSiteController extends Controller
             ->where('id_site', $id)
             ->delete();
 
-        return response()->json(['message' => 'BRS berhasil dihapus']);
+        return response()->json(['success' => true, 'message' => 'BRS berhasil dihapus']);
     }
 }

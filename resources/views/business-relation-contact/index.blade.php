@@ -35,6 +35,7 @@
                 title="List of Business Relation Contacts"
                 create-route="business-relation-contacts.create"
                 add-label="Add Data"
+                :with-history="true"
             />
             
             <div class="tab-content">
@@ -49,6 +50,11 @@
                 <div class="tab-pane fade" id="tab-detail">
                     <div id="detailContent" class="p-3 text-muted">Pilih data pada tab Data untuk melihat detail</div>
                 </div>
+                <div class="tab-pane fade" id="tab-history">
+                    <div id="historyContent" class="p-3 text-muted">
+                        Pilih data pada tab Data untuk melihat history
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -61,7 +67,8 @@
     window.route = {
         data: "{{ route('business-relation-contacts.data') }}",
         update: "{{ url('business-relation-contacts') }}/",
-        csrf: "{{ csrf_token() }}"
+        csrf: "{{ csrf_token() }}",
+        history: "{{ url('business-relation-contacts') }}/",
     }
 </script>
 <script src="{{ asset('assets/js/business-relation-contact/index.js') }}"></script>

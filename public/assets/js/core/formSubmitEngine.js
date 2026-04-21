@@ -30,9 +30,9 @@ function submitCrudForm(options) {
             changes.deleted.length > 0;
     }
 
-    console.log(isFormChanged, window.initialForms, currentForms);
+    let isAttachmentChanged = filepondInstance && filepondInstance.getFiles().length > 0;
 
-    if (!isFormChanged && !isItemsChanged) {
+    if (!isFormChanged && !isItemsChanged && !isAttachmentChanged) {
         Notify.warning("Tidak ada perubahan data");
         return;
     }

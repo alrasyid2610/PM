@@ -22,127 +22,80 @@
 
 @section('content')
 <section class="section">
-    <div class="container-fluid">
-        <form id="testingMatriksSampleForm">
-            @csrf
+    <form id="testingMatriksSampleForm">
+        @csrf
 
-            <div class="card mb-4">
-                <div class="card-body">
-
-                    {{-- FK Kelompok --}}
-                    <div class="mb-3">
-                        <label class="form-label required">
-                            Kelompok Matriks Sample
-                        </label>
-
+        <div class="detail-section-card mb-3">
+            <div class="detail-section-header">
+                <div class="detail-section-icon icon-teal">
+                    <i class="fa-solid fa-vials"></i>
+                </div>
+                <div class="detail-section-title">Testing Matriks Samples</div>
+                <div class="detail-section-sub">Data matriks sampel pengujian</div>
+            </div>
+            <div class="detail-section-body">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label required">Kelompok Matriks Sample</label>
                         <select id="id_testing_kelompok_matriks_sample"
                                 name="id_testing_kelompok_matriks_sample"
                                 class="form-select"
                                 required>
                         </select>
                     </div>
-
-                    <div class="mb-3">
+                    <div class="col-md-4 col-12">
                         <label class="form-label required">Kode</label>
-                        <input type="text"
-                               class="form-control"
-                               name="kode"
-                               required>
+                        <input type="text" class="form-control" name="kode" required>
                     </div>
-
-                    <div class="mb-3">
+                    <div class="col-md-4 col-12">
                         <label class="form-label required">Judul Indonesia</label>
-                        <input type="text"
-                               class="form-control"
-                               name="judul_indonesia"
-                               required>
+                        <input type="text" class="form-control" name="judul_indonesia" required>
                     </div>
-
-                    <div class="mb-3">
+                    <div class="col-md-4 col-12">
                         <label class="form-label required">Judul Inggris</label>
-                        <input type="text"
-                               class="form-control"
-                               name="judul_inggris"
-                               required>
+                        <input type="text" class="form-control" name="judul_inggris" required>
                     </div>
-
-                    <div class="mb-3">
+                    <div class="col-md-12">
                         <label class="form-label">Keterangan</label>
-                        <textarea class="form-control"
-                                  name="keterangan"></textarea>
+                        <textarea class="form-control" name="keterangan" rows="3"></textarea>
                     </div>
-
                 </div>
             </div>
+        </div>
 
-            <div class="d-flex justify-content-end gap-2">
-                <button type="submit" class="btn btn-primary">
-                    Simpan Data
-                </button>
+        <div class="d-flex justify-content-between align-items-center">
+            <a href="{{ route('testing-matriks-samples.index') }}" class="btn btn-secondary btn-sm">
+                <i class="fa-solid fa-arrow-left me-1"></i> Kembali
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Data
+            </button>
+        </div>
 
-                <a href="{{ route('testing-matriks-samples.index') }}"
-                   class="btn btn-secondary btn-sm">
-                    Batal
-                </a>
-            </div>
-
-        </form>
-
-    </div>
+    </form>
 </section>
 @endsection
 
 @section('custom-script')
 <script>
-
-$(document).ready(function() {
-
-    // SELECT2 FK
-    $('#id_testing_kelompok_matriks_sample').select2({
-        placeholder: 'Pilih Kelompok...',
-        ajax: {
-            url: "{{ route('testing-kelompok-matriks-samples.select2') }}",
-            dataType: 'json',
-            delay: 250,
-            data: function (params) {
-                return { q: params.term };
+    $(document).ready(function () {
+        $("#id_testing_kelompok_matriks_sample").select2({
+            placeholder: "Pilih Kelompok...",
+            ajax: {
+                url: "{{ route('testing-kelompok-matriks-samples.select2') }}",
+                dataType: "json",
+                delay: 250,
+                data: (params) => ({ q: params.term }),
+                processResults: (data) => ({ results: data }),
+                cache: true,
             },
-            processResults: function (data) {
-                return {
-                    results: data
-                };
-            },
-            cache: true
-        }
-    });
-
-});
-
-
-$('#testingMatriksSampleForm').submit(function(e) {
-
-    e.preventDefault();
-
-    Notify.confirm('Simpan Data?', function() {
-
-        $.ajax({
-            url: "{{ route('testing-matriks-samples.store') }}",
-            method: "POST",
-            data: $('#testingMatriksSampleForm').serialize(),
-
-            success: function(response) {
-                Notify.success('Data berhasil disimpan');
-                // optional redirect
-                // window.location.href = "{{ route('testing-matriks-samples.index') }}";
-            },
-
-            error: function(xhr) {
-                Notify.error('Gagal menyimpan data');
-            }
         });
-
     });
 
-});
+    submitCreateForm({
+        formId: "#testingMatriksSampleForm",
+        url: "{{ route('testing-matriks-samples.store') }}",
+        redirect: "{{ route('testing-matriks-samples.index') }}",
+    });
 </script>
 @endsection

@@ -35,6 +35,7 @@
                 title="List of Testing Points"
                 create-route="testing-points.create"
                 add-label="Add Data"
+                :with-history="true"
             />
 
             <div class="tab-content">
@@ -53,6 +54,12 @@
                 <div class="tab-pane fade" id="tab-detail">
                     <div id="detailContent" class="p-3 text-muted">
                         Pilih data pada tab Data untuk melihat detail
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tab-history">
+                    <div id="historyContent" class="p-3 text-muted">
+                        Pilih data pada tab Data untuk melihat history
                     </div>
                 </div>
 
@@ -118,7 +125,7 @@
         data: "{{ route('testing-points.data') }}",
         update: "{{ url('testing-points') }}/",
         deleteAttachment: "{{ route('testing-points.delete-attachment') }}",
-        detail: "{{ url('testing-points') }}/",
+        history: "{{ url('testing-points') }}/",
         csrf: "{{ csrf_token() }}"
     }
 </script>

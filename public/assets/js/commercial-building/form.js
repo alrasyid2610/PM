@@ -13,9 +13,7 @@ function renderUnitForm(res) {
                 </div>
                 <div class="detail-section-title">Commercial Building</div>
                 <div class="detail-section-sub">Data gedung komersial</div>
-                <button class="btn btn-warning btn-sm btn-edit-context ms-2" title="Edit Commercial Building">
-                    <i class="fa-solid fa-pen"></i>
-                </button>
+                ${formGroup.editButton("Edit Commercial Building")}
             </div>
             <div class="detail-section-body">
                 <div class="row g-3 form-1">
@@ -81,7 +79,7 @@ function renderUnitForm(res) {
                 <div class="detail-section-sub">Data pemilik & pengurus gedung</div>
             </div>
             <div class="detail-section-body">
-                <div class="row g-3 form-1">
+                <div class="row g-3 form-2">
                     ${formGroup.text("pemilik", "Pemilik", res.pemilik, false, {
                         className: "col-md-6 col-12",
                     })}

@@ -30,35 +30,6 @@
     </style>
 
     <section class="section">
-        <div class="row g-3 mb-4">
-            <!-- Kantor Pusat -->
-            <div class="col-md-6">
-                <div class="summary-card summary-blue">
-                    <div class="summary-icon">
-                        <i class="fa-solid fa-building"></i>
-                    </div>
-                    <div class="summary-content">
-                        <span class="summary-title">Total Kantor Pusat</span>
-                        <h2 id="totalKantorPusat">0</h2>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Kantor Cabang -->
-            <div class="col-md-6">
-                <div class="summary-card summary-light-blue">
-                    <div class="summary-icon">
-                        <i class="fa-solid fa-sitemap"></i>
-                    </div>
-                    <div class="summary-content">
-                        <span class="summary-title">Total Kantor Cabang / Sites</span>
-                        <h2 id="totalKantorCabang">0</h2>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-        
         <div class="card">
 
             <div class="card-body">
@@ -67,6 +38,7 @@
                     title="List of Business Relations"
                     create-route="business-relations.create"
                     add-label="Add Data"
+                    :with-history="true"
                 />
                 
                 <div class="tab-content">
@@ -92,6 +64,13 @@
                         </div>
                     </div>
 
+                    <!-- TAB HISTORY -->
+                    <div class="tab-pane fade" id="tab-history">
+                        <div id="historyContent" class="p-3 text-muted">
+                            Pilih data pada tab Data untuk melihat history
+                        </div>
+                    </div>
+
                 </div>
                 
                 
@@ -105,12 +84,9 @@
 @section('custom-script')
 <script>
     window.route = {
-        summary: "{{ route('business-relations.summary') }}",
         data: "{{ route('business-relations.data') }}",
-        detail: "{{ url('business-relations') }}/",
         update: "{{ url('business-relations') }}/",
-        select2: "{{ route('business-relations.select2') }}",
-        site: "{{ url('business-relations/sites') }}/",
+        history: "{{ url('business-relations') }}/",
         csrf: "{{ csrf_token() }}",
     }
 </script>

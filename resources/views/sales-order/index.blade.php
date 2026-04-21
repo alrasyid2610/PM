@@ -43,6 +43,7 @@
                     title="List of Sales Orders"
                     create-route="sales-orders.create"
                     add-label="Add Data"
+                    :with-history="true"
                 />
 
                 <div class="tab-content">
@@ -69,6 +70,13 @@
                         </div>
                     </div>
 
+                    <!-- TAB HISTORY -->
+                    <div class="tab-pane fade" id="tab-history">
+                        <div id="historyContent" class="p-3 text-muted">
+                            Pilih data pada tab Data untuk melihat history
+                        </div>
+                    </div>
+
                 </div>
                 
                 
@@ -82,11 +90,8 @@
 @section('custom-script')
 <script>
     window.route = {
-        summary: "{{ route('business-relations.summary') }}",
         data: "{{ route('sales-orders.data') }}",
-        select2: "{{ route('business-relations.select2') }}",
-        detail: "{{ url('sales-orders') }}/",
-        site: "{{ url('business-relations/sites') }}/",
+        history: "{{ url('sales-orders') }}/",
         csrf: "{{ csrf_token() }}",
         update: "{{ url('sales-orders') }}/"
     }

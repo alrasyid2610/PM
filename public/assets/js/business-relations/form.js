@@ -22,9 +22,7 @@ function renderForm(res) {
                 </div>
                 <div class="detail-section-title">Business Relation</div>
                 <div class="detail-section-sub">Data utama perusahaan klien</div>
-                <button class="btn btn-warning btn-sm btn-edit-context ms-2" title="Edit Business Relation">
-                    <i class="fa-solid fa-pen"></i>
-                </button>
+                ${formGroup.editButton("Edit Business Relation")}
             </div>
             <div class="detail-section-body">
                 <div class="row g-3 form-1">
@@ -113,6 +111,15 @@ function renderForm(res) {
                 </div>
                 <div class="detail-section-title">Business Relation Site</div>
                 <div class="detail-section-sub">Data lokasi & cabang</div>
+                <div style="min-width:220px">
+                    <select id="site-switcher"
+                            data-id-br="${res.id_br}"
+                            data-id-site="${res.id_site}"
+                            data-no-disable="true"
+                            class="form-select form-select-sm">
+                        <option value="${res.id_site}" selected>${res.nama_lokasi}</option>
+                    </select>
+                </div>
             </div>
             <div class="detail-section-body">
                 <div class="row g-3 form-2">

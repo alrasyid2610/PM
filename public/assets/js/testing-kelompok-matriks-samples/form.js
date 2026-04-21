@@ -13,9 +13,7 @@ function renderParameterForm(res) {
                 </div>
                 <div class="detail-section-title">Kelompok Matriks Samples</div>
                 <div class="detail-section-sub">Data kelompok matriks sampel</div>
-                <button class="btn btn-warning btn-sm btn-edit-context ms-2" title="Edit Kelompok Matriks">
-                    <i class="fa-solid fa-pen"></i>
-                </button>
+                ${formGroup.editButton("Edit Kelompok Matriks")}
             </div>
             <div class="detail-section-body">
                 <div class="row g-3 form-1">

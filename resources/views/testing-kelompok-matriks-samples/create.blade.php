@@ -21,95 +21,58 @@
 
 @section('content')
 <section class="section">
-    <div class="container-fluid">
-        <form id="testingKelompokMatriksSampleForm">
-            @csrf
+    <form id="testingKelompokMatriksSampleForm">
+        @csrf
 
-            <div class="card mb-4">
-                <div class="card-body">
-
-                    <div class="mb-3">
+        <div class="detail-section-card mb-3">
+            <div class="detail-section-header">
+                <div class="detail-section-icon icon-teal">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <div class="detail-section-title">Kelompok Matriks Samples</div>
+                <div class="detail-section-sub">Data kelompok matriks sampel</div>
+            </div>
+            <div class="detail-section-body">
+                <div class="row g-3">
+                    <div class="col-md-4 col-12">
                         <label for="kode" class="form-label required">Kode</label>
-                        <input type="text"
-                               class="form-control"
-                               id="kode"
-                               name="kode"
-                               required>
+                        <input type="text" class="form-control" id="kode" name="kode" required>
                     </div>
-
-                    <div class="mb-3">
-                        <label for="judul_indonesia" class="form-label required">
-                            Judul Indonesia
-                        </label>
-                        <input type="text"
-                               class="form-control"
-                               id="judul_indonesia"
-                               name="judul_indonesia"
-                               required>
+                    <div class="col-md-4 col-12">
+                        <label for="judul_indonesia" class="form-label required">Judul Indonesia</label>
+                        <input type="text" class="form-control" id="judul_indonesia" name="judul_indonesia" required>
                     </div>
-
-                    <div class="mb-3">
-                        <label for="judul_inggris" class="form-label required">
-                            Judul Inggris
-                        </label>
-                        <input type="text"
-                               class="form-control"
-                               id="judul_inggris"
-                               name="judul_inggris"
-                               required>
+                    <div class="col-md-4 col-12">
+                        <label for="judul_inggris" class="form-label required">Judul Inggris</label>
+                        <input type="text" class="form-control" id="judul_inggris" name="judul_inggris" required>
                     </div>
-
-                    <div class="mb-3">
+                    <div class="col-md-12">
                         <label for="keterangan" class="form-label">Keterangan</label>
-                        <textarea class="form-control"
-                                  id="keterangan"
-                                  name="keterangan"></textarea>
+                        <textarea class="form-control" id="keterangan" name="keterangan" rows="3"></textarea>
                     </div>
-
                 </div>
             </div>
+        </div>
 
-            <div class="d-flex justify-content-end gap-2">
-                <button type="submit" class="btn btn-primary">
-                    Simpan Data
-                </button>
-                <a href="{{ route('testing-kelompok-matriks-samples.index') }}"
-                   class="btn btn-secondary btn-sm">
-                    Batal
-                </a>
-            </div>
+        <div class="d-flex justify-content-between align-items-center">
+            <a href="{{ route('testing-kelompok-matriks-samples.index') }}" class="btn btn-secondary btn-sm">
+                <i class="fa-solid fa-arrow-left me-1"></i> Kembali
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Data
+            </button>
+        </div>
 
-        </form>
-
-    </div>
+    </form>
 </section>
 @endsection
 
 @section('custom-script')
 <script>
-    $('#testingKelompokMatriksSampleForm').submit(function(e) {
-        e.preventDefault();
-
-        Notify.confirm('Simpan Data?', function() {
-
-            $.ajax({
-                url: "{{ route('testing-kelompok-matriks-samples.store') }}",
-                method: "POST",
-                data: $('#testingKelompokMatriksSampleForm').serialize(),
-
-                success: function(response) {
-                    Notify.success('Data berhasil disimpan');
-
-                    // optional redirect
-                    // window.location.href = "{{ route('testing-kelompok-matriks-samples.index') }}";
-                },
-
-                error: function(xhr) {
-                    Notify.error('Gagal menyimpan data');
-                }
-            });
-
-        });
+    submitCreateForm({
+        formId: "#testingKelompokMatriksSampleForm",
+        url: "{{ route('testing-kelompok-matriks-samples.store') }}",
+        redirect: "{{ route('testing-kelompok-matriks-samples.index') }}",
     });
 </script>
 @endsection

@@ -24,58 +24,58 @@
 
 @section('content')
 <section class="section">
-    <div class="container-fluid">
-        <form id="testingUnitForm">
-            @csrf
-            <div class="card mb-4">
-                <div class="card-body">
-                    <div class="mb-3">
+    <form id="testingUnitForm">
+        @csrf
+
+        <div class="detail-section-card mb-3">
+            <div class="detail-section-header">
+                <div class="detail-section-icon icon-amber">
+                    <i class="fa-solid fa-ruler"></i>
+                </div>
+                <div class="detail-section-title">Informasi Unit</div>
+                <div class="detail-section-sub">Data satuan pengujian laboratorium</div>
+            </div>
+            <div class="detail-section-body">
+                <div class="row g-3">
+                    <div class="col-md-4 col-12">
                         <label for="kode" class="form-label required">Kode</label>
                         <input type="text" class="form-control" id="kode" name="kode" required>
                     </div>
-                    <div class="mb-3">
+                    <div class="col-md-4 col-12">
                         <label for="judul_indonesia" class="form-label required">Judul Indonesia</label>
                         <input type="text" class="form-control scientific-input" id="judul_indonesia" name="judul_indonesia" required>
                     </div>
-                    <div class="mb-3">
+                    <div class="col-md-4 col-12">
                         <label for="judul_inggris" class="form-label required">Judul Inggris</label>
                         <input type="text" class="form-control scientific-input" id="judul_inggris" name="judul_inggris" required>
                     </div>
-                    <div class="mb-3">
+                    <div class="col-md-12">
                         <label for="keterangan" class="form-label">Keterangan</label>
-                        <textarea class="form-control" id="keterangan" name="keterangan"></textarea>
+                        <textarea class="form-control" id="keterangan" name="keterangan" rows="3"></textarea>
                     </div>
                 </div>
             </div>
-            <div class="d-flex justify-content-end gap-2">
-                <button type="submit" class="btn btn-primary">
-                    Simpan Testing Unit
-                </button>
-                <a href="{{ route('testing-units.index') }}" class="btn btn-secondary btn-sm">Batal</a>
-            </div>
-        </form>
-    </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center">
+            <a href="{{ route('testing-units.index') }}" class="btn btn-secondary btn-sm">
+                <i class="fa-solid fa-arrow-left me-1"></i> Kembali
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Testing Unit
+            </button>
+        </div>
+
+    </form>
 </section>
 @endsection
 
 @section('custom-script')
 <script>
-    $('#testingUnitForm').submit(function(e) {
-        e.preventDefault();
-        Notify.confirm('Simpan Data?', function() {
-            $.ajax({
-                url: "{{ route('testing-units.store') }}",
-                method: "POST",
-                data: $('#testingUnitForm').serialize(),
-                success: function(response) {
-                    Notify.success('Testing unit berhasil disimpan');
-                    // window.location.href = "{{ route('testing-units.index') }}";
-                },
-                error: function(xhr) {
-                    Notify.error('Gagal menyimpan testing unit');
-                }
-            });
-        });
+    submitCreateForm({
+        formId: "#testingUnitForm",
+        url: "{{ route('testing-units.store') }}",
+        redirect: "{{ route('testing-units.index') }}",
     });
 </script>
 @endsection

@@ -316,9 +316,7 @@ function renderForm(res) {
                     <span class="detail-status-dot"></span>
                     ${res.status ?? "Draft"}
                 </span>
-                <button class="btn btn-warning btn-sm btn-edit-context" title="Edit SO">
-                    <i class="fa-solid fa-pen"></i>
-                </button>
+                ${formGroup.editButton("Edit SO")}
             </div>
         </div>
     </div>

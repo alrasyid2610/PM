@@ -6,10 +6,22 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use SebastianBergmann\Environment\Console;
 use Yajra\DataTables\Facades\DataTables;
+use App\Traits\HasAuditHistory;
 
 
 class SalesOrderController extends Controller
 {
+    use HasAuditHistory;
+
+    protected function auditTable(): string
+    {
+        return 'sales_orders';
+    }
+
+    protected function auditExcludeFields(): array
+    {
+        return ['updated_at', 'created_at', 'id_so'];
+    }
     //
     public function index()
     {
@@ -86,8 +98,11 @@ class SalesOrderController extends Controller
             'updated_at' => now(),
         ]);
 
+        $after = DB::table('sales_orders')->where('id_so', $id)->get()->toJson();
+        saveAudit('sales_orders', $id, 'Create', '', $after);
+
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'message' => 'Sales Order berhasil dibuat',
             'id_so' => $id
         ]);
@@ -233,16 +248,10 @@ class SalesOrderController extends Controller
         try {
 
             // =========================
-            // LOGIC PO
-            // =========================
-            // if ($validated['tidak_ada_po']) {
-            //     $validated['no_po'] = null;
-            //     $validated['tanggal_po'] = null;
-            // }
-
-            // =========================
             // UPDATE
             // =========================
+            $before = DB::table('sales_orders')->where('id_so', $id)->get()->toJson();
+
             DB::table('sales_orders')
                 ->where('id_so', $id)
                 ->update([
@@ -278,6 +287,9 @@ class SalesOrderController extends Controller
 
                     'updated_at' => now(),
                 ]);
+
+            $after = DB::table('sales_orders')->where('id_so', $id)->get()->toJson();
+            saveAudit('sales_orders', $id, 'update', $before, $after);
 
             return response()->json([
                 'success' => true,

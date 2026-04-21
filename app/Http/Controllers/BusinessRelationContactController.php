@@ -5,9 +5,21 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
+use App\Traits\HasAuditHistory;
 
 class BusinessRelationContactController extends Controller
 {
+    use HasAuditHistory;
+
+    protected function auditTable(): string
+    {
+        return 'business_relation_contacts';
+    }
+
+    protected function auditExcludeFields(): array
+    {
+        return ['updated_at', 'created_at', 'id_contact'];
+    }
     public function index()
     {
         return view('business-relation-contact.index', [
@@ -57,10 +69,24 @@ class BusinessRelationContactController extends Controller
         ]);
     }
 
-    public function show($id)
+    public function detail($id)
     {
         $testingUnit = DB::table('business_relation_contacts')
             ->leftJoin('business_relation_sites', 'business_relation_contacts.id_br', '=', 'business_relation_sites.id_site')
+            ->where('id_contact', $id)->first();
+
+        if (!$testingUnit) {
+            return response()->json(['message' => 'Data tidak ditemukan'], 404);
+        }
+
+        return response()->json($testingUnit);
+    }
+
+    public function show($id)
+    {
+        $testingUnit = DB::table('business_relation_contacts as brc')
+            ->leftJoin('business_relations as br', 'br.id_br', '=', 'brc.id_br')
+            ->select(['brc.*', 'br.nama as nama_br'])
             ->where('id_contact', $id)->first();
         if (!$testingUnit) {
             return response()->json(['message' => 'Testing unit tidak ditemukan'], 404);
@@ -130,6 +156,28 @@ class BusinessRelationContactController extends Controller
         );
     }
 
+    // public function select2(Request $request)
+    // {
+    //     $search = $request->q;
+
+    //     $data = DB::table('business_relation_contacts')
+    //         ->where('is_aktif', 1)
+    //         ->when($search, function ($query) use ($search) {
+    //             $query->where('nama_pic', 'like', "%{$search}%");
+    //         })          // ← kalau $search kosong, ambil semua
+    //         ->limit(200) // ← limit secukupnya
+    //         ->get();
+
+    //     return response()->json(
+    //         $data->map(function ($item) {
+    //             return [
+    //                 'id'   => $item->id_contact,
+    //                 'text' => $item->nama_pic,
+    //             ];
+    //         })
+    //     );
+    // }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -149,8 +197,11 @@ class BusinessRelationContactController extends Controller
             'updated_at' => now(),
         ]);
 
+        $after = DB::table('business_relation_contacts')->where('id_contact', $id)->get()->toJson();
+        saveAudit('business_relation_contacts', $id, 'Create', '', $after);
+
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'id' => $id
         ]);
     }

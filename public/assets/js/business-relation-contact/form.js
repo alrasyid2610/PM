@@ -13,9 +13,7 @@ function renderForm(res) {
                 </div>
                 <div class="detail-section-title">Business Relation Contacts</div>
                 <div class="detail-section-sub">Data kontak PIC pelanggan</div>
-                <button class="btn btn-warning btn-sm btn-edit-context ms-2" title="Edit Contact">
-                    <i class="fa-solid fa-pen"></i>
-                </button>
+                ${formGroup.editButton("Edit Contact")}
             </div>
             <div class="detail-section-body">
                 <div class="row g-3 form-1">

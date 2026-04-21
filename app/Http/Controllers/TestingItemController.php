@@ -113,7 +113,7 @@ class TestingItemController extends Controller
 
 
             return response()->json([
-                'status' => 'success',
+                'success' => true,
                 'message' => 'Data berhasil disimpan'
             ]);
         } catch (\Throwable $e) {
@@ -121,8 +121,8 @@ class TestingItemController extends Controller
             DB::rollBack();
 
             return response()->json([
-                'status' => 'error',
-                'message' => $e->getMessage()
+                'success' => false,
+                'message' => 'Terjadi kesalahan server'
             ], 500);
         }
     }

@@ -4,14 +4,14 @@ $(document).ready(function () {
     page = new CrudPageController({
         primaryKey: "id_testing_point",
         renderForm: renderForm,
-        initSelect: function () {
-            // $("#detail_kelompok").select2({
-            //     width: "100%",
-            //     dropdownParent: $("#detailContent"),
-            // });
-        },
+        initSelect: function () {},
         initDynamicTable: true,
         useAttachment: true,
+        historyConfig: {
+            masterLabel: "Testing Point",
+            linesLabel: "Testing Items",
+            linesDisplayFields: ["nomor", "judul_indonesia", "judul_inggris", "nilai"],
+        },
     });
 
     // setDynamicFormState(false);

@@ -5,14 +5,16 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use App\Traits\HasAuditHistory;
-
-
+use App\Traits\HasAttachment;
 
 class TestingParameterController extends Controller
 {
+    use HasAttachment;
+
+    protected function attachmentTable(): string      { return 'testing_parameters'; }
+    protected function attachmentPrimaryKey(): string { return 'id_testing_parameter'; }
     use HasAuditHistory;
 
     protected function auditTable(): string
@@ -88,8 +90,11 @@ class TestingParameterController extends Controller
             'updated_at' => now(),
         ]);
 
+        $after = DB::table('testing_parameters')->where('id_testing_parameter', $id)->get()->toJson();
+        saveAudit('testing_parameters', $id, 'Create', '', $after);
+
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'message' => 'Testing parameter berhasil dibuat',
             'id' => $id
         ]);
@@ -246,47 +251,6 @@ class TestingParameterController extends Controller
         );
     }
 
-
-    public function deleteAttachment(Request $request)
-    {
-
-        $id = $request->id;
-        $file = $request->file;
-
-        $data = DB::table('testing_parameters')
-            ->where('id_testing_parameter', $id)
-            ->first();
-
-        if (!$data) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Data tidak ditemukan'
-            ]);
-        }
-
-        $attachments = json_decode($data->attachment, true) ?? [];
-
-        // hapus file dari array
-        $attachments = array_filter($attachments, function ($item) use ($file) {
-            return $item != $file;
-        });
-
-        // hapus file dari storage
-
-        Storage::disk('public')->delete($file);
-
-        // update database
-        DB::table('testing_parameters')
-            ->where('id_testing_parameter', $id)
-            ->update([
-                'attachment' => json_encode(array_values($attachments)),
-                'updated_at' => now()
-            ]);
-
-        return response()->json([
-            'success' => true
-        ]);
-    }
 
     protected function auditExcludeFields(): array
     {

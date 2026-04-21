@@ -199,9 +199,7 @@ function renderForm(res) {
                 </div>
                 <div class="detail-section-title">Testing Points</div>
                 <div class="detail-section-sub">Data titik pengujian laboratorium</div>
-                <button class="btn btn-warning btn-sm btn-edit-context ms-2" title="Edit Testing Point">
-                    <i class="fa-solid fa-pen"></i>
-                </button>
+                ${formGroup.editButton("Edit Testing Point")}
             </div>
             <div class="detail-section-body">
                 <div class="row g-3 form-1">
@@ -262,7 +260,7 @@ function renderForm(res) {
                         },
                     )}
                     ${formGroup.textarea(
-                        "keterangan",
+                        "keterangan_point",
                         "Keterangan",
                         res.keterangan,
                         {
@@ -299,30 +297,33 @@ function renderForm(res) {
                 </div>
                 <div class="detail-section-title">Testing Items</div>
                 <div class="detail-section-sub">Detail item pengujian per point</div>
-                <button type="button" class="btn btn-primary btn-sm btn-add-row ms-2">
-                    <i class="fa-solid fa-plus me-1"></i> Tambah Baris
-                </button>
             </div>
             <div class="detail-section-body p-0">
                 <div class="dynamic-table-wrapper">
-                    <div class="table-responsive">
+                    <div class="p-3 pb-0">
+                        <button type="button" class="btn btn-primary btn-sm btn-add-row">
+                            <i class="fa-solid fa-plus me-1"></i> Tambah Baris
+                        </button>
+                    </div>
+                    <div class="table-responsive p-3">
                         <table id="Table" class="table table-bordered table-sm dynamic-table mb-0">
                             <thead class="table-light">
                                 <tr>
                                     <th width="3%">No</th>
-                                    <th width="20%">Judul Indonesia</th>
-                                    <th width="20%">Judul Inggris</th>
+                                    <th width="18%">Judul Indonesia</th>
+                                    <th width="18%">Judul Inggris</th>
                                     <th width="12%">Parameter</th>
                                     <th width="10%">Unit</th>
-                                    <th width="10%">Nilai</th>
+                                    <th width="9%">Nilai</th>
                                     <th width="12%">Keterangan</th>
                                     <th width="8%">Status</th>
-                                    <th width="5%">Aksi</th>
+                                    <th width="10%">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
                                     <input type="hidden" name="id_testing_item[]" value="">
+                                    <input type="hidden" name="nomor[]" value="">
                                     <td class="row-number"></td>
                                     <td>
                                         <input type="text" name="judul_indonesia[]" class="form-control form-control-sm">
@@ -346,34 +347,38 @@ function renderForm(res) {
                                         <input type="checkbox" name="status[]" value="1">
                                     </td>
                                     <td class="text-center">
-                                        <button type="button" class="btn btn-danger btn-sm btn-remove">
-                                            <i class="fa-solid fa-trash"></i>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary px-2 btn-row-action">
+                                            <i class="fa-solid fa-ellipsis-vertical"></i>
                                         </button>
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+                    <script type="text/template" id="row-template">
+                        <tr>
+                            <input type="hidden" name="id_testing_item[]" value="">
+                            <input type="hidden" name="nomor[]" value="">
+                            <td class="row-number"></td>
+                            <td><input type="text" name="judul_indonesia[]" class="form-control form-control-sm"></td>
+                            <td><input type="text" name="judul_inggris[]" class="form-control form-control-sm"></td>
+                            <td><select name="parameter[]" class="form-control form-control-sm parameter-select"></select></td>
+                            <td><select name="unit[]" class="form-control form-control-sm unit-select"></select></td>
+                            <td><input type="text" name="nilai[]" class="form-control form-control-sm"></td>
+                            <td><input type="text" name="keterangan[]" class="form-control form-control-sm"></td>
+                            <td class="text-center"><input type="checkbox" name="status[]" value="1"></td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-secondary px-2 btn-row-action">
+                                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </script>
                 </div>
             </div>
         </div>
     </div>
 
 </form>
-`;
-}
-
-function renderAttachmentSection() {
-    return `
-<div class="col-md-12">
-    <div id="attachmentPreview" class="row g-3"></div>
-    <div id="attachmentUploader" class="mt-3" style="display:none">
-        <input
-            type="file"
-            class="filepond-edit"
-            name="attachments[]"
-            multiple>
-    </div>
-</div>
 `;
 }

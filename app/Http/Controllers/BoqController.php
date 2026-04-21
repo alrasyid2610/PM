@@ -3,9 +3,17 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class BoqController extends Controller
 {
+    public function index()
+    {
+        return view('boq.index', [
+            'title' => 'BOQ'
+        ]);
+    }
+
     public function create()
     {
         return view('boq.create', [

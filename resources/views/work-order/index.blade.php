@@ -26,6 +26,7 @@
                     title="List of Work Orders"
                     create-route="work-orders.create"
                     add-label="Add Data"
+                    :with-history="true"
                 />
 
                 <div class="tab-content">
@@ -33,15 +34,12 @@
                     <!-- TAB DATA -->
                     <div class="tab-pane fade show active" id="tab-data">
                         <div class="table-responsive">
-                            {{-- Table Business Relations --}}
                             <table id="{{ request()->segment(1) }}-table"
-                                class="table table-striped table-hover table-sm table-bordered w-100" data-datatable-auto-columns="true">
-                                <thead>
-                                </thead>
-
+                                class="table table-hover table-striped table-sm w-100"
+                                data-datatable-auto-columns="true">
+                                <thead></thead>
                                 <tbody></tbody>
                             </table>
-                            {{-- End Table Business Relations --}}
                         </div>
                     </div>
 
@@ -49,6 +47,13 @@
                     <div class="tab-pane fade" id="tab-detail">
                         <div id="detailContent" class="p-3 text-muted">
                             Pilih data pada tab Data untuk melihat detail
+                        </div>
+                    </div>
+
+                    <!-- TAB HISTORY -->
+                    <div class="tab-pane fade" id="tab-history">
+                        <div id="historyContent" class="p-3 text-muted">
+                            Pilih data pada tab Data untuk melihat history
                         </div>
                     </div>
 
@@ -65,14 +70,12 @@
 @section('custom-script')
 <script>
     window.route = {
-        summary: "{{ route('business-relations.summary') }}",
         data: "{{ route('work-orders.data') }}",
-        select2: "{{ route('sales-orders.select2') }}",
-        detail: "{{ url('work-orders') }}/",
-        site: "{{ url('business-relations/sites') }}/",
+        history: "{{ url('work-orders') }}/",
         csrf: "{{ csrf_token() }}",
         update: "{{ url('work-orders') }}/"
     }
 </script>
 <script src="{{ asset('assets/js/work-order/index.js') }}"></script>
+<script src="{{ asset('assets/js/work-order/form.js') }}"></script>
 @endsection

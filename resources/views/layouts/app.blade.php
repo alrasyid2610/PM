@@ -142,6 +142,12 @@
     <script src="{{ asset('assets/js/pages/dashboard.js') }}"></script>
     <script src="{{ asset('assets/js/main.js') }}"></script>
     <script>
+        document.querySelectorAll('.sidebar-item.has-sub.active').forEach(function(item) {
+            var submenu = item.querySelector('.submenu');
+            if (submenu) submenu.classList.add('active');
+        });
+    </script>
+    <script>
         let resource = '{{ request()->segment(1) }}';
 
         let tableId = resource + '-table';
@@ -161,10 +167,18 @@
     <script src="{{ asset('assets/js/core/detailLoader.js') }}"></script>
     <script src="{{ asset('assets/js/core/masterCrudEngine.js') }}"></script>
     <script src="{{ asset('assets/js/core/formSubmitEngine.js') }}"></script>
+    <script src="{{ asset('assets/js/core/createFormHandler.js') }}"></script>
     <script src="{{ asset('assets/js/core/attachmentEngine.js') }}"></script>
     <script src="{{ asset('assets/js/core/formComponents.js') }}"></script>
     <script src="{{ asset('assets/js/core/crudPageController.js') }}"></script>
+    <script src="{{ asset('assets/js/core/permissionEngine.js') }}"></script>
     <script src="{{ asset('assets/js/pm.js') }}"></script>
+    @auth
+    <script>
+        window.userPermissions = @json(getUserPermissions(auth()->id()));
+        window.currentMenuSlug = '{{ request()->segment(1) }}';
+    </script>
+    @endauth
     <script src="{{ asset('assets/js/scientific-input.js') }}"></script>
     <script src="{{ asset('assets/js/tableForm.js') }}"></script>
     <script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -173,7 +187,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     @yield('custom-script')
-
 </body>
 
 </html>

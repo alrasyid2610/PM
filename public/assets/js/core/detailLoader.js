@@ -6,21 +6,14 @@ function loadDetailEngine(options) {
     const afterRender = options.afterRender;
 
     $(container).html("Loading...");
-    console.log("loading.....");
     window.dataBefore = [];
-    console.log("data before : ", window.dataBefore);
 
-    $.get(url + id, function (res) {
+    $.get(url + id, async function (res) {
         window.dataBefore.push(res);
-        const html = render(res);
+        const html = await Promise.resolve(render(res));
         $(container).html(html);
         if (afterRender) {
             afterRender(res);
-
-            // setTimeout(() => {
-            //     window.initialForms = getAllFormsData();
-            //     window.initialItems = getDynamicTableData();
-            // }, 3000);
         }
     }).fail(function () {
         $(container).html("Gagal memuat detail");
