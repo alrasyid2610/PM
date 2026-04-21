@@ -19,6 +19,21 @@ use App\Http\Controllers\TestingKelompokMatriksSampleController;
 use App\Http\Controllers\TestingStandardController;
 use App\Http\Controllers\TestingMatriksSampleController;
 use App\Http\Controllers\TestingPointController;
+use Spatie\LaravelPdf\Facades\Pdf;
+
+Route::get('/test-so-pdf', function () {
+    // return view('pdf.sales_order');
+    return Pdf::view('pdf.sales_order')
+        ->withBrowsershot(function ($browsershot) {
+            $browsershot->setChromePath('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
+            $browsershot->timeout(120);
+        })
+        ->format('a4')
+        ->name('SO-25-001.pdf');
+});
+
+
+
 
 // AUTH
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');

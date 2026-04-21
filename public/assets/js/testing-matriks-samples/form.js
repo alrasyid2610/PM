@@ -29,6 +29,7 @@ function renderForm(res) {
                             placeholder: "Pilih Kelompok",
                             label: res.kelompok_matriks_judul_indonesia,
                             className: "col-md-12",
+                            createUrl: "/testing-kelompok-matriks-samples/create",
                         },
                     )}
                     ${formGroup.text("kode", "Kode", res.kode, true, {

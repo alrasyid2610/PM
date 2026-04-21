@@ -89,6 +89,12 @@
                 processResults: (data) => ({ results: data }),
                 cache: true,
             },
+            language: {
+                noResults: function () {
+                    return `<span>Tidak ditemukan. <a href="{{ route('testing-kelompok-matriks-samples.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`;
+                },
+            },
+            escapeMarkup: function (m) { return m; },
         });
     });
 

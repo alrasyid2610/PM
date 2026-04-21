@@ -89,6 +89,7 @@ const formGroup = {
             allowClear = false,
             minimumInputLength = 2,
             showAll = false,
+            createUrl = null,
         } = config;
 
         let opts = "";
@@ -141,6 +142,7 @@ const formGroup = {
                     data-placeholder="${placeholder}"
                     data-minimum-input="${minimumInputLength}"
                     data-show-all="${showAll}"
+                    ${createUrl ? `data-create-url="${createUrl}"` : ""}
                     ${required ? "required" : ""}
                 >
 
@@ -265,14 +267,25 @@ function initDynamicSelect(scope = document) {
 
             let showAll = $el.data("show-all") === true;
             let allowClear = $el.data("allow-clear") === true;
+            let createUrl = $el.data("create-url") || null;
             let cachedData = null;
-            let currentTerm = ""; // ← tambah variable untuk simpan term
+            let currentTerm = "";
+
+            const noResultsConfig = createUrl ? {
+                language: {
+                    noResults: function () {
+                        return `<span>Tidak ditemukan. <a href="${createUrl}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`;
+                    },
+                },
+                escapeMarkup: function (m) { return m; },
+            } : {};
 
             $el.select2({
                 width: "100%",
                 placeholder: $el.data("placeholder"),
                 allowClear: allowClear,
                 minimumInputLength: showAll ? 0 : $el.data("minimum-input"),
+                ...noResultsConfig,
                 ajax: {
                     url: $el.data("url"),
                     delay: showAll ? 0 : 300,
