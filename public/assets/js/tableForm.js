@@ -123,7 +123,7 @@ class DynamicTable {
     initPlugins(scope) {
         scope.find(".parameter-select").select2({
             placeholder: "Pilih Parameter",
-            minimumInputLength: 2,
+            minimumInputLength: 0,
             ajax: {
                 url: "/testing-parameters/select2",
                 delay: 300,
@@ -135,7 +135,7 @@ class DynamicTable {
 
         scope.find(".unit-select").select2({
             placeholder: "Pilih Unit",
-            minimumInputLength: 2,
+            minimumInputLength: 0,
             ajax: {
                 url: "/testing-units/select2",
                 delay: 300,

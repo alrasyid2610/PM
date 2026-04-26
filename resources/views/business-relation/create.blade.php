@@ -29,162 +29,129 @@
         <input type="hidden" name="site_id" id="site_id_hidden">
 
         <!-- SECTION 1: BUSINESS RELATION -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-navy">
-                    <i class="fa-solid fa-building"></i>
+        <x-section-card icon="fa-building" color="icon-navy" title="Business Relation" subtitle="Data utama perusahaan klien">
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <label class="form-label required">Nama Business Relation</label>
+                    <select id="nama_br" name="nama" class="form-select" style="width:100%"></select>
                 </div>
-                <div class="detail-section-title">Business Relation</div>
-                <div class="detail-section-sub">Data utama perusahaan klien</div>
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3">
-                    <div class="col-md-12">
-                        <label class="form-label required">Nama Business Relation</label>
-                        <select id="nama_br" name="nama" class="form-select" style="width:100%"></select>
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Entitas</label>
-                        <select name="entitas" class="form-select">
-                            <option value="">Pilih Entitas</option>
-                            <option value="Perseroan Terbatas">Perseroan Terbatas</option>
-                            <option value="Commanditaire Vennootschap">Commanditaire Vennootschap</option>
-                            <option value="Firma">Firma</option>
-                            <option value="Koperasi">Koperasi</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Kepemilikan</label>
-                        <select name="kepemilikan" class="form-select">
-                            <option value="">Pilih Kepemilikan</option>
-                            <option value="Swasta">Swasta</option>
-                            <option value="BUMN/BUMD">BUMN/BUMD</option>
-                            <option value="Pemerintah">Pemerintah</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">NPWP</label>
-                        <input type="text" name="npwp" class="form-control">
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Kategori Bisnis</label>
-                        <input type="text" name="kategori_bisnis" class="form-control">
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Sub Kategori Bisnis</label>
-                        <input type="text" name="sub_kategori_bisnis" class="form-control">
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Website</label>
-                        <input type="text" name="website" class="form-control">
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Nomor Telepon</label>
-                        <input type="text" name="nomor_telepon" class="form-control">
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Status</label>
-                        <select name="is_aktif" class="form-select">
-                            <option value="">Pilih Status</option>
-                            <option value="1">Aktif</option>
-                            <option value="0">Non Aktif</option>
-                        </select>
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label">Alamat NPWP</label>
-                        <textarea name="npwp_alamat" class="form-control" rows="2"></textarea>
-                    </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Entitas</label>
+                    <select name="entitas" id="entitas" class="form-select">
+                        <option value="">Pilih Entitas</option>
+                        <option value="Perseroan Terbatas">Perseroan Terbatas</option>
+                        <option value="Commanditaire Vennootschap">Commanditaire Vennootschap</option>
+                        <option value="Firma">Firma</option>
+                        <option value="Koperasi">Koperasi</option>
+                    </select>
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Kepemilikan</label>
+                    <select name="kepemilikan" id="kepemilikan" class="form-select">
+                        <option value="">Pilih Kepemilikan</option>
+                        <option value="Swasta">Swasta</option>
+                        <option value="BUMN/BUMD">BUMN/BUMD</option>
+                        <option value="Pemerintah">Pemerintah</option>
+                    </select>
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">NPWP</label>
+                    <input type="text" name="npwp" class="form-control">
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Kategori Bisnis</label>
+                    <input type="text" name="kategori_bisnis" class="form-control">
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Sub Kategori Bisnis</label>
+                    <input type="text" name="sub_kategori_bisnis" class="form-control">
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Website</label>
+                    <input type="text" name="website" class="form-control">
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Nomor Telepon</label>
+                    <input type="text" name="nomor_telepon" class="form-control">
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Status</label>
+                    <select name="is_aktif" id="br_is_aktif" class="form-select">
+                        <option value="">Pilih Status</option>
+                        <option value="1">Aktif</option>
+                        <option value="0">Non Aktif</option>
+                    </select>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">Alamat NPWP</label>
+                    <textarea name="npwp_alamat" class="form-control" rows="2"></textarea>
                 </div>
             </div>
-        </div>
+        </x-section-card>
 
         <!-- SECTION 2: BUSINESS RELATION SITE -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-blue">
-                    <i class="fa-solid fa-location-dot"></i>
+        <x-section-card icon="fa-location-dot" color="icon-blue" title="Business Relation Site" subtitle="Data lokasi & cabang">
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <label class="form-label">Lokasi / Cabang</label>
+                    <select id="site_id" class="form-select" style="width:100%"></select>
+                    <small class="text-muted">Pilih cabang yang sudah ada atau ketik untuk menambahkan cabang baru.</small>
                 </div>
-                <div class="detail-section-title">Business Relation Site</div>
-                <div class="detail-section-sub">Data lokasi & cabang</div>
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3">
-                    <div class="col-md-12">
-                        <label class="form-label">Lokasi / Cabang</label>
-                        <select id="site_id" class="form-select" style="width:100%"></select>
-                        <small class="text-muted">Pilih cabang yang sudah ada atau ketik untuk menambahkan cabang baru.</small>
-                    </div>
-                    <div class="col-md-8 col-12">
-                        <label class="form-label required">Nama Lokasi</label>
-                        <input type="text" name="nama_lokasi" class="form-control" required>
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">NPWP Cabang</label>
-                        <input type="text" name="npwp_cabang" class="form-control">
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label required">Alamat Lengkap</label>
-                        <textarea name="alamat_lengkap" class="form-control" rows="3" required></textarea>
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Provinsi</label>
-                        <input type="text" name="provinsi" class="form-control">
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Kota / Kabupaten</label>
-                        <input type="text" name="kota_kabupaten" class="form-control">
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Kecamatan</label>
-                        <input type="text" name="kecamatan" class="form-control">
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Kelurahan</label>
-                        <input type="text" name="kelurahan" class="form-control">
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Kode Pos</label>
-                        <input type="text" name="kode_pos" class="form-control">
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Kawasan Bisnis</label>
-                        <select name="kawasan_bisnis" id="kawasan_bisnis" class="select2 form-control">
-                            @foreach ($commercial_buildings as $value)
-                                <option value="{{ $value->id_building }}">{{ $value->nama }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Gedung</label>
-                        <select name="gedung" id="gedung" class="select2 form-control">
-                            @foreach ($bestate as $value)
-                                <option value="{{ $value->id_bestate }}">{{ $value->nama }} - {{ $value->kode }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Status</label>
-                        <select name="is_aktif" class="form-select">
-                            <option value="1">Aktif</option>
-                            <option value="0">Non Aktif</option>
-                        </select>
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label">Alamat Tambahan</label>
-                        <input type="text" name="alamat" class="form-control">
-                    </div>
+                <div class="col-md-8 col-12">
+                    <label class="form-label required">Nama Lokasi</label>
+                    <input type="text" name="nama_lokasi" class="form-control" required>
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">NPWP Cabang</label>
+                    <input type="text" name="npwp_cabang" class="form-control">
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label required">Alamat Lengkap</label>
+                    <textarea name="alamat_lengkap" class="form-control" rows="3" required></textarea>
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Provinsi</label>
+                    <select name="provinsi" class="form-select wilayah-provinsi" data-value=""></select>
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Kota / Kabupaten</label>
+                    <select name="kota_kabupaten" class="form-select wilayah-kota" data-value=""></select>
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Kecamatan</label>
+                    <select name="kecamatan" class="form-select wilayah-kecamatan" data-value=""></select>
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Kelurahan</label>
+                    <select name="kelurahan" class="form-select wilayah-kelurahan" data-value=""></select>
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Kode Pos</label>
+                    <input type="text" name="kode_pos" class="form-control">
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Kawasan Bisnis</label>
+                    <select name="kawasan_bisnis" id="kawasan_bisnis" class="form-select"></select>
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Gedung</label>
+                    <select name="gedung" id="gedung" class="form-select"></select>
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Status</label>
+                    <select name="is_aktif" id="site_is_aktif" class="form-select">
+                        <option value="1">Aktif</option>
+                        <option value="0">Non Aktif</option>
+                    </select>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">Alamat Tambahan</label>
+                    <input type="text" name="alamat" class="form-control">
                 </div>
             </div>
-        </div>
+        </x-section-card>
 
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{{ route('business-relations.index') }}" class="btn btn-secondary btn-sm">
-                <i class="fa-solid fa-arrow-left me-1"></i> Kembali
-            </a>
-            <button type="submit" class="btn btn-primary" id="btnSubmit">
-                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Data
-            </button>
-        </div>
+        <x-form-actions back-route="{{ route('business-relations.index') }}" submit-label="Simpan Data" submit-id="btnSubmit" />
 
     </form>
 </section>
@@ -209,16 +176,41 @@
 
         if (EDIT_SITE) {
             initEditSite(EDIT_SITE);
+        } else {
+            WilayahEngine.init('body');
         }
 
-        $("#gedung").select2({
-            placeholder: 'Pilih Business Estate',
-            allowClear: true
-        });
+        $("#entitas").select2({ placeholder: 'Pilih Entitas', allowClear: true, width: '100%' });
+        $("#kepemilikan").select2({ placeholder: 'Pilih Kepemilikan', allowClear: true, width: '100%' });
+        $("#br_is_aktif").select2({ placeholder: 'Pilih Status', allowClear: true, width: '100%' });
+        $("#site_is_aktif").select2({ placeholder: 'Pilih Status', allowClear: true, width: '100%' });
 
         $("#kawasan_bisnis").select2({
             placeholder: 'Pilih Kawasan Bisnis',
-            allowClear: true
+            allowClear: true,
+            width: '100%',
+            ajax: {
+                url: "{{ route('business-estates.select2') }}",
+                dataType: 'json',
+                delay: 0,
+                data: params => ({ q: params.term ?? '' }),
+                processResults: data => ({ results: data }),
+                cache: true,
+            },
+        });
+
+        $("#gedung").select2({
+            placeholder: 'Pilih Gedung',
+            allowClear: true,
+            width: '100%',
+            ajax: {
+                url: "{{ route('commercial-buildings.select2') }}",
+                dataType: 'json',
+                delay: 0,
+                data: params => ({ q: params.term ?? '' }),
+                processResults: data => ({ results: data }),
+                cache: true,
+            },
         });
 
     });
@@ -229,7 +221,7 @@
             placeholder: 'Pilih atau ketik Business Relation',
             tags: true,
             allowClear: true,
-            minimumInputLength: 2,
+            minimumInputLength: 0,
             ajax: {
                 url: "{{ route('business-relations.select2') }}",
                 dataType: 'json',
@@ -272,13 +264,18 @@
 
         $('input[name="nama_lokasi"]').val(site.nama_lokasi);
         $('textarea[name="alamat_lengkap"]').val(site.alamat_lengkap);
-        $('input[name="provinsi"]').val(site.provinsi);
-        $('input[name="kota_kabupaten"]').val(site.kota_kabupaten);
-        $('input[name="kecamatan"]').val(site.kecamatan);
-        $('input[name="kelurahan"]').val(site.kelurahan);
+        $('.wilayah-provinsi').data('value', site.provinsi ?? '');
+        $('.wilayah-kota').data('value', site.kota_kabupaten ?? '');
+        $('.wilayah-kecamatan').data('value', site.kecamatan ?? '');
+        $('.wilayah-kelurahan').data('value', site.kelurahan ?? '');
+        WilayahEngine.init('body');
         $('input[name="kode_pos"]').val(site.kode_pos);
-        $('input[name="kawasan_bisnis"]').val(site.kawasan_bisnis);
-        $('input[name="gedung"]').val(site.gedung);
+        if (site.id_bestate && site.nama_kawasan_bisnis) {
+            $('#kawasan_bisnis').append(new Option(site.nama_kawasan_bisnis, site.id_bestate, true, true)).trigger('change');
+        }
+        if (site.id_building && site.nama_gedung) {
+            $('#gedung').append(new Option(site.nama_gedung, site.id_building, true, true)).trigger('change');
+        }
         $('input[name="alamat"]').val(site.alamat);
         $('input[name="npwp_cabang"]').val(site.npwp_cabang);
     }
@@ -404,14 +401,11 @@
 
     function clearSiteField() {
         $('#site_id_hidden').val('');
-        const fields = [
-            'nama_lokasi','alamat_lengkap','provinsi','kota_kabupaten',
-            'kecamatan','kelurahan','kode_pos','kawasan_bisnis',
-            'gedung','alamat','npwp_cabang'
-        ];
-        fields.forEach(name => {
-            $(`[name="${name}"]`).val('');
-        });
+        const fields = ['nama_lokasi', 'alamat_lengkap', 'kode_pos', 'alamat', 'npwp_cabang'];
+        fields.forEach(name => $(`[name="${name}"]`).val(''));
+        WilayahEngine.reset('.wilayah-provinsi', '.wilayah-kota', '.wilayah-kecamatan', '.wilayah-kelurahan');
+        $('#kawasan_bisnis').val(null).trigger('change');
+        $('#gedung').val(null).trigger('change');
     }
 
     function clearBrField() {

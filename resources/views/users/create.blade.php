@@ -24,60 +24,44 @@
         @csrf
 
         <!-- SECTION 1: INFORMASI USER -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-navy">
-                    <i class="fa-solid fa-user"></i>
+        <x-section-card icon="fa-user" color="icon-navy" title="Informasi User" subtitle="Data akun pengguna sistem">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">Nama</label>
+                    <input type="text" name="name" class="form-control" required>
                 </div>
-                <div class="detail-section-title">Informasi User</div>
-                <div class="detail-section-sub">Data akun pengguna sistem</div>
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label required">Nama</label>
-                        <input type="text" name="name" class="form-control" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label required">Email</label>
-                        <input type="email" name="email" class="form-control" required>
-                    </div>
-                    <div class="col-md-5">
-                        <label class="form-label required">Password</label>
-                        <input type="password" name="password" class="form-control" required>
-                    </div>
-                    <div class="col-md-5">
-                        <label class="form-label required">Konfirmasi Password</label>
-                        <input type="password" name="password_confirmation" class="form-control" required>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Status</label>
-                        <select name="is_active" class="form-select">
-                            <option value="1" selected>Aktif</option>
-                            <option value="0">Tidak Aktif</option>
-                        </select>
-                    </div>
-                    <div class="col-md-5">
-                        <label class="form-label">Grup / Departemen</label>
-                        <select name="menu_group_id" class="form-select">
-                            <option value="">-- Tanpa Grup --</option>
-                            @foreach(\Illuminate\Support\Facades\DB::table('menu_groups')->orderBy('name')->get() as $group)
-                                <option value="{{ $group->id }}">{{ $group->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                <div class="col-md-6">
+                    <label class="form-label required">Email</label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label required">Password</label>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label required">Konfirmasi Password</label>
+                    <input type="password" name="password_confirmation" class="form-control" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select name="is_active" class="form-select">
+                        <option value="1" selected>Aktif</option>
+                        <option value="0">Tidak Aktif</option>
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">Grup / Departemen</label>
+                    <select name="menu_group_id" class="form-select">
+                        <option value="">-- Tanpa Grup --</option>
+                        @foreach(\Illuminate\Support\Facades\DB::table('menu_groups')->orderBy('name')->get() as $group)
+                            <option value="{{ $group->id }}">{{ $group->name }}</option>
+                        @endforeach
+                    </select>
                 </div>
             </div>
-        </div>
+        </x-section-card>
 
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{{ route('users.index') }}" class="btn btn-secondary btn-sm">
-                <i class="fa-solid fa-arrow-left me-1"></i> Kembali
-            </a>
-            <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan User
-            </button>
-        </div>
+        <x-form-actions back-route="{{ route('users.index') }}" submit-label="Simpan User" />
 
     </form>
 
@@ -86,6 +70,11 @@
 
 @section('custom-script')
 <script>
+    $(document).ready(function () {
+        $('select[name="is_active"]').select2({ placeholder: 'Pilih Status', width: '100%' });
+        $('select[name="menu_group_id"]').select2({ placeholder: '-- Tanpa Grup --', allowClear: true, width: '100%' });
+    });
+
     submitCreateForm({
         formId:    '#createUserForm',
         url:       "{{ route('users.store') }}",

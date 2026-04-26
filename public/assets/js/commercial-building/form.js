@@ -5,18 +5,9 @@ function renderUnitForm(res) {
     <input type="hidden" name="_method" value="PUT">
 
     <!-- SECTION 1: INFORMASI GEDUNG -->
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-blue">
-                    <i class="fa-solid fa-building"></i>
-                </div>
-                <div class="detail-section-title">Commercial Building</div>
-                <div class="detail-section-sub">Data gedung komersial</div>
-                ${formGroup.editButton("Edit Commercial Building")}
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3 form-1">
+    ${formGroup.sectionCard(
+        { icon: 'fa-building', color: 'icon-blue', title: 'Commercial Building', subtitle: 'Data gedung komersial', editTitle: 'Edit Commercial Building' },
+        `<div class="row g-3 form-1">
                     ${formGroup.text("nama", "Nama Gedung", res.nama, true, {
                         className: "col-md-6 col-12",
                     })}
@@ -36,24 +27,18 @@ function renderUnitForm(res) {
                     ${formGroup.textarea("alamat", "Alamat", res.alamat, {
                         className: "col-md-12",
                     })}
-                    ${formGroup.text(
-                        "provinsi",
-                        "Provinsi",
-                        res.provinsi,
-                        false,
-                        {
-                            className: "col-md-4 col-12",
-                        },
-                    )}
-                    ${formGroup.text(
-                        "kota_kabupaten",
-                        "Kota / Kabupaten",
-                        res.kota_kabupaten,
-                        false,
-                        {
-                            className: "col-md-4 col-12",
-                        },
-                    )}
+                    <div class="col-md-4 col-12 mb-3">
+                        <label class="form-label">Provinsi</label>
+                        <select name="provinsi" class="form-select wilayah-provinsi disabled" data-value="${res.provinsi ?? ''}">
+                            ${res.provinsi ? `<option value="${res.provinsi}" selected>${res.provinsi}</option>` : '<option value="">-- Pilih --</option>'}
+                        </select>
+                    </div>
+                    <div class="col-md-4 col-12 mb-3">
+                        <label class="form-label">Kota / Kabupaten</label>
+                        <select name="kota_kabupaten" class="form-select wilayah-kota disabled" data-value="${res.kota_kabupaten ?? ''}">
+                            ${res.kota_kabupaten ? `<option value="${res.kota_kabupaten}" selected>${res.kota_kabupaten}</option>` : '<option value="">-- Pilih --</option>'}
+                        </select>
+                    </div>
                     ${formGroup.text(
                         "kode_pos",
                         "Kode Pos",
@@ -63,23 +48,13 @@ function renderUnitForm(res) {
                             className: "col-md-4 col-12",
                         },
                     )}
-                </div>
-            </div>
-        </div>
-    </div>
+                </div>`
+    )}
 
     <!-- SECTION 2: PENANGGUNG JAWAB -->
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-green">
-                    <i class="fa-solid fa-users"></i>
-                </div>
-                <div class="detail-section-title">Penanggung Jawab</div>
-                <div class="detail-section-sub">Data pemilik & pengurus gedung</div>
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3 form-2">
+    ${formGroup.sectionCard(
+        { icon: 'fa-users', color: 'icon-green', title: 'Penanggung Jawab', subtitle: 'Data pemilik & pengurus gedung' },
+        `<div class="row g-3 form-2">
                     ${formGroup.text("pemilik", "Pemilik", res.pemilik, false, {
                         className: "col-md-6 col-12",
                     })}
@@ -92,10 +67,8 @@ function renderUnitForm(res) {
                             className: "col-md-6 col-12",
                         },
                     )}
-                </div>
-            </div>
-        </div>
-    </div>
+                </div>`
+    )}
 
 </form>
 `;

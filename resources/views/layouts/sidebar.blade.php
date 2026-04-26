@@ -5,6 +5,14 @@
                 <img style="width: 100%; height: 60px;" src="/assets/images/logo.png" alt="" srcset="">
             </a>
         </div>
+        <div class="sidebar-search-wrap">
+            <i class="fa-solid fa-magnifying-glass sidebar-search-icon"></i>
+            <input type="text" id="sidebarSearch" class="sidebar-search-input" placeholder="Cari menu..." autocomplete="off">
+            <button type="button" id="sidebarSearchClear" class="sidebar-search-clear">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
         <div class="sidebar-menu">
             <ul class="menu">
 
@@ -71,3 +79,71 @@
         <button class="sidebar-toggler btn x"><i data-feather="x"></i></button>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var $search = $('#sidebarSearch');
+    var $clear  = $('#sidebarSearchClear');
+
+    $clear.hide();
+
+    $search.on('input', function () {
+        var q = $(this).val().trim().toLowerCase();
+        $clear.toggle(q.length > 0);
+        filterMenu(q);
+    });
+
+    $clear.on('click', function () {
+        $search.val('').trigger('input').focus();
+    });
+
+    function filterMenu(q) {
+        var $menu = $('.menu');
+
+        if (!q) {
+            $menu.find('.sf-hidden').removeClass('sf-hidden');
+            $menu.find('.sf-open').removeClass('sf-open');
+            return;
+        }
+
+        $menu.children('.sidebar-title').addClass('sf-hidden');
+
+        $menu.children('.sidebar-item').each(function () {
+            var $item = $(this);
+
+            if ($item.hasClass('has-sub')) {
+                var groupText  = $item.find('> .sidebar-link > span').text().toLowerCase();
+                var groupMatch = groupText.includes(q);
+                var anyMatch   = false;
+
+                $item.find('.submenu').children('li').each(function () {
+                    if ($(this).hasClass('sidebar-title')) {
+                        $(this).addClass('sf-hidden');
+                        return;
+                    }
+                    var itemText = $(this).text().trim().toLowerCase();
+                    if (itemText.includes(q) || groupMatch) {
+                        $(this).removeClass('sf-hidden');
+                        anyMatch = true;
+                    } else {
+                        $(this).addClass('sf-hidden');
+                    }
+                });
+
+                if (anyMatch) {
+                    $item.removeClass('sf-hidden').addClass('sf-open');
+                } else {
+                    $item.addClass('sf-hidden').removeClass('sf-open');
+                }
+            } else {
+                var linkText = $item.find('.sidebar-link span').text().toLowerCase();
+                if (linkText.includes(q)) {
+                    $item.removeClass('sf-hidden');
+                } else {
+                    $item.addClass('sf-hidden');
+                }
+            }
+        });
+    }
+});
+</script>

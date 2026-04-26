@@ -57,18 +57,37 @@ function initDataTable(tableSelector, onReady) {
                 columns.push({ data: key });
             });
 
+            let exportFilename = (window.currentMenuSlug || tableSelector.replace('#', '').replace('-table', '')).replace(/-/g, '_');
+
             let tableInstance = $(tableSelector).DataTable({
                 data: dataRows,
                 columns: columns,
                 processing: true,
                 destroy: true,
                 scrollX: true,
-                scrollY: "500px", // ← tinggi area scroll, sesuaikan kebutuhan
-                scrollCollapse: true, // ← kalau data sedikit, tinggi menyesuaikan
-                fixedHeader: true, // ← header kolom fix saat scroll vertikal
+                scrollY: "500px",
+                scrollCollapse: true,
+                fixedHeader: true,
+
+                dom: '<"dt-top d-flex align-items-center gap-2 mb-3"Bl<"ms-auto"f>>rt<"dt-bottom d-flex align-items-center justify-content-between mt-3"ip>',
+
+                buttons: [
+                    {
+                        extend: 'excelHtml5',
+                        text: '<i class="fa-solid fa-file-excel me-1"></i> Export Excel',
+                        className: 'btn btn-success btn-sm',
+                        filename: exportFilename,
+                        title: null,
+                        exportOptions: {
+                            modifier: { search: 'applied', order: 'applied' },
+                        },
+                    },
+                ],
 
                 language: {
                     emptyTable: "Data tidak ditemukan",
+                    search: "",
+                    searchPlaceholder: "Cari...",
                 },
             });
 

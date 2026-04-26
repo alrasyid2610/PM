@@ -24,44 +24,28 @@
     <form id="testingKelompokMatriksSampleForm">
         @csrf
 
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-teal">
-                    <i class="fa-solid fa-layer-group"></i>
+        <x-section-card icon="fa-layer-group" color="icon-teal" title="Kelompok Matriks Samples" subtitle="Data kelompok matriks sampel">
+            <div class="row g-3">
+                <div class="col-md-4 col-12">
+                    <label for="kode" class="form-label required">Kode</label>
+                    <input type="text" class="form-control" id="kode" name="kode" required>
                 </div>
-                <div class="detail-section-title">Kelompok Matriks Samples</div>
-                <div class="detail-section-sub">Data kelompok matriks sampel</div>
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3">
-                    <div class="col-md-4 col-12">
-                        <label for="kode" class="form-label required">Kode</label>
-                        <input type="text" class="form-control" id="kode" name="kode" required>
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label for="judul_indonesia" class="form-label required">Judul Indonesia</label>
-                        <input type="text" class="form-control" id="judul_indonesia" name="judul_indonesia" required>
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label for="judul_inggris" class="form-label required">Judul Inggris</label>
-                        <input type="text" class="form-control" id="judul_inggris" name="judul_inggris" required>
-                    </div>
-                    <div class="col-md-12">
-                        <label for="keterangan" class="form-label">Keterangan</label>
-                        <textarea class="form-control" id="keterangan" name="keterangan" rows="3"></textarea>
-                    </div>
+                <div class="col-md-4 col-12">
+                    <label for="judul_indonesia" class="form-label required">Judul Indonesia</label>
+                    <input type="text" class="form-control" id="judul_indonesia" name="judul_indonesia" required>
+                </div>
+                <div class="col-md-4 col-12">
+                    <label for="judul_inggris" class="form-label required">Judul Inggris</label>
+                    <input type="text" class="form-control" id="judul_inggris" name="judul_inggris" required>
+                </div>
+                <div class="col-md-12">
+                    <label for="keterangan" class="form-label">Keterangan</label>
+                    <textarea class="form-control" id="keterangan" name="keterangan" rows="3"></textarea>
                 </div>
             </div>
-        </div>
+        </x-section-card>
 
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{{ route('testing-kelompok-matriks-samples.index') }}" class="btn btn-secondary btn-sm">
-                <i class="fa-solid fa-arrow-left me-1"></i> Kembali
-            </a>
-            <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Data
-            </button>
-        </div>
+        <x-form-actions back-route="{{ route('testing-kelompok-matriks-samples.index') }}" submit-label="Simpan Data" />
 
     </form>
 </section>

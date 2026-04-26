@@ -8,12 +8,8 @@ $(document).ready(function () {
     }
 });
 
-$(document).ajaxStart(function () {
-    $("#global-loader").fadeIn(150);
-});
-
-$(document).ajaxStop(function () {
-    $("#global-loader").fadeOut(150);
+$(window).on('load', function () {
+    $("#global-loader").fadeOut(400);
 });
 
 function toggleAdvanceSearch() {
@@ -33,107 +29,91 @@ function toggleAdvanceSearch() {
     });
 }
 
-$(document).on("click", ".attachment-image", function () {
-    let src = $(this).attr("src");
-
-    $("#previewImage").attr("src", src);
-
-    $("#imagePreviewModal").modal("show");
-});
 
 function renderAttachments(attachments) {
     let files = [];
 
     if (!attachments) {
         $("#attachmentPreview").html(
-            `<div class="text-muted">Tidak ada attachment</div>`,
+            `<div class="att-empty"><i class="fa-solid fa-paperclip"></i> Tidak ada attachment</div>`,
         );
         return;
     }
 
     try {
-        files =
-            typeof attachments === "string"
-                ? JSON.parse(attachments)
-                : attachments;
+        files = typeof attachments === "string" ? JSON.parse(attachments) : attachments;
     } catch (e) {
         files = [];
     }
 
     if (!files || files.length === 0) {
         $("#attachmentPreview").html(
-            `<div class="text-muted">Tidak ada attachment</div>`,
+            `<div class="att-empty"><i class="fa-solid fa-paperclip"></i> Tidak ada attachment</div>`,
         );
         return;
     }
 
-    let html = "";
+    const isEditing = $(".btn-edit-context").hasClass("editing");
 
-    files.forEach((file) => {
-        let url = "/storage/" + file;
-        let ext = file.split(".").pop().toLowerCase();
-        let name = file.split("/").pop();
+    const iconMap = {
+        jpg:  { icon: "fa-image",      bg: "#e8f0fe", color: "#1a5fbe" },
+        jpeg: { icon: "fa-image",      bg: "#e8f0fe", color: "#1a5fbe" },
+        png:  { icon: "fa-image",      bg: "#e8f0fe", color: "#1a5fbe" },
+        gif:  { icon: "fa-image",      bg: "#e8f0fe", color: "#1a5fbe" },
+        webp: { icon: "fa-image",      bg: "#e8f0fe", color: "#1a5fbe" },
+        pdf:  { icon: "fa-file-pdf",   bg: "#fee2e2", color: "#dc2626" },
+        xls:  { icon: "fa-file-excel", bg: "#dcfce7", color: "#166534" },
+        xlsx: { icon: "fa-file-excel", bg: "#dcfce7", color: "#166534" },
+        doc:  { icon: "fa-file-word",  bg: "#dbeafe", color: "#1d4ed8" },
+        docx: { icon: "fa-file-word",  bg: "#dbeafe", color: "#1d4ed8" },
+    };
 
-        let deleteBtn = "";
+    const rows = files.map((file) => {
+        const url  = "/storage/" + file;
+        const ext  = file.split(".").pop().toLowerCase();
+        const name = file.split("/").pop();
+        const ic   = iconMap[ext] ?? { icon: "fa-file", bg: "#f3f4f6", color: "#6b7280" };
+        const isImage = ["jpg", "jpeg", "png", "gif", "webp"].includes(ext);
 
-        if ($(".btn-edit-context").hasClass("editing")) {
-            deleteBtn = `
-                <button 
-                    class="btn btn-sm btn-danger btn-delete-attachment"
-                    data-file="${file}">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
-            `;
-        }
+        const previewBtn = isImage
+            ? `<button type="button" class="att-btn att-btn-preview attachment-image-trigger" data-src="${url}" title="Preview">
+                   <i class="fa-solid fa-eye"></i>
+               </button>`
+            : "";
 
-        let preview = "";
+        const deleteBtn = isEditing
+            ? `<button type="button" class="att-btn att-btn-delete btn-delete-attachment" data-file="${file}" title="Hapus">
+                   <i class="fa-solid fa-trash"></i>
+               </button>`
+            : "";
 
-        if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) {
-            preview = `
-                <img src="${url}" 
-                     class="img-fluid rounded attachment-image"
-                     style="height:120px;object-fit:cover;cursor:pointer;">
-            `;
-        } else {
-            preview = `
-                <div class="attachment-icon">
-                    <i class="fa-solid fa-file fa-2x text-secondary"></i>
-                    <div class="small mt-1">${ext.toUpperCase()}</div>
-                </div>
-            `;
-        }
-
-        html += `
-            <div class="col-md-3">
-
+        return `
+            <div class="att-row">
                 <input type="hidden" name="existing_attachments[]" value="${file}">
-
-                <div class="attachment-card border rounded p-2 text-center">
-
-                    ${preview}
-
-                    <p class="small mt-2">${name}</p>
-
-                    <div class="mt-2 d-flex justify-content-center gap-2">
-
-                        <a href="${url}" 
-                           download
-                           class="btn btn-sm btn-primary">
-                           <i class="fa-solid fa-download"></i>
-                        </a>
-
-                        ${deleteBtn}
-
-                    </div>
-
+                <div class="att-icon" style="background:${ic.bg};color:${ic.color};">
+                    <i class="fa-solid ${ic.icon}"></i>
                 </div>
+                <div class="att-info">
+                    <span class="att-name" title="${name}">${name}</span>
+                    <span class="att-ext">${ext.toUpperCase()}</span>
+                </div>
+                <div class="att-actions">
+                    ${previewBtn}
+                    <a href="${url}" download class="att-btn att-btn-download" title="Download">
+                        <i class="fa-solid fa-download"></i>
+                    </a>
+                    ${deleteBtn}
+                </div>
+            </div>`;
+    }).join("");
 
-            </div>
-        `;
-    });
-
-    $("#attachmentPreview").html(html);
+    $("#attachmentPreview").html(`<div class="att-list">${rows}</div>`);
 }
+
+$(document).on("click", ".attachment-image-trigger", function () {
+    $("#previewImage").attr("src", $(this).data("src"));
+    $("#imagePreviewModal").modal("show");
+});
 
 function fillFormFromObject(data) {
     Object.keys(data).forEach(function (key) {

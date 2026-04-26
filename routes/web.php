@@ -19,6 +19,7 @@ use App\Http\Controllers\TestingKelompokMatriksSampleController;
 use App\Http\Controllers\TestingStandardController;
 use App\Http\Controllers\TestingMatriksSampleController;
 use App\Http\Controllers\TestingPointController;
+use App\Http\Controllers\WilayahController;
 use Spatie\LaravelPdf\Facades\Pdf;
 
 Route::get('/test-so-pdf', function () {
@@ -515,6 +516,11 @@ Route::prefix('dashboard')->name('dashboard.')->group(function () {
     Route::get('/',             [DashboardController::class, 'index'])->name('index');
     Route::get('/summary',      [DashboardController::class, 'summary'])->name('summary');
     Route::get('/so-per-month', [DashboardController::class, 'soPerMonth'])->name('soPerMonth');
+});
+
+Route::prefix('/wilayah')->name('wilayah.')->group(function () {
+    Route::get('/provinces', [WilayahController::class, 'provinces'])->name('provinces');
+    Route::get('/children',  [WilayahController::class, 'children'])->name('children');
 });
 
 // Update redirect root ke dashboard

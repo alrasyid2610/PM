@@ -94,30 +94,22 @@
                         {{-- Wilayah --}}
                         <div class="col-md-4">
                             <label class="form-label">Provinsi</label>
-                            <input type="text" class="form-control"
-                                id="edit_provinsi"
-                                name="provinsi">
+                            <select class="form-select wilayah-provinsi" name="provinsi" data-value=""></select>
                         </div>
 
                         <div class="col-md-4">
                             <label class="form-label">Kota / Kabupaten</label>
-                            <input type="text" class="form-control"
-                                id="edit_kota_kabupaten"
-                                name="kota_kabupaten">
+                            <select class="form-select wilayah-kota" name="kota_kabupaten" data-value=""></select>
                         </div>
 
                         <div class="col-md-4">
                             <label class="form-label">Kecamatan</label>
-                            <input type="text" class="form-control"
-                                id="edit_kecamatan"
-                                name="kecamatan">
+                            <select class="form-select wilayah-kecamatan" name="kecamatan" data-value=""></select>
                         </div>
 
                         <div class="col-md-4">
                             <label class="form-label">Kelurahan</label>
-                            <input type="text" class="form-control"
-                                id="edit_kelurahan"
-                                name="kelurahan">
+                            <select class="form-select wilayah-kelurahan" name="kelurahan" data-value=""></select>
                         </div>
 
                         <div class="col-md-4">
@@ -196,6 +188,9 @@
 @section('custom-script')
 <script>
     $(document).ready(function() {
+        $('#edit_is_kantor_pusat').select2({ placeholder: 'Pilih Tipe', width: '100%', dropdownParent: $('#editBrsModal') });
+        $('#edit_is_aktif').select2({ placeholder: 'Pilih Status', width: '100%', dropdownParent: $('#editBrsModal') });
+
         const table = $('#brsTable').DataTable({
             // processing: true,
             // serverSide: true,
@@ -269,14 +264,15 @@
                 $('#edit_id_br').val(res.id_br);
 
                 $('#edit_nama_lokasi').val(res.nama_lokasi);
-                $('#edit_is_kantor_pusat').val(res.is_kantor_pusat);
-                $('#edit_is_aktif').val(res.is_aktif);
+                $('#edit_is_kantor_pusat').val(res.is_kantor_pusat).trigger('change');
+                $('#edit_is_aktif').val(res.is_aktif).trigger('change');
 
                 $('#edit_alamat_lengkap').val(res.alamat_lengkap);
-                $('#edit_provinsi').val(res.provinsi);
-                $('#edit_kota_kabupaten').val(res.kota_kabupaten);
-                $('#edit_kecamatan').val(res.kecamatan);
-                $('#edit_kelurahan').val(res.kelurahan);
+                $('#editBrsModal .wilayah-provinsi').data('value', res.provinsi ?? '');
+                $('#editBrsModal .wilayah-kota').data('value', res.kota_kabupaten ?? '');
+                $('#editBrsModal .wilayah-kecamatan').data('value', res.kecamatan ?? '');
+                $('#editBrsModal .wilayah-kelurahan').data('value', res.kelurahan ?? '');
+                WilayahEngine.init('#editBrsModal');
                 $('#edit_kode_pos').val(res.kode_pos);
                 $('#edit_kawasan_bisnis').val(res.kawasan_bisnis);
                 $('#edit_gedung').val(res.gedung);

@@ -47,11 +47,7 @@ class BusinessRelationController extends Controller
             ? DB::table('business_relation_sites')->where('id_site', $siteId)->first()
             : null;
 
-        $bestate = DB::table('business_estates')->get();
-        $commercial_buildings = DB::table('commercial_buildings')->get();
-        // dd($bestate);
-
-        return view('business-relation.create', compact('br', 'site', 'bestate', 'commercial_buildings'));
+        return view('business-relation.create', compact('br', 'site'));
     }
 
     public function edit()

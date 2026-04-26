@@ -15,50 +15,12 @@
 @endsection
 
 @section('content')
-<section class="section">
-    <div class="card">
-        <div class="card-body">
-
-            <x-datatable-header
-                title="List of Users"
-                create-route="users.create"
-                add-label="Tambah User"
-                :with-history="false"
-            />
-
-            <div class="tab-content">
-
-                <!-- TAB DATA -->
-                <div class="tab-pane fade show active" id="tab-data">
-                    <div class="table-responsive">
-                        <table id="{{ request()->segment(1) }}-table"
-                               class="table table-striped table-hover table-sm table-bordered w-100"
-                               data-datatable-auto-columns="true">
-                            <thead></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- TAB DETAIL -->
-                <div class="tab-pane fade" id="tab-detail">
-                    <div id="detailContent" class="p-3 text-muted">
-                        Pilih data pada tab Data untuk melihat detail
-                    </div>
-                </div>
-
-                <!-- TAB HISTORY -->
-                <div class="tab-pane fade" id="tab-history">
-                    <div id="historyContent" class="p-3 text-muted">
-                        Pilih data pada tab Data untuk melihat history
-                    </div>
-                </div>
-
-            </div>
-
-        </div>
-    </div>
-</section>
+<x-crud-index
+    title="List of Users"
+    create-route="users.create"
+    add-label="Tambah User"
+    :with-history="false"
+/>
 @endsection
 
 @section('custom-script')
@@ -74,25 +36,3 @@
 <script src="{{ asset('assets/js/users/index.js') }}"></script>
 @endsection
 
-@section('style')
-<style>
-    .permission-matrix th,
-    .permission-matrix td {
-        vertical-align: middle;
-    }
-    .permission-matrix .table-secondary td {
-        font-size: 13px;
-        letter-spacing: 0.3px;
-    }
-    .permission-matrix .form-check-input {
-        cursor: pointer;
-        width: 16px;
-        height: 16px;
-    }
-    .permission-matrix .form-check-input:disabled,
-    .permission-matrix .form-check-input.disabled {
-        opacity: 0.5;
-        cursor: default;
-    }
-</style>
-@endsection

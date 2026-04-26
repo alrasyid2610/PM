@@ -5,18 +5,9 @@ function renderForm(res) {
     <input type="hidden" name="_method" value="PUT">
 
     <!-- SECTION 1: INFORMASI WORK ORDER -->
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-navy">
-                    <i class="fa-solid fa-briefcase"></i>
-                </div>
-                <div class="detail-section-title">Informasi Work Order</div>
-                <div class="detail-section-sub">Data pekerjaan lapangan</div>
-                ${formGroup.editButton("Edit Work Order")}
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3 form-1">
+    ${formGroup.sectionCard(
+        { icon: 'fa-briefcase', color: 'icon-navy', title: 'Informasi Work Order', subtitle: 'Data pekerjaan lapangan', editTitle: 'Edit Work Order' },
+        `<div class="row g-3 form-1">
                     <div class="col-md-4">
                         <label class="form-label">No WO</label>
                         <p class="form-control" style="margin: 0; line-height: 1.5;">${res.no_wo ?? "-"}</p>
@@ -36,6 +27,7 @@ function renderForm(res) {
                         placeholder: "Pilih Sales Order",
                         label: res.no_so,
                         className: "col-md-12",
+                        createUrl: "/sales-orders/create",
                     })}
                     ${formGroup.select(
                         "id_pelanggan",
@@ -48,6 +40,7 @@ function renderForm(res) {
                             placeholder: "Pilih Pelanggan",
                             label: res.nama_pelanggan_pekerjaan,
                             className: "col-md-5",
+                            createUrl: "/business-relations/create",
                         },
                     )}
                     ${formGroup.select(
@@ -61,6 +54,7 @@ function renderForm(res) {
                             placeholder: "Pilih Site",
                             label: res.nama_site_pelanggan_pekerjaan,
                             className: "col-md-5",
+                            createUrl: "/business-relations/create",
                         },
                     )}
                     ${formGroup.select(
@@ -74,6 +68,7 @@ function renderForm(res) {
                             placeholder: "Pilih PIC",
                             label: res.nama_pic_pelanggan_pekerjaan,
                             className: "col-md-2",
+                            createUrl: "/business-relation-contacts/create",
                         },
                     )}
                     ${formGroup.textarea(
@@ -84,10 +79,8 @@ function renderForm(res) {
                             className: "col-md-12",
                         },
                     )}
-                </div>
-            </div>
-        </div>
-    </div>
+                </div>`
+    )}
 
 </form>
 `;

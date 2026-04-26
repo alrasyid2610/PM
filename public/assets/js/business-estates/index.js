@@ -5,10 +5,7 @@ $(document).ready(function () {
         primaryKey: "id_bestate",
         renderForm: renderForm,
         initSelect: function () {
-            $("#detail_kelompok").select2({
-                width: "100%",
-                dropdownParent: $("#detailContent"),
-            });
+            WilayahEngine.init("#detailContent");
         },
     });
 });

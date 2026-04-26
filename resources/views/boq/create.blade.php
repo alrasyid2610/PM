@@ -1,14 +1,6 @@
 @extends('layouts.app')
 
 @section('content')
-<style>
-    .required::after {
-        content: " *";
-        color: red;
-    }
-
-</style>
-
 
 <section class="section">
     <div class="container-fluid">
@@ -138,7 +130,7 @@
         $("#id_work_order").select2({
             placeholder: "Pilih atau ketik Work Order",
             allowClear: true,
-            minimumInputLength: 2,
+            minimumInputLength: 0,
             ajax: {
                 url: "{{ route('work-orders.select2') }}",
                 dataType: "json",
@@ -147,6 +139,12 @@
                 processResults: (data) => ({ results: data }),
                 cache: true,
             },
+            language: {
+                noResults: function () {
+                    return `<span>Tidak ditemukan. <a href="{{ route('work-orders.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`;
+                },
+            },
+            escapeMarkup: function (m) { return m; },
         });
 
         $("#id_work_order").on("select2:select", function (e) {

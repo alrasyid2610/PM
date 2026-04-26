@@ -25,50 +25,27 @@
         @csrf
 
         <!-- SECTION 1: INFO GRUP -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-navy">
-                    <i class="fa-solid fa-layer-group"></i>
+        <x-section-card icon="fa-layer-group" color="icon-navy" title="Informasi Grup" subtitle="Nama dan deskripsi departemen">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label required">Nama Grup</label>
+                    <input type="text" name="name" class="form-control" required placeholder="contoh: Sales, Lab, Admin">
                 </div>
-                <div class="detail-section-title">Informasi Grup</div>
-                <div class="detail-section-sub">Nama dan deskripsi departemen</div>
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3">
-                    <div class="col-md-5">
-                        <label class="form-label required">Nama Grup</label>
-                        <input type="text" name="name" class="form-control" required placeholder="contoh: Sales, Lab, Admin">
-                    </div>
-                    <div class="col-md-7">
-                        <label class="form-label">Deskripsi</label>
-                        <input type="text" name="description" class="form-control" placeholder="Keterangan singkat grup ini">
-                    </div>
+                <div class="col-md-7">
+                    <label class="form-label">Deskripsi</label>
+                    <input type="text" name="description" class="form-control" placeholder="Keterangan singkat grup ini">
                 </div>
             </div>
-        </div>
+        </x-section-card>
 
         <!-- SECTION 2: PERMISSION MATRIX -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-green">
-                    <i class="fa-solid fa-shield-halved"></i>
-                </div>
-                <div class="detail-section-title">Hak Akses Menu</div>
-                <div class="detail-section-sub">Konfigurasi akses grup per menu dan per aksi</div>
-            </div>
-            <div class="detail-section-body p-0" id="permissionMatrixContainer">
+        <x-section-card icon="fa-shield-halved" color="icon-green" title="Hak Akses Menu" subtitle="Konfigurasi akses grup per menu dan per aksi">
+            <div class="p-0" id="permissionMatrixContainer">
                 <div class="p-3 text-muted">Memuat konfigurasi menu...</div>
             </div>
-        </div>
+        </x-section-card>
 
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{{ route('menu-groups.index') }}" class="btn btn-secondary btn-sm">
-                <i class="fa-solid fa-arrow-left me-1"></i> Kembali
-            </a>
-            <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Grup
-            </button>
-        </div>
+        <x-form-actions back-route="{{ route('menu-groups.index') }}" submit-label="Simpan Grup" />
 
     </form>
 
@@ -112,10 +89,3 @@ $(document).ready(async function () {
 </script>
 @endsection
 
-@section('style')
-<style>
-    .permission-matrix th,
-    .permission-matrix td { vertical-align: middle; }
-    .permission-matrix .form-check-input { cursor: pointer; width: 16px; height: 16px; }
-</style>
-@endsection

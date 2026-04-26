@@ -27,44 +27,28 @@
     <form id="testingUnitForm">
         @csrf
 
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-amber">
-                    <i class="fa-solid fa-ruler"></i>
+        <x-section-card icon="fa-ruler" color="icon-amber" title="Informasi Unit" subtitle="Data satuan pengujian laboratorium">
+            <div class="row g-3">
+                <div class="col-md-4 col-12">
+                    <label for="kode" class="form-label required">Kode</label>
+                    <input type="text" class="form-control" id="kode" name="kode" required>
                 </div>
-                <div class="detail-section-title">Informasi Unit</div>
-                <div class="detail-section-sub">Data satuan pengujian laboratorium</div>
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3">
-                    <div class="col-md-4 col-12">
-                        <label for="kode" class="form-label required">Kode</label>
-                        <input type="text" class="form-control" id="kode" name="kode" required>
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label for="judul_indonesia" class="form-label required">Judul Indonesia</label>
-                        <input type="text" class="form-control scientific-input" id="judul_indonesia" name="judul_indonesia" required>
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label for="judul_inggris" class="form-label required">Judul Inggris</label>
-                        <input type="text" class="form-control scientific-input" id="judul_inggris" name="judul_inggris" required>
-                    </div>
-                    <div class="col-md-12">
-                        <label for="keterangan" class="form-label">Keterangan</label>
-                        <textarea class="form-control" id="keterangan" name="keterangan" rows="3"></textarea>
-                    </div>
+                <div class="col-md-4 col-12">
+                    <label for="judul_indonesia" class="form-label required">Judul Indonesia</label>
+                    <input type="text" class="form-control scientific-input" id="judul_indonesia" name="judul_indonesia" required>
+                </div>
+                <div class="col-md-4 col-12">
+                    <label for="judul_inggris" class="form-label required">Judul Inggris</label>
+                    <input type="text" class="form-control scientific-input" id="judul_inggris" name="judul_inggris" required>
+                </div>
+                <div class="col-md-12">
+                    <label for="keterangan" class="form-label">Keterangan</label>
+                    <textarea class="form-control" id="keterangan" name="keterangan" rows="3"></textarea>
                 </div>
             </div>
-        </div>
+        </x-section-card>
 
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{{ route('testing-units.index') }}" class="btn btn-secondary btn-sm">
-                <i class="fa-solid fa-arrow-left me-1"></i> Kembali
-            </a>
-            <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Testing Unit
-            </button>
-        </div>
+        <x-form-actions back-route="{{ route('testing-units.index') }}" submit-label="Simpan Testing Unit" />
 
     </form>
 </section>

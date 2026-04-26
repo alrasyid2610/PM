@@ -26,82 +26,57 @@
         @csrf
 
         <!-- SECTION 1: INFORMASI KAWASAN -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-navy">
-                    <i class="fa-solid fa-industry"></i>
+        <x-section-card icon="fa-industry" color="icon-navy" title="Business Estates" subtitle="Data kawasan industri">
+            <div class="row g-3">
+                <div class="col-md-6 col-12">
+                    <label class="form-label required">Nama Estate</label>
+                    <input type="text" name="nama" class="form-control" required>
                 </div>
-                <div class="detail-section-title">Business Estates</div>
-                <div class="detail-section-sub">Data kawasan industri</div>
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3">
-                    <div class="col-md-6 col-12">
-                        <label class="form-label required">Nama Estate</label>
-                        <input type="text" name="nama" class="form-control" required>
-                    </div>
-                    <div class="col-md-3 col-12">
-                        <label class="form-label">Kode</label>
-                        <input type="text" name="kode" class="form-control">
-                    </div>
-                    <div class="col-md-3 col-12">
-                        <label class="form-label">Status</label>
-                        <select name="is_aktif" class="form-select">
-                            <option value="1">Aktif</option>
-                            <option value="0">Non Aktif</option>
-                        </select>
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label required">Alamat</label>
-                        <textarea name="alamat" class="form-control" rows="3" required></textarea>
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Provinsi</label>
-                        <input type="text" name="provinsi" class="form-control">
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Kota / Kabupaten</label>
-                        <input type="text" name="kota_kabupaten" class="form-control">
-                    </div>
-                    <div class="col-md-4 col-12">
-                        <label class="form-label">Website</label>
-                        <input type="text" name="website" class="form-control">
-                    </div>
+                <div class="col-md-3 col-12">
+                    <label class="form-label">Kode</label>
+                    <input type="text" name="kode" class="form-control">
+                </div>
+                <div class="col-md-3 col-12">
+                    <label class="form-label">Status</label>
+                    <select name="is_aktif" class="form-select">
+                        <option value="1">Aktif</option>
+                        <option value="0">Non Aktif</option>
+                    </select>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label required">Alamat</label>
+                    <textarea name="alamat" class="form-control" rows="3" required></textarea>
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Provinsi</label>
+                    <select name="provinsi" class="form-select wilayah-provinsi" data-value=""></select>
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Kota / Kabupaten</label>
+                    <select name="kota_kabupaten" class="form-select wilayah-kota" data-value=""></select>
+                </div>
+                <div class="col-md-4 col-12">
+                    <label class="form-label">Website</label>
+                    <input type="text" name="website" class="form-control">
                 </div>
             </div>
-        </div>
+        </x-section-card>
 
         <!-- SECTION 2: PENANGGUNG JAWAB -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-green">
-                    <i class="fa-solid fa-users"></i>
+        <x-section-card icon="fa-users" color="icon-green" title="Penanggung Jawab" subtitle="Data pemilik & pengurus kawasan">
+            <div class="row g-3">
+                <div class="col-md-6 col-12">
+                    <label class="form-label">Pemilik</label>
+                    <input type="text" name="pemilik" class="form-control">
                 </div>
-                <div class="detail-section-title">Penanggung Jawab</div>
-                <div class="detail-section-sub">Data pemilik & pengurus kawasan</div>
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3">
-                    <div class="col-md-6 col-12">
-                        <label class="form-label">Pemilik</label>
-                        <input type="text" name="pemilik" class="form-control">
-                    </div>
-                    <div class="col-md-6 col-12">
-                        <label class="form-label">Pengurus</label>
-                        <input type="text" name="pengurus" class="form-control">
-                    </div>
+                <div class="col-md-6 col-12">
+                    <label class="form-label">Pengurus</label>
+                    <input type="text" name="pengurus" class="form-control">
                 </div>
             </div>
-        </div>
+        </x-section-card>
 
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{{ route('business-estates.index') }}" class="btn btn-secondary btn-sm">
-                <i class="fa-solid fa-arrow-left me-1"></i> Kembali
-            </a>
-            <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Data
-            </button>
-        </div>
+        <x-form-actions back-route="{{ route('business-estates.index') }}" submit-label="Simpan Data" />
 
     </form>
 </section>
@@ -110,6 +85,11 @@
 
 @section('custom-script')
 <script>
+    $(document).ready(function () {
+        WilayahEngine.init('body');
+        $('select[name="is_aktif"]').select2({ placeholder: 'Pilih Status', width: '100%' });
+    });
+
     submitCreateForm({
         formId: "#createBusinessEstateForm",
         url: "{{ route('business-estates.store') }}",

@@ -25,55 +25,39 @@
     <form id="createBusinesRelationContact">
         @csrf
 
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-green">
-                    <i class="fa-solid fa-address-card"></i>
+        <x-section-card icon="fa-address-card" color="icon-green" title="Business Relation Contacts" subtitle="Data kontak PIC pelanggan">
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <label class="form-label required">Bussines Relation Site</label>
+                    <select id="id_br" name="id_br" class="form-select" required></select>
                 </div>
-                <div class="detail-section-title">Business Relation Contacts</div>
-                <div class="detail-section-sub">Data kontak PIC pelanggan</div>
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3">
-                    <div class="col-md-12">
-                        <label class="form-label required">Bussines Relation Site</label>
-                        <select id="id_br" name="id_br" class="form-select" required></select>
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label required">Nama PIC</label>
-                        <input type="text" class="form-control" id="nama_pic" name="nama_pic" required>
-                    </div>
-                    <div class="col-md-3 col-12">
-                        <label class="form-label required">No. Telp PIC</label>
-                        <input type="text" class="form-control" id="nomor_telepon_pic" name="nomor_telepon_pic" required>
-                    </div>
-                    <div class="col-md-3 col-12">
-                        <label class="form-label required">Email PIC</label>
-                        <input type="text" class="form-control" id="email_pic" name="email_pic" required>
-                    </div>
-                    <div class="col-md-3 col-12">
-                        <label class="form-label required">Lokasi PIC</label>
-                        <input type="text" class="form-control" id="lokasi_pic" name="lokasi_pic" required>
-                    </div>
-                    <div class="col-md-3 col-12">
-                        <label for="is_aktif" class="form-label required">Status</label>
-                        <select class="form-select" id="is_aktif" name="is_aktif" required>
-                            <option value="1">Aktif</option>
-                            <option value="0">Tidak Aktif</option>
-                        </select>
-                    </div>
+                <div class="col-md-12">
+                    <label class="form-label required">Nama PIC</label>
+                    <input type="text" class="form-control" id="nama_pic" name="nama_pic" required>
+                </div>
+                <div class="col-md-3 col-12">
+                    <label class="form-label required">No. Telp PIC</label>
+                    <input type="text" class="form-control" id="nomor_telepon_pic" name="nomor_telepon_pic" required>
+                </div>
+                <div class="col-md-3 col-12">
+                    <label class="form-label required">Email PIC</label>
+                    <input type="text" class="form-control" id="email_pic" name="email_pic" required>
+                </div>
+                <div class="col-md-3 col-12">
+                    <label class="form-label required">Lokasi PIC</label>
+                    <input type="text" class="form-control" id="lokasi_pic" name="lokasi_pic" required>
+                </div>
+                <div class="col-md-3 col-12">
+                    <label for="is_aktif" class="form-label required">Status</label>
+                    <select class="form-select" id="is_aktif" name="is_aktif" required>
+                        <option value="1">Aktif</option>
+                        <option value="0">Tidak Aktif</option>
+                    </select>
                 </div>
             </div>
-        </div>
+        </x-section-card>
 
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{{ route('business-relation-contacts.index') }}" class="btn btn-secondary btn-sm">
-                <i class="fa-solid fa-arrow-left me-1"></i> Kembali
-            </a>
-            <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Data
-            </button>
-        </div>
+        <x-form-actions back-route="{{ route('business-relation-contacts.index') }}" submit-label="Simpan Data" />
 
     </form>
 </section>
@@ -83,6 +67,8 @@
 @section('custom-script')
 <script>
     $(document).ready(function () {
+        $('#is_aktif').select2({ placeholder: 'Pilih Status', width: '100%' });
+
         $("#id_br").select2({
             placeholder: "Pilih Business Relation Site...",
             ajax: {
@@ -93,6 +79,12 @@
                 processResults: (data) => ({ results: data }),
                 cache: true,
             },
+            language: {
+                noResults: function () {
+                    return `<span>Tidak ditemukan. <a href="{{ route('business-relations.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`;
+                },
+            },
+            escapeMarkup: function (m) { return m; },
         });
     });
 
