@@ -12,7 +12,7 @@ use App\Http\Controllers\SalesOrderController;
 use App\Http\Controllers\TestingItemController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkOrderController;
-
+use App\Http\Controllers\ContractController;
 use App\Http\Controllers\TestingUnitController;
 use App\Http\Controllers\TestingParameterController;
 use App\Http\Controllers\TestingKelompokMatriksSampleController;
@@ -115,6 +115,25 @@ Route::prefix('testing-kelompok-matriks-samples')
         Route::get('/{id}/history', [TestingKelompokMatriksSampleController::class, 'history'])->name('history')->whereNumber('id');
     });
 
+Route::prefix('contracts')
+    ->name('contracts.')
+    ->group(function () {
+
+    Route::get('/select2byid', [ContractController::class, 'select2byid'])->name('select2byid');
+    Route::get('/select2',     [ContractController::class, 'select2'])->name('select2');
+
+    Route::get('/',            [ContractController::class, 'index'])->name('index');
+    Route::get('/data',        [ContractController::class, 'data'])->name('data');
+    Route::get('/create',      [ContractController::class, 'create'])->name('create');
+    Route::post('/',           [ContractController::class, 'store'])->name('store');
+    Route::get('/{id}',        [ContractController::class, 'show'])->name('show');
+    Route::put('/{id}',        [ContractController::class, 'update'])->name('update');
+    Route::post('/{id}',       [ContractController::class, 'update'])->name('update.post'); // untuk FormData
+    Route::delete('/{id}',     [ContractController::class, 'destroy'])->name('destroy');
+    Route::get('/{id}/detail', [ContractController::class, 'detail'])->name('detail');
+    Route::get('/{id}/history',[ContractController::class, 'history'])->name('history')->whereNumber('id');
+
+    });
 
 Route::prefix('testing-standards')
     ->name('testing-standards.')
@@ -310,6 +329,8 @@ Route::prefix('/commercial-buildings')
         Route::put('/{id}', [CommercialBuildingController::class, 'update'])->name('update');
         Route::get('/{id}/history', [CommercialBuildingController::class, 'history'])->name('history')->whereNumber('id');
     });
+
+
 
 
 Route::prefix('/business-estates')

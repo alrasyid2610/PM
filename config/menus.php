@@ -34,6 +34,7 @@ return [
             ['slug' => 'business-relation-contacts',       'label' => 'Business Relation Contacts',  'section' => 'Business Relation'],
             ['slug' => 'business-estates',                 'label' => 'Business Estate',             'section' => 'Location'],
             ['slug' => 'commercial-buildings',             'label' => 'Commercial Buildings',        'section' => 'Location'],
+            ['slug' => 'contracts',                        'label' => 'Contracts',                   'section' => 'Product'],
             ['slug' => 'testing-units',                    'label' => 'Testing Units',               'section' => 'Product'],
             ['slug' => 'testing-parameters',               'label' => 'Testing Parameters',          'section' => 'Product'],
             ['slug' => 'testing-kelompok-matriks-samples', 'label' => 'Kelompok Matriks Sample',     'section' => 'Product'],
