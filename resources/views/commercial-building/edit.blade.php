@@ -30,9 +30,13 @@
 
         <x-section-card icon="fa-building" color="icon-navy" title="Informasi Commercial Building" subtitle="Data gedung komersial">
             <div class="row g-3">
-                <div class="col-md-6">
+                <div class="col-md-5">
                     <label class="form-label required">Nama</label>
                     <input type="text" name="nama" class="form-control" value="{{ old('nama', $building->nama) }}" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Kode</label>
+                    <input type="text" name="kode" class="form-control" value="{{ old('kode', $building->kode) }}">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Status</label>
@@ -41,7 +45,7 @@
                         <option value="0" {{ $building->is_aktif == 0 ? 'selected' : '' }}>Non Aktif</option>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">Website</label>
                     <input type="text" name="website" class="form-control" value="{{ old('website', $building->website) }}">
                 </div>

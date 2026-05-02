@@ -9,10 +9,13 @@ function renderUnitForm(res) {
         { icon: 'fa-building', color: 'icon-blue', title: 'Commercial Building', subtitle: 'Data gedung komersial', editTitle: 'Edit Commercial Building' },
         `<div class="row g-3 form-1">
                     ${formGroup.text("nama", "Nama Gedung", res.nama, true, {
-                        className: "col-md-6 col-12",
+                        className: "col-md-5 col-12",
+                    })}
+                    ${formGroup.text("kode", "Kode", res.kode, false, {
+                        className: "col-md-2 col-12",
                     })}
                     ${formGroup.text("website", "Website", res.website, false, {
-                        className: "col-md-4 col-12",
+                        className: "col-md-3 col-12",
                     })}
                     ${formGroup.select(
                         "is_aktif",

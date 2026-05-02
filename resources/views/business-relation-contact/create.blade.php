@@ -22,40 +22,42 @@
 
 @section('content')
 <section class="section">
-    <form id="createBusinesRelationContact">
+    <form id="createBusinesRelationContact" class="row g-3">
         @csrf
 
-        <x-section-card icon="fa-address-card" color="icon-green" title="Business Relation Contacts" subtitle="Data kontak PIC pelanggan">
-            <div class="row g-3">
-                <div class="col-md-12">
-                    <label class="form-label required">Bussines Relation Site</label>
-                    <select id="id_br" name="id_br" class="form-select" required></select>
+        <div class="col-12">
+            <x-section-card icon="fa-address-card" color="icon-green" title="Business Relation Contacts" subtitle="Data kontak PIC pelanggan">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label required">Bussines Relation Site</label>
+                        <select id="id_br" name="id_br" class="form-select" required></select>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label required">Nama PIC</label>
+                        <input type="text" class="form-control" id="nama_pic" name="nama_pic" required>
+                    </div>
+                    <div class="col-md-3 col-12">
+                        <label class="form-label required">No. Telp PIC</label>
+                        <input type="text" class="form-control" id="nomor_telepon_pic" name="nomor_telepon_pic" required>
+                    </div>
+                    <div class="col-md-3 col-12">
+                        <label class="form-label required">Email PIC</label>
+                        <input type="text" class="form-control" id="email_pic" name="email_pic" required>
+                    </div>
+                    <div class="col-md-3 col-12">
+                        <label class="form-label required">Lokasi PIC</label>
+                        <input type="text" class="form-control" id="lokasi_pic" name="lokasi_pic" required>
+                    </div>
+                    <div class="col-md-3 col-12">
+                        <label for="is_aktif" class="form-label required">Status</label>
+                        <select class="form-select" id="is_aktif" name="is_aktif" required>
+                            <option value="1">Aktif</option>
+                            <option value="0">Tidak Aktif</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="col-md-12">
-                    <label class="form-label required">Nama PIC</label>
-                    <input type="text" class="form-control" id="nama_pic" name="nama_pic" required>
-                </div>
-                <div class="col-md-3 col-12">
-                    <label class="form-label required">No. Telp PIC</label>
-                    <input type="text" class="form-control" id="nomor_telepon_pic" name="nomor_telepon_pic" required>
-                </div>
-                <div class="col-md-3 col-12">
-                    <label class="form-label required">Email PIC</label>
-                    <input type="text" class="form-control" id="email_pic" name="email_pic" required>
-                </div>
-                <div class="col-md-3 col-12">
-                    <label class="form-label required">Lokasi PIC</label>
-                    <input type="text" class="form-control" id="lokasi_pic" name="lokasi_pic" required>
-                </div>
-                <div class="col-md-3 col-12">
-                    <label for="is_aktif" class="form-label required">Status</label>
-                    <select class="form-select" id="is_aktif" name="is_aktif" required>
-                        <option value="1">Aktif</option>
-                        <option value="0">Tidak Aktif</option>
-                    </select>
-                </div>
-            </div>
-        </x-section-card>
+            </x-section-card>
+        </div>
 
         <x-form-actions back-route="{{ route('business-relation-contacts.index') }}" submit-label="Simpan Data" />
 

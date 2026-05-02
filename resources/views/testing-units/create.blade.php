@@ -24,29 +24,31 @@
 
 @section('content')
 <section class="section">
-    <form id="testingUnitForm">
+    <form id="testingUnitForm" class="row g-3">
         @csrf
 
-        <x-section-card icon="fa-ruler" color="icon-amber" title="Informasi Unit" subtitle="Data satuan pengujian laboratorium">
-            <div class="row g-3">
-                <div class="col-md-4 col-12">
-                    <label for="kode" class="form-label required">Kode</label>
-                    <input type="text" class="form-control" id="kode" name="kode" required>
+        <div class="col-12">
+            <x-section-card icon="fa-ruler" color="icon-amber" title="Informasi Unit" subtitle="Data satuan pengujian laboratorium">
+                <div class="row g-3">
+                    <div class="col-md-4 col-12">
+                        <label for="kode" class="form-label required">Kode</label>
+                        <input type="text" class="form-control" id="kode" name="kode" required>
+                    </div>
+                    <div class="col-md-4 col-12">
+                        <label for="judul_indonesia" class="form-label required">Judul Indonesia</label>
+                        <input type="text" class="form-control scientific-input" id="judul_indonesia" name="judul_indonesia" required>
+                    </div>
+                    <div class="col-md-4 col-12">
+                        <label for="judul_inggris" class="form-label required">Judul Inggris</label>
+                        <input type="text" class="form-control scientific-input" id="judul_inggris" name="judul_inggris" required>
+                    </div>
+                    <div class="col-md-12">
+                        <label for="keterangan" class="form-label">Keterangan</label>
+                        <textarea class="form-control" id="keterangan" name="keterangan" rows="3"></textarea>
+                    </div>
                 </div>
-                <div class="col-md-4 col-12">
-                    <label for="judul_indonesia" class="form-label required">Judul Indonesia</label>
-                    <input type="text" class="form-control scientific-input" id="judul_indonesia" name="judul_indonesia" required>
-                </div>
-                <div class="col-md-4 col-12">
-                    <label for="judul_inggris" class="form-label required">Judul Inggris</label>
-                    <input type="text" class="form-control scientific-input" id="judul_inggris" name="judul_inggris" required>
-                </div>
-                <div class="col-md-12">
-                    <label for="keterangan" class="form-label">Keterangan</label>
-                    <textarea class="form-control" id="keterangan" name="keterangan" rows="3"></textarea>
-                </div>
-            </div>
-        </x-section-card>
+            </x-section-card>
+        </div>
 
         <x-form-actions back-route="{{ route('testing-units.index') }}" submit-label="Simpan Testing Unit" />
 

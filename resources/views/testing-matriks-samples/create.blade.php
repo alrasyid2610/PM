@@ -22,37 +22,39 @@
 
 @section('content')
 <section class="section">
-    <form id="testingMatriksSampleForm">
+    <form id="testingMatriksSampleForm" class="row g-3">
         @csrf
 
-        <x-section-card icon="fa-vials" color="icon-teal" title="Testing Matriks Samples" subtitle="Data matriks sampel pengujian">
-            <div class="row g-3">
-                <div class="col-md-12">
-                    <label class="form-label required">Kelompok Matriks Sample</label>
-                    <select id="id_testing_kelompok_matriks_sample"
-                            name="id_testing_kelompok_matriks_sample"
-                            class="form-select"
-                            required>
-                    </select>
+        <div class="col-12">
+            <x-section-card icon="fa-vials" color="icon-teal" title="Testing Matriks Samples" subtitle="Data matriks sampel pengujian">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label required">Kelompok Matriks Sample</label>
+                        <select id="id_testing_kelompok_matriks_sample"
+                                name="id_testing_kelompok_matriks_sample"
+                                class="form-select"
+                                required>
+                        </select>
+                    </div>
+                    <div class="col-md-4 col-12">
+                        <label class="form-label required">Kode</label>
+                        <input type="text" class="form-control" name="kode" required>
+                    </div>
+                    <div class="col-md-4 col-12">
+                        <label class="form-label required">Judul Indonesia</label>
+                        <input type="text" class="form-control" name="judul_indonesia" required>
+                    </div>
+                    <div class="col-md-4 col-12">
+                        <label class="form-label required">Judul Inggris</label>
+                        <input type="text" class="form-control" name="judul_inggris" required>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Keterangan</label>
+                        <textarea class="form-control" name="keterangan" rows="3"></textarea>
+                    </div>
                 </div>
-                <div class="col-md-4 col-12">
-                    <label class="form-label required">Kode</label>
-                    <input type="text" class="form-control" name="kode" required>
-                </div>
-                <div class="col-md-4 col-12">
-                    <label class="form-label required">Judul Indonesia</label>
-                    <input type="text" class="form-control" name="judul_indonesia" required>
-                </div>
-                <div class="col-md-4 col-12">
-                    <label class="form-label required">Judul Inggris</label>
-                    <input type="text" class="form-control" name="judul_inggris" required>
-                </div>
-                <div class="col-md-12">
-                    <label class="form-label">Keterangan</label>
-                    <textarea class="form-control" name="keterangan" rows="3"></textarea>
-                </div>
-            </div>
-        </x-section-card>
+            </x-section-card>
+        </div>
 
         <x-form-actions back-route="{{ route('testing-matriks-samples.index') }}" submit-label="Simpan Data" />
 

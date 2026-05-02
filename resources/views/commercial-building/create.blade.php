@@ -28,11 +28,15 @@
         <!-- SECTION 1: INFORMASI GEDUNG -->
         <x-section-card icon="fa-building" color="icon-blue" title="Commercial Building" subtitle="Data gedung komersial">
             <div class="row g-3">
-                <div class="col-md-6 col-12">
+                <div class="col-md-5 col-12">
                     <label class="form-label required">Nama Gedung</label>
                     <input type="text" name="nama" class="form-control" required>
                 </div>
-                <div class="col-md-4 col-12">
+                <div class="col-md-2 col-12">
+                    <label class="form-label">Kode</label>
+                    <input type="text" name="kode" class="form-control">
+                </div>
+                <div class="col-md-3 col-12">
                     <label class="form-label">Website</label>
                     <input type="text" name="website" class="form-control">
                 </div>

@@ -14,13 +14,34 @@ class BusinessRelationController extends Controller
 {
     use HasAuditHistoryWithLines;
 
-    protected function auditTable(): string { return 'business_relations'; }
-    protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_br', '_lines']; }
-    protected function auditLinesTable(): string { return 'business_relation_sites'; }
-    protected function auditLinesForeignKey(): string { return 'id_br'; }
-    protected function auditLinesPrimaryKey(): string { return 'id_site'; }
-    protected function auditLinesExcludeFields(): array { return ['updated_at', 'created_at', 'id_site', 'id_br']; }
-    protected function auditLinesLabelField(): string { return 'nama_lokasi'; }
+    protected function auditTable(): string
+    {
+        return 'business_relations';
+    }
+    protected function auditExcludeFields(): array
+    {
+        return ['updated_at', 'created_at', 'id_br', '_lines'];
+    }
+    protected function auditLinesTable(): string
+    {
+        return 'business_relation_sites';
+    }
+    protected function auditLinesForeignKey(): string
+    {
+        return 'id_br';
+    }
+    protected function auditLinesPrimaryKey(): string
+    {
+        return 'id_site';
+    }
+    protected function auditLinesExcludeFields(): array
+    {
+        return ['updated_at', 'created_at', 'id_site', 'id_br'];
+    }
+    protected function auditLinesLabelField(): string
+    {
+        return 'nama_lokasi';
+    }
 
     public function history($id)
     {
@@ -259,7 +280,8 @@ class BusinessRelationController extends Controller
                     'kode_pos' => $request->kode_pos,
                     'kawasan_bisnis' => $request->kawasan_bisnis,
                     'gedung' => $request->gedung,
-                    'alamat' => $request->alamat,
+                    'keterangan_alamat' => $request->keterangan_alamat,
+                    'nama_jalan' => $request->nama_jalan,
                     'npwp_cabang' => $request->npwp_cabang,
                     'is_aktif' => 1,
                     'created_at' => now(),
@@ -271,6 +293,7 @@ class BusinessRelationController extends Controller
                     ->where('id_site', $request->site_id)
                     ->update([
                         'nama_lokasi'     => $request->nama_lokasi,
+                        'is_kantor_pusat'     => $request->is_kantor_pusat,
                         'alamat_lengkap'  => $request->alamat_lengkap,
                         'provinsi'        => $request->provinsi,
                         'kota_kabupaten'  => $request->kota_kabupaten,
@@ -298,7 +321,8 @@ class BusinessRelationController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan sistem'
+                // 'message' => 'Terjadi kesalahan sistem'
+                'message' => $e->getMessage()
             ], 500);
         }
     }
@@ -354,6 +378,7 @@ class BusinessRelationController extends Controller
                 ->where('id_site', $request->id_site)
                 ->update([
                     'nama_lokasi'     => $request->nama_lokasi,
+                    'is_kantor_pusat' => $request->is_kantor_pusat,
                     'alamat_lengkap'  => $request->alamat_lengkap,
                     'provinsi'        => $request->provinsi,
                     'kota_kabupaten'  => $request->kota_kabupaten,
@@ -510,7 +535,7 @@ class BusinessRelationController extends Controller
                 'be.nama as nama_kawasan_bisnis',
                 's.gedung as id_building',    // ← ID untuk value select2
                 'cb.nama as nama_gedung',
-                's.alamat',
+                's.keterangan_alamat',
                 's.npwp_cabang',
                 's.is_aktif as s_is_aktif',
                 's.created_at as s_created_at',

@@ -65,8 +65,26 @@ function renderForm(res) {
                         className: "col-md-4",
                     })}
                     ${formGroup.select(
+                        "kategori_bisnis",
+                        "Kategori Bisnis",
+                        res.kategori_bisnis,
+                        [
+                            { value: "Manufaktur", label: "Manufaktur" },
+                            {
+                                value: "Makanan & Minuman",
+                                label: "Makanan & Minuman",
+                            },
+                            { value: "Otomotif", label: "Otomotif" },
+                            { value: "Industri", label: "Industri" },
+                            { value: "Perdagangan", label: "Perdagangan" },
+                            { value: "Jasa", label: "Jasa" },
+                            { value: "Konstruksi", label: "Konstruksi" },
+                        ],
+                        { className: "col-md-4" },
+                    )}
+                    ${formGroup.select(
                         "sub_kategori_bisnis",
-                        "sub_kategori_bisnis",
+                        "Sub Kategori Bisnis",
                         res.sub_kategori_bisnis,
                         [
                             { value: "Otomotif", label: "Otomotif" },
@@ -78,6 +96,15 @@ function renderForm(res) {
                     ${formGroup.text("website", "Website", res.website, false, {
                         className: "col-md-4",
                     })}
+                    ${formGroup.text(
+                        "nomor_telepon",
+                        "Nomor Telepon",
+                        res.nomor_telepon,
+                        false,
+                        {
+                            className: "col-md-4",
+                        },
+                    )}
                     ${formGroup.select(
                         "br_is_aktif",
                         "Status",
@@ -105,7 +132,7 @@ function renderForm(res) {
             icon: "fa-location-dot",
             color: "icon-blue",
             title: "Business Relation Site",
-            subtitle: "Data lokasi & cabang",
+            subtitle: "Data Site",
             actions: `<div style="min-width:220px">
                 <select id="site-switcher"
                         data-id-br="${res.id_br}"
@@ -117,8 +144,17 @@ function renderForm(res) {
             </div>`,
         },
         `<div class="row g-3 form-2">
-            ${formGroup.text("nama_lokasi", "Lokasi / Cabang", res.nama_lokasi, true, { className: "col-md-8" })}
-            ${formGroup.text("npwp_cabang", "NPWP Cabang", res.npwp_cabang, false, { className: "col-md-4" })}
+            ${formGroup.text("nama_lokasi", "Site", res.nama_lokasi, true, { className: "col-md-7" })}
+            ${formGroup.text("npwp_cabang", "NPWP Site", res.npwp_cabang, false, { className: "col-md-3" })}
+             ${formGroup.checkbox(
+                 "is_kantor_pusat",
+                 "Kantor Pusat",
+                 res.is_kantor_pusat,
+                 {
+                     className: "col-md-2",
+                     checkLabel: "Kantor Pusat",
+                 },
+             )}
             ${formGroup.wilayah({
                 provinsiValue: res.provinsi,
                 kotaValue: res.kota_kabupaten,
@@ -126,16 +162,22 @@ function renderForm(res) {
                 kelurahanValue: res.kelurahan,
                 kodePos: res.kode_pos,
             })}
-            ${formGroup.select("kawasan_bisnis", "Kawasan Bisnis", res.id_bestate, [], {
-                mode: "ajax",
-                url: "/business-estates/select2",
-                placeholder: "Pilih Kawasan Bisnis",
-                label: res.nama_kawasan_bisnis,
-                className: "col-md-4",
-                allowClear: true,
-                showAll: true,
-                createUrl: "/business-estates/create",
-            })}
+            ${formGroup.select(
+                "kawasan_bisnis",
+                "Kawasan Bisnis",
+                res.id_bestate,
+                [],
+                {
+                    mode: "ajax",
+                    url: "/business-estates/select2",
+                    placeholder: "Pilih Kawasan Bisnis",
+                    label: res.nama_kawasan_bisnis,
+                    className: "col-md-4",
+                    allowClear: true,
+                    showAll: true,
+                    createUrl: "/business-estates/create",
+                },
+            )}
             ${formGroup.select("gedung", "Gedung", res.id_building, [], {
                 mode: "ajax",
                 url: "/commercial-buildings/select2",
@@ -146,12 +188,18 @@ function renderForm(res) {
                 showAll: true,
                 createUrl: "/commercial-buildings/create",
             })}
-            ${formGroup.select("s_is_aktif", "Status", res.s_is_aktif, [
-                { value: 1, label: "Aktif" },
-                { value: 0, label: "Tidak Aktif" },
-            ], { className: "col-md-4" })}
+            ${formGroup.select(
+                "s_is_aktif",
+                "Status",
+                res.s_is_aktif,
+                [
+                    { value: 1, label: "Aktif" },
+                    { value: 0, label: "Tidak Aktif" },
+                ],
+                { className: "col-md-4" },
+            )}
             ${formGroup.textarea("alamat_lengkap", "Alamat Lengkap", res.alamat_lengkap, { className: "col-md-12" })}
-        </div>`
+        </div>`,
     )}
 
 </form>

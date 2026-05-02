@@ -22,34 +22,38 @@
 
 @section('content')
 <section class="section">
-    <form id="testingStandardForm" enctype="multipart/form-data">
+    <form id="testingStandardForm" enctype="multipart/form-data" class="row g-3">
         @csrf
 
         <!-- SECTION 1: INFORMASI STANDARD -->
-        <x-section-card icon="fa-book" color="icon-navy" title="Testing Standards" subtitle="Data standar pengujian laboratorium">
-            <div class="row g-3">
-                <div class="col-md-4 col-12">
-                    <label for="nomor" class="form-label required">Nomor</label>
-                    <input type="text" class="form-control" id="nomor" name="nomor" required>
+        <div class="col-12">
+            <x-section-card icon="fa-book" color="icon-navy" title="Testing Standards" subtitle="Data standar pengujian laboratorium">
+                <div class="row g-3">
+                    <div class="col-md-4 col-12">
+                        <label for="nomor" class="form-label required">Nomor</label>
+                        <input type="text" class="form-control" id="nomor" name="nomor" required>
+                    </div>
+                    <div class="col-md-6 col-12">
+                        <label for="judul" class="form-label required">Judul</label>
+                        <input type="text" class="form-control" id="judul" name="judul" required>
+                    </div>
+                    <div class="col-md-2 col-12">
+                        <label for="is_aktif" class="form-label required">Status</label>
+                        <select class="form-select" id="is_aktif" name="is_aktif" required>
+                            <option value="1">Aktif</option>
+                            <option value="0">Tidak Aktif</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="col-md-6 col-12">
-                    <label for="judul" class="form-label required">Judul</label>
-                    <input type="text" class="form-control" id="judul" name="judul" required>
-                </div>
-                <div class="col-md-2 col-12">
-                    <label for="is_aktif" class="form-label required">Status</label>
-                    <select class="form-select" id="is_aktif" name="is_aktif" required>
-                        <option value="1">Aktif</option>
-                        <option value="0">Tidak Aktif</option>
-                    </select>
-                </div>
-            </div>
-        </x-section-card>
+            </x-section-card>
+        </div>
 
         <!-- SECTION 2: ATTACHMENT -->
-        <x-section-card icon="fa-paperclip" color="icon-blue" title="Attachment" subtitle="File pendukung standard">
-            <input type="file" class="filepond" name="attachments[]" multiple>
-        </x-section-card>
+        <div class="col-12">
+            <x-section-card icon="fa-paperclip" color="icon-blue" title="Attachment" subtitle="File pendukung standard">
+                <input type="file" class="filepond" name="attachments[]" multiple>
+            </x-section-card>
+        </div>
 
         <x-form-actions back-route="{{ route('testing-standards.index') }}" submit-label="Simpan Testing Standard" />
 
