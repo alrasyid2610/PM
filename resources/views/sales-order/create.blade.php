@@ -12,19 +12,12 @@
 
 @section('content')
 <section class="section">
-    <form id="salesOrderForm">
+    <form id="salesOrderForm" class="row g-3">
         @csrf
 
         <!-- SECTION 1: INFORMASI ORDER -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-navy">
-                    <i class="fa-solid fa-file-lines"></i>
-                </div>
-                <div class="detail-section-title">Informasi Order</div>
-                <div class="detail-section-sub">Data utama sales order</div>
-            </div>
-            <div class="detail-section-body">
+        <div class="col-12">
+            <x-section-card icon="fa-file-lines" color="icon-navy" title="Informasi Order" subtitle="Data utama sales order">
                 <div class="row g-3">
                     <div class="col-md-3 col-12">
                         <label class="form-label required">Tanggal SO</label>
@@ -51,19 +44,12 @@
                         </select>
                     </div>
                 </div>
-            </div>
+            </x-section-card>
         </div>
 
         <!-- SECTION 2: PURCHASE ORDER -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-amber">
-                    <i class="fa-solid fa-receipt"></i>
-                </div>
-                <div class="detail-section-title">Purchase Order (PO)</div>
-                <div class="detail-section-sub">Referensi PO dari pelanggan</div>
-            </div>
-            <div class="detail-section-body">
+        <div class="col-12">
+            <x-section-card icon="fa-receipt" color="icon-amber" title="Purchase Order (PO)" subtitle="Referensi PO dari pelanggan">
                 <div class="row g-3">
                     <div class="col-md-12">
                         <div class="form-check form-switch">
@@ -85,20 +71,13 @@
                         <input type="text" name="no_po" class="form-control">
                     </div>
                 </div>
-            </div>
+            </x-section-card>
         </div>
 
         <!-- SECTION 3: DATA PELANGGAN -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-blue">
-                    <i class="fa-solid fa-building-user"></i>
-                </div>
-                <div class="detail-section-title">Data Pelanggan</div>
-                <div class="detail-section-sub">Billing, Delivery & Payment</div>
-            </div>
-            <div class="detail-section-body">
-
+        <div class="col-12">
+            <x-section-card icon="fa-building-user" color="icon-blue" title="Data Pelanggan" subtitle="Billing, Delivery & Payment">
+    
                 <!-- Party header desktop -->
                 <div class="detail-party-header d-none d-md-grid">
                     <div class="detail-party-label">
@@ -111,7 +90,7 @@
                         <i class="fa-solid fa-money-bill me-1"></i> Payment (Pembayaran)
                     </div>
                 </div>
-
+    
                 <!-- Pelanggan -->
                 <div class="row g-3 mb-1">
                     <div class="col-12 d-md-none">
@@ -148,7 +127,7 @@
                         </select>
                     </div>
                 </div>
-
+    
                 <!-- Site -->
                 <div class="row g-3 mb-1">
                     <div class="col-md-4 col-12">
@@ -170,7 +149,7 @@
                         </select>
                     </div>
                 </div>
-
+    
                 <!-- PIC — Section 3 -->
                 <div class="row g-3">
                     <div class="col-md-4 col-12">
@@ -198,20 +177,13 @@
                         </select>
                     </div>
                 </div>
-
-            </div>
+    
+            </x-section-card>
         </div>
 
         <!-- SECTION 4: PIC INTERNAL -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-green">
-                    <i class="fa-solid fa-users"></i>
-                </div>
-                <div class="detail-section-title">PIC Internal</div>
-                <div class="detail-section-sub">Penanggung jawab dari Pramatek</div>
-            </div>
-            <div class="detail-section-body">
+        <div class="col-12">
+            <x-section-card icon="fa-users" color="icon-green" title="PIC Internal" subtitle="Penanggung jawab dari Pramatek">
                 <div class="row g-3">
                     <div class="col-md-3 col-12">
                         <label class="form-label">PIC Input</label>
@@ -238,18 +210,12 @@
                         </select>
                     </div>
                 </div>
-            </div>
+            </x-section-card>
         </div>
 
         <!-- SECTION 5: STATUS & KETERANGAN -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-purple">
-                    <i class="fa-solid fa-circle-info"></i>
-                </div>
-                <div class="detail-section-title">Status & Keterangan</div>
-            </div>
-            <div class="detail-section-body">
+        <div class="col-12">
+            <x-section-card icon="fa-circle-info" color="icon-purple" title="Status & Keterangan">
                 <div class="row g-3">
                     <div class="col-md-3 col-12">
                         <label class="form-label">Status</label>
@@ -264,18 +230,11 @@
                         <textarea name="keterangan" class="form-control" rows="3"></textarea>
                     </div>
                 </div>
-            </div>
+            </x-section-card>
         </div>
 
         <!-- ACTION BUTTONS -->
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{{ url('sales-orders') }}" class="btn btn-secondary btn-sm">
-                <i class="fa-solid fa-arrow-left me-1"></i> Kembali
-            </a>
-            <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Sales Order
-            </button>
-        </div>
+        <x-form-actions back-route="{{ url('sales-orders') }}" submit-label="Simpan Sales Order" />
 
     </form>
 </section>
@@ -286,6 +245,8 @@
     var dataPelanggan = '';
 
     $(document).ready(function () {
+        $('select[name="id_office"]').select2({ placeholder: 'Pilih Office', allowClear: true, width: '100%' });
+
         loadPelangganDetails();
         //  loadPICInternal();
         loadAllContacts();

@@ -4,6 +4,14 @@ $(document).ready(function () {
     page = new CrudPageController({
         primaryKey: 'id',
         renderForm: renderForm,
+        initSelect: function () {
+            $('select[name="menu_group_id"]', '#detailContent').select2({
+                width: '100%',
+                dropdownParent: $('#detailContent'),
+                placeholder: '-- Tanpa Grup --',
+                allowClear: true,
+            });
+        },
         afterRender: function (res) {
             initPermissionMatrix();
         },

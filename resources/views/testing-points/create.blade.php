@@ -22,19 +22,12 @@
 
 @section('content')
 <section class="section">
-    <form id="testingPointForm" enctype="multipart/form-data">
+    <form id="testingPointForm" enctype="multipart/form-data" class="row g-3">
         @csrf
 
         <!-- SECTION 1: INFORMASI POINT -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-navy">
-                    <i class="fa-solid fa-map-pin"></i>
-                </div>
-                <div class="detail-section-title">Testing Points</div>
-                <div class="detail-section-sub">Data titik pengujian laboratorium</div>
-            </div>
-            <div class="detail-section-body">
+        <div class="col-12">
+            <x-section-card icon="fa-map-pin" color="icon-navy" title="Testing Points" subtitle="Data titik pengujian laboratorium">
                 <div class="row g-3">
                     <div class="col-md-6 col-12">
                         <label class="form-label required">Testing Standard</label>
@@ -74,36 +67,24 @@
                         <textarea class="form-control" name="keterangan" rows="3"></textarea>
                     </div>
                 </div>
-            </div>
+            </x-section-card>
         </div>
 
         <!-- SECTION 2: ATTACHMENT -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-blue">
-                    <i class="fa-solid fa-paperclip"></i>
-                </div>
-                <div class="detail-section-title">Attachment</div>
-                <div class="detail-section-sub">File pendukung testing point</div>
-            </div>
-            <div class="detail-section-body">
+        <div class="col-12">
+            <x-section-card icon="fa-paperclip" color="icon-blue" title="Attachment" subtitle="File pendukung testing point">
                 <input type="file" class="filepond" name="attachments[]" multiple>
-            </div>
+            </x-section-card>
         </div>
 
         <!-- SECTION 3: TESTING ITEMS -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-green">
-                    <i class="fa-solid fa-table-list"></i>
-                </div>
-                <div class="detail-section-title">Testing Items</div>
-                <div class="detail-section-sub">Detail item pengujian per point</div>
-                <button type="button" class="btn btn-primary btn-sm btn-add-row ms-2">
-                    <i class="fa-solid fa-plus me-1"></i> Tambah Baris
-                </button>
-            </div>
-            <div class="detail-section-body p-0">
+        <div class="col-12">
+            <x-section-card icon="fa-table-list" color="icon-green" title="Testing Items" subtitle="Detail item pengujian per point">
+                <x-slot name="actions">
+                    <button type="button" class="btn btn-primary btn-sm btn-add-row ms-2">
+                        <i class="fa-solid fa-plus me-1"></i> Tambah Baris
+                    </button>
+                </x-slot>
                 <div class="dynamic-table-wrapper">
                     <div class="table-responsive">
                         <table id="Table" class="table table-bordered table-sm dynamic-table mb-0">
@@ -155,17 +136,10 @@
                         </table>
                     </div>
                 </div>
-            </div>
+            </x-section-card>
         </div>
 
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{{ route('testing-points.index') }}" class="btn btn-secondary btn-sm">
-                <i class="fa-solid fa-arrow-left me-1"></i> Kembali
-            </a>
-            <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Data
-            </button>
-        </div>
+        <x-form-actions back-route="{{ route('testing-points.index') }}" submit-label="Simpan Data" />
 
     </form>
 </section>
@@ -175,6 +149,8 @@
 <script>
     $(document).ready(function () {
         createFileUploader(".filepond");
+
+        $('select[name="is_aktif"]').select2({ placeholder: 'Pilih Status', width: '100%' });
 
         $("#id_testing_standard").select2({
             placeholder: "Pilih Testing Standard...",
@@ -188,6 +164,12 @@
                     })),
                 }),
             },
+            language: {
+                noResults: function () {
+                    return `<span>Tidak ditemukan. <a href="{{ route('testing-standards.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`;
+                },
+            },
+            escapeMarkup: function (m) { return m; },
         });
 
         $("#id_testing_matriks_sample").select2({
@@ -202,6 +184,12 @@
                     })),
                 }),
             },
+            language: {
+                noResults: function () {
+                    return `<span>Tidak ditemukan. <a href="{{ route('testing-matriks-samples.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`;
+                },
+            },
+            escapeMarkup: function (m) { return m; },
         });
 
         $(".btn-add-row").on("click", function () {

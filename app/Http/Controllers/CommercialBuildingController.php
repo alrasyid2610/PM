@@ -88,6 +88,7 @@ class CommercialBuildingController extends Controller
         // =========================
         $validated = $request->validate([
             'nama'            => 'required|string|max:255',
+            'kode'            => 'nullable|string|max:50',
             'alamat'          => 'required|string',
             'provinsi'        => 'nullable|string|max:100',
             'kota_kabupaten'  => 'nullable|string|max:100',
@@ -103,6 +104,7 @@ class CommercialBuildingController extends Controller
         // =========================
         $id = DB::table('commercial_buildings')->insertGetId([
             'nama'           => $validated['nama'],
+            'kode'           => $validated['kode'] ?? null,
             'alamat'         => $validated['alamat'],
             'provinsi'       => $validated['provinsi'] ?? null,
             'kota_kabupaten' => $validated['kota_kabupaten'] ?? null,
@@ -163,7 +165,7 @@ class CommercialBuildingController extends Controller
                 ->with('error', 'Data Commercial Building tidak ditemukan');
         }
 
-        return view('business-building.edit', [
+        return view('commercial-building.edit', [
             'building' => $building
         ]);
     }
@@ -175,6 +177,7 @@ class CommercialBuildingController extends Controller
         // =========================
         $validated = $request->validate([
             'nama'            => 'required|string|max:255',
+            'kode'            => 'nullable|string|max:50',
             'alamat'          => 'nullable|string',
             'provinsi'        => 'nullable|string|max:150',
             'kota_kabupaten'  => 'nullable|string|max:150',
@@ -214,6 +217,7 @@ class CommercialBuildingController extends Controller
                 ->where('id_building', $id)
                 ->update([
                     'nama'           => $validated['nama'],
+                    'kode'           => $validated['kode'] ?? null,
                     'alamat'         => $validated['alamat'] ?? null,
                     'provinsi'       => $validated['provinsi'] ?? null,
                     'kota_kabupaten' => $validated['kota_kabupaten'] ?? null,

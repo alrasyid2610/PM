@@ -24,18 +24,11 @@
 
 @section('content')
 <section class="section">
-    <form id="testingUnitForm">
+    <form id="testingUnitForm" class="row g-3">
         @csrf
 
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-amber">
-                    <i class="fa-solid fa-ruler"></i>
-                </div>
-                <div class="detail-section-title">Informasi Unit</div>
-                <div class="detail-section-sub">Data satuan pengujian laboratorium</div>
-            </div>
-            <div class="detail-section-body">
+        <div class="col-12">
+            <x-section-card icon="fa-ruler" color="icon-amber" title="Informasi Unit" subtitle="Data satuan pengujian laboratorium">
                 <div class="row g-3">
                     <div class="col-md-4 col-12">
                         <label for="kode" class="form-label required">Kode</label>
@@ -54,17 +47,10 @@
                         <textarea class="form-control" id="keterangan" name="keterangan" rows="3"></textarea>
                     </div>
                 </div>
-            </div>
+            </x-section-card>
         </div>
 
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{{ route('testing-units.index') }}" class="btn btn-secondary btn-sm">
-                <i class="fa-solid fa-arrow-left me-1"></i> Kembali
-            </a>
-            <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Testing Unit
-            </button>
-        </div>
+        <x-form-actions back-route="{{ route('testing-units.index') }}" submit-label="Simpan Testing Unit" />
 
     </form>
 </section>

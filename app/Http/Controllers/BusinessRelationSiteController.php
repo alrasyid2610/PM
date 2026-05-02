@@ -12,61 +12,67 @@ class BusinessRelationSiteController extends Controller
     {
         $search = trim($request->q);
 
-        $query = DB::table('business_relation_sites')
+        $query = DB::table('business_relation_sites as s')
+            ->leftJoin('business_estates as be', 'be.id_bestate', '=', 's.kawasan_bisnis')
+            ->leftJoin('commercial_buildings as cb', 'cb.id_building', '=', 's.gedung')
             ->select([
-                'id_site',
-                'id_br',
-                'nama_lokasi',
-                'alamat_lengkap',
-                'provinsi',
-                'kota_kabupaten',
-                'kecamatan',
-                'kelurahan',
-                'kode_pos',
-                'kawasan_bisnis',
-                'gedung',
-                'alamat',
-                'npwp_cabang',
-                'is_kantor_pusat',
-                'is_aktif',
+                's.id_site',
+                's.id_br',
+                's.nama_lokasi',
+                's.alamat_lengkap',
+                's.provinsi',
+                's.kota_kabupaten',
+                's.kecamatan',
+                's.kelurahan',
+                's.kode_pos',
+                's.kawasan_bisnis',
+                'be.nama as nama_kawasan_bisnis',
+                's.gedung',
+                'cb.nama as nama_gedung',
+                's.nama_jalan',
+                's.keterangan_alamat',
+                's.alamat',
+                's.npwp_cabang',
+                's.is_kantor_pusat',
+                's.is_aktif',
             ]);
 
         if (!empty($id)) {
-            $query->where('id_br', $id);
+            $query->where('s.id_br', $id);
         }
 
-
-        // search hanya jika ada keyword
         if (!empty($search)) {
-            $query->where('nama_lokasi', 'like', "%{$search}%");
+            $query->where('s.nama_lokasi', 'like', "%{$search}%");
         }
 
         $sites = $query
-            ->orderByDesc('is_kantor_pusat') // kantor pusat di atas
-            ->orderBy('nama_lokasi')
+            ->orderByDesc('s.is_kantor_pusat')
+            ->orderBy('s.nama_lokasi')
             ->limit(10)
             ->get();
 
         return response()->json(
             $sites->map(function ($site) {
                 return [
-                    'id'              => $site->id_site,   // WAJIB utk Select2
-                    'text'            => $site->nama_lokasi,
-
-                    // auto-fill fields
-                    'nama_lokasi'     => $site->nama_lokasi,
-                    'alamat_lengkap'  => $site->alamat_lengkap,
-                    'provinsi'        => $site->provinsi,
-                    'kota_kabupaten'  => $site->kota_kabupaten,
-                    'kecamatan'       => $site->kecamatan,
-                    'kelurahan'       => $site->kelurahan,
-                    'kode_pos'        => $site->kode_pos,
-                    'kawasan_bisnis'  => $site->kawasan_bisnis,
-                    'gedung'          => $site->gedung,
-                    'alamat'          => $site->alamat,
-                    'npwp_cabang'     => $site->npwp_cabang,
-                    'is_aktif'        => $site->is_aktif,
-                    'is_kantor_pusat' => $site->is_kantor_pusat,
+                    'id'                   => $site->id_site,
+                    'text'                 => $site->nama_lokasi,
+                    'nama_lokasi'          => $site->nama_lokasi,
+                    'alamat_lengkap'       => $site->alamat_lengkap,
+                    'provinsi'             => $site->provinsi,
+                    'kota_kabupaten'       => $site->kota_kabupaten,
+                    'kecamatan'            => $site->kecamatan,
+                    'kelurahan'            => $site->kelurahan,
+                    'kode_pos'             => $site->kode_pos,
+                    'kawasan_bisnis'       => $site->kawasan_bisnis,
+                    'nama_kawasan_bisnis'  => $site->nama_kawasan_bisnis,
+                    'gedung'               => $site->gedung,
+                    'nama_gedung'          => $site->nama_gedung,
+                    'nama_jalan'           => $site->nama_jalan,
+                    'keterangan_alamat'    => $site->keterangan_alamat,
+                    'alamat'               => $site->alamat,
+                    'npwp_cabang'          => $site->npwp_cabang,
+                    'is_aktif'             => $site->is_aktif,
+                    'is_kantor_pusat'      => $site->is_kantor_pusat,
                 ];
             })
         );

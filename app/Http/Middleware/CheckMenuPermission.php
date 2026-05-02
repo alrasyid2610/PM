@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 class CheckMenuPermission
 {
     // Route pertama yang tidak perlu autentikasi
-    private const PUBLIC_SEGMENTS = ['login', 'logout', 'up', 'test-pdf', 'test-pdf-view', 'test-pdf-download', 'test-so-pdf'];
+    private const PUBLIC_SEGMENTS = ['login', 'logout', 'up', 'test-pdf', 'test-pdf-view', 'test-pdf-download', 'test-so-pdf', 'wilayah'];
 
     // Route yang tidak perlu cek permission (cukup auth)
     private const OPEN_SEGMENTS = ['dashboard', 'api'];

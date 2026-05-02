@@ -23,19 +23,12 @@
 
 @section('content')
 <section class="section">
-    <form id="testingParameterForm" enctype="multipart/form-data">
+    <form id="testingParameterForm" enctype="multipart/form-data" class="row g-3">
         @csrf
 
         <!-- SECTION 1: INFORMASI PARAMETER -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-amber">
-                    <i class="fa-solid fa-flask"></i>
-                </div>
-                <div class="detail-section-title">Informasi Parameter</div>
-                <div class="detail-section-sub">Data parameter pengujian laboratorium</div>
-            </div>
-            <div class="detail-section-body">
+        <div class="col-12">
+            <x-section-card icon="fa-flask" color="icon-amber" title="Informasi Parameter" subtitle="Data parameter pengujian laboratorium">
                 <div class="row g-3">
                     <div class="col-md-4 col-12">
                         <label for="kelompok" class="form-label">Kelompok</label>
@@ -76,31 +69,17 @@
                         <textarea class="form-control" id="keterangan" name="keterangan" rows="3"></textarea>
                     </div>
                 </div>
-            </div>
+            </x-section-card>
         </div>
 
         <!-- SECTION 2: ATTACHMENT -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-blue">
-                    <i class="fa-solid fa-paperclip"></i>
-                </div>
-                <div class="detail-section-title">Attachment</div>
-                <div class="detail-section-sub">File pendukung parameter</div>
-            </div>
-            <div class="detail-section-body">
+        <div class="col-12">
+            <x-section-card icon="fa-paperclip" color="icon-blue" title="Attachment" subtitle="File pendukung parameter">
                 <input type="file" class="filepond" name="attachments[]" multiple>
-            </div>
+            </x-section-card>
         </div>
 
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{{ route('testing-parameters.index') }}" class="btn btn-secondary btn-sm">
-                <i class="fa-solid fa-arrow-left me-1"></i> Kembali
-            </a>
-            <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Testing Parameter
-            </button>
-        </div>
+        <x-form-actions back-route="{{ route('testing-parameters.index') }}" submit-label="Simpan Testing Parameter" />
 
     </form>
 </section>

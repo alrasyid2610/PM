@@ -22,45 +22,11 @@
 
 
 @section('content')
-<style>
-    thead * {
-        text-align: center
-    }
-</style>
-
-<section class="section">
-    <div class="card">
-        <div class="card-body">
-
-            <x-datatable-header
-                title="List of Estate"
-                create-route="business-estates.create"
-                add-label="Add Data"
-                :with-history="true"
-            />
-
-            <div class="tab-content">
-                <div class="tab-pane fade show active" id="tab-data">
-                    <div class="table-responsive">
-                        <table id="business-estates-table" class="table table-striped table-hover table-sm table-bordered w-100" data-datatable-auto-columns="true">
-                            <thead></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="tab-pane fade" id="tab-detail">
-                    <div id="detailContent" class="p-3 text-muted">Pilih data pada tab Data untuk melihat detail</div>
-                </div>
-                <div class="tab-pane fade" id="tab-history">
-                    <div id="historyContent" class="p-3 text-muted">
-                        Pilih data pada tab Data untuk melihat history
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
+<x-crud-index
+    title="List of Estate"
+    create-route="business-estates.create"
+    :with-history="true"
+/>
 @endsection
 
 @section('custom-script')

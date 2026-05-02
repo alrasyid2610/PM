@@ -191,18 +191,9 @@ function renderForm(res) {
     <input type="hidden" name="id_testing_matriks_sample" value="${res.id_testing_matriks_sample}">
 
     <!-- SECTION 1: INFORMASI POINT -->
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-navy">
-                    <i class="fa-solid fa-map-pin"></i>
-                </div>
-                <div class="detail-section-title">Testing Points</div>
-                <div class="detail-section-sub">Data titik pengujian laboratorium</div>
-                ${formGroup.editButton("Edit Testing Point")}
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3 form-1">
+    ${formGroup.sectionCard(
+        { icon: 'fa-map-pin', color: 'icon-navy', title: 'Testing Points', subtitle: 'Data titik pengujian laboratorium', editTitle: 'Edit Testing Point' },
+        `<div class="row g-3 form-1">
                     ${formGroup.select(
                         "id_testing_standard",
                         "Testing Standard",
@@ -214,6 +205,7 @@ function renderForm(res) {
                             placeholder: "Pilih Standard",
                             label: res.standard_judul,
                             className: "col-md-6",
+                            createUrl: "/testing-standards/create",
                         },
                     )}
                     ${formGroup.select(
@@ -227,6 +219,7 @@ function renderForm(res) {
                             placeholder: "Pilih Matriks Sample",
                             label: res.matrik_sample_judul_indonesia,
                             className: "col-md-6",
+                            createUrl: "/testing-matriks-samples/create",
                         },
                     )}
                     ${formGroup.text("nama", "Nama", res.nama, true, {
@@ -267,39 +260,19 @@ function renderForm(res) {
                             className: "col-md-12",
                         },
                     )}
-                </div>
-            </div>
-        </div>
-    </div>
+                </div>`
+    )}
 
     <!-- SECTION 2: ATTACHMENT -->
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-blue">
-                    <i class="fa-solid fa-paperclip"></i>
-                </div>
-                <div class="detail-section-title">Attachment</div>
-                <div class="detail-section-sub">File pendukung testing point</div>
-            </div>
-            <div class="detail-section-body">
-                ${renderAttachmentSection()}
-            </div>
-        </div>
-    </div>
+    ${formGroup.sectionCard(
+        { icon: 'fa-paperclip', color: 'icon-blue', title: 'Attachment', subtitle: 'File pendukung testing point' },
+        `${renderAttachmentSection()}`
+    )}
 
     <!-- SECTION 3: TESTING ITEMS -->
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-green">
-                    <i class="fa-solid fa-table-list"></i>
-                </div>
-                <div class="detail-section-title">Testing Items</div>
-                <div class="detail-section-sub">Detail item pengujian per point</div>
-            </div>
-            <div class="detail-section-body p-0">
-                <div class="dynamic-table-wrapper">
+    ${formGroup.sectionCard(
+        { icon: 'fa-table-list', color: 'icon-green', title: 'Testing Items', subtitle: 'Detail item pengujian per point' },
+        `<div class="dynamic-table-wrapper">
                     <div class="p-3 pb-0">
                         <button type="button" class="btn btn-primary btn-sm btn-add-row">
                             <i class="fa-solid fa-plus me-1"></i> Tambah Baris
@@ -374,10 +347,8 @@ function renderForm(res) {
                             </td>
                         </tr>
                     </script>
-                </div>
-            </div>
-        </div>
-    </div>
+                </div>`
+    )}
 
 </form>
 `;

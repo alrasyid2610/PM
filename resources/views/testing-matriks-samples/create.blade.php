@@ -22,18 +22,11 @@
 
 @section('content')
 <section class="section">
-    <form id="testingMatriksSampleForm">
+    <form id="testingMatriksSampleForm" class="row g-3">
         @csrf
 
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-teal">
-                    <i class="fa-solid fa-vials"></i>
-                </div>
-                <div class="detail-section-title">Testing Matriks Samples</div>
-                <div class="detail-section-sub">Data matriks sampel pengujian</div>
-            </div>
-            <div class="detail-section-body">
+        <div class="col-12">
+            <x-section-card icon="fa-vials" color="icon-teal" title="Testing Matriks Samples" subtitle="Data matriks sampel pengujian">
                 <div class="row g-3">
                     <div class="col-md-12">
                         <label class="form-label required">Kelompok Matriks Sample</label>
@@ -60,17 +53,10 @@
                         <textarea class="form-control" name="keterangan" rows="3"></textarea>
                     </div>
                 </div>
-            </div>
+            </x-section-card>
         </div>
 
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{{ route('testing-matriks-samples.index') }}" class="btn btn-secondary btn-sm">
-                <i class="fa-solid fa-arrow-left me-1"></i> Kembali
-            </a>
-            <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Data
-            </button>
-        </div>
+        <x-form-actions back-route="{{ route('testing-matriks-samples.index') }}" submit-label="Simpan Data" />
 
     </form>
 </section>

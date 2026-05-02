@@ -92,18 +92,9 @@ async function renderForm(res) {
     <input type="hidden" name="_method" value="PUT">
 
     <!-- SECTION 1: INFORMASI USER -->
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-navy">
-                    <i class="fa-solid fa-user"></i>
-                </div>
-                <div class="detail-section-title">Informasi User</div>
-                <div class="detail-section-sub">Data akun pengguna sistem</div>
-                ${formGroup.editButton("Edit User")}
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3 form-1">
+    ${formGroup.sectionCard(
+        { icon: 'fa-user', color: 'icon-navy', title: 'Informasi User', subtitle: 'Data akun pengguna sistem', editTitle: 'Edit User' },
+        `<div class="row g-3 form-1">
                     ${formGroup.text("name", "Nama", res.name, true, { className: "col-md-5" })}
                     ${formGroup.text("email", "Email", res.email, true, { className: "col-md-5" })}
                     ${formGroup.select("is_active", "Status", res.is_active,
@@ -120,26 +111,14 @@ async function renderForm(res) {
                     <div class="col-md-12">
                         <small class="text-muted">Kosongkan Password Baru jika tidak ingin mengubah password. Permission dari grup akan digabung dengan override di bawah.</small>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
+                </div>`
+    )}
 
     <!-- SECTION 2: OVERRIDE PERMISSION -->
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-green">
-                    <i class="fa-solid fa-shield-halved"></i>
-                </div>
-                <div class="detail-section-title">Override Permission</div>
-                <div class="detail-section-sub">Tambahan akses di luar grup — digabung (OR) dengan permission grup</div>
-            </div>
-            <div class="detail-section-body p-0">
-                ${renderPermissionMatrix(res.permissions)}
-            </div>
-        </div>
-    </div>
+    ${formGroup.sectionCard(
+        { icon: 'fa-shield-halved', color: 'icon-green', title: 'Override Permission', subtitle: 'Tambahan akses di luar grup — digabung (OR) dengan permission grup' },
+        `${renderPermissionMatrix(res.permissions)}`
+    )}
 
 </form>`;
 }

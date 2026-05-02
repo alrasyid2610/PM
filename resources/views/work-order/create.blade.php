@@ -22,19 +22,12 @@
 
 @section('content')
 <section class="section">
-    <form id="workOrderForm">
+    <form id="workOrderForm" class="row g-3">
         @csrf
 
         <!-- SECTION 1: INFORMASI WORK ORDER -->
-        <div class="detail-section-card mb-3">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-navy">
-                    <i class="fa-solid fa-briefcase"></i>
-                </div>
-                <div class="detail-section-title">Informasi Work Order</div>
-                <div class="detail-section-sub">Data pekerjaan lapangan</div>
-            </div>
-            <div class="detail-section-body">
+        <div class="col-12">
+            <x-section-card icon="fa-briefcase" color="icon-navy" title="Informasi Work Order" subtitle="Data pekerjaan lapangan">
                 <div class="row g-3">
                     <div class="col-md-12 col-12">
                         <label class="form-label required">Sales Order</label>
@@ -56,7 +49,7 @@
                         <label class="form-label">Tanggal Selesai</label>
                         <input type="date" name="tanggal_selesai" class="form-control">
                     </div> --}}
-
+    
                     <div class="col-md-5 col-12">
                         <label class="form-label required">Pelanggan</label>
                         <select name="id_pelanggan" class="form-select" required>
@@ -69,7 +62,7 @@
                             <option value="">Pilih Pelanggan Site</option>
                         </select>
                     </div>
-
+    
                      <div class="col-md-2 col-12">
                         <label class="form-label">PIC Pekerjaan</label>
                         <select name="pic_pekerjaan"
@@ -78,24 +71,17 @@
                             <option value="">Pilih PIC</option>
                         </select>
                     </div>
-
-
+    
+    
                     <div class="col-md-12">
                         <label class="form-label">Keterangan</label>
                         <textarea name="keterangan" id="keterangan" class="form-control" rows="4"></textarea>
                     </div>
                 </div>
-            </div>
+            </x-section-card>
         </div>
 
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{{ url('work-orders') }}" class="btn btn-secondary btn-sm">
-                <i class="fa-solid fa-arrow-left me-1"></i> Kembali
-            </a>
-            <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Work Order
-            </button>
-        </div>
+        <x-form-actions back-route="{{ url('work-orders') }}" submit-label="Simpan Work Order" />
 
     </form>
 </section>
@@ -200,7 +186,7 @@
         $('#id_sales_order').select2({
             placeholder: 'Pilih atau ketik Sales Order',
             allowClear: true,
-            minimumInputLength: 2,
+            minimumInputLength: 0,
             ajax: {
                 url: "{{ route('sales-orders.select2') }}",
                 dataType: 'json',
@@ -212,7 +198,13 @@
                     return { results: data };
                 },
                 cache: true
-            }
+            },
+            language: {
+                noResults: function () {
+                    return `<span>Tidak ditemukan. <a href="{{ route('sales-orders.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`;
+                },
+            },
+            escapeMarkup: function (m) { return m; },
         });
     }
 

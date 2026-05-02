@@ -131,40 +131,19 @@ async function renderForm(res) {
     <input type="hidden" name="_method" value="PUT">
 
     <!-- SECTION 1: INFO GRUP -->
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-navy">
-                    <i class="fa-solid fa-layer-group"></i>
-                </div>
-                <div class="detail-section-title">Informasi Grup</div>
-                <div class="detail-section-sub">Nama dan deskripsi departemen</div>
-                ${formGroup.editButton("Edit Grup")}
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3 form-1">
+    ${formGroup.sectionCard(
+        { icon: 'fa-layer-group', color: 'icon-navy', title: 'Informasi Grup', subtitle: 'Nama dan deskripsi departemen', editTitle: 'Edit Grup' },
+        `<div class="row g-3 form-1">
                     ${formGroup.text("name", "Nama Grup", res.name, true, { className: "col-md-5" })}
                     ${formGroup.text("description", "Deskripsi", res.description || '', false, { className: "col-md-7" })}
-                </div>
-            </div>
-        </div>
-    </div>
+                </div>`
+    )}
 
     <!-- SECTION 2: PERMISSION MATRIX -->
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-green">
-                    <i class="fa-solid fa-shield-halved"></i>
-                </div>
-                <div class="detail-section-title">Hak Akses Menu</div>
-                <div class="detail-section-sub">Konfigurasi akses grup per menu dan per aksi</div>
-            </div>
-            <div class="detail-section-body p-0">
-                ${renderPermissionMatrix(res.permissions)}
-            </div>
-        </div>
-    </div>
+    ${formGroup.sectionCard(
+        { icon: 'fa-shield-halved', color: 'icon-green', title: 'Hak Akses Menu', subtitle: 'Konfigurasi akses grup per menu dan per aksi' },
+        `${renderPermissionMatrix(res.permissions)}`
+    )}
 
 </form>`;
 }

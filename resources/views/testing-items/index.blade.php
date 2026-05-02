@@ -1,10 +1,6 @@
 @extends('layouts.app')
 
 @section('content')
-<style>
-    thead * { text-align: center }
-</style>
-
 <section class="section">
     <div class="card">
         <div class="card-body">

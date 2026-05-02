@@ -5,18 +5,9 @@ function renderParameterForm(res) {
     <input type="hidden" name="_method" value="PUT">
 
     <!-- SECTION 1: INFORMASI PARAMETER -->
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-amber">
-                    <i class="fa-solid fa-flask"></i>
-                </div>
-                <div class="detail-section-title">Informasi Parameter</div>
-                <div class="detail-section-sub">Data parameter pengujian laboratorium</div>
-                ${formGroup.editButton("Edit Parameter")}
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3 form-1">
+    ${formGroup.sectionCard(
+        { icon: 'fa-flask', color: 'icon-amber', title: 'Informasi Parameter', subtitle: 'Data parameter pengujian laboratorium', editTitle: 'Edit Parameter' },
+        `<div class="row g-3 form-1">
                     ${formGroup.select(
                         "kelompok",
                         "Kelompok",
@@ -89,26 +80,14 @@ function renderParameterForm(res) {
                             className: "col-md-12",
                         },
                     )}
-                </div>
-            </div>
-        </div>
-    </div>
+                </div>`
+    )}
 
     <!-- SECTION 2: ATTACHMENT -->
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-blue">
-                    <i class="fa-solid fa-paperclip"></i>
-                </div>
-                <div class="detail-section-title">Attachment</div>
-                <div class="detail-section-sub">File pendukung parameter</div>
-            </div>
-            <div class="detail-section-body">
-                ${renderAttachmentSection()}
-            </div>
-        </div>
-    </div>
+    ${formGroup.sectionCard(
+        { icon: 'fa-paperclip', color: 'icon-blue', title: 'Attachment', subtitle: 'File pendukung parameter' },
+        `${renderAttachmentSection()}`
+    )}
 
 </form>
 `;

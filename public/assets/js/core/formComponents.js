@@ -87,7 +87,7 @@ const formGroup = {
             mode = "static", // static | ajax
             url = "",
             allowClear = false,
-            minimumInputLength = 2,
+            minimumInputLength = 0,
             showAll = false,
             createUrl = null,
         } = config;
@@ -254,7 +254,42 @@ const formGroup = {
             <i class="fa-solid fa-pen"></i> Edit
         </button>`;
     },
+
+    sectionCard({ icon, color, title, subtitle = null, editTitle = null, actions = '' }, content) {
+        return `
+        <div class="col-md-12">
+            <div class="detail-section-card" data-sc-open="true">
+                <div class="detail-section-header">
+                    <div class="detail-section-icon ${color}">
+                        <i class="fa-solid ${icon}"></i>
+                    </div>
+                    <div class="detail-section-title">${title}</div>
+                    ${subtitle ? `<div class="detail-section-sub">${subtitle}</div>` : ''}
+                    ${editTitle ? formGroup.editButton(editTitle) : ''}
+                    ${actions}
+                    <div class="detail-section-icon" style="background-color:#e5e5e5;flex-shrink:0;cursor:pointer;" onclick="scToggle(this, event)">
+                        <i class="fa-solid fa-chevron-up sc-chevron" style="transition:transform 0.25s;"></i>
+                    </div>
+                </div>
+                <div class="sc-body">
+                    <div class="detail-section-body">
+                        ${content}
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    },
 };
+
+function scToggle(chevronDiv) {
+    var card = chevronDiv.closest('.detail-section-card');
+    var body = card.querySelector('.sc-body');
+    var chevron = card.querySelector('.sc-chevron');
+    var open = card.dataset.scOpen !== 'false';
+    card.dataset.scOpen = open ? 'false' : 'true';
+    body.style.display = open ? 'none' : '';
+    chevron.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+}
 
 function initDynamicSelect(scope = document) {
     $(scope)
@@ -262,6 +297,15 @@ function initDynamicSelect(scope = document) {
         .each(function () {
             let $el = $(this);
             let mode = $el.data("mode");
+
+            if (mode === "static") {
+                $el.select2({
+                    width: "100%",
+                    placeholder: $el.data("placeholder"),
+                    allowClear: $el.data("allow-clear") === true,
+                });
+                return;
+            }
 
             if (mode !== "ajax") return;
 

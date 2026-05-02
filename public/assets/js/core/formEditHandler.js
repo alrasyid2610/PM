@@ -4,6 +4,53 @@ function bindEditToggle(options) {
     const onEditCancel = options.onEditCancel;
     const onSave = options.onSave;
 
+    let _snapshot = null;
+
+    function takeSnapshot() {
+        _snapshot = [];
+        $(container).find("input, select, textarea").not("[data-no-disable]").each(function () {
+            const $el = $(this);
+            const entry = { el: this };
+
+            if ($el.is('input[type="checkbox"]') || $el.is('input[type="radio"]')) {
+                entry.checked = this.checked;
+            } else {
+                entry.val = $el.val();
+            }
+
+            if ($el.is('select') && $el.hasClass('select2-hidden-accessible')) {
+                entry.isSelect2 = true;
+                entry.selectedText = $el.find('option:selected').text();
+            }
+
+            _snapshot.push(entry);
+        });
+    }
+
+    function restoreSnapshot() {
+        if (!_snapshot) return;
+        _snapshot.forEach(function (item) {
+            const $el = $(item.el);
+
+            if (item.checked !== undefined) {
+                $el.prop('checked', item.checked).trigger('change');
+            } else if (item.isSelect2) {
+                if (item.val) {
+                    if ($el.find('option[value="' + item.val + '"]').length === 0) {
+                        $el.append(new Option(item.selectedText || item.val, item.val, true, true));
+                    }
+                    $el.val(item.val);
+                } else {
+                    $el.val(null);
+                }
+                $el.trigger('change');
+            } else {
+                $el.val(item.val);
+            }
+        });
+        _snapshot = null;
+    }
+
     $(container)
         .off("click", ".btn-edit-context")
         .on("click", ".btn-edit-context", function (e) {
@@ -11,11 +58,11 @@ function bindEditToggle(options) {
 
             const $btn = $(this);
             const isEditing = $btn.hasClass("editing");
-            console.log("Tombol edit diklik", isEditing);
-
             const isModern = $btn.hasClass("btn-action-edit");
 
             if (!isEditing) {
+                takeSnapshot();
+
                 $(container)
                     .find("input, select, textarea")
                     .not("[data-no-disable]")
@@ -50,6 +97,8 @@ function bindEditToggle(options) {
 
                 if (onEditStart) onEditStart();
             } else {
+                restoreSnapshot();
+
                 $(container)
                     .find("input, select, textarea")
                     .not("[data-no-disable]")
@@ -80,7 +129,7 @@ function bindEditToggle(options) {
         .off("click", ".btn-save-context")
         .on("click", ".btn-save-context", function (e) {
             e.preventDefault();
-
+            _snapshot = null;
             if (onSave) onSave();
         });
 }

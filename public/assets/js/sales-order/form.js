@@ -322,17 +322,9 @@ function renderForm(res) {
     </div>
 
     <!-- SECTION 1: INFORMASI ORDER -->
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-navy">
-                    <i class="fa-solid fa-file-lines"></i>
-                </div>
-                <div class="detail-section-title">Informasi Order</div>
-                <div class="detail-section-sub">Data utama sales order</div>
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3 form-1">
+    ${formGroup.sectionCard(
+        { icon: 'fa-file-lines', color: 'icon-navy', title: 'Informasi Order', subtitle: 'Data utama sales order' },
+        `<div class="row g-3 form-1">
                     ${formGroup.date(
                         "tanggal_so",
                         "Tanggal SO",
@@ -379,23 +371,13 @@ function renderForm(res) {
                         ],
                         { className: "col-md-4" },
                     )}
-                </div>
-            </div>
-        </div>
-    </div>
+                </div>`
+    )}
 
     <!-- SECTION 2: PURCHASE ORDER -->
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-amber">
-                    <i class="fa-solid fa-receipt"></i>
-                </div>
-                <div class="detail-section-title">Purchase Order (PO)</div>
-                <div class="detail-section-sub">Referensi PO dari pelanggan</div>
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3 form-1">
+    ${formGroup.sectionCard(
+        { icon: 'fa-receipt', color: 'icon-amber', title: 'Purchase Order (PO)', subtitle: 'Referensi PO dari pelanggan' },
+        `<div class="row g-3 form-1">
                     ${formGroup.checkbox(
                         "tidak_ada_po",
                         "Tidak Ada PO",
@@ -417,23 +399,13 @@ function renderForm(res) {
                     ${formGroup.text("no_po", "No PO", res.no_po, false, {
                         className: "col-md-9",
                     })}
-                </div>
-            </div>
-        </div>
-    </div>
+                </div>`
+    )}
 
     <!-- SECTION 3: DATA PELANGGAN -->
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-blue">
-                    <i class="fa-solid fa-building-user"></i>
-                </div>
-                <div class="detail-section-title">Data Pelanggan</div>
-                <div class="detail-section-sub">Billing, Delivery & Payment</div>
-            </div>
-            <div class="detail-section-body">
-
+    ${formGroup.sectionCard(
+        { icon: 'fa-building-user', color: 'icon-blue', title: 'Data Pelanggan', subtitle: 'Billing, Delivery & Payment' },
+        `
                 <!-- Desktop: party header -->
                 <div class="detail-party-header d-none d-md-grid">
                     <div class="detail-party-label">
@@ -465,6 +437,7 @@ function renderForm(res) {
                             placeholder: "Pilih Data",
                             label: res.nama_pelanggan,
                             className: "col-md-4",
+                            createUrl: "/business-relations/create",
                         },
                     )}
                     <div class="col-12 d-md-none">
@@ -483,6 +456,7 @@ function renderForm(res) {
                             placeholder: "Pilih Data",
                             label: res.pelanggan_delivery,
                             className: "col-md-4",
+                            createUrl: "/business-relations/create",
                         },
                     )}
                     <div class="col-12 d-md-none">
@@ -501,6 +475,7 @@ function renderForm(res) {
                             placeholder: "Pilih Data",
                             label: res.pelanggan_pay,
                             className: "col-md-4",
+                            createUrl: "/business-relations/create",
                         },
                     )}
                 </div>
@@ -518,6 +493,7 @@ function renderForm(res) {
                             placeholder: "Pilih Data",
                             label: res.nama_site_pelanggan,
                             className: "col-md-4",
+                            createUrl: "/business-relations/create",
                         },
                     )}
                     ${formGroup.select(
@@ -531,6 +507,7 @@ function renderForm(res) {
                             placeholder: "Pilih Data",
                             label: res.pelanggan_site_delivery,
                             className: "col-md-4",
+                            createUrl: "/business-relations/create",
                         },
                     )}
                     ${formGroup.select(
@@ -544,6 +521,7 @@ function renderForm(res) {
                             placeholder: "Pilih Data",
                             label: res.pelanggan_site_pay,
                             className: "col-md-4",
+                            createUrl: "/business-relations/create",
                         },
                     )}
                 </div>
@@ -561,6 +539,7 @@ function renderForm(res) {
                             placeholder: "Pilih Data",
                             label: res.pic_pelanggan,
                             className: "col-md-4",
+                            createUrl: "/business-relation-contacts/create",
                         },
                     )}
                     ${formGroup.select(
@@ -574,6 +553,7 @@ function renderForm(res) {
                             placeholder: "Pilih Data",
                             label: res.pic_pelanggan_del,
                             className: "col-md-4",
+                            createUrl: "/business-relation-contacts/create",
                         },
                     )}
                     ${formGroup.select(
@@ -587,26 +567,17 @@ function renderForm(res) {
                             placeholder: "Pilih Data",
                             label: res.pic_pelanggan_pay,
                             className: "col-md-4",
+                            createUrl: "/business-relation-contacts/create",
                         },
                     )}
                 </div>
-
-            </div>
-        </div>
-    </div>
+            `
+    )}
 
     <!-- SECTION 4: PIC INTERNAL -->
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-green">
-                    <i class="fa-solid fa-users"></i>
-                </div>
-                <div class="detail-section-title">PIC Internal</div>
-                <div class="detail-section-sub">Penanggung jawab dari Pramatek</div>
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3 form-1">
+    ${formGroup.sectionCard(
+        { icon: 'fa-users', color: 'icon-green', title: 'PIC Internal', subtitle: 'Penanggung jawab dari Pramatek' },
+        `<div class="row g-3 form-1">
                     ${formGroup.select(
                         "pic_input",
                         "PIC Input",
@@ -618,6 +589,7 @@ function renderForm(res) {
                             placeholder: "Pilih Data",
                             label: res.pic_input,
                             className: "col-md-3",
+                            createUrl: "/business-relation-contacts/create",
                         },
                     )}
                     ${formGroup.select(
@@ -631,6 +603,7 @@ function renderForm(res) {
                             placeholder: "Pilih Data",
                             label: res.pic_ordername,
                             className: "col-md-3",
+                            createUrl: "/business-relation-contacts/create",
                         },
                     )}
                     ${formGroup.select(
@@ -644,6 +617,7 @@ function renderForm(res) {
                             placeholder: "Pilih Data",
                             label: res.marketing_internal_name,
                             className: "col-md-3",
+                            createUrl: "/business-relation-contacts/create",
                         },
                     )}
                     ${formGroup.select(
@@ -657,24 +631,16 @@ function renderForm(res) {
                             placeholder: "Pilih Data",
                             label: res.marketing_eksternal_name,
                             className: "col-md-3",
+                            createUrl: "/business-relation-contacts/create",
                         },
                     )}
-                </div>
-            </div>
-        </div>
-    </div>
+                </div>`
+    )}
 
     <!-- SECTION 5: STATUS & KETERANGAN -->
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-purple">
-                    <i class="fa-solid fa-circle-info"></i>
-                </div>
-                <div class="detail-section-title">Status & Keterangan</div>
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3 form-1">
+    ${formGroup.sectionCard(
+        { icon: 'fa-circle-info', color: 'icon-purple', title: 'Status & Keterangan' },
+        `<div class="row g-3 form-1">
                     ${formGroup.select(
                         "status",
                         "Status SO",
@@ -704,10 +670,8 @@ function renderForm(res) {
                             className: "col-md-12",
                         },
                     )}
-                </div>
-            </div>
-        </div>
-    </div>
+                </div>`
+    )}
 
 </form>
 `;

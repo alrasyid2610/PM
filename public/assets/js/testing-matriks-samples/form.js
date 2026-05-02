@@ -6,18 +6,9 @@ function renderForm(res) {
     <input type="hidden" name="_method" value="PUT">
     <input type="hidden" name="id_testing_kelompok_matriks_sample" value="${res.id_testing_kelompok_matriks_sample}">
 
-    <div class="col-md-12">
-        <div class="detail-section-card">
-            <div class="detail-section-header">
-                <div class="detail-section-icon icon-teal">
-                    <i class="fa-solid fa-vials"></i>
-                </div>
-                <div class="detail-section-title">Testing Matriks Samples</div>
-                <div class="detail-section-sub">Data matriks sampel pengujian</div>
-                ${formGroup.editButton("Edit Matriks Sample")}
-            </div>
-            <div class="detail-section-body">
-                <div class="row g-3 form-1">
+    ${formGroup.sectionCard(
+        { icon: 'fa-vials', color: 'icon-teal', title: 'Testing Matriks Samples', subtitle: 'Data matriks sampel pengujian', editTitle: 'Edit Matriks Sample' },
+        `<div class="row g-3 form-1">
                     ${formGroup.select(
                         "kelompok",
                         "Kelompok",
@@ -61,10 +52,8 @@ function renderForm(res) {
                             className: "col-md-12",
                         },
                     )}
-                </div>
-            </div>
-        </div>
-    </div>
+                </div>`
+    )}
 
 </form>
 `;
