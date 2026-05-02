@@ -6,14 +6,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Yajra\DataTables\Facades\DataTables;
+use App\Traits\HasAuditHistory;
+use App\Traits\HasAttachment;
 
 class ContractController extends Controller
 {
+    use HasAuditHistory, HasAttachment;
+
+    protected function auditTable(): string        { return 'contracts'; }
+    protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_contract']; }
+    protected function attachmentTable(): string   { return 'contracts'; }
+    protected function attachmentPrimaryKey(): string { return 'id_contract'; }
+
     public function index()
     {
-        return view('contracts.index', [
-            'title' => 'Contracts'
-        ]);
+        return view('contracts.index', ['title' => 'Contracts']);
     }
 
     public function data()
@@ -37,21 +44,17 @@ class ContractController extends Controller
                 'c.created_at',
             ]);
 
-        return DataTables::of($query)
-            ->addIndexColumn()
-            ->make(true);
+        return DataTables::of($query)->addIndexColumn()->make(true);
     }
 
     public function create()
     {
-        return view('contracts.create', [
-            'title' => 'Tambah Contract'
-        ]);
+        return view('contracts.create', ['title' => 'Tambah Contract']);
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $request->validate([
             'no_kontrak'           => 'required|string|max:100|unique:contracts,no_kontrak',
             'id_business_relation' => 'nullable|integer',
             'tanggal_kontrak'      => 'nullable|date',
@@ -63,53 +66,60 @@ class ContractController extends Controller
             'id_pic_pelanggan'     => 'nullable|integer',
             'id_pic_pramatek'      => 'nullable|integer',
             'catatan'              => 'nullable|string',
-            'attachment'           => 'nullable|file|mimes:pdf,doc,docx,jpg,png|max:5120',
+            'attachments.*'        => 'nullable|file|mimes:pdf,doc,docx,jpg,png|max:5120',
         ]);
 
-        $attachmentPath = null;
-        if ($request->hasFile('attachment')) {
-            $attachmentPath = $request->file('attachment')
-                ->store('contracts', 'public');
-        }
+        $upload = uploadAttachment($request->file('attachments'), 'contracts');
+        $files  = $upload['files'];
 
         $id = DB::table('contracts')->insertGetId([
-            'no_kontrak'           => $validated['no_kontrak'],
-            'id_business_relation' => $validated['id_business_relation'] ?? null,
-            'tanggal_kontrak'      => $validated['tanggal_kontrak'] ?? null,
-            'tanggal_mulai'        => $validated['tanggal_mulai'] ?? null,
-            'tanggal_selesai'      => $validated['tanggal_selesai'] ?? null,
-            'durasi_bulan'         => $validated['durasi_bulan'] ?? null,
-            'nilai_kontrak'        => $validated['nilai_kontrak'] ?? null,
-            'status'               => $validated['status'] ?? 'draft',
-            'id_pic_pelanggan'     => $validated['id_pic_pelanggan'] ?? null,
-            'id_pic_pramatek'      => $validated['id_pic_pramatek'] ?? null,
-            'catatan'              => $validated['catatan'] ?? null,
-            'attachment'           => $attachmentPath,
+            'no_kontrak'           => $request->no_kontrak,
+            'id_business_relation' => $request->id_business_relation,
+            'tanggal_kontrak'      => $request->tanggal_kontrak,
+            'tanggal_mulai'        => $request->tanggal_mulai,
+            'tanggal_selesai'      => $request->tanggal_selesai,
+            'durasi_bulan'         => $request->durasi_bulan,
+            'nilai_kontrak'        => $request->nilai_kontrak,
+            'status'               => $request->status ?? 'draft',
+            'id_pic_pelanggan'     => $request->id_pic_pelanggan,
+            'id_pic_pramatek'      => $request->id_pic_pramatek,
+            'catatan'              => $request->catatan,
+            'attachment'           => json_encode($files),
             'created_at'           => now(),
             'updated_at'           => now(),
         ]);
 
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Contract berhasil dibuat',
-            'id'      => $id
-        ]);
+        $after = DB::table('contracts')->where('id_contract', $id)->get()->toJson();
+        saveAudit('contracts', $id, 'create', '', $after);
+
+        return response()->json(['success' => true, 'message' => 'Contract berhasil dibuat', 'id' => $id]);
     }
 
     public function show($id)
     {
-        $contract = DB::table('contracts')->where('id_contract', $id)->first();
+        $data = DB::table('contracts as c')
+            ->leftJoin('business_relations as br', 'br.id_br', '=', 'c.id_business_relation')
+            ->leftJoin('business_relation_contacts as pic', 'pic.id_contact', '=', 'c.id_pic_pelanggan')
+            ->leftJoin('users as u', 'u.id', '=', 'c.id_pic_pramatek')
+            ->select([
+                'c.*',
+                'br.nama as nama_pelanggan',
+                'pic.nama_pic as nama_pic_pelanggan',
+                'u.name as nama_pic_pramatek',
+            ])
+            ->where('c.id_contract', $id)
+            ->first();
 
-        if (!$contract) {
+        if (!$data) {
             return response()->json(['message' => 'Contract tidak ditemukan'], 404);
         }
 
-        return response()->json($contract);
+        return response()->json($data);
     }
 
     public function update(Request $request, $id)
     {
-        $validated = $request->validate([
+        $request->validate([
             'no_kontrak'           => 'required|string|max:100|unique:contracts,no_kontrak,' . $id . ',id_contract',
             'id_business_relation' => 'nullable|integer',
             'tanggal_kontrak'      => 'nullable|date',
@@ -121,57 +131,43 @@ class ContractController extends Controller
             'id_pic_pelanggan'     => 'nullable|integer',
             'id_pic_pramatek'      => 'nullable|integer',
             'catatan'              => 'nullable|string',
-            'attachment'           => 'nullable|file|mimes:pdf,doc,docx,jpg,png|max:5120',
+            'attachments.*'        => 'nullable|file|mimes:pdf,doc,docx,jpg,png|max:5120',
         ]);
 
         try {
-            $before = DB::table('contracts')
-                ->where('id_contract', $id)
-                ->get()->toJson();
+            $before = DB::table('contracts')->where('id_contract', $id)->get()->toJson();
 
-            $updateData = [
-                'no_kontrak'           => $validated['no_kontrak'],
-                'id_business_relation' => $validated['id_business_relation'] ?? null,
-                'tanggal_kontrak'      => $validated['tanggal_kontrak'] ?? null,
-                'tanggal_mulai'        => $validated['tanggal_mulai'] ?? null,
-                'tanggal_selesai'      => $validated['tanggal_selesai'] ?? null,
-                'durasi_bulan'         => $validated['durasi_bulan'] ?? null,
-                'nilai_kontrak'        => $validated['nilai_kontrak'] ?? null,
-                'status'               => $validated['status'] ?? 'draft',
-                'id_pic_pelanggan'     => $validated['id_pic_pelanggan'] ?? null,
-                'id_pic_pramatek'      => $validated['id_pic_pramatek'] ?? null,
-                'catatan'              => $validated['catatan'] ?? null,
-                'updated_at'           => now(),
-            ];
+            $existing = $request->existing_attachments ?? [];
+            $newFiles = [];
 
-            // Handle file upload baru
-            if ($request->hasFile('attachment')) {
-                // Hapus file lama
-                $old = DB::table('contracts')->where('id_contract', $id)->value('attachment');
-                if ($old) Storage::disk('public')->delete($old);
-
-                $updateData['attachment'] = $request->file('attachment')
-                    ->store('contracts', 'public');
+            if ($request->hasFile('attachments')) {
+                $upload   = uploadAttachment($request->file('attachments'), 'contracts');
+                $newFiles = $upload['files'];
             }
 
-            DB::table('contracts')->where('id_contract', $id)->update($updateData);
+            DB::table('contracts')->where('id_contract', $id)->update([
+                'no_kontrak'           => $request->no_kontrak,
+                'id_business_relation' => $request->id_business_relation,
+                'tanggal_kontrak'      => $request->tanggal_kontrak,
+                'tanggal_mulai'        => $request->tanggal_mulai,
+                'tanggal_selesai'      => $request->tanggal_selesai,
+                'durasi_bulan'         => $request->durasi_bulan,
+                'nilai_kontrak'        => $request->nilai_kontrak,
+                'status'               => $request->status ?? 'draft',
+                'id_pic_pelanggan'     => $request->id_pic_pelanggan,
+                'id_pic_pramatek'      => $request->id_pic_pramatek,
+                'catatan'              => $request->catatan,
+                'attachment'           => json_encode(array_merge($existing, $newFiles)),
+                'updated_at'           => now(),
+            ]);
 
-            $after = DB::table('contracts')
-                ->where('id_contract', $id)
-                ->get()->toJson();
-
+            $after = DB::table('contracts')->where('id_contract', $id)->get()->toJson();
             saveAudit('contracts', $id, 'update', $before, $after);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Contract berhasil diperbarui'
-            ]);
+            return response()->json(['success' => true, 'message' => 'Contract berhasil diperbarui']);
+
         } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan sistem',
-                'error'   => $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -179,61 +175,21 @@ class ContractController extends Controller
     {
         $contract = DB::table('contracts')->where('id_contract', $id)->first();
 
-        // Hapus file attachment jika ada
         if ($contract && $contract->attachment) {
-            Storage::disk('public')->delete($contract->attachment);
+            $files = json_decode($contract->attachment, true) ?? [];
+            foreach ($files as $file) {
+                Storage::disk('public')->delete($file);
+            }
         }
 
         DB::table('contracts')->where('id_contract', $id)->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Data berhasil dihapus'
-        ]);
+        return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
     }
 
     public function detail($id)
     {
-        $data = DB::table('contracts as c')
-            ->leftJoin('business_relations as br', 'br.id_br', '=', 'c.id_business_relation')
-            ->leftJoin('business_relation_contacts as pic', 'pic.id_contact', '=', 'c.id_pic_pelanggan')
-            ->leftJoin('users as u', 'u.id', '=', 'c.id_pic_pramatek')
-            ->select([
-                'c.*',
-                'br.nama as nama_pelanggan',
-                'br.npwp as npwp_pelanggan',
-                'br.nomor_telepon as telepon_pelanggan',
-                'pic.nama_pic as nama_pic_pelanggan',
-                'pic.email_pic as email_pic_pelanggan',
-                'u.name as nama_pic_pramatek',
-                'u.email as email_pic_pramatek',
-            ])
-            ->where('c.id_contract', $id)
-            ->first();
-
-        if (!$data) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Contract tidak ditemukan'
-            ], 404);
-        }
-
-        return response()->json($data);
-    }
-
-    public function history($id)
-    {
-        $logs = DB::table('audit_logs')
-            ->where('nama_table', 'contracts')
-            ->where('row_id', $id)
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($log) {
-                $log->action = strtolower($log->action);
-                return $log;
-            });
-
-        return response()->json($logs);
+        return $this->show($id);
     }
 
     public function select2(Request $request)
@@ -249,12 +205,10 @@ class ContractController extends Controller
             ->get();
 
         return response()->json(
-            $data->map(function ($item) {
-                return [
-                    'id'   => $item->id_contract,
-                    'text' => $item->no_kontrak . ' — ' . ($item->nama_pelanggan ?? '-'),
-                ];
-            })
+            $data->map(fn($item) => [
+                'id'   => $item->id_contract,
+                'text' => $item->no_kontrak . ' — ' . ($item->nama_pelanggan ?? '-'),
+            ])
         );
     }
 
@@ -270,12 +224,10 @@ class ContractController extends Controller
             ->get();
 
         return response()->json(
-            $data->map(function ($item) {
-                return [
-                    'id'   => $item->id_contract,
-                    'text' => $item->no_kontrak . ' — ' . ($item->nama_pelanggan ?? '-'),
-                ];
-            })
+            $data->map(fn($item) => [
+                'id'   => $item->id_contract,
+                'text' => $item->no_kontrak . ' — ' . ($item->nama_pelanggan ?? '-'),
+            ])
         );
     }
 }

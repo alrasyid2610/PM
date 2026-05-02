@@ -127,9 +127,10 @@ Route::prefix('contracts')
     Route::get('/data',        [ContractController::class, 'data'])->name('data');
     Route::get('/create',      [ContractController::class, 'create'])->name('create');
     Route::post('/',           [ContractController::class, 'store'])->name('store');
+    Route::post('/delete-attachment', [ContractController::class, 'deleteAttachment'])->name('delete-attachment');
     Route::get('/{id}',        [ContractController::class, 'show'])->name('show');
     Route::put('/{id}',        [ContractController::class, 'update'])->name('update');
-    Route::post('/{id}',       [ContractController::class, 'update'])->name('update.post'); // untuk FormData
+    Route::post('/{id}',       [ContractController::class, 'update'])->name('update.post');
     Route::delete('/{id}',     [ContractController::class, 'destroy'])->name('destroy');
     Route::get('/{id}/detail', [ContractController::class, 'detail'])->name('detail');
     Route::get('/{id}/history',[ContractController::class, 'history'])->name('history')->whereNumber('id');
@@ -525,6 +526,7 @@ Route::get('/api/menu-groups', function () {
 Route::prefix('users')->name('users.')->group(function () {
     Route::get('/',           [UserController::class, 'index'])->name('index');
     Route::get('/data',       [UserController::class, 'data'])->name('data');
+    Route::get('/select2',    [UserController::class, 'select2'])->name('select2');
     Route::get('/create',     [UserController::class, 'create'])->name('create');
     Route::post('/',          [UserController::class, 'store'])->name('store');
     Route::get('/{id}',       [UserController::class, 'show'])->name('show')->whereNumber('id');

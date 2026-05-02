@@ -32,6 +32,23 @@ class UserController extends Controller
             ->make(true);
     }
 
+    public function select2(Request $request)
+    {
+        $search = $request->q;
+
+        $data = DB::table('users')
+            ->where('is_active', 1)
+            ->where('name', 'like', "%{$search}%")
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->limit(20)
+            ->get();
+
+        return response()->json(
+            $data->map(fn($u) => ['id' => $u->id, 'text' => $u->name])
+        );
+    }
+
     public function create()
     {
         return view('users.create');
