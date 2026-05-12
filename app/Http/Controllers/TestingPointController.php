@@ -68,16 +68,19 @@ class TestingPointController extends Controller
     {
         $search = $request->q;
 
-        $data = DB::table('testing_points')
-            ->where('nama', 'like', "%{$search}%")
-            ->limit(10)
+        $data = DB::table('testing_points as tp')
+            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->where('tp.nama', 'like', "%{$search}%")
+            ->select('tp.id_testing_point', 'tp.nama', 'tp.nomor_halaman', 'tms.kode as tms_kode')
+            ->limit(20)
             ->get();
 
         return response()->json(
             $data->map(function ($item) {
+                $text = trim(($item->tms_kode ? $item->tms_kode . ' - ' : '') . $item->nama);
                 return [
-                    'id' => $item->id_testing_standard,
-                    'text' => $item->nomor . ' - ' . $item->judul,
+                    'id'   => $item->id_testing_point,
+                    'text' => $text,
                 ];
             })
         );

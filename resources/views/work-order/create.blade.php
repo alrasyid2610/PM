@@ -98,6 +98,18 @@
         loadPelangganDetails();
         initBrSelect2();
 
+        const preselectSoId = new URLSearchParams(window.location.search).get('id_so');
+        if (preselectSoId) {
+            $.get("{{ url('sales-orders') }}/" + preselectSoId, function (so) {
+                if (!so || !so.id_so) return;
+                const opt = new Option(so.no_so + ' — ' + so.judul_order, so.id_so, true, true);
+                $('#id_sales_order').append(opt).trigger('change');
+                $("input[name='judul_order']").val(so.judul_order);
+                $("select[name='id_pelanggan']").val(so.id_pelanggan).trigger('change');
+                $("select[name='id_site_pelanggan']").val(so.id_site_pelanggan).trigger('change');
+            });
+        }
+
         $('#id_sales_order').on('select2:select', function (e) {
             var data = e.params.data;
 

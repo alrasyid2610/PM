@@ -128,6 +128,27 @@ class WorkOrderController extends Controller
     }
 
 
+    public function bySo($id_so)
+    {
+        $data = DB::table('work_orders as wo')
+            ->leftJoin('business_relations as br', 'br.id_br', '=', 'wo.id_pelanggan_pekerjaan')
+            ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
+            ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'wo.id_pic_pelanggan_pekerjaan')
+            ->where('wo.id_so', $id_so)
+            ->select([
+                'wo.id_wo',
+                'wo.no_wo',
+                'wo.judul_pekerjaan',
+                'br.nama as nama_pelanggan',
+                'brs.nama_lokasi as nama_site',
+                'brc.nama_pic as nama_pic_pekerjaan',
+                'wo.keterangan',
+            ])
+            ->get();
+
+        return response()->json($data);
+    }
+
     public function select2(Request $request)
     {
         $search = $request->q;
@@ -236,6 +257,7 @@ class WorkOrderController extends Controller
                 's.no_po',
                 's.tanggal_po',
                 'wo.no_wo',
+                'wo.judul_pekerjaan',
                 's.tidak_ada_po',
                 's.no_so',
                 'br.nama as Pelanggan',
@@ -257,6 +279,79 @@ class WorkOrderController extends Controller
         return response()->json($wo);
     }
 
+    public function assignPeriod(Request $request, $id)
+    {
+        DB::table('work_orders')->where('id_wo', $id)->update([
+            'id_period'  => $request->id_period ?: null,
+            'updated_at' => now(),
+        ]);
+
+        return response()->json(['status' => 'success', 'message' => 'Period WO berhasil diperbarui']);
+    }
+
+    public function boqProgress(int $id)
+    {
+        $boqSections = DB::table('boq as b')
+            ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+            ->where('b.id_wo', $id)
+            ->select(['b.id_boq', 'tp.nama as point_name', 'b.qty as boq_qty', 'b.satuan', 'b.harga'])
+            ->get();
+
+        $boqIds = $boqSections->pluck('id_boq');
+
+        $fwoQtyByBoq = $boqIds->isNotEmpty()
+            ? DB::table('fieldwork_boq')
+                ->whereIn('id_boq', $boqIds)
+                ->selectRaw('id_boq, SUM(COALESCE(qty, 0)) as fwo_qty')
+                ->groupBy('id_boq')
+                ->pluck('fwo_qty', 'id_boq')
+            : collect();
+
+        $totalBoqQty    = (int) $boqSections->sum('boq_qty');
+        $totalFwoQty    = (int) $boqSections->sum(fn($s) => (int)($fwoQtyByBoq[$s->id_boq] ?? 0));
+        $pct            = $totalBoqQty > 0 ? round($totalFwoQty / $totalBoqQty * 100) : 0;
+        $totalBoqAmount = (int) $boqSections->sum(fn($s) => (int)($s->boq_qty ?? 0) * (int)($s->harga ?? 0));
+
+        $fwos = DB::table('fieldworks as fw')
+            ->leftJoin('fieldwork_boq as fb', 'fw.id_fwo', '=', 'fb.id_fwo')
+            ->where('fw.id_wo', $id)
+            ->select([
+                'fw.id_fwo', 'fw.no_fwo', 'fw.tanggal_mulai', 'fw.tanggal_selesai',
+                DB::raw('COUNT(fb.id_fwo_boq) as boq_section_count'),
+                DB::raw('SUM(COALESCE(fb.qty, 0)) as total_qty'),
+            ])
+            ->groupBy('fw.id_fwo', 'fw.no_fwo', 'fw.tanggal_mulai', 'fw.tanggal_selesai')
+            ->orderBy('fw.id_fwo')
+            ->get();
+
+        return response()->json([
+            'total_boq_qty'    => $totalBoqQty,
+            'total_fwo_qty'    => $totalFwoQty,
+            'progress_pct'     => $pct,
+            'total_boq_amount' => $totalBoqAmount,
+            'sections'         => $boqSections->map(fn($s) => [
+                'id_boq'       => $s->id_boq,
+                'point_name'   => $s->point_name ?? '—',
+                'boq_qty'      => (int)($s->boq_qty ?? 0),
+                'satuan'       => $s->satuan,
+                'harga'        => (int)($s->harga ?? 0),
+                'total_amount' => (int)($s->boq_qty ?? 0) * (int)($s->harga ?? 0),
+                'fwo_qty'      => (int)($fwoQtyByBoq[$s->id_boq] ?? 0),
+                'progress_pct' => ($s->boq_qty ?? 0) > 0
+                    ? round((int)($fwoQtyByBoq[$s->id_boq] ?? 0) / $s->boq_qty * 100)
+                    : 0,
+            ])->values(),
+            'fwos' => $fwos->map(fn($f) => [
+                'id_fwo'            => $f->id_fwo,
+                'no_fwo'            => $f->no_fwo,
+                'tanggal_mulai'     => $f->tanggal_mulai,
+                'tanggal_selesai'   => $f->tanggal_selesai,
+                'boq_section_count' => (int)$f->boq_section_count,
+                'total_qty'         => (int)$f->total_qty,
+            ])->values(),
+        ]);
+    }
+
     public function show($id)
     {
 
@@ -265,20 +360,29 @@ class WorkOrderController extends Controller
             ->leftJoin('business_relations as br', 'br.id_br', '=', 'wo.id_pelanggan_pekerjaan')
             ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
             ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'wo.id_pic_pelanggan_pekerjaan')
+            ->leftJoin('wo_periods as wp', 'wp.id_period', '=', 'wo.id_period')
+            ->leftJoin('business_relation_sites as brs_period', 'brs_period.id_site', '=', 'wp.id_site')
             ->where('wo.id_wo', $id)
             ->select([
                 'wo.id_wo',
                 'wo.no_wo',
                 'wo.id_so',
-                'so.no_so',                         // ← label SO
+                'so.no_so',
                 'wo.judul_pekerjaan',
                 'wo.keterangan',
                 'wo.id_pelanggan_pekerjaan',
-                'br.nama as nama_pelanggan_pekerjaan', // ← label pelanggan
+                'br.nama as nama_pelanggan_pekerjaan',
                 'wo.id_site_pelanggan_pekerjaan',
-                'brs.nama_lokasi as nama_site_pelanggan_pekerjaan', // ← label site
+                'brs.nama_lokasi as nama_site_pelanggan_pekerjaan',
                 'wo.id_pic_pelanggan_pekerjaan',
-                'brc.nama_pic as nama_pic_pelanggan_pekerjaan',     // ← label PIC
+                'brc.nama_pic as nama_pic_pelanggan_pekerjaan',
+                'wo.id_period',
+                'wp.id_site as period_id_site',
+                'brs_period.nama_lokasi as period_nama_site',
+                'wp.tanggal_mulai as period_tanggal_mulai',
+                'wp.tanggal_selesai as period_tanggal_selesai',
+                'wp.interval_bulan as period_interval_bulan',
+                'wp.keterangan as period_keterangan',
                 'wo.created_at',
                 'wo.updated_at',
             ])

@@ -1,420 +1,143 @@
-// let selectedRow = {
-//     no_so: null,
-//     id_wo: null,
-// };
-
-// $(document).ready(function () {
-//     initDataTable(tableId);
-
-//     $(tableId)
-//         .find("tbody")
-//         .on("click", "tr", function () {
-//             if ($(event.target).closest("button").length) return;
-
-//             console.log("row clicked, show detail tab");
-//             const data = table.row(this).data();
-//             if (!data) return;
-
-//             console.log("Selected Row Data:", data);
-//             selectedRow.no_wo = data.no_wo;
-//             selectedRow.id_wo = data.id_wo;
-//             console.log("Selected WO Number:", selectedRow);
-
-//             loadDetail(data.id_wo);
-
-//             $(tableId + " tr").removeClass("table-active");
-//             $(this).addClass("table-active");
-
-//             // pindah ke tab Detail
-//             const detailTab = new bootstrap.Tab(
-//                 document.querySelector("#detail-tab"),
-//             );
-//             detailTab.show();
-//         });
-// });
-
-// function loadDetail(id_wo) {
-//     $("#detailContent").html("Loading...");
-
-//     $.get(window.route.detail + id_wo + "/detail", function (res) {
-//         $("#detailContent").html(`
-//                 <form class="row g-3" id="detailForm">
-
-//                     <div class="col-md-12">
-//                         <div class="d-flex justify-content-between align-items-center mb-2">
-//                             <h3>Work Order</h3>
-//                             <div class="btn-group">
-//                                 <button
-//                                     class="btn btn-warning btn-sm btn-edit-context"
-//                                     data-br="${res.id_br}"
-//                                     data-site="${res.id_site}"
-//                                     title="Edit Business Relation">
-//                                     <i class="fa-solid fa-pen"></i>
-//                                 </button>
-//                             </div>
-
-//                         </div>
-
-//                         <div class="row mb-4">
-//                             <input type="hidden" name="_token" value="${window.route.csrf}">
-
-//                             <h6 class="fw-bold mb-3">Sales Order</h6>
-//                             <div class="row mb-4">
-//                                 <div class="col-md-12 col-lg-3 mb-3">
-//                                     <label class="form-label required">Sales Order</label>
-//                                     <p class="text-muted form-control">${res.no_so}</p>
-//                                 </div>
-
-//                                 <div class="col-md-12 col-lg-3 mb-3">
-//                                     <label class="form-label required">Tanggal SO</label>
-//                                     <p class="text-muted form-control">${res.tanggal_so}</p>
-//                                 </div>
-
-//                                 <div class="col-md-4 col-lg-3 mb-3">
-//                                     <label class="form-label required">Tanggal Mulai</label>
-//                                     <p class="text-muted form-control">${res.tanggal_mulai}</p>
-//                                 </div>
-
-//                                 <div class="col-md-4 col-lg-3 mb-3">
-//                                     <label class="form-label required">Tanggal Selesai</label>
-//                                     <p class="text-muted form-control">${res.tanggal_selesai}</p>
-//                                 </div>
-
-//                                 <div class="col-md-12 col-lg-9 mb-3">
-//                                     <label class="form-label required">Judul Order</label>
-//                                     <input type="text" name="judul_order" class="form-control" value="${res.judul_order}" required>
-//                                 </div>
-
-//                                 <div class="col-md-12 col-lg-3 mb-3">
-//                                     <label class="form-label">PIC Pekerjaan</label>
-//                                     <input type="text" name="pic_pekerjaan" class="form-control">
-//                                 </div>
-
-//                                 <div class="col-md-12 col-lg-6 mb-3">
-//                                     <label class="form-label required">Pelanggan</label>
-//                                     <select name="id_pelanggan" id="id_pelanggan" class="form-select" required>
-//                                         <option value="">Pilih Pelanggan</option>
-//                                     </select>
-//                                 </div>
-
-//                                 <div class="col-md-12 col-lg-6 mb-3">
-//                                     <label class="form-label required">Pelanggan Site</label>
-//                                     <select name="id_site_pelanggan" id="id_site_pelanggan" class="form-select" required>
-//                                         <option value="">Pilih Pelanggan Site</option>
-//                                     </select>
-//                                 </div>
-
-//                             </div>
-
-//                             <h6 class="fw-bold">PO</h6>
-//                             <div class="row mb-4 align-items-center">
-//                                 <div class="col-md-4 col-lg-2">
-//                                     <label class="form-label">Tidak Ada PO</label>
-//                                     <p class="text-muted form-control">${res.tidak_ada_po == 0 ? "Tidak Ada PO" : "Ada PO"}</p>
-//                                 </div>
-
-//                                 <div class="col-md-4 col-lg-4">
-//                                     <label class="form-label">Tanggal PO</label>
-//                                     <p class="text-muted form-control">${res.tanggal_po}</p>
-//                                 </div>
-
-//                                 <div class="col-md-4 col-lg-6 mb-3">
-//                                     <label class="form-label">No PO</label>
-//                                     <p class="text-muted form-control">${res.no_po}</p>
-//                                 </div>
-
-//                             </div>
-
-//                             <h6 class="fw-bold">Lainnya</h6>
-//                             <div class="row mb-4">
-//                                 <div class="col-md-12 col-lg-12 mb-3">
-//                                     <label class="form-label">Keterangan</label>
-//                                     <textarea name="keterangan" id="keterangan" cols="30" rows="6" class="form-control">${res.keterangan ?? ""}</textarea>
-//                                 </div>
-//                             </div>
-//                         </div>
-
-//                     </div>
-
-//                 </form>
-//             `);
-
-//         $("#detailContent")
-//             .find("input, select, textarea")
-//             .prop("disabled", true);
-
-//         initSelect2(res);
-
-//         // $("#id_pelanggan").on("select2:select", function (e) {
-//         //     var data = e.params.data;
-//         //     console.log("Data pelanggan yang dipilih:", data);
-//         //     console.log(data.id);
-
-//         //     $("select[name='id_pelanggan_delivery']")
-//         //         .val(data.id)
-//         //         .trigger("change");
-
-//         //     $("select[name='id_pelanggan_payment']")
-//         //         .val(data.id)
-//         //         .trigger("change");
-
-//         //     console.log(
-//         //         $("select[name='id_pelanggan_delivery']").find(
-//         //             "option[value='" + data.id + "']",
-//         //         ).length,
-//         //     );
-
-//         //     $.ajax({
-//         //         url: "/api/get-contact-site/" + data.id, // Kirim ID site yang dipilih
-//         //         method: "GET",
-//         //         success: function (response) {
-//         //             console.log(
-//         //                 "Data kontak pelanggan berhasil dimuat:",
-//         //                 response,
-//         //             );
-//         //             $("#id_pic_pelanggan")
-//         //                 .empty()
-//         //                 .append('<option value="">Pilih PIC</option>'); // Reset options PIC pelanggan
-//         //             $.each(response, function (index, contact) {
-//         //                 $("#id_pic_pelanggan").append(
-//         //                     new Option(contact.nama_pic, contact.id_contact),
-//         //                 );
-//         //             });
-
-//         //             $("#id_pic_pelanggan").select2({
-//         //                 placeholder: "Pilih PIC",
-//         //                 allowClear: true,
-//         //             });
-
-//         //             // Lakukan sesuatu dengan data kontak, misalnya tampilkan di form
-//         //         },
-//         //         error: function (xhr) {
-//         //             Notify.error("Gagal memuat kontak pelanggan");
-//         //         },
-//         //     });
-//         // });
-
-//         $(".btn-edit-context").on("click", function (e) {
-//             e.preventDefault();
-//             const $btn = $(this);
-//             const isEditing = $btn.hasClass("editing");
-
-//             if (!isEditing) {
-//                 // Switch to edit mode
-//                 $("#detailContent")
-//                     .find("input, select, textarea")
-//                     .prop("disabled", false);
-
-//                 $("#detailContent")
-//                     .find("input, select, textarea")
-//                     .removeClass("disabled");
-
-//                 $btn.addClass("editing")
-//                     .removeClass("btn-warning")
-//                     .addClass("btn-secondary")
-//                     .html('<i class="fa-solid fa-times"></i>');
-
-//                 // Add save button
-//                 $btn.after(`
-//                 <button class="btn btn-success btn-sm btn-save-context ms-2" title="Simpan">
-//                 <i class="fa-solid fa-check"></i>
-//                 </button>
-//             `);
-
-//                 // SUBMIT FORM
-
-//                 $(".btn-save-context").on("click", function (e) {
-//                     e.preventDefault();
-//                     // Save logic here
-//                     console.log("Save clicked");
-//                     submitForm();
-//                 });
-//             } else {
-//                 // Cancel edit mode
-//                 $("#detailContent")
-//                     .find("input, select, textarea")
-//                     .prop("disabled", true);
-
-//                 $("#detailContent")
-//                     .find("input, select, textarea")
-//                     .addClass("disabled");
-
-//                 $btn.removeClass("editing")
-//                     .addClass("btn-warning")
-//                     .removeClass("btn-secondary")
-//                     .html('<i class="fa-solid fa-pen"></i>');
-
-//                 $(".btn-save-context").remove();
-//             }
-//         });
-//     });
-// }
-
-// function initSelect2(data) {
-//     // Console log untuk memastikan fungsi dipanggil
-//     console.log("Memuat data pelanggan...");
-
-//     $.ajax({
-//         url: "/api/get-data-br",
-//         method: "GET",
-//         success: function (response) {
-//             dataPelanggan = response;
-//             console.log(
-//                 "Data pelanggan busines relation berhasil dimuat dan select2 diisi.",
-//             );
-//             console.log("init select2");
-//             // Populate select2 for pelanggan
-//             $.each(dataPelanggan, function (index, item) {
-//                 $("select[name='id_pelanggan']").append(
-//                     new Option(item.text, item.id),
-//                 );
-//             });
-
-//             // $.each(dataPelanggan, function (index, item) {
-//             //     $("select[name='id_pelanggan_delivery']").append(
-//             //         new Option(item.text, item.id),
-//             //     );
-//             // });
-
-//             // $.each(dataPelanggan, function (index, item) {
-//             //     $("select[name='id_pelanggan_payment']").append(
-//             //         new Option(item.text, item.id),
-//             //     );
-//             // });
-
-//             // Initialize select2 for delivery and payment
-//             // Baru init select2 TANPA data:
-//             $("select[name='id_pelanggan']").select2({
-//                 placeholder: "Pilih Pelanggan",
-//                 allowClear: true,
-//             });
-
-//             // $("select[name='id_pelanggan_delivery']").select2({
-//             //     placeholder: "Pilih Pelanggan",
-//             //     allowClear: true,
-//             // });
-
-//             // $("select[name='id_pelanggan_payment']").select2({
-//             //     placeholder: "Pilih Pelanggan",
-//             //     allowClear: true,
-//             // });
-
-//             $("#id_pelanggan")
-//                 .val(data.id_pelanggan_pekerjaan)
-//                 .trigger("change");
-//             // $("#id_pelanggan_delivery")
-//             //     .val(data.id_pelanggan_delivery)
-//             //     .trigger("change");
-//             // $("#id_pelanggan_payment")
-//             //     .val(data.id_pelanggan_payment)
-//             //     .trigger("change");
-
-//             console.log(
-//                 "Select2 berhasil diinisialisasi dengan data pelanggan.",
-//             );
-//         },
-//         error: function (xhr) {
-//             Notify.error("Gagal memuat detail pelanggan");
-//         },
-//     });
-
-//     $.ajax({
-//         url: "/api/get-data-site",
-//         method: "GET",
-//         success: function (response) {
-//             dataPelanggan = response;
-//             console.log("Data pelanggan berhasil dimuat dan select2 diisi.");
-
-//             console.log("init select2", response);
-
-//             // Populate select2 for pelanggan
-//             // Populate select2 for pelanggan
-//             $.each(dataPelanggan, function (index, item) {
-//                 $("select[name='id_site_pelanggan']").append(
-//                     new Option(item.nama_lokasi, item.id_site),
-//                 );
-//             });
-
-//             // $.each(dataPelanggan, function (index, item) {
-//             //     $("select[name='id_site_pelanggan_delivery']").append(
-//             //         new Option(item.nama_lokasi, item.id_site),
-//             //     );
-//             // });
-
-//             // $.each(dataPelanggan, function (index, item) {
-//             //     $("select[name='id_site_pelanggan_payment']").append(
-//             //         new Option(item.nama_lokasi, item.id_site),
-//             //     );
-//             // });
-
-//             // Initialize select2 for delivery and payment
-//             // Baru init select2 TANPA data:
-//             $("select[name='id_site_pelanggan']").select2({
-//                 placeholder: "Pilih Pelanggan",
-//                 allowClear: true,
-//             });
-
-//             // $("select[name='id_site_pelanggan_delivery']").select2({
-//             //     placeholder: "Pilih Pelanggan",
-//             //     allowClear: true,
-//             // });
-
-//             // $("select[name='id_site_pelanggan_payment']").select2({
-//             //     placeholder: "Pilih Pelanggan",
-//             //     allowClear: true,
-//             // });
-
-//             $("#id_site_pelanggan")
-//                 .val(data.id_site_pelanggan_pekerjaan)
-//                 .trigger("change");
-//             // $("#id_site_pelanggan_delivery")
-//             //     .val(data.id_site_pelanggan_delivery)
-//             //     .trigger("change");
-//             // $("#id_site_pelanggan_payment")
-//             //     .val(data.id_site_pelanggan_payment)
-//             //     .trigger("change");
-
-//             console.log(
-//                 "Select2 berhasil diinisialisasi dengan data pelanggan.",
-//             );
-//         },
-//         error: function (xhr) {
-//             Notify.error("Gagal memuat detail pelanggan");
-//         },
-//     });
-// }
-
-// function submitForm(e) {
-//     const formData = $("#detailForm").serialize();
-//     console.log("Form data to submit:", formData);
-//     Notify.confirm("Simpan Data?", function () {
-//         $.ajax({
-//             url: window.route.update + selectedRow.id_wo,
-//             method: "PUT",
-//             data: formData,
-//             success: function (response) {
-//                 Notify.success("Data berhasil diperbarui");
-//                 // $("#modalEdit").modal("hide");
-//                 // reloadTable();
-//             },
-//             error: function (xhr) {
-//                 Notify.error("Gagal memperbarui data");
-//             },
-//         });
-//     });
-// }
-
 let page;
 
+// ── Load & render BOQ progress ─────────────────────────────────────────────────
+function loadBoqProgress(id_wo) {
+    $('#boqProgressContent').html(
+        '<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>'
+    );
+
+    $.get('/work-orders/' + id_wo + '/boq-progress', function (data) {
+        $('#boqProgressContent').html(renderBoqProgressContent(data, id_wo));
+    }).fail(function () {
+        $('#boqProgressContent').html(
+            '<div class="text-center text-danger py-3"><i class="fa-solid fa-circle-exclamation me-1"></i> Gagal memuat data</div>'
+        );
+    });
+}
+
+function renderBoqProgressContent(data, id_wo) {
+    const hasBoq = data.sections && data.sections.length > 0;
+    const hasFwo = data.fwos && data.fwos.length > 0;
+
+    if (!hasBoq && !hasFwo) {
+        return '<div class="text-center text-muted py-4">' +
+            '<i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>' +
+            'Belum ada data BOQ untuk Work Order ini</div>';
+    }
+
+    // ── Summary bar ──────────────────────────────────────────────────────────
+    const pctColor = data.progress_pct >= 100 ? 'bg-success' : data.progress_pct > 0 ? 'bg-primary' : 'bg-secondary';
+    const pctBadgeStyle = data.progress_pct >= 100
+        ? 'background:#198754;color:#fff;'
+        : data.progress_pct > 0 ? 'background:#dbeafe;color:#1d4ed8;' : 'background:#e9ecef;color:#495057;';
+
+    const summaryHtml = hasBoq ? `
+        <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="small text-muted">BOQ Progress</span>
+                    ${data.total_boq_amount > 0
+                        ? `<span style="font-size:11px;background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:20px;font-weight:600;">
+                            <i class="fa-solid fa-tag me-1" style="font-size:10px;"></i>Rp ${Number(data.total_boq_amount).toLocaleString('en-US')}
+                           </span>`
+                        : ''}
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="small text-muted">${data.total_fwo_qty} / ${data.total_boq_qty} qty</span>
+                    <span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;${pctBadgeStyle}">${data.progress_pct}%</span>
+                </div>
+            </div>
+            <div class="progress" style="height:7px;">
+                <div class="progress-bar ${pctColor}" style="width:${data.progress_pct}%;transition:width .4s;"></div>
+            </div>
+        </div>` : '';
+
+    // ── BOQ Items rows ────────────────────────────────────────────────────────
+    const sectionsHtml = hasBoq ? data.sections.map(function (sec) {
+        const secColor   = sec.progress_pct >= 100 ? 'bg-success' : sec.progress_pct > 0 ? 'bg-primary' : 'bg-secondary';
+        const satuan     = sec.satuan ? escWo(sec.satuan) : '';
+        const done       = sec.progress_pct >= 100
+            ? '<i class="fa-solid fa-circle-check text-success flex-shrink-0 ms-2" style="font-size:13px;"></i>' : '';
+        const priceHtml  = sec.harga > 0
+            ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">
+                <span>Rp ${Number(sec.harga).toLocaleString('en-US')}${satuan ? ' / ' + satuan : ''}</span>
+                <span style="margin:0 4px;">×</span>
+                <span>${sec.boq_qty}${satuan ? ' ' + satuan : ''}</span>
+                <span style="margin:0 4px;">=</span>
+                <strong style="color:#1d4ed8;">Rp ${Number(sec.total_amount).toLocaleString('en-US')}</strong>
+               </div>`
+            : '';
+        return `<a href="/boq?open=${id_wo}" target="_blank"
+            class="d-flex align-items-center gap-2 py-2 text-decoration-none"
+            style="border-bottom:1px solid #f1f5f9;color:inherit;transition:background .15s;border-radius:4px;padding-left:4px;padding-right:4px;"
+            onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+            <div class="flex-grow-1" style="min-width:0;">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                    <div>
+                        <div class="small fw-semibold" style="color:#1a56db;">${escWo(sec.point_name)}</div>
+                        ${priceHtml}
+                    </div>
+                    <span class="small text-muted flex-shrink-0 ms-2" style="padding-top:1px;">${sec.fwo_qty} / ${sec.boq_qty}${satuan ? ' ' + satuan : ''}</span>
+                </div>
+                <div class="progress" style="height:5px;">
+                    <div class="progress-bar ${secColor}" style="width:${sec.progress_pct}%;transition:width .4s;"></div>
+                </div>
+            </div>${done}
+        </a>`;
+    }).join('') : '<div class="text-muted small py-2 text-center">Belum ada item BOQ</div>';
+
+    // ── FWO list rows ─────────────────────────────────────────────────────────
+    const fwoListHtml = hasFwo ? data.fwos.map(function (fwo) {
+        const tgl = fwo.tanggal_mulai ? fwo.tanggal_mulai.substring(0, 10) : '—';
+        return `<div class="d-flex align-items-center justify-content-between py-2" style="border-bottom:1px solid #f1f5f9;">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fa-solid fa-hard-hat" style="color:#7c3aed;font-size:12px;"></i>
+                <a href="/fieldworks?open=${fwo.id_fwo}" target="_blank"
+                    class="fw-semibold small text-decoration-none">${escWo(fwo.no_fwo ?? '—')}</a>
+                <span class="text-muted small">${tgl}</span>
+            </div>
+            <span style="font-size:11px;background:#e9ecef;color:#495057;padding:3px 8px;border-radius:20px;white-space:nowrap;">
+                ${fwo.boq_section_count} item &middot; ${fwo.total_qty} qty
+            </span>
+        </div>`;
+    }).join('') : '<div class="text-muted small py-2 text-center">Belum ada FWO</div>';
+
+    // ── 2-column layout ───────────────────────────────────────────────────────
+    return `${summaryHtml}
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="fw-semibold small text-muted mb-2">
+                    <i class="fa-solid fa-layer-group me-1"></i> BOQ Items (${data.sections.length})
+                </div>
+                ${sectionsHtml}
+            </div>
+            <div class="col-md-6" style="border-left:1px solid #e9ecef;">
+                <div class="fw-semibold small text-muted mb-2">
+                    <i class="fa-solid fa-hard-hat me-1"></i> Fieldwork Orders (${data.fwos.length})
+                </div>
+                ${fwoListHtml}
+            </div>
+        </div>`;
+}
+
+// ── Event handlers ─────────────────────────────────────────────────────────────
 $(document).ready(function () {
+
+    $(document).on('click', '#btnRefreshBoqProgress', function () {
+        const woId  = $(this).data('wo-id');
+        const $icon = $(this).find('i');
+        $icon.addClass('fa-spin');
+        loadBoqProgress(woId);
+        setTimeout(function () { $icon.removeClass('fa-spin'); }, 600);
+    });
+
     page = new CrudPageController({
-        primaryKey: "id_wo",
+        primaryKey: 'id_wo',
         renderForm: renderForm,
-        initSelect: function () {
-            $("#detail_kelompok").select2({
-                width: "100%",
-                dropdownParent: $("#detailContent"),
-            });
+        afterLoad: function (res) {
+            loadBoqProgress(res.id_wo);
+            loadWoPeriodContent(res.id_wo, res.id_so, res.id_period);
+            initWoPeriodSection(res.id_wo, res.id_so, res.id_period);
         },
     });
 });

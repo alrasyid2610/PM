@@ -255,9 +255,9 @@ const formGroup = {
         </button>`;
     },
 
-    sectionCard({ icon, color, title, subtitle = null, editTitle = null, actions = '' }, content) {
+    sectionCard({ icon, color, title, subtitle = null, editTitle = null, actions = '', id = null }, content) {
         return `
-        <div class="col-md-12">
+        <div class="col-md-12"${id ? ` id="${id}"` : ''}>
             <div class="detail-section-card" data-sc-open="true">
                 <div class="detail-section-header">
                     <div class="detail-section-icon ${color}">

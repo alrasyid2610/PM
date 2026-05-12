@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('page-title', 'BoQ')
-@section('page-descrip', 'Data BOQ')
+@section('page-title', 'BOQ')
+@section('page-descrip', 'Data Bill of Quantity')
 
 @section('breadcrumb')
     <li class="breadcrumb-item active" aria-current="page">BOQ</li>
@@ -17,26 +17,121 @@
     </svg>
 @endsection
 
-
 @section('content')
 <x-crud-index
-    title="List of Units"
+    title="List BOQ"
     create-route="boq.create"
     :with-history="true"
 />
+
+{{-- Modal: Tambah / Edit Section (digunakan saat edit inline) --}}
+<div class="modal fade" id="modalAddSection" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalSectionTitle">
+                    <i class="fa-solid fa-layer-group me-2 text-primary"></i> Tambah Section
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">
+                        Testing Point <span class="text-danger">*</span>
+                    </label>
+                    <select id="selectTestingPoint" style="width:100%"></select>
+                </div>
+
+                <div id="modalLoading" class="text-center text-muted py-3 d-none">
+                    <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat item...
+                </div>
+
+                <div id="modalEmpty" class="text-center text-muted py-3 d-none">
+                    <i class="fa-solid fa-inbox me-1 opacity-50"></i> Tidak ada item pada Testing Point ini
+                </div>
+
+                <div id="modalItemsWrap" class="d-none">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-semibold small text-muted">
+                            <i class="fa-solid fa-list-check me-1"></i> Pilih item yang akan dimasukkan:
+                        </span>
+                        <div class="d-flex gap-3">
+                            <a href="#" id="btnCheckAll" class="small text-decoration-none">Pilih Semua</a>
+                            <a href="#" id="btnUncheckAll" class="small text-decoration-none text-secondary">Hapus Semua</a>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <input type="text" id="modalItemSearch" class="form-control form-control-sm"
+                            placeholder="Cari item...">
+                    </div>
+                    <div id="modalItemsList"></div>
+                    <div id="modalSearchEmpty" class="text-center text-muted py-3 d-none" style="font-size:13px;">
+                        <i class="fa-solid fa-magnifying-glass me-1 opacity-50"></i> Tidak ada item yang cocok
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                <button type="button" id="btnConfirmSection" class="btn btn-primary btn-sm" disabled>
+                    <i class="fa-solid fa-check me-1"></i>
+                    <span id="btnConfirmText">Tambah Section</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('custom-script')
+<style>
+    .boq-section .card-header {
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .section-fields {
+        background: #fafbfc;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 12px 14px;
+        margin-bottom: 14px;
+    }
+    .boq-item {
+        padding: 7px 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .boq-item:last-child { border-bottom: none; }
+    .item-meta-badge {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 20px;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        color: #475569;
+        white-space: nowrap;
+    }
+    .modal-item-row {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 8px;
+        transition: background 0.1s;
+    }
+    .modal-item-row:hover { background: #f8fafc; }
+</style>
+
 <script>
     window.route = {
-        data: "{{ route('boq.data') }}",
-        update: "{{ url('boq') }}/",
-        csrf: "{{ csrf_token() }}",
+        data:    "{{ route('boq.data') }}",
+        update:  "{{ url('boq') }}/",
         history: "{{ url('boq') }}/",
-
+        csrf:    "{{ csrf_token() }}",
+        testingPointSelect2: "{{ route('testing-points.select2') }}",
+        testingItemsByPoint: "{{ url('testing-items/by-point') }}/",
     }
 </script>
 
-<script src="{{ asset('assets/js/testing-units/form.js') }}"></script>
-<script src="{{ asset('assets/js/testing-units/index.js') }}"></script>
+<script src="{{ asset('assets/js/boq/form.js') }}"></script>
+<script src="{{ asset('assets/js/boq/index.js') }}"></script>
 @endsection

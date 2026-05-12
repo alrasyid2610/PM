@@ -40,6 +40,7 @@
                         @endphp
                         <li class="sidebar-item has-sub {{ $isActive ? 'active' : '' }}">
                             <a href="#" class='sidebar-link'>
+                                <i class="fa-solid {{ $group['icon'] }}"></i>
                                 <span>{{ $group['group'] }}</span>
                             </a>
                             <ul class="submenu">
@@ -53,7 +54,10 @@
                                         <li class="sidebar-title mt-2">{{ $item['section'] }}</li>
                                     @endif
                                     <li class="{{ request()->routeIs($item['slug'] . '.*') ? 'active' : '' }}">
-                                        <a href="{{ route($item['slug'] . '.index') }}">{{ $item['label'] }}</a>
+                                        <a href="{{ route($item['slug'] . '.index') }}">
+                                            <i class="fa-solid {{ $item['icon'] ?? 'fa-circle-dot' }} me-1"></i>
+                                            {{ $item['label'] }}
+                                        </a>
                                     </li>
                                 @endforeach
                             </ul>

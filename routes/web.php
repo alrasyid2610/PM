@@ -5,6 +5,8 @@ use App\Http\Controllers\BusinessRelationSiteController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BoqController;
+use App\Http\Controllers\FieldworkBoqController;
+use App\Http\Controllers\FieldworkController;
 use App\Http\Controllers\BusinessEstateController;
 use App\Http\Controllers\BusinessRelationContactController;
 use App\Http\Controllers\CommercialBuildingController;
@@ -20,6 +22,7 @@ use App\Http\Controllers\TestingStandardController;
 use App\Http\Controllers\TestingMatriksSampleController;
 use App\Http\Controllers\TestingPointController;
 use App\Http\Controllers\WilayahController;
+use App\Http\Controllers\WoPeriodController;
 use Spatie\LaravelPdf\Facades\Pdf;
 
 Route::get('/test-so-pdf', function () {
@@ -425,6 +428,9 @@ Route::prefix('sales-orders')->name('sales-orders.')->group(function () {
         ->name('detail')
         ->whereNumber('id');
 
+    Route::get('/{id}/wo-progress', [SalesOrderController::class, 'woProgress'])
+        ->name('wo-progress')
+        ->whereNumber('id');
 
     Route::get('/{id}', [SalesOrderController::class, 'show'])->name('show');
     Route::get('/{id}/edit', [SalesOrderController::class, 'edit'])->name('edit');
@@ -441,6 +447,8 @@ Route::prefix('work-orders')->name('work-orders.')->group(function () {
     Route::get('/create', [WorkOrderController::class, 'create'])->name('create');
     Route::post('/', [WorkOrderController::class, 'store'])->name('store');
 
+    Route::get('/by-so/{id}', [WorkOrderController::class, 'bySo'])->name('by-so');
+
     Route::get('/select2', [WorkOrderController::class, 'select2'])
         ->name('select2');
 
@@ -451,8 +459,34 @@ Route::prefix('work-orders')->name('work-orders.')->group(function () {
     Route::get('/{id}', [WorkOrderController::class, 'show'])->name('show');
     Route::get('/{id}/edit', [WorkOrderController::class, 'edit'])->name('edit');
     Route::put('/{id}', [WorkOrderController::class, 'update'])->name('update');
+    Route::put('/{id}/period', [WorkOrderController::class, 'assignPeriod'])->name('assign-period')->whereNumber('id');
     Route::delete('/{id}', [WorkOrderController::class, 'destroy'])->name('destroy');
     Route::get('/{id}/history', [WorkOrderController::class, 'history'])->name('history')->whereNumber('id');
+    Route::get('/{id}/boq-progress', [WorkOrderController::class, 'boqProgress'])->name('boq-progress')->whereNumber('id');
+});
+
+Route::prefix('wo-periods')->name('wo-periods.')->group(function () {
+    Route::get('/by-so/{id_so}', [WoPeriodController::class, 'bySo'])->name('by-so');
+    Route::get('/select2', [WoPeriodController::class, 'select2'])->name('select2');
+    Route::post('/', [WoPeriodController::class, 'store'])->name('store');
+    Route::put('/{id}', [WoPeriodController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [WoPeriodController::class, 'destroy'])->name('destroy')->whereNumber('id');
+});
+
+Route::prefix('fieldwork-boq')->name('fieldwork-boq.')->group(function () {
+    Route::get('/by-fwo/{id_fwo}', [FieldworkBoqController::class, 'byFwo'])->name('by-fwo');
+    Route::put('/{id_fwo}',        [FieldworkBoqController::class, 'update'])->name('update')->whereNumber('id_fwo');
+});
+
+Route::prefix('fieldworks')->name('fieldworks.')->group(function () {
+    Route::get('/',             [FieldworkController::class, 'index'])->name('index');
+    Route::get('/data',         [FieldworkController::class, 'data'])->name('data');
+    Route::get('/create',       [FieldworkController::class, 'create'])->name('create');
+    Route::post('/',            [FieldworkController::class, 'store'])->name('store');
+    Route::get('/{id}',         [FieldworkController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::put('/{id}',         [FieldworkController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}',      [FieldworkController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/history', [FieldworkController::class, 'history'])->name('history')->whereNumber('id');
 });
 
 Route::prefix('boq')->name('boq.')->group(function () {
@@ -466,10 +500,14 @@ Route::prefix('boq')->name('boq.')->group(function () {
     Route::get('/select2', [BoqController::class, 'select2'])
         ->name('select2');
 
+    Route::get('/by-wo/{id}', [BoqController::class, 'byWo'])->name('by-wo');
+    Route::get('/select2-by-wo/{id_wo}', [BoqController::class, 'select2ByWo'])->name('select2-by-wo');
+    Route::get('/{id}/section-items', [BoqController::class, 'sectionItems'])->name('section-items');
+
     Route::get('/{id}', [BoqController::class, 'show'])->name('show');
-    Route::get('/{id}/edit', [BoqController::class, 'edit'])->name('edit');
     Route::put('/{id}', [BoqController::class, 'update'])->name('update');
     Route::delete('/{id}', [BoqController::class, 'destroy'])->name('destroy');
+    Route::get('/{id}/history', [BoqController::class, 'history'])->name('history')->whereNumber('id');
 });
 
 

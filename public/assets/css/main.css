@@ -1,3 +1,42 @@
+/* =====================
+   THEME VARIABLES
+   Ganti blok ini untuk mengganti seluruh tema warna aplikasi.
+   ===================== */
+:root {
+    /* Gradient header (darkest → mid) */
+    --primary-950:     #0a1628;
+    --primary-900:     #0d2146;
+    --primary-850:     #0f2d5a;
+    --primary-800:     #1a3a6e;
+
+    /* Core brand */
+    --primary-700:     #18386b;
+    --primary-700-rgb: 24, 56, 107;
+
+    /* Accent blue */
+    --primary-500:     #1a5fbe;
+    --primary-500-rgb: 26, 95, 190;
+
+    /* Highlight blue */
+    --primary-400:     #4a9eff;
+    --primary-400-rgb: 74, 158, 255;
+
+    /* Tints */
+    --primary-200:     #bcd0f8;
+    --primary-150:     #f0f6ff;
+    --primary-100:     #e8f0fe;
+    --primary-50:      #eef2f9;
+}
+
+/* Color */
+.text-primary {
+    color: #fff !important;
+}
+
+div.dt-scroll-body > table > tbody > tr:last-child > .dt-empty {
+    text-align: center !important;
+}
+
 .navbar {
     padding-bottom: 0;
 }
@@ -18,10 +57,10 @@
     inset: 0;
     background: linear-gradient(
         135deg,
-        #0a1628 0%,
-        #0d2146 40%,
-        #1a3a6e 70%,
-        #0f2d5a 100%
+        var(--primary-950) 0%,
+        var(--primary-900) 40%,
+        var(--primary-800) 70%,
+        var(--primary-850) 100%
     );
 }
 
@@ -76,7 +115,7 @@
     top: 0;
     bottom: 0;
     width: 4px;
-    background: linear-gradient(180deg, #4a9eff 0%, #1a5fbe 100%);
+    background: linear-gradient(180deg, var(--primary-400) 0%, var(--primary-500) 100%);
 }
 
 .page-header-banner .header-line {
@@ -87,8 +126,8 @@
     height: 1px;
     background: linear-gradient(
         90deg,
-        rgba(74, 158, 255, 0.6) 0%,
-        rgba(74, 158, 255, 0.1) 40%,
+        rgba(var(--primary-400-rgb), 0.6) 0%,
+        rgba(var(--primary-400-rgb), 0.1) 40%,
         transparent 100%
     );
 }
@@ -209,8 +248,8 @@
 
 .dataTables_wrapper .dataTables_filter input:focus {
     outline: none !important;
-    border-color: #1a5fbe !important;
-    box-shadow: 0 0 0 3px rgba(26, 95, 190, 0.08) !important;
+    border-color: var(--primary-500) !important;
+    box-shadow: 0 0 0 3px rgba(var(--primary-500-rgb), 0.08) !important;
 }
 
 /* Table wrapper — border & rounded */
@@ -262,7 +301,7 @@ table.dataTable thead th.sorting_desc::after {
 }
 
 table.dataTable thead th.sorting_asc::after {
-    color: #1a5fbe !important;
+    color: var(--primary-500) !important;
 }
 
 /* Body rows */
@@ -277,12 +316,12 @@ table.dataTable tbody tr:last-child {
 }
 
 table.dataTable tbody tr:hover {
-    background: #f0f6ff !important;
+    background: var(--primary-150) !important;
 }
 
 table.dataTable tbody tr.table-active,
 table.dataTable tbody tr.selected {
-    background: #e8f0fe !important;
+    background: var(--primary-100) !important;
 }
 
 table.dataTable tbody td {
@@ -315,7 +354,7 @@ table.dataTable.table-striped tbody tr:nth-child(odd) {
 }
 
 table.dataTable.table-striped tbody tr:nth-child(odd):hover {
-    background: #f0f6ff !important;
+    background: var(--primary-150) !important;
 }
 
 /* =====================
@@ -351,8 +390,8 @@ table.dataTable.table-striped tbody tr:nth-child(odd):hover {
 
 .dataTables_wrapper .dataTables_paginate .paginate_button.current,
 .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
-    background: #1a5fbe !important;
-    border-color: #1a5fbe !important;
+    background: var(--primary-500) !important;
+    border-color: var(--primary-500) !important;
     color: #fff !important;
     font-weight: 500 !important;
 }
@@ -405,9 +444,9 @@ table.dataTable.table-striped tbody tr:nth-child(odd):hover {
 }
 
 .sidebar-wrapper .menu .submenu li.active > a {
-    color: #18386b !important;
+    color: var(--primary-700) !important;
     font-weight: 700 !important;
-    background: #e8f0fe;
+    background: var(--primary-100);
     border-radius: 6px;
     margin-left: 0.3rem;
     padding-left: 2.7rem;
@@ -439,10 +478,10 @@ table.dataTable.table-striped tbody tr:nth-child(odd):hover {
 }
 
 .nav-tabs .nav-item .nav-link.active {
-    background: #18386b !important;
-    border-color: #18386b !important;
+    background: var(--primary-700) !important;
+    border-color: var(--primary-700) !important;
     color: #ffffff !important;
-    box-shadow: 0 2px 8px rgba(24, 56, 107, 0.25) !important;
+    box-shadow: 0 2px 8px rgba(var(--primary-700-rgb), 0.25) !important;
 }
 
 .nav-tabs .nav-link.active::after {
@@ -520,7 +559,7 @@ section .card {
 .detail-number {
     font-size: 18px;
     font-weight: 700;
-    color: #18386b;
+    color: var(--primary-700);
     letter-spacing: -0.02em;
 }
 
@@ -555,8 +594,8 @@ section .card {
     color: #6b7280;
 }
 .detail-status-badge.detail-status-confirmed {
-    background: #e8f0fe;
-    color: #1a5fbe;
+    background: var(--primary-100);
+    color: var(--primary-500);
 }
 .detail-status-badge.detail-status-on-progress {
     background: #fef3c7;
@@ -611,12 +650,12 @@ section .card {
 }
 
 .detail-section-icon.icon-navy {
-    background: #eef2f9;
-    color: #18386b;
+    background: var(--primary-50);
+    color: var(--primary-700);
 }
 .detail-section-icon.icon-blue {
-    background: #e8f0fe;
-    color: #1a5fbe;
+    background: var(--primary-100);
+    color: var(--primary-500);
 }
 .detail-section-icon.icon-green {
     background: #dcfce7;
@@ -946,13 +985,13 @@ section .card {
 .history-wrap-icon {
     width: 28px;
     height: 28px;
-    background: #e8f0fe;
+    background: var(--primary-100);
     border-radius: 7px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 12px;
-    color: #1a5fbe;
+    color: var(--primary-500);
 }
 
 .history-wrap-title {
@@ -1002,8 +1041,8 @@ section .card {
 }
 
 .badge-update {
-    background: #e8f0fe;
-    color: #1a5fbe;
+    background: var(--primary-100);
+    color: var(--primary-500);
 }
 .badge-create {
     background: #dcfce7;
@@ -1027,7 +1066,7 @@ section .card {
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    background: #18386b;
+    background: var(--primary-700);
     color: #fff;
     font-size: 8px;
     font-weight: 700;
@@ -1261,8 +1300,8 @@ section .card {
 }
 
 .dt-top .dataTables_filter input:focus {
-    border-color: #18386b;
-    box-shadow: 0 0 0 3px rgba(24, 56, 107, 0.08);
+    border-color: var(--primary-700);
+    box-shadow: 0 0 0 3px rgba(var(--primary-700-rgb), 0.08);
 }
 
 .dt-bottom .dataTables_info {
@@ -1287,8 +1326,8 @@ section .card {
 }
 
 .sidebar-search-wrap:focus-within {
-    border-color: #18386b;
-    box-shadow: 0 0 0 3px rgba(24, 56, 107, 0.08);
+    border-color: var(--primary-700);
+    box-shadow: 0 0 0 3px rgba(var(--primary-700-rgb), 0.08);
     background: #fff;
 }
 
@@ -1425,12 +1464,12 @@ section .card {
 }
 
 .att-btn-download {
-    color: #1a5fbe;
+    color: var(--primary-500);
 }
 .att-btn-download:hover {
-    background: #e8f0fe;
-    border-color: #bcd0f8;
-    color: #1a5fbe;
+    background: var(--primary-100);
+    border-color: var(--primary-200);
+    color: var(--primary-500);
 }
 
 .att-btn-preview {
@@ -1486,7 +1525,7 @@ td.dt-control {
 }
 tr.shown td.dt-control i {
     transform: rotate(90deg);
-    transition: transform .2s ease;
+    transition: transform 0.2s ease;
 }
 
 /* Global Loader */
@@ -1514,14 +1553,21 @@ tr.shown td.dt-control i {
 }
 
 @keyframes gl-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50%       { opacity: 0.7; transform: scale(0.97); }
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(0.97);
+    }
 }
 
 .gl-bar {
     width: 160px;
     height: 3px;
-    background: rgba(24, 56, 107, 0.12);
+    background: rgba(var(--primary-700-rgb), 0.12);
     border-radius: 99px;
     position: relative;
     overflow: hidden;
@@ -1532,12 +1578,16 @@ tr.shown td.dt-control i {
     top: 0;
     height: 100%;
     width: 45%;
-    background: #18386b;
+    background: var(--primary-700);
     border-radius: 99px;
     animation: gl-sweep 1.3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @keyframes gl-sweep {
-    0%   { left: -45%; }
-    100% { left: 105%; }
+    0% {
+        left: -45%;
+    }
+    100% {
+        left: 105%;
+    }
 }

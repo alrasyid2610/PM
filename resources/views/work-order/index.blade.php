@@ -14,9 +14,11 @@
         data: "{{ route('work-orders.data') }}",
         history: "{{ url('work-orders') }}/",
         csrf: "{{ csrf_token() }}",
-        update: "{{ url('work-orders') }}/"
+        update: "{{ url('work-orders') }}/",
+        boqProgress: "{{ url('work-orders') }}/",
     }
 </script>
 <script src="{{ asset('assets/js/work-order/index.js') }}"></script>
 <script src="{{ asset('assets/js/work-order/form.js') }}"></script>
+<script src="{{ asset('assets/js/work-order/period.js') }}"></script>
 @endsection

@@ -7,6 +7,7 @@ class CrudPageController {
         this.initDynamicTable = options.initDynamicTable || null;
         this.historyConfig = options.historyConfig || null;
         this.onSave = options.onSave || null;
+        this.afterLoad = options.afterLoad || null;
 
         this.selectedRow = { id: null };
 
@@ -39,6 +40,25 @@ class CrudPageController {
                 self.loadHistory(self.selectedRow.id);
             }
         });
+
+        // Auto-open detail jika URL mengandung ?open=ID
+        const openId = new URLSearchParams(window.location.search).get('open');
+        if (openId) {
+            const id = parseInt(openId);
+            if (!isNaN(id)) {
+                // Tunggu DataTable selesai render baru buka detail
+                setTimeout(function () {
+                    self.selectedRow.id = id;
+                    self.loadDetail(id);
+
+                    // Pindah ke tab Detail jika ada tab system
+                    const $detailTab = $('#detail-tab');
+                    if ($detailTab.length) {
+                        new bootstrap.Tab($detailTab[0]).show();
+                    }
+                }, 400);
+            }
+        }
     }
 
     loadDetail(id) {
@@ -104,6 +124,10 @@ class CrudPageController {
                 // 🔥 SEKARANG BARU AMBIL INITIAL STATE
                 window.initialForms = getAllFormsData();
                 window.initialItems = getDynamicTableData();
+
+                if (self.afterLoad) {
+                    self.afterLoad(res);
+                }
             },
         });
     }

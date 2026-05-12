@@ -305,6 +305,99 @@ class SalesOrderController extends Controller
         }
     }
 
+    public function woProgress(int $id_so)
+    {
+        $wos = DB::table('work_orders as wo')
+            ->where('wo.id_so', $id_so)
+            ->select(['wo.id_wo', 'wo.no_wo', 'wo.judul_pekerjaan'])
+            ->orderBy('wo.id_wo')
+            ->get();
+
+        if ($wos->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $woIds = $wos->pluck('id_wo');
+
+        $boqSections = DB::table('boq as b')
+            ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+            ->whereIn('b.id_wo', $woIds)
+            ->select(['b.id_boq', 'b.id_wo', 'tp.nama as point_name', 'b.qty as boq_qty', 'b.satuan', 'b.harga'])
+            ->get();
+
+        $boqIds = $boqSections->pluck('id_boq');
+
+        $fwoQtyByBoq = DB::table('fieldwork_boq')
+            ->whereIn('id_boq', $boqIds)
+            ->selectRaw('id_boq, SUM(COALESCE(qty, 0)) as fwo_qty')
+            ->groupBy('id_boq')
+            ->pluck('fwo_qty', 'id_boq');
+
+        $fwoCountByWo = DB::table('fieldworks')
+            ->whereIn('id_wo', $woIds)
+            ->selectRaw('id_wo, COUNT(*) as fwo_count')
+            ->groupBy('id_wo')
+            ->pluck('fwo_count', 'id_wo');
+
+        $sectionsByWo = $boqSections->groupBy('id_wo');
+
+        // FWO list per WO dengan total qty yang dikerjakan
+        $fwoRows = DB::table('fieldworks as fw')
+            ->leftJoin('fieldwork_boq as fb', 'fw.id_fwo', '=', 'fb.id_fwo')
+            ->whereIn('fw.id_wo', $woIds)
+            ->select([
+                'fw.id_fwo', 'fw.id_wo', 'fw.no_fwo',
+                'fw.tanggal_mulai', 'fw.tanggal_selesai',
+                DB::raw('COUNT(fb.id_fwo_boq) as boq_section_count'),
+                DB::raw('SUM(COALESCE(fb.qty, 0)) as total_qty'),
+            ])
+            ->groupBy('fw.id_fwo', 'fw.id_wo', 'fw.no_fwo', 'fw.tanggal_mulai', 'fw.tanggal_selesai')
+            ->orderBy('fw.id_fwo')
+            ->get()
+            ->groupBy('id_wo');
+
+        return response()->json($wos->map(function ($wo) use ($sectionsByWo, $fwoQtyByBoq, $fwoCountByWo, $fwoRows) {
+            $sections         = $sectionsByWo->get($wo->id_wo) ?? collect();
+            $totalBoqQty      = (int) $sections->sum('boq_qty');
+            $totalFwoQty      = (int) $sections->sum(fn($s) => (int)($fwoQtyByBoq[$s->id_boq] ?? 0));
+            $pct              = $totalBoqQty > 0 ? round($totalFwoQty / $totalBoqQty * 100) : 0;
+            $totalBoqAmount   = (int) $sections->sum(fn($s) => (int)($s->boq_qty ?? 0) * (int)($s->harga ?? 0));
+
+            $fwos = ($fwoRows->get($wo->id_wo) ?? collect())->map(fn($f) => [
+                'id_fwo'             => $f->id_fwo,
+                'no_fwo'             => $f->no_fwo,
+                'tanggal_mulai'      => $f->tanggal_mulai,
+                'tanggal_selesai'    => $f->tanggal_selesai,
+                'boq_section_count'  => (int)$f->boq_section_count,
+                'total_qty'          => (int)$f->total_qty,
+            ])->values()->toArray();
+
+            return [
+                'id_wo'           => $wo->id_wo,
+                'no_wo'           => $wo->no_wo,
+                'judul_pekerjaan' => $wo->judul_pekerjaan,
+                'fwo_count'       => (int)($fwoCountByWo[$wo->id_wo] ?? 0),
+                'total_boq_qty'   => $totalBoqQty,
+                'total_fwo_qty'   => $totalFwoQty,
+                'progress_pct'    => $pct,
+                'total_boq_amount' => $totalBoqAmount,
+                'sections'        => $sections->map(fn($s) => [
+                    'id_boq'        => $s->id_boq,
+                    'point_name'    => $s->point_name ?? '—',
+                    'boq_qty'       => (int)($s->boq_qty ?? 0),
+                    'satuan'        => $s->satuan,
+                    'harga'         => (int)($s->harga ?? 0),
+                    'total_amount'  => (int)($s->boq_qty ?? 0) * (int)($s->harga ?? 0),
+                    'fwo_qty'       => (int)($fwoQtyByBoq[$s->id_boq] ?? 0),
+                    'progress_pct'  => ($s->boq_qty ?? 0) > 0
+                        ? round((int)($fwoQtyByBoq[$s->id_boq] ?? 0) / $s->boq_qty * 100)
+                        : 0,
+                ])->values()->toArray(),
+                'fwos'            => $fwos,
+            ];
+        })->values());
+    }
+
     public function select2(Request $request)
     {
         $search = $request->q;

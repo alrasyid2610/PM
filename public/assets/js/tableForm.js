@@ -131,6 +131,10 @@ class DynamicTable {
                 data: (params) => ({ q: params.term }),
                 processResults: (data) => ({ results: data }),
             },
+            language: {
+                noResults: () => `<span>Tidak ditemukan. <a href="/testing-parameters/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`,
+            },
+            escapeMarkup: (m) => m,
         });
 
         scope.find(".unit-select").select2({
@@ -143,6 +147,10 @@ class DynamicTable {
                 data: (params) => ({ q: params.term }),
                 processResults: (data) => ({ results: data }),
             },
+            language: {
+                noResults: () => `<span>Tidak ditemukan. <a href="/testing-units/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`,
+            },
+            escapeMarkup: (m) => m,
         });
     }
 

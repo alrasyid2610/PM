@@ -189,7 +189,60 @@
 
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cleave.js@1.6.0/dist/cleave.min.js"></script>
+    <script>
+        function initNumericMask(container) {
+            $(container).find('.input-num-mask').each(function () {
+                if (this._cleave) return;
+                const isInt = $(this).hasClass('input-num-int');
+                this._cleave = new Cleave(this, {
+                    numeral: true,
+                    numeralThousandsGroupStyle: 'thousand',
+                    delimiter: ',',
+                    numeralDecimalMark: '.',
+                    numeralDecimalScale: isInt ? 0 : 2,
+                });
+            });
+        }
+        function rawNumVal(el) {
+            if (!el) return null;
+            const raw = el._cleave ? el._cleave.getRawValue()
+                                   : String($(el).val()).replace(/,/g, '');
+            const n = parseFloat(raw);
+            return isNaN(n) ? null : n;
+        }
+    </script>
     @yield('custom-script')
+
+    {{-- Back to Top --}}
+    <button id="btnBackToTop" title="Kembali ke atas"
+        style="display:none;position:fixed;bottom:28px;right:28px;z-index:9999;
+               width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;
+               background:#1d4ed8;color:#fff;box-shadow:0 4px 12px rgba(29,78,216,.35);
+               font-size:16px;transition:opacity .2s,transform .2s;">
+        <i class="fa-solid fa-chevron-up"></i>
+    </button>
+    <script>
+        (function () {
+            const btn = document.getElementById('btnBackToTop');
+            window.addEventListener('scroll', function () {
+                if (window.scrollY > 300) {
+                    btn.style.display = 'flex';
+                    btn.style.alignItems = 'center';
+                    btn.style.justifyContent = 'center';
+                    btn.style.opacity = '1';
+                } else {
+                    btn.style.opacity = '0';
+                    setTimeout(function () {
+                        if (window.scrollY <= 300) btn.style.display = 'none';
+                    }, 200);
+                }
+            });
+            btn.addEventListener('click', function () {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        })();
+    </script>
 </body>
 
 </html>
