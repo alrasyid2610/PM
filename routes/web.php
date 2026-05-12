@@ -20,6 +20,7 @@ use App\Http\Controllers\TestingStandardController;
 use App\Http\Controllers\TestingMatriksSampleController;
 use App\Http\Controllers\TestingPointController;
 use App\Http\Controllers\WilayahController;
+use App\Http\Controllers\TerminController;
 use Spatie\LaravelPdf\Facades\Pdf;
 
 Route::get('/test-so-pdf', function () {
@@ -453,6 +454,20 @@ Route::prefix('work-orders')->name('work-orders.')->group(function () {
     Route::put('/{id}', [WorkOrderController::class, 'update'])->name('update');
     Route::delete('/{id}', [WorkOrderController::class, 'destroy'])->name('destroy');
     Route::get('/{id}/history', [WorkOrderController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('termin')->name('termin.')->group(function () {
+    Route::get('/',                   [TerminController::class, 'index'])->name('index');
+    Route::get('/data',               [TerminController::class, 'data'])->name('data');
+    Route::get('/create',             [TerminController::class, 'create'])->name('create');
+    Route::post('/',                  [TerminController::class, 'store'])->name('store');
+    Route::get('/select2',            [TerminController::class, 'select2'])->name('select2');
+    Route::post('/delete-attachment', [TerminController::class, 'deleteAttachment'])->name('delete-attachment');
+    Route::get('/{id}',               [TerminController::class, 'show'])->name('show')->whereNumber('id');
+    Route::get('/{id}/detail',        [TerminController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::get('/{id}/history',       [TerminController::class, 'history'])->name('history')->whereNumber('id');
+    Route::put('/{id}',               [TerminController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}',            [TerminController::class, 'destroy'])->name('destroy')->whereNumber('id');
 });
 
 Route::prefix('boq')->name('boq.')->group(function () {

@@ -51,6 +51,7 @@ return [
             ['slug' => 'sales-orders', 'label' => 'Sales Order'],
             ['slug' => 'work-orders',  'label' => 'Work Order'],
             ['slug' => 'boq',          'label' => 'BOQ'],
+            ['slug' => 'termin',       'label' => 'Termin'],
         ],
     ],
     [
