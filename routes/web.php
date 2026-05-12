@@ -22,6 +22,7 @@ use App\Http\Controllers\TestingStandardController;
 use App\Http\Controllers\TestingMatriksSampleController;
 use App\Http\Controllers\TestingPointController;
 use App\Http\Controllers\WilayahController;
+use App\Http\Controllers\TerminController;
 use App\Http\Controllers\WoPeriodController;
 use Spatie\LaravelPdf\Facades\Pdf;
 
@@ -123,21 +124,20 @@ Route::prefix('contracts')
     ->name('contracts.')
     ->group(function () {
 
-    Route::get('/select2byid', [ContractController::class, 'select2byid'])->name('select2byid');
-    Route::get('/select2',     [ContractController::class, 'select2'])->name('select2');
+        Route::get('/select2byid', [ContractController::class, 'select2byid'])->name('select2byid');
+        Route::get('/select2',     [ContractController::class, 'select2'])->name('select2');
 
-    Route::get('/',            [ContractController::class, 'index'])->name('index');
-    Route::get('/data',        [ContractController::class, 'data'])->name('data');
-    Route::get('/create',      [ContractController::class, 'create'])->name('create');
-    Route::post('/',           [ContractController::class, 'store'])->name('store');
-    Route::post('/delete-attachment', [ContractController::class, 'deleteAttachment'])->name('delete-attachment');
-    Route::get('/{id}',        [ContractController::class, 'show'])->name('show');
-    Route::put('/{id}',        [ContractController::class, 'update'])->name('update');
-    Route::post('/{id}',       [ContractController::class, 'update'])->name('update.post');
-    Route::delete('/{id}',     [ContractController::class, 'destroy'])->name('destroy');
-    Route::get('/{id}/detail', [ContractController::class, 'detail'])->name('detail');
-    Route::get('/{id}/history',[ContractController::class, 'history'])->name('history')->whereNumber('id');
-
+        Route::get('/',            [ContractController::class, 'index'])->name('index');
+        Route::get('/data',        [ContractController::class, 'data'])->name('data');
+        Route::get('/create',      [ContractController::class, 'create'])->name('create');
+        Route::post('/',           [ContractController::class, 'store'])->name('store');
+        Route::post('/delete-attachment', [ContractController::class, 'deleteAttachment'])->name('delete-attachment');
+        Route::get('/{id}',        [ContractController::class, 'show'])->name('show');
+        Route::put('/{id}',        [ContractController::class, 'update'])->name('update');
+        Route::post('/{id}',       [ContractController::class, 'update'])->name('update.post');
+        Route::delete('/{id}',     [ContractController::class, 'destroy'])->name('destroy');
+        Route::get('/{id}/detail', [ContractController::class, 'detail'])->name('detail');
+        Route::get('/{id}/history', [ContractController::class, 'history'])->name('history')->whereNumber('id');
     });
 
 Route::prefix('testing-standards')
@@ -487,6 +487,20 @@ Route::prefix('fieldworks')->name('fieldworks.')->group(function () {
     Route::put('/{id}',         [FieldworkController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}',      [FieldworkController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/history', [FieldworkController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('termin')->name('termin.')->group(function () {
+    Route::get('/',                   [TerminController::class, 'index'])->name('index');
+    Route::get('/data',               [TerminController::class, 'data'])->name('data');
+    Route::get('/create',             [TerminController::class, 'create'])->name('create');
+    Route::post('/',                  [TerminController::class, 'store'])->name('store');
+    Route::get('/select2',            [TerminController::class, 'select2'])->name('select2');
+    Route::post('/delete-attachment', [TerminController::class, 'deleteAttachment'])->name('delete-attachment');
+    Route::get('/{id}',               [TerminController::class, 'show'])->name('show')->whereNumber('id');
+    Route::get('/{id}/detail',        [TerminController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::get('/{id}/history',       [TerminController::class, 'history'])->name('history')->whereNumber('id');
+    Route::put('/{id}',               [TerminController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}',            [TerminController::class, 'destroy'])->name('destroy')->whereNumber('id');
 });
 
 Route::prefix('boq')->name('boq.')->group(function () {
