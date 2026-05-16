@@ -59,6 +59,7 @@ class WorkOrderController extends Controller
             'id_pic_pelanggan_pekerjaan' => $request->pic_pekerjaan,
             'judul_pekerjaan' => $request->judul_order,
             'keterangan' => $request->keterangan,
+            'id_period' => $request->id_period ?: null,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -220,6 +221,40 @@ class WorkOrderController extends Controller
     }
 
 
+    public function duplicate(int $id)
+    {
+        $source = DB::table('work_orders')->where('id_wo', $id)->first();
+
+        if (!$source) {
+            return response()->json(['message' => 'Work Order tidak ditemukan'], 404);
+        }
+
+        $no_wo = $this->generateNoWo();
+
+        $newId = DB::table('work_orders')->insertGetId([
+            'no_wo'                       => $no_wo,
+            'id_so'                       => $source->id_so,
+            'id_pelanggan_pekerjaan'      => $source->id_pelanggan_pekerjaan,
+            'id_site_pelanggan_pekerjaan' => $source->id_site_pelanggan_pekerjaan,
+            'id_pic_pelanggan_pekerjaan'  => $source->id_pic_pelanggan_pekerjaan,
+            'judul_pekerjaan'             => $source->judul_pekerjaan,
+            'keterangan'                  => $source->keterangan,
+            'id_period'                   => $source->id_period,
+            'created_at'                  => now(),
+            'updated_at'                  => now(),
+        ]);
+
+        $after = DB::table('work_orders')->where('id_wo', $newId)->get()->toJson();
+        saveAudit('work_orders', $newId, 'create', null, $after);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Work Order berhasil disalin',
+            'no_wo'   => $no_wo,
+            'id_wo'   => $newId,
+        ]);
+    }
+
     private function generateNoWo()
     {
         $year = now()->format('y');
@@ -312,16 +347,22 @@ class WorkOrderController extends Controller
         $pct            = $totalBoqQty > 0 ? round($totalFwoQty / $totalBoqQty * 100) : 0;
         $totalBoqAmount = (int) $boqSections->sum(fn($s) => (int)($s->boq_qty ?? 0) * (int)($s->harga ?? 0));
 
-        $fwos = DB::table('fieldworks as fw')
-            ->leftJoin('fieldwork_boq as fb', 'fw.id_fwo', '=', 'fb.id_fwo')
-            ->where('fw.id_wo', $id)
-            ->select([
-                'fw.id_fwo', 'fw.no_fwo', 'fw.tanggal_mulai', 'fw.tanggal_selesai',
-                DB::raw('COUNT(fb.id_fwo_boq) as boq_section_count'),
-                DB::raw('SUM(COALESCE(fb.qty, 0)) as total_qty'),
-            ])
-            ->groupBy('fw.id_fwo', 'fw.no_fwo', 'fw.tanggal_mulai', 'fw.tanggal_selesai')
-            ->orderBy('fw.id_fwo')
+        // FWO contributions per BOQ item
+        $fwoDetailsByBoq = $boqIds->isNotEmpty()
+            ? DB::table('fieldwork_boq as fb')
+                ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
+                ->whereIn('fb.id_boq', $boqIds)
+                ->select(['fb.id_boq', 'fw.id_fwo', 'fw.no_fwo', 'fw.tanggal_mulai', 'fb.qty'])
+                ->orderBy('fw.id_fwo')
+                ->get()
+                ->groupBy('id_boq')
+            : collect();
+
+        // All FWOs linked to this WO
+        $allFwos = DB::table('fieldworks')
+            ->where('id_wo', $id)
+            ->select(['id_fwo', 'no_fwo', 'tanggal_mulai'])
+            ->orderBy('id_fwo')
             ->get();
 
         return response()->json([
@@ -329,6 +370,11 @@ class WorkOrderController extends Controller
             'total_fwo_qty'    => $totalFwoQty,
             'progress_pct'     => $pct,
             'total_boq_amount' => $totalBoqAmount,
+            'fwos'             => $allFwos->map(fn($f) => [
+                'id_fwo'        => $f->id_fwo,
+                'no_fwo'        => $f->no_fwo,
+                'tanggal_mulai' => $f->tanggal_mulai,
+            ])->values(),
             'sections'         => $boqSections->map(fn($s) => [
                 'id_boq'       => $s->id_boq,
                 'point_name'   => $s->point_name ?? '—',
@@ -340,14 +386,12 @@ class WorkOrderController extends Controller
                 'progress_pct' => ($s->boq_qty ?? 0) > 0
                     ? round((int)($fwoQtyByBoq[$s->id_boq] ?? 0) / $s->boq_qty * 100)
                     : 0,
-            ])->values(),
-            'fwos' => $fwos->map(fn($f) => [
-                'id_fwo'            => $f->id_fwo,
-                'no_fwo'            => $f->no_fwo,
-                'tanggal_mulai'     => $f->tanggal_mulai,
-                'tanggal_selesai'   => $f->tanggal_selesai,
-                'boq_section_count' => (int)$f->boq_section_count,
-                'total_qty'         => (int)$f->total_qty,
+                'fwos' => ($fwoDetailsByBoq[$s->id_boq] ?? collect())->map(fn($f) => [
+                    'id_fwo'        => $f->id_fwo,
+                    'no_fwo'        => $f->no_fwo,
+                    'tanggal_mulai' => $f->tanggal_mulai,
+                    'qty'           => (int)$f->qty,
+                ])->values(),
             ])->values(),
         ]);
     }

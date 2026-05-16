@@ -725,6 +725,32 @@ section .card {
     color: #374151;
 }
 
+.btn-action-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1.5px solid #d1d5db;
+    color: #6b7280;
+    background: #f9fafb;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    line-height: 1.4;
+}
+
+.btn-action-secondary:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #374151;
+}
+
+.btn-action-secondary i.fa-spin {
+    animation: fa-spin 0.6s linear infinite;
+}
+
 .btn-action-save {
     display: inline-flex;
     align-items: center;

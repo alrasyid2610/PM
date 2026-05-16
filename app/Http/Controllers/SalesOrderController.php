@@ -98,6 +98,24 @@ class SalesOrderController extends Controller
             'updated_at' => now(),
         ]);
 
+        // Simpan periods jika ada
+        $periods = json_decode($request->input('periods_json', '[]'), true);
+        if (is_array($periods)) {
+            foreach ($periods as $p) {
+                if (empty($p['id_site'])) continue;
+                DB::table('wo_periods')->insert([
+                    'id_so'           => $id,
+                    'id_site'         => $p['id_site'],
+                    'tanggal_mulai'   => $p['tanggal_mulai']   ?? null,
+                    'tanggal_selesai' => $p['tanggal_selesai'] ?? null,
+                    'interval_bulan'  => $p['interval_bulan']  ?? null,
+                    'keterangan'      => $p['keterangan']      ?? null,
+                    'created_at'      => now(),
+                    'updated_at'      => now(),
+                ]);
+            }
+        }
+
         $after = DB::table('sales_orders')->where('id_so', $id)->get()->toJson();
         saveAudit('sales_orders', $id, 'Create', '', $after);
 
@@ -308,8 +326,11 @@ class SalesOrderController extends Controller
     public function woProgress(int $id_so)
     {
         $wos = DB::table('work_orders as wo')
+            ->leftJoin('wo_periods as p', 'p.id_period', '=', 'wo.id_period')
+            ->leftJoin('business_relations as br', 'br.id_br', '=', 'wo.id_pelanggan_pekerjaan')
+            ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
             ->where('wo.id_so', $id_so)
-            ->select(['wo.id_wo', 'wo.no_wo', 'wo.judul_pekerjaan'])
+            ->select(['wo.id_wo', 'wo.no_wo', 'wo.judul_pekerjaan', 'wo.id_period', 'p.nama_period', 'p.tanggal_mulai', 'p.tanggal_selesai', 'p.interval_bulan', 'br.nama as nama_pelanggan', 'brs.nama_lokasi as nama_site_pelanggan'])
             ->orderBy('wo.id_wo')
             ->get();
 
@@ -376,7 +397,14 @@ class SalesOrderController extends Controller
                 'id_wo'           => $wo->id_wo,
                 'no_wo'           => $wo->no_wo,
                 'judul_pekerjaan' => $wo->judul_pekerjaan,
-                'fwo_count'       => (int)($fwoCountByWo[$wo->id_wo] ?? 0),
+                'id_period'           => $wo->id_period,
+                'nama_period'         => $wo->nama_period,
+                'tanggal_mulai'       => $wo->tanggal_mulai,
+                'tanggal_selesai'     => $wo->tanggal_selesai,
+                'interval_bulan'      => $wo->interval_bulan,
+                'nama_pelanggan'      => $wo->nama_pelanggan,
+                'nama_site_pelanggan' => $wo->nama_site_pelanggan,
+                'fwo_count'           => (int)($fwoCountByWo[$wo->id_wo] ?? 0),
                 'total_boq_qty'   => $totalBoqQty,
                 'total_fwo_qty'   => $totalFwoQty,
                 'progress_pct'    => $pct,

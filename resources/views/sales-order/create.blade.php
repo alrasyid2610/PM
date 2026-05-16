@@ -233,6 +233,65 @@
             </x-section-card>
         </div>
 
+        <!-- SECTION 6: PERIOD JADWAL -->
+        <div class="col-12">
+            <x-section-card icon="fa-calendar-days" color="icon-navy" title="Period Jadwal" subtitle="Jadwal kunjungan per lokasi (opsional)">
+                <div id="createPeriodList" class="mb-2"></div>
+
+                <button type="button" id="btnAddCreatePeriod" class="btn btn-sm btn-outline-primary">
+                    <i class="fa-solid fa-plus me-1"></i> Tambah Period
+                </button>
+
+                <div id="createPeriodForm" class="mt-3 d-none p-3" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                    <div class="small fw-semibold text-muted mb-3">
+                        <i class="fa-solid fa-calendar-plus me-1"></i> Data Period
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label form-label-sm text-muted mb-1">Nama Period <span class="text-danger">*</span></label>
+                            <input type="text" id="createPeriodNama" class="form-control form-control-sm" placeholder="cth: Maintenance Semester 1">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label form-label-sm text-muted mb-1">Lokasi (Site) <span class="text-muted fst-italic" style="font-size:10px;">opsional</span></label>
+                            <select id="createPeriodSite" style="width:100%"></select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label form-label-sm text-muted mb-1">Tanggal Mulai</label>
+                            <input type="date" id="createPeriodMulai" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label form-label-sm text-muted mb-1">Tanggal Selesai</label>
+                            <input type="date" id="createPeriodSelesai" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label form-label-sm text-muted mb-1">Frekuensi</label>
+                            <select id="createPeriodInterval" class="form-select form-select-sm">
+                                <option value="">Pilih...</option>
+                                <option value="1">Bulanan</option>
+                                <option value="2">Bimulanan</option>
+                                <option value="3">Triwulan</option>
+                                <option value="4">Caturwulan</option>
+                                <option value="6">Semester</option>
+                                <option value="12">Annual</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label form-label-sm text-muted mb-1">Keterangan</label>
+                            <input type="text" id="createPeriodKet" class="form-control form-control-sm" placeholder="opsional">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                        <button type="button" id="btnCancelCreatePeriod" class="btn btn-sm btn-outline-secondary">Batal</button>
+                        <button type="button" id="btnSaveCreatePeriod" class="btn btn-sm btn-primary">
+                            <i class="fa-solid fa-check me-1"></i> Tambahkan
+                        </button>
+                    </div>
+                </div>
+
+                <input type="hidden" name="periods_json" id="periodsJson" value="[]">
+            </x-section-card>
+        </div>
+
         <!-- ACTION BUTTONS -->
         <x-form-actions back-route="{{ url('sales-orders') }}" submit-label="Simpan Sales Order" />
 
@@ -364,6 +423,104 @@
             }
         });
     }
+
+    // ── Period Jadwal ────────────────────────────────────────────────────────────
+    var INTERVAL_LABELS = {1:'Bulanan',2:'Bimulanan',3:'Triwulan',4:'Caturwulan',6:'Semester',12:'Annual'};
+    var soCreatePeriods = [];
+
+    function escPeriod(str) {
+        return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function renderCreatePeriodList() {
+        var $list = $('#createPeriodList');
+        if (!soCreatePeriods.length) { $list.html(''); return; }
+        $list.html(soCreatePeriods.map(function(p, idx) {
+            var freqLabel = INTERVAL_LABELS[p.interval_bulan] || (p.interval_bulan ? p.interval_bulan + ' bln' : '—');
+            var jadwal    = (p.tanggal_mulai ? p.tanggal_mulai.substring(0, 7) : '—') +
+                            ' s/d ' +
+                            (p.tanggal_selesai ? p.tanggal_selesai.substring(0, 7) : '—');
+            return '<div class="d-flex align-items-center gap-3 py-2 px-3 mb-2" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;">' +
+                '<i class="fa-solid fa-calendar-days" style="color:#1a5fbe;font-size:13px;"></i>' +
+                '<div class="flex-grow-1">' +
+                    '<div class="small fw-semibold">' + escPeriod(p.nama_period) + '</div>' +
+                    '<div class="small text-muted">' +
+                        jadwal + ' &middot; ' + escPeriod(freqLabel) +
+                        (p.site_name ? ' &middot; <i class="fa-solid fa-location-dot" style="font-size:10px;"></i> ' + escPeriod(p.site_name) : '') +
+                    '</div>' +
+                    (p.keterangan ? '<div class="small text-muted fst-italic">' + escPeriod(p.keterangan) + '</div>' : '') +
+                '</div>' +
+                '<button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-remove-create-period" data-idx="' + idx + '" style="font-size:11px;">' +
+                    '<i class="fa-solid fa-times"></i>' +
+                '</button>' +
+            '</div>';
+        }).join(''));
+        $('#periodsJson').val(JSON.stringify(soCreatePeriods));
+    }
+
+    function initCreatePeriodSiteSelect2() {
+        if ($('#createPeriodSite').hasClass('select2-hidden-accessible')) return;
+        $('#createPeriodSite').select2({
+            dropdownParent: $('#createPeriodForm'),
+            placeholder: 'Ketik nama lokasi...',
+            allowClear: true,
+            ajax: {
+                url: "{{ url('business-relations/sites/select2') }}",
+                dataType: 'json',
+                delay: 200,
+                data: function(params) { return { q: params.term }; },
+                processResults: function(data) { return { results: data }; },
+            },
+        });
+    }
+
+    $('#btnAddCreatePeriod').on('click', function() {
+        $('#createPeriodForm').removeClass('d-none');
+        $(this).addClass('d-none');
+        initCreatePeriodSiteSelect2();
+    });
+
+    $('#btnCancelCreatePeriod').on('click', function() {
+        $('#createPeriodForm').addClass('d-none');
+        $('#btnAddCreatePeriod').removeClass('d-none');
+        $('#createPeriodNama').val('');
+        $('#createPeriodSite').val(null).trigger('change');
+        $('#createPeriodMulai, #createPeriodSelesai, #createPeriodKet').val('');
+        $('#createPeriodInterval').val('');
+    });
+
+    $('#btnSaveCreatePeriod').on('click', function() {
+        var namaPeriod = $('#createPeriodNama').val().trim();
+        if (!namaPeriod) { Notify.error('Nama period wajib diisi'); return; }
+
+        var siteId   = $('#createPeriodSite').val();
+        var siteName = siteId ? $('#createPeriodSite option:selected').text() : '';
+
+        soCreatePeriods.push({
+            nama_period:     namaPeriod,
+            id_site:         siteId   || null,
+            site_name:       siteName || null,
+            tanggal_mulai:   $('#createPeriodMulai').val()    || null,
+            tanggal_selesai: $('#createPeriodSelesai').val()  || null,
+            interval_bulan:  $('#createPeriodInterval').val() ? parseInt($('#createPeriodInterval').val()) : null,
+            keterangan:      $('#createPeriodKet').val()      || null,
+        });
+        renderCreatePeriodList();
+
+        $('#createPeriodNama').val('');
+        $('#createPeriodSite').val(null).trigger('change');
+        $('#createPeriodMulai, #createPeriodSelesai, #createPeriodKet').val('');
+        $('#createPeriodInterval').val('');
+        $('#createPeriodForm').addClass('d-none');
+        $('#btnAddCreatePeriod').removeClass('d-none');
+    });
+
+    $(document).on('click', '.btn-remove-create-period', function() {
+        var idx = parseInt($(this).data('idx'));
+        soCreatePeriods.splice(idx, 1);
+        renderCreatePeriodList();
+    });
+    // ─────────────────────────────────────────────────────────────────────────────
 
     submitCreateForm({
         formId: "#salesOrderForm",

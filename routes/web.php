@@ -463,6 +463,7 @@ Route::prefix('work-orders')->name('work-orders.')->group(function () {
     Route::delete('/{id}', [WorkOrderController::class, 'destroy'])->name('destroy');
     Route::get('/{id}/history', [WorkOrderController::class, 'history'])->name('history')->whereNumber('id');
     Route::get('/{id}/boq-progress', [WorkOrderController::class, 'boqProgress'])->name('boq-progress')->whereNumber('id');
+    Route::post('/{id}/duplicate', [WorkOrderController::class, 'duplicate'])->name('duplicate')->whereNumber('id');
 });
 
 Route::prefix('wo-periods')->name('wo-periods.')->group(function () {
@@ -486,7 +487,9 @@ Route::prefix('fieldworks')->name('fieldworks.')->group(function () {
     Route::get('/{id}',         [FieldworkController::class, 'detail'])->name('detail')->whereNumber('id');
     Route::put('/{id}',         [FieldworkController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}',      [FieldworkController::class, 'destroy'])->name('destroy')->whereNumber('id');
-    Route::get('/{id}/history', [FieldworkController::class, 'history'])->name('history')->whereNumber('id');
+    Route::get('/{id}/history',   [FieldworkController::class, 'history'])->name('history')->whereNumber('id');
+    Route::put('/{id}/personels',  [FieldworkController::class, 'updatePersonels'])->name('updatePersonels')->whereNumber('id');
+    Route::post('/{id}/duplicate', [FieldworkController::class, 'duplicate'])->name('duplicate')->whereNumber('id');
 });
 
 Route::prefix('termin')->name('termin.')->group(function () {

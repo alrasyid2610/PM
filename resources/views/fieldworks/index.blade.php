@@ -89,10 +89,12 @@
         woSelect2:       "{{ route('work-orders.select2') }}",
         siteSelect2:     "{{ route('business-relation-sites.select2') }}",
         picSelect2:      "{{ route('business-relation-contacts.select2') }}",
-        fwoBoqByFwo:     "{{ url('fieldwork-boq/by-fwo') }}/",
-        fwoBoqUpdate:    "{{ url('fieldwork-boq') }}/",
-        boqSelect2ByWo:  "{{ url('boq/select2-by-wo') }}/",
-        boqSectionItems: "{{ url('boq') }}/",
+        fwoBoqByFwo:      "{{ url('fieldwork-boq/by-fwo') }}/",
+        fwoBoqUpdate:     "{{ url('fieldwork-boq') }}/",
+        boqSelect2ByWo:   "{{ url('boq/select2-by-wo') }}/",
+        boqSectionItems:  "{{ url('boq') }}/",
+        personelUpdate:   "{{ url('fieldworks') }}/",
+        userSelect2:      "{{ route('users.select2') }}",
     }
 </script>
 

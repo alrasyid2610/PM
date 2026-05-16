@@ -158,8 +158,9 @@
 </style>
 
 <script>
-let addedPointIds  = new Set();
-let selectedPoint  = null;
+let addedPointIds    = new Set();
+let existingDbPointIds = new Set();
+let selectedPoint    = null;
 let editingSectionId = null;
 
 $(document).ready(function () {
@@ -186,6 +187,7 @@ $(document).ready(function () {
     $("#id_wo").on("select2:select", function (e) {
         $("#judulOrder").text(e.params.data.judul || "—").removeClass("text-muted");
         $("#btnAddSection").prop("disabled", false);
+        loadExistingBoqPoints(e.params.data.id);
     });
 
     const preselectWoId = new URLSearchParams(window.location.search).get('id_wo');
@@ -197,6 +199,7 @@ $(document).ready(function () {
             $("#id_wo").append(opt).trigger('change');
             $("#judulOrder").text(wo.judul_pekerjaan || "—").removeClass("text-muted");
             $("#btnAddSection").prop("disabled", false);
+            loadExistingBoqPoints(preselectWoId);
         });
     }
 
@@ -206,6 +209,7 @@ $(document).ready(function () {
         $("#boqSections").empty();
         $("#boqEmpty").show();
         addedPointIds.clear();
+        existingDbPointIds.clear();
     });
 
     // ── Testing Point Select2 (di dalam modal) ────────────────────────────────
@@ -227,7 +231,11 @@ $(document).ready(function () {
     $("#selectTestingPoint").on("select2:select", function (e) {
         const id = String(e.params.data.id);
         if (!editingSectionId && addedPointIds.has(id)) {
-            Notify.warning("Testing Point ini sudah ditambahkan. Gunakan tombol Edit pada section tersebut.");
+            if (existingDbPointIds.has(id)) {
+                Notify.warning("Testing Point ini sudah ada pada BOQ Work Order ini. Buka halaman Edit BOQ untuk mengubahnya.");
+            } else {
+                Notify.warning("Testing Point ini sudah ditambahkan. Gunakan tombol Edit pada section tersebut.");
+            }
             $(this).val(null).trigger("change");
             selectedPoint = null;
             resetModalItems();
@@ -529,6 +537,19 @@ function renderItem(pointId, item, num) {
             <span class="text-muted small">/ ${escHtml(item.judul_inggris ?? "—")}</span>
             <span class="item-meta-badge">${escHtml(unit)} · ${escHtml(String(nilai))}</span>
         </div>`;
+}
+
+function loadExistingBoqPoints(woId) {
+    existingDbPointIds.clear();
+    $.get('/boq/by-wo/' + woId, function (data) {
+        data.forEach(function (row) {
+            if (row.id_testing_point) {
+                const ptId = String(row.id_testing_point);
+                existingDbPointIds.add(ptId);
+                addedPointIds.add(ptId);
+            }
+        });
+    });
 }
 
 function checkEmpty() {

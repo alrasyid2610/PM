@@ -1,10 +1,13 @@
 let page;
-let currentFwoData  = null;
-let fwoBoqData      = [];
-let fwoBoqViewHtml  = null;
-let fwoBoqSnapshot  = null;
-let addedBoqIds     = new Set();
-let selectedBoq     = null;
+let currentFwoData      = null;
+let fwoBoqData          = [];
+let fwoBoqViewHtml      = null;
+let fwoBoqSnapshot      = null;
+let addedBoqIds         = new Set();
+let selectedBoq         = null;
+let currentPersonelData = [];
+let personelViewHtml    = null;
+let personelEditIdx     = 0;
 
 // ── Init ───────────────────────────────────────────────────────────────────────
 $(document).ready(function () {
@@ -81,9 +84,10 @@ $(document).ready(function () {
         bootstrap.Modal.getInstance('#modalAddFwoBoq').hide();
     });
 
-    // Tombol Edit BOQ (delegasi)
-    $(document).on('click', '.btn-fwo-boq-edit', function () {
-        enterFwoBoqEditMode();
+    // Hapus baris personel (delegasi)
+    $(document).on('click', '.btn-remove-personel-row', function () {
+        $(this).closest('.personel-edit-row').remove();
+        syncPersonelEditEmpty();
     });
 
     // Hapus section (delegasi)
@@ -103,11 +107,140 @@ $(document).ready(function () {
             });
         },
         afterLoad: function (res) {
-            currentFwoData = res;
+            currentFwoData      = res;
+            currentPersonelData = res.personels || [];
+            $('#fwoPersonelContent').html(renderPersonelView(currentPersonelData));
             loadFwoBoqList(res.id_fwo);
         },
     });
+
+    page.bindEditBehaviour = function () {
+        bindEditToggle({
+            container: '#detailContent',
+            onEditStart: function () {
+                enterPersonelEditMode();
+                enterFwoBoqEditMode();
+            },
+            onEditCancel: function () {
+                exitPersonelEditMode();
+                exitFwoBoqEditMode();
+            },
+            onSave: function () {
+                saveAll(page.selectedRow.id);
+            },
+        });
+    };
 });
+
+// ── Personel edit mode ─────────────────────────────────────────────────────────
+function enterPersonelEditMode() {
+    personelViewHtml = $('#fwoPersonelContent').html();
+    personelEditIdx  = 0;
+
+    const editBar = `<div class="d-flex justify-content-start align-items-center mb-3">
+        <button type="button" id="btnAddPersonelRow" class="btn btn-outline-primary btn-sm">
+            <i class="fa-solid fa-plus me-1"></i> Tambah Personel
+        </button>
+    </div>`;
+
+    const emptyMsg = `<div id="personelEditEmpty" style="display:none;text-align:center;padding:16px;border:1px dashed #e2e8f0;border-radius:8px;color:#94a3b8;font-size:13px;">
+        Belum ada personel. Klik <strong>+ Tambah Personel</strong>.
+    </div>`;
+
+    $('#fwoPersonelContent').html(editBar + '<div id="personelEditRows"></div>' + emptyMsg);
+
+    // Pre-load existing personels
+    if (currentPersonelData.length > 0) {
+        currentPersonelData.forEach(function (p) {
+            addPersonelEditRow({ id: p.id_user, text: p.user_name }, p.role);
+        });
+    } else {
+        syncPersonelEditEmpty();
+    }
+
+    $('#btnAddPersonelRow').on('click', function () {
+        addPersonelEditRow(null, '');
+    });
+}
+
+function exitPersonelEditMode() {
+    personelEditIdx  = 0;
+    personelViewHtml && $('#fwoPersonelContent').html(personelViewHtml);
+    personelViewHtml = null;
+}
+
+function addPersonelEditRow(userData, roleVal) {
+    const idx = personelEditIdx++;
+    const roleOptions = ['Leader', 'Driver', 'Anggota'].map(function (r) {
+        return `<option value="${r}" ${roleVal === r ? 'selected' : ''}>${r}</option>`;
+    }).join('');
+
+    const row = $(`
+        <div class="personel-edit-row d-flex align-items-end gap-2 mb-2" data-idx="${idx}">
+            <div style="flex:1;min-width:0;">
+                <label class="form-label form-label-sm text-muted mb-1">Personel</label>
+                <select class="form-select personel-edit-user" data-idx="${idx}"></select>
+            </div>
+            <div style="width:160px;flex-shrink:0;">
+                <label class="form-label form-label-sm text-muted mb-1">Role</label>
+                <select class="form-select personel-edit-role">
+                    <option value="">— Pilih Role —</option>
+                    ${roleOptions}
+                </select>
+            </div>
+            <div style="flex-shrink:0;padding-bottom:2px;">
+                <button type="button" class="btn btn-outline-danger btn-sm btn-remove-personel-row" title="Hapus">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `);
+
+    $('#personelEditRows').append(row);
+
+    const $select = row.find('.personel-edit-user');
+    $select.select2({
+        width: '100%',
+        placeholder: 'Ketik nama personel...',
+        allowClear: true,
+        minimumInputLength: 0,
+        ajax: {
+            url: window.route.userSelect2,
+            dataType: 'json',
+            delay: 200,
+            data: p => ({ q: p.term }),
+            processResults: d => ({ results: d }),
+            cache: true,
+        },
+    });
+
+    row.find('.personel-edit-role').select2({
+        width: '100%',
+        minimumResultsForSearch: Infinity,
+    });
+
+    if (userData) {
+        const opt = new Option(userData.text, userData.id, true, true);
+        $select.append(opt).trigger('change');
+    }
+
+    syncPersonelEditEmpty();
+}
+
+function syncPersonelEditEmpty() {
+    const has = $('#personelEditRows .personel-edit-row').length > 0;
+    $('#personelEditEmpty').toggle(!has);
+}
+
+function collectPersonelRows() {
+    const rows = [];
+    $('#personelEditRows .personel-edit-row').each(function () {
+        const id_user = $(this).find('.personel-edit-user').val();
+        const role    = $(this).find('.personel-edit-role').val() || null;
+        if (id_user) rows.push({ id_user: parseInt(id_user), role });
+    });
+    return rows;
+}
 
 // ── Load & render view mode ────────────────────────────────────────────────────
 function loadFwoBoqList(id_fwo) {
@@ -151,26 +284,12 @@ function enterFwoBoqEditMode() {
 
     fwoBoqSnapshot = JSON.stringify(collectFwoBoqSections());
 
-    // Bind tombol dalam edit mode
-    $('#btnCancelFwoBoq').on('click', function () {
-        exitFwoBoqEditMode();
-    });
-
-    $('#btnSaveFwoBoq').on('click', function () {
-        saveFwoBoq(currentFwoData.id_fwo);
-    });
-
     $('#btnAddFwoBoqSection').on('click', function () {
         selectedBoq = null;
         resetFwoBoqModal();
         $('#selectFwoBoq').val(null).trigger('change');
         new bootstrap.Modal('#modalAddFwoBoq').show();
     });
-
-    // Ubah tombol "Edit BOQ" jadi visual aktif
-    $('.btn-fwo-boq-edit')
-        .addClass('editing')
-        .html('<i class="fa-solid fa-times"></i> Batal Edit');
 }
 
 function exitFwoBoqEditMode() {
@@ -178,24 +297,15 @@ function exitFwoBoqEditMode() {
     fwoBoqSnapshot = null;
     $('#fwoBoqContent').html(fwoBoqViewHtml);
     fwoBoqViewHtml = null;
-    // Kembalikan tombol
-    $('.btn-fwo-boq-edit')
-        .removeClass('editing')
-        .html('<i class="fa-solid fa-pen"></i> Edit BOQ');
 }
 
-// ── Save BOQ ───────────────────────────────────────────────────────────────────
-function saveFwoBoq(id_fwo) {
-    const sections = collectFwoBoqSections();
-    if (!sections.length) { Notify.warning('Tambahkan minimal 1 section BOQ'); return; }
+// ── Save all (FWO info + personel + BOQ) ──────────────────────────────────────
+function saveAll(id_fwo) {
+    const formData    = $('#detailForm').serialize();
+    const personels   = collectPersonelRows();
+    const boqSections = collectFwoBoqSections();
 
-    if (JSON.stringify(sections) === fwoBoqSnapshot) {
-        Notify.warning('Tidak ada perubahan data');
-        return;
-    }
-
-    // Client-side qty validation: pakai remaining_qty dari data attribute
-    for (const sec of sections) {
+    for (const sec of boqSections) {
         const $sec     = $(`.fwo-boq-section[data-boq-id="${sec.id_boq}"]`);
         const rawRem   = $sec.data('remaining-qty');
         const rawBoq   = $sec.data('boq-qty');
@@ -209,28 +319,56 @@ function saveFwoBoq(id_fwo) {
         }
     }
 
-    Notify.confirm('Simpan Fieldwork BOQ?', function () {
-        $('#btnSaveFwoBoq').prop('disabled', true)
-            .html('<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...');
+    Notify.confirm('Simpan semua perubahan?', function () {
+        const $saveBtn = $('.btn-save-context');
+        $saveBtn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...');
 
         $.ajax({
-            url: window.route.fwoBoqUpdate + id_fwo,
-            method: 'PUT',
-            contentType: 'application/json',
-            headers: { 'X-CSRF-TOKEN': window.route.csrf },
-            data: JSON.stringify({ sections }),
+            url:    window.route.update + id_fwo,
+            method: 'POST',
+            data:   formData,
             success: function () {
-                Notify.success('Fieldwork BOQ berhasil diperbarui');
-                addedBoqIds.clear();
-                fwoBoqSnapshot = null;
-                fwoBoqViewHtml = null;
-                $('.btn-fwo-boq-edit').removeClass('editing').html('<i class="fa-solid fa-pen"></i> Edit BOQ');
-                loadFwoBoqList(id_fwo);
+                $.ajax({
+                    url:         window.route.personelUpdate + id_fwo + '/personels',
+                    method:      'PUT',
+                    contentType: 'application/json',
+                    headers:     { 'X-CSRF-TOKEN': window.route.csrf },
+                    data:        JSON.stringify({ personels }),
+                    success: function () {
+                        if (!boqSections.length) {
+                            Notify.success('Data berhasil disimpan');
+                            page.loadDetail(id_fwo);
+                            return;
+                        }
+                        $.ajax({
+                            url:         window.route.fwoBoqUpdate + id_fwo,
+                            method:      'PUT',
+                            contentType: 'application/json',
+                            headers:     { 'X-CSRF-TOKEN': window.route.csrf },
+                            data:        JSON.stringify({ sections: boqSections }),
+                            success: function () {
+                                Notify.success('Data berhasil disimpan');
+                                page.loadDetail(id_fwo);
+                            },
+                            error: function (xhr) {
+                                Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan Fieldwork BOQ');
+                                $saveBtn.prop('disabled', false).html('<i class="fa-solid fa-check"></i> Simpan');
+                            },
+                        });
+                    },
+                    error: function (xhr) {
+                        Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan personel');
+                        $saveBtn.prop('disabled', false).html('<i class="fa-solid fa-check"></i> Simpan');
+                    },
+                });
             },
             error: function (xhr) {
-                Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan Fieldwork BOQ');
-                $('#btnSaveFwoBoq').prop('disabled', false)
-                    .html('<i class="fa-solid fa-check me-1"></i> Simpan BOQ');
+                const errs = xhr.responseJSON?.errors;
+                const msg  = errs
+                    ? Object.values(errs).flat().join(' ')
+                    : (xhr.responseJSON?.message || 'Gagal menyimpan data fieldwork');
+                Notify.error(msg);
+                $saveBtn.prop('disabled', false).html('<i class="fa-solid fa-check"></i> Simpan');
             },
         });
     });

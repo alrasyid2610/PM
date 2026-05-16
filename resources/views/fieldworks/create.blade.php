@@ -79,6 +79,22 @@
             </x-section-card>
         </div>
 
+        <!-- SECTION: PERSONEL -->
+        <div class="col-12">
+            <x-section-card icon="fa-users" color="icon-purple" title="Personel" subtitle="Teknisi / personel yang bertugas pada fieldwork ini">
+                <div id="personelContainer" class="d-flex flex-column gap-2 mb-3"></div>
+
+                <div id="personelEmpty" class="text-center text-muted py-3" style="border:1px dashed #e2e8f0;border-radius:8px;">
+                    <i class="fa-solid fa-users fa-lg d-block mb-2 opacity-25"></i>
+                    <span style="font-size:13px;">Belum ada personel. Klik <strong>+ Tambah Personel</strong> di bawah.</span>
+                </div>
+
+                <button type="button" id="btnAddPersonel" class="btn btn-outline-primary btn-sm mt-2">
+                    <i class="fa-solid fa-plus me-1"></i> Tambah Personel
+                </button>
+            </x-section-card>
+        </div>
+
         <x-form-actions back-route="{{ route('fieldworks.index') }}" submit-label="Simpan Fieldwork" />
 
     </form>
@@ -163,6 +179,87 @@
         });
     });
 
+    // ── Personel dynamic rows ────────────────────────────────────────────────
+    let personelIdx = 0;
+
+    function syncPersonelEmpty() {
+        const hasRows = $('#personelContainer .personel-row').length > 0;
+        $('#personelEmpty').toggle(!hasRows);
+    }
+
+    function addPersonelRow(userData, roleVal) {
+        const idx = personelIdx++;
+        const row = $(`
+            <div class="personel-row d-flex align-items-start gap-2" data-idx="${idx}">
+                <div style="flex:1;min-width:0;">
+                    <label class="form-label form-label-sm text-muted mb-1">Personel</label>
+                    <select name="personels[${idx}][id_user]"
+                        class="form-select personel-user-select" required></select>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <label class="form-label form-label-sm text-muted mb-1">Role</label>
+                    <select name="personels[${idx}][role]" class="form-select personel-role-select">
+                        <option value="">-- Pilih Role --</option>
+                        <option value="Leader"  ${roleVal === 'Leader'  ? 'selected' : ''}>Leader</option>
+                        <option value="Driver"  ${roleVal === 'Driver'  ? 'selected' : ''}>Driver</option>
+                        <option value="Anggota" ${roleVal === 'Anggota' ? 'selected' : ''}>Anggota</option>
+                    </select>
+                </div>
+                <div style="padding-top:26px;flex-shrink:0;">
+                    <button type="button" class="btn btn-outline-danger btn-sm btn-remove-personel"
+                        title="Hapus personel">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `);
+
+        const $select = row.find('.personel-user-select');
+        $('#personelContainer').append(row);
+
+        $select.select2({
+            width: '100%',
+            placeholder: 'Ketik nama personel...',
+            allowClear: true,
+            minimumInputLength: 0,
+            ajax: {
+                url: "{{ route('users.select2') }}",
+                dataType: 'json',
+                delay: 200,
+                data: p => ({ q: p.term }),
+                processResults: d => ({ results: d }),
+                cache: true,
+            },
+        });
+
+        row.find('.personel-role-select').select2({
+            width: '100%',
+            placeholder: '-- Pilih Role --',
+            allowClear: false,
+            minimumResultsForSearch: Infinity,
+        });
+
+        // Pre-fill user jika ada data (mis. edit ulang)
+        if (userData) {
+            const opt = new Option(userData.text, userData.id, true, true);
+            $select.append(opt).trigger('change');
+        }
+
+        syncPersonelEmpty();
+    }
+
+    $('#btnAddPersonel').on('click', function () {
+        addPersonelRow(null, '');
+    });
+
+    $(document).on('click', '.btn-remove-personel', function () {
+        $(this).closest('.personel-row').remove();
+        syncPersonelEmpty();
+    });
+
+    syncPersonelEmpty();
+
+    // ── Submit ───────────────────────────────────────────────────────────────
     submitCreateForm({
         formId: '#fieldworkForm',
         url: "{{ route('fieldworks.store') }}",

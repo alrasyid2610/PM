@@ -33,8 +33,9 @@
         history:    "{{ url('sales-orders') }}/",
         csrf:       "{{ csrf_token() }}",
         update:     "{{ url('sales-orders') }}/",
-        woProgress: "{{ url('sales-orders') }}/",
-        siteSelect2: "{{ url('business-relations/sites/select2') }}",
+        woProgress:   "{{ url('sales-orders') }}/",
+        woDuplicate:  "{{ url('work-orders') }}/",
+        siteSelect2:  "{{ url('business-relations/sites/select2') }}",
     }
 </script>
 <script src="{{ asset('assets/js/sales-order/index.js') }}"></script>

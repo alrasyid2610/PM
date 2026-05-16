@@ -17,12 +17,13 @@ class CheckMenuPermission
     private const OPEN_LAST_SEGMENTS = ['select2', 'select2byid', 'data'];
 
     // Sub-route supporting dari modul lain
-    private const OPEN_PATH_KEYWORDS = ['by-point'];
+    private const OPEN_PATH_KEYWORDS = ['by-point', 'by-so', 'wo-progress', 'boq-progress'];
 
     // Mapping route prefix → menu slug (jika berbeda)
     private const SLUG_MAP = [
         'business-relation-sites' => 'business-relations',
         'testing-items'           => 'testing-points',
+        'wo-periods'              => 'work-orders',
     ];
 
     public function handle(Request $request, Closure $next): mixed

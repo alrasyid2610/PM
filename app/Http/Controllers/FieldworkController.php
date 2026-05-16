@@ -62,7 +62,38 @@ class FieldworkController extends Controller
             return response()->json(['message' => 'Data tidak ditemukan'], 404);
         }
 
+        $data->personels = DB::table('fieldwork_personels as fp')
+            ->join('users as u', 'fp.id_user', '=', 'u.id')
+            ->where('fp.id_fwo', $id)
+            ->select(['fp.id_fwo_personel', 'fp.id_user', 'u.name as user_name', 'fp.role'])
+            ->get();
+
         return response()->json($data);
+    }
+
+    public function updatePersonels(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'personels'           => 'nullable|array',
+            'personels.*.id_user' => 'required|integer',
+            'personels.*.role'    => 'nullable|string|max:500',
+        ]);
+
+        DB::table('fieldwork_personels')->where('id_fwo', $id)->delete();
+
+        if (!empty($validated['personels'])) {
+            DB::table('fieldwork_personels')->insert(
+                array_map(fn($p) => [
+                    'id_fwo'     => $id,
+                    'id_user'    => $p['id_user'],
+                    'role'       => $p['role'] ?? null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ], $validated['personels'])
+            );
+        }
+
+        return response()->json(['success' => true, 'message' => 'Personel berhasil diperbarui']);
     }
 
     public function store(Request $request)
@@ -76,19 +107,41 @@ class FieldworkController extends Controller
             'tanggal_selesai'             => 'nullable|date',
             'waktu_kedatangan'            => 'nullable|date',
             'keterangan'                  => 'nullable|string',
+            'personels'                   => 'nullable|array',
+            'personels.*.id_user'         => 'required|integer',
+            'personels.*.role'            => 'nullable|string|max:500',
         ]);
 
         $id = DB::table('fieldworks')->insertGetId([
-            ...$validated,
-            'no_fwo'     => $this->generateNoFwo(),
-            'created_at' => now(),
-            'updated_at' => now(),
+            'id_wo'                       => $validated['id_wo'],
+            'judul_pekerjaan'             => $validated['judul_pekerjaan'],
+            'id_site_pelanggan_pekerjaan' => $validated['id_site_pelanggan_pekerjaan'],
+            'id_pic_pelanggan_pekerjaan'  => $validated['id_pic_pelanggan_pekerjaan'],
+            'tanggal_mulai'               => $validated['tanggal_mulai'] ?? null,
+            'tanggal_selesai'             => $validated['tanggal_selesai'] ?? null,
+            'waktu_kedatangan'            => $validated['waktu_kedatangan'] ?? null,
+            'keterangan'                  => $validated['keterangan'] ?? null,
+            'no_fwo'                      => $this->generateNoFwo(),
+            'created_at'                  => now(),
+            'updated_at'                  => now(),
         ]);
+
+        if (!empty($validated['personels'])) {
+            DB::table('fieldwork_personels')->insert(
+                array_map(fn($p) => [
+                    'id_fwo'     => $id,
+                    'id_user'    => $p['id_user'],
+                    'role'       => $p['role'] ?? null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ], $validated['personels'])
+            );
+        }
 
         $after = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
         saveAudit('fieldworks', $id, 'create', null, $after);
 
-        return response()->json(['success' => true, 'message' => 'Fieldwork berhasil disimpan']);
+        return response()->json(['success' => true, 'message' => 'Fieldwork berhasil disimpan', 'id_fwo' => $id]);
     }
 
     public function update(Request $request, $id)
@@ -121,6 +174,95 @@ class FieldworkController extends Controller
     {
         DB::table('fieldworks')->where('id_fwo', $id)->delete();
         return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
+    }
+
+    public function duplicate(Request $request, int $id)
+    {
+        $source = DB::table('fieldworks')->where('id_fwo', $id)->first();
+        if (!$source) {
+            return response()->json(['message' => 'FWO tidak ditemukan'], 404);
+        }
+
+        $validated = $request->validate([
+            'judul_pekerjaan'       => 'required|string|max:500',
+            'tanggal_mulai'         => 'nullable|date',
+            'tanggal_selesai'       => 'nullable|date',
+            'keterangan'            => 'nullable|string',
+            'personels'             => 'nullable|array',
+            'personels.*.id_user'   => 'required|integer',
+            'personels.*.role'      => 'nullable|string|max:500',
+            'sections'              => 'nullable|array',
+            'sections.*.id_boq'     => 'required|integer',
+            'sections.*.qty'        => 'nullable|integer|min:1',
+            'sections.*.keterangan' => 'nullable|string',
+        ]);
+
+        $no_fwo = $this->generateNoFwo();
+
+        $newId = DB::table('fieldworks')->insertGetId([
+            'id_wo'                       => $source->id_wo,
+            'no_fwo'                      => $no_fwo,
+            'judul_pekerjaan'             => $validated['judul_pekerjaan'],
+            'id_site_pelanggan_pekerjaan' => $source->id_site_pelanggan_pekerjaan,
+            'id_pic_pelanggan_pekerjaan'  => $source->id_pic_pelanggan_pekerjaan,
+            'tanggal_mulai'               => $validated['tanggal_mulai'] ?? null,
+            'tanggal_selesai'             => $validated['tanggal_selesai'] ?? null,
+            'waktu_kedatangan'            => null,
+            'keterangan'                  => $validated['keterangan'] ?? null,
+            'created_at'                  => now(),
+            'updated_at'                  => now(),
+        ]);
+
+        if (!empty($validated['personels'])) {
+            DB::table('fieldwork_personels')->insert(
+                array_map(fn($p) => [
+                    'id_fwo'     => $newId,
+                    'id_user'    => $p['id_user'],
+                    'role'       => $p['role'] ?? null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ], $validated['personels'])
+            );
+        }
+
+        if (!empty($validated['sections'])) {
+            foreach ($validated['sections'] as $sec) {
+                $boq = DB::table('boq')->where('id_boq', $sec['id_boq'])->first();
+                if (!$boq) continue;
+
+                $fwoBoqId = DB::table('fieldwork_boq')->insertGetId([
+                    'id_fwo'           => $newId,
+                    'id_boq'           => $sec['id_boq'],
+                    'id_testing_point' => $boq->id_testing_point,
+                    'qty'              => $sec['qty'] ?? null,
+                    'keterangan'       => $sec['keterangan'] ?? null,
+                    'created_at'       => now(),
+                    'updated_at'       => now(),
+                ]);
+
+                $boqItems = DB::table('boq_items')->where('id_boq', $sec['id_boq'])->get();
+                if ($boqItems->isNotEmpty()) {
+                    DB::table('fieldwork_boq_items')->insert(
+                        $boqItems->map(fn($item) => [
+                            'id_fwo_boq'      => $fwoBoqId,
+                            'id_testing_item' => $item->id_testing_item,
+                            'created_at'      => now(),
+                            'updated_at'      => now(),
+                        ])->toArray()
+                    );
+                }
+            }
+        }
+
+        $after = DB::table('fieldworks')->where('id_fwo', $newId)->get()->toJson();
+        saveAudit('fieldworks', $newId, 'create', null, $after);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'FWO berhasil disalin',
+            'no_fwo'  => $no_fwo,
+            'id_fwo'  => $newId,
+        ]);
     }
 
     // ── Auto-numbering: FWO.YY.A.0001 → FWO.YY.A.9999 → FWO.YY.B.0001 ────────

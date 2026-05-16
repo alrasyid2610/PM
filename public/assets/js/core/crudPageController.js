@@ -90,6 +90,19 @@ class CrudPageController {
                     .not("[data-no-disable]")
                     .prop("disabled", true);
 
+                // Inject refresh button — sebelum tombol Edit di manapun letaknya
+                $("#detailContent").find('.btn-refresh-detail').remove();
+                $("#detailContent").find('.btn-edit-context').first().before(
+                    `<button type="button" class="btn-refresh-detail btn-action-secondary" title="Refresh data" data-no-disable>
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>`
+                );
+                $("#detailContent").off("click.refresh", ".btn-refresh-detail").on("click.refresh", ".btn-refresh-detail", function () {
+                    const $icon = $(this).find('i');
+                    $icon.addClass('fa-spin');
+                    self.loadDetail(self.selectedRow.id);
+                });
+
                 if (self.initSelect) {
                     self.initSelect(res);
                 }

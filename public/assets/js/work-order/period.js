@@ -54,9 +54,13 @@ function renderWoPeriodView(period, id_wo) {
 
     return '<div class="d-flex flex-wrap gap-3">' +
         '<div style="min-width:140px;">' +
-            '<div class="small text-muted mb-1">Lokasi</div>' +
-            '<div class="small fw-semibold">' + escWo(period.nama_site ?? '—') + '</div>' +
+            '<div class="small text-muted mb-1">Period</div>' +
+            '<div class="small fw-semibold">' + escWo(period.nama_period ?? '—') + '</div>' +
         '</div>' +
+        (period.nama_site ? '<div style="min-width:140px;">' +
+            '<div class="small text-muted mb-1">Lokasi</div>' +
+            '<div class="small fw-semibold">' + escWo(period.nama_site) + '</div>' +
+        '</div>' : '') +
         '<div style="min-width:140px;">' +
             '<div class="small text-muted mb-1">Jadwal</div>' +
             '<div class="small fw-semibold">' + tglMulai + ' s/d ' + tglSelesai + '</div>' +
@@ -110,8 +114,16 @@ function renderWoPeriodEditForm(id_wo, id_so, id_period) {
                     '<input type="date" id="newPeriodSelesai" class="form-control form-control-sm">' +
                 '</div>' +
                 '<div class="col-md-2">' +
-                    '<label class="form-label form-label-sm text-muted mb-1">Interval (bln)</label>' +
-                    '<input type="number" id="newPeriodInterval" class="form-control form-control-sm" min="1" placeholder="2">' +
+                    '<label class="form-label form-label-sm text-muted mb-1">Frekuensi</label>' +
+                    '<select id="newPeriodInterval" class="form-select form-select-sm">' +
+                        '<option value="">Pilih...</option>' +
+                        '<option value="1">Bulanan</option>' +
+                        '<option value="2">Bimulanan</option>' +
+                        '<option value="3">Triwulan</option>' +
+                        '<option value="4">Caturwulan</option>' +
+                        '<option value="6">Semester</option>' +
+                        '<option value="12">Annual</option>' +
+                    '</select>' +
                 '</div>' +
                 '<div class="col-md-12">' +
                     '<label class="form-label form-label-sm text-muted mb-1">Keterangan</label>' +
@@ -157,6 +169,7 @@ function initWoPeriodSection(id_wo, id_so, id_period) {
                 data: function (params) {
                     return { q: params.term, id_so: id_so };
                 },
+                processResults: function (data) { return { results: data }; },
             },
         });
 
@@ -175,11 +188,13 @@ function initWoPeriodSection(id_wo, id_so, id_period) {
         $('#newPeriodSite').select2({
             dropdownParent: $('#woPeriodCreateForm'),
             placeholder: 'Pilih lokasi...',
+            allowClear: true,
             ajax: {
                 url: '/business-relations/sites/select2',
                 dataType: 'json',
                 delay: 200,
                 data: function (params) { return { q: params.term }; },
+                processResults: function (data) { return { results: data }; },
             },
         });
 
@@ -197,35 +212,37 @@ function initWoPeriodSection(id_wo, id_so, id_period) {
         $(document).on('click', '#btnSaveCreatePeriod', function () {
             var $btn = $(this);
             var id_site = $('#newPeriodSite').val();
-            if (!id_site) { alert('Lokasi wajib dipilih'); return; }
+            if (!id_site) { Notify.error('Lokasi wajib dipilih'); return; }
 
-            $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...');
-            $.ajax({
-                url: '/wo-periods',
-                method: 'POST',
-                data: {
-                    _token: window.route.csrf,
-                    id_so: id_so,
-                    id_site: id_site,
-                    tanggal_mulai: $('#newPeriodMulai').val() || null,
-                    tanggal_selesai: $('#newPeriodSelesai').val() || null,
-                    interval_bulan: $('#newPeriodInterval').val() || null,
-                    keterangan: $('#newPeriodKet').val() || null,
-                },
-                success: function (res) {
-                    // Auto-select the new period
-                    var opt = new Option(
-                        (res.data.nama_site ?? 'Lokasi') +
-                        (res.data.tanggal_mulai ? ' · ' + res.data.tanggal_mulai.substring(0, 7) : '') +
-                        (res.data.interval_bulan ? ' · tiap ' + res.data.interval_bulan + ' bln' : ''),
-                        res.data.id_period, true, true
-                    );
-                    $('#woPeriodSelect2').append(opt).trigger('change');
-                    $('#woPeriodCreateForm').addClass('d-none');
-                    $('#btnShowCreatePeriod').removeClass('d-none');
-                },
-                error: function () { alert('Gagal membuat period'); },
-                complete: function () { $btn.prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i> Simpan Period'); },
+            Notify.confirm('Simpan Data?', function () {
+                $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...');
+                $.ajax({
+                    url: '/wo-periods',
+                    method: 'POST',
+                    data: {
+                        _token: window.route.csrf,
+                        id_so: id_so,
+                        id_site: id_site,
+                        tanggal_mulai: $('#newPeriodMulai').val() || null,
+                        tanggal_selesai: $('#newPeriodSelesai').val() || null,
+                        interval_bulan: $('#newPeriodInterval').val() || null,
+                        keterangan: $('#newPeriodKet').val() || null,
+                    },
+                    success: function (res) {
+                        var opt = new Option(
+                            (res.data.nama_site ?? 'Lokasi') +
+                            (res.data.tanggal_mulai ? ' · ' + res.data.tanggal_mulai.substring(0, 7) : '') +
+                            (res.data.interval_bulan ? ' · tiap ' + res.data.interval_bulan + ' bln' : ''),
+                            res.data.id_period, true, true
+                        );
+                        $('#woPeriodSelect2').append(opt).trigger('change');
+                        $('#woPeriodCreateForm').addClass('d-none');
+                        $('#btnShowCreatePeriod').removeClass('d-none');
+                        Notify.success('Period berhasil dibuat');
+                    },
+                    error: function () { Notify.error('Gagal membuat period'); },
+                    complete: function () { $btn.prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i> Simpan Period'); },
+                });
             });
         });
 
@@ -240,18 +257,21 @@ function initWoPeriodSection(id_wo, id_so, id_period) {
             var $btn  = $(this);
             var newId = $('#woPeriodSelect2').val() || null;
 
-            $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i>');
-            $.ajax({
-                url: '/work-orders/' + id_wo + '/period',
-                method: 'PUT',
-                data: { _token: window.route.csrf, id_period: newId },
-                success: function () {
-                    id_period = newId ? parseInt(newId) : null;
-                    $('#btnUbahPeriod').removeClass('d-none');
-                    loadWoPeriodContent(id_wo, id_so, id_period);
-                },
-                error: function () { alert('Gagal menyimpan period'); },
-                complete: function () { $btn.prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i> Simpan'); },
+            Notify.confirm('Simpan Data?', function () {
+                $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i>');
+                $.ajax({
+                    url: '/work-orders/' + id_wo + '/period',
+                    method: 'PUT',
+                    data: { _token: window.route.csrf, id_period: newId },
+                    success: function () {
+                        id_period = newId ? parseInt(newId) : null;
+                        $('#btnUbahPeriod').removeClass('d-none');
+                        loadWoPeriodContent(id_wo, id_so, id_period);
+                        Notify.success('Period berhasil disimpan');
+                    },
+                    error: function () { Notify.error('Gagal menyimpan period'); },
+                    complete: function () { $btn.prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i> Simpan'); },
+                });
             });
         });
     });

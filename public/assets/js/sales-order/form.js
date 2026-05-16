@@ -19,18 +19,14 @@ function renderForm(res) {
                     <span class="detail-status-dot"></span>
                     ${res.status ?? "Draft"}
                 </span>
-                <span id="woBadge"
-                    title="Lihat daftar Work Order"
-                    style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:#e8f0fe;color:#1a56db;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #c7d7f8;transition:background 0.15s;"
-                    onmouseover="this.style.background='#c7d7f8'"
-                    onmouseout="this.style.background='#e8f0fe'"
-                    onclick="document.getElementById('wo-section')?.scrollIntoView({behavior:'smooth',block:'start'})">
-                    <i class="fa-solid fa-briefcase" style="font-size:11px; transform: translateY(3px);"></i>
-                    <span id="woBadgeCount">...</span> WO
-                </span>
                 ${formGroup.editButton("Edit SO")}
             </div>
         </div>
+    </div>
+
+    <!-- SUMMARY CARD -->
+    <div class="col-md-12">
+        <div id="woSummaryCard"></div>
     </div>
 
     <!-- SECTION 1: INFORMASI ORDER -->
@@ -444,10 +440,6 @@ function renderForm(res) {
                     class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:12px;" title="Refresh">
                     <i class="fa-solid fa-rotate-right"></i>
                 </button>
-                <button type="button" id="btnToggleWoView"
-                    class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:12px;" title="Tampilan Tabel">
-                    <i class="fa-solid fa-table-list"></i>
-                </button>
                 <a href="/work-orders/create?id_so=${res.id_so}" target="_blank"
                     style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:#e8f0fe;color:#1a56db;font-size:12px;font-weight:600;text-decoration:none;border:1px solid #c7d7f8;transition:background 0.15s;"
                     onmouseover="this.style.background='#c7d7f8'" onmouseout="this.style.background='#e8f0fe'">
@@ -461,7 +453,7 @@ function renderForm(res) {
                     <i class="fa-solid fa-magnifying-glass text-muted" style="font-size:11px;"></i>
                 </span>
                 <input type="text" id="woProgressSearch" class="form-control"
-                    placeholder="Cari No WO atau No FWO..."
+                    placeholder="Cari No WO atau judul..."
                     style="border-color:#e2e8f0;font-size:12px;"
                     data-no-disable>
                 <button type="button" id="btnClearWoSearch" class="btn btn-outline-secondary d-none"

@@ -82,14 +82,28 @@ function renderFwoForm(res) {
 <div class="row g-3 mt-1">
     ${formGroup.sectionCard(
         {
+            icon: 'fa-users',
+            color: 'icon-purple',
+            title: 'Personel',
+            subtitle: 'Teknisi / personel yang bertugas pada fieldwork ini',
+            id: 'fwoPersonelSection',
+        },
+        `<div id="fwoPersonelContent">
+            <div class="text-center text-muted py-3">
+                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
+            </div>
+        </div>`
+    )}
+</div>
+
+<div class="row g-3 mt-1">
+    ${formGroup.sectionCard(
+        {
             icon: 'fa-clipboard-list',
             color: 'icon-green',
             title: 'Fieldwork BOQ',
             subtitle: 'BOQ yang dikerjakan pada kunjungan lapangan ini',
             id: 'fwoBoqSection',
-            actions: `<button type="button" class="btn-fwo-boq-edit btn-action-edit ms-0">
-                <i class="fa-solid fa-pen"></i> Edit BOQ
-            </button>`,
         },
         `<div id="fwoBoqContent">
             <div class="text-center text-muted py-4">
@@ -165,18 +179,10 @@ function renderFwoBoqView(sections) {
 
 // ── Edit mode: action bar ──────────────────────────────────────────────────────
 function renderFwoBoqEditBar() {
-    return `<div class="d-flex justify-content-between align-items-center mb-3">
+    return `<div class="d-flex justify-content-start align-items-center mb-3">
         <button type="button" id="btnAddFwoBoqSection" class="btn btn-outline-primary btn-sm">
             <i class="fa-solid fa-plus me-1"></i> Tambah Section
         </button>
-        <div class="d-flex gap-2">
-            <button type="button" id="btnCancelFwoBoq" class="btn btn-outline-secondary btn-sm">
-                <i class="fa-solid fa-times me-1"></i> Batal
-            </button>
-            <button type="button" id="btnSaveFwoBoq" class="btn btn-primary btn-sm">
-                <i class="fa-solid fa-check me-1"></i> Simpan BOQ
-            </button>
-        </div>
     </div>`;
 }
 
@@ -258,4 +264,38 @@ function escFwo(str) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+}
+
+// ── Personel view ──────────────────────────────────────────────────────────────
+function renderPersonelView(personels) {
+    if (!personels || personels.length === 0) {
+        return `<div class="text-center text-muted py-4">
+            <i class="fa-solid fa-users fa-2x d-block mb-2 opacity-25"></i>
+            Belum ada personel
+        </div>`;
+    }
+
+    const roleColors = {
+        'Leader':  { bg: '#fef9c3', color: '#854d0e' },
+        'Driver':  { bg: '#dbeafe', color: '#1e40af' },
+        'Anggota': { bg: '#f0fdf4', color: '#166534' },
+    };
+
+    return `<div style="display:flex;flex-direction:column;gap:8px;">` +
+        personels.map(function (p) {
+            const rc  = roleColors[p.role] || { bg: '#f1f5f9', color: '#475569' };
+            const role = p.role
+                ? `<span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;background:${rc.bg};color:${rc.color};">${escFwo(p.role)}</span>`
+                : `<span style="font-size:11px;color:#94a3b8;">—</span>`;
+            return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">
+                <div style="width:32px;height:32px;border-radius:50%;background:#ede9fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fa-solid fa-user" style="color:#7c3aed;font-size:12px;"></i>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:13px;font-weight:600;color:#1e293b;">${escFwo(p.user_name)}</div>
+                </div>
+                ${role}
+            </div>`;
+        }).join('') +
+    `</div>`;
 }

@@ -19,6 +19,11 @@ function renderForm(res) {
         </div>
     </div>
 
+    <!-- SUMMARY CARD -->
+    <div class="col-md-12">
+        <div id="boqSummaryCard"></div>
+    </div>
+
     <!-- SECTION 1: INFORMASI WORK ORDER -->
     ${formGroup.sectionCard(
         {
@@ -69,26 +74,6 @@ function renderForm(res) {
         </div>`
     )}
 
-    <!-- SECTION 2: PERIOD JADWAL -->
-    ${formGroup.sectionCard(
-        {
-            icon: 'fa-calendar-days',
-            color: 'icon-navy',
-            title: 'Period Jadwal',
-            subtitle: res.period_nama_site
-                ? (res.period_nama_site + (res.period_tanggal_mulai ? ' · ' + res.period_tanggal_mulai.substring(0,7) : ''))
-                : 'Belum ada period',
-            actions: `<button type="button" id="btnUbahPeriod" class="btn-action-edit ms-0" data-no-disable>
-                <i class="fa-solid fa-pen"></i> Ubah Period
-            </button>`,
-        },
-        `<div id="woPeriodContent">
-            <div class="text-center text-muted py-3">
-                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
-            </div>
-        </div>`
-    )}
-
     <!-- SECTION 3: BOQ PROGRESS -->
     ${formGroup.sectionCard(
         {
@@ -102,6 +87,11 @@ function renderForm(res) {
                     class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:12px;" title="Refresh"
                     data-no-disable>
                     <i class="fa-solid fa-rotate-right"></i>
+                </button>
+                <button type="button" id="btnToggleBoqView"
+                    class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:12px;" title="Tampilan Tabel"
+                    data-no-disable>
+                    <i class="fa-solid fa-table-list"></i>
                 </button>
                 <a href="/boq/create?id_wo=${res.id_wo}" target="_blank"
                     style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:#dcfce7;color:#166534;font-size:12px;font-weight:600;text-decoration:none;border:1px solid #bbf7d0;transition:background 0.15s;"

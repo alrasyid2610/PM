@@ -15,6 +15,7 @@ class WoPeriodController extends Controller
             ->select([
                 'p.id_period',
                 'p.id_so',
+                'p.nama_period',
                 'p.id_site',
                 'brs.nama_lokasi as nama_site',
                 'p.tanggal_mulai',
@@ -28,9 +29,17 @@ class WoPeriodController extends Controller
         $periodIds = $periods->pluck('id_period');
 
         $wos = $periodIds->isNotEmpty()
-            ? DB::table('work_orders')
-                ->whereIn('id_period', $periodIds)
-                ->select(['id_wo', 'no_wo', 'judul_pekerjaan', 'id_period'])
+            ? DB::table('work_orders as wo')
+                ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
+                ->whereIn('wo.id_period', $periodIds)
+                ->select([
+                    'wo.id_wo',
+                    'wo.no_wo',
+                    'wo.judul_pekerjaan',
+                    'wo.id_period',
+                    'wo.id_site_pelanggan_pekerjaan',
+                    'brs.nama_lokasi as nama_site_wo',
+                ])
                 ->get()
                 ->groupBy('id_period')
             : collect();
@@ -39,6 +48,7 @@ class WoPeriodController extends Controller
             return [
                 'id_period'       => $p->id_period,
                 'id_so'           => $p->id_so,
+                'nama_period'     => $p->nama_period,
                 'id_site'         => $p->id_site,
                 'nama_site'       => $p->nama_site,
                 'tanggal_mulai'   => $p->tanggal_mulai,
@@ -54,7 +64,8 @@ class WoPeriodController extends Controller
     {
         $request->validate([
             'id_so'           => 'required|integer',
-            'id_site'         => 'required|integer',
+            'nama_period'     => 'required|string|max:100',
+            'id_site'         => 'nullable|integer',
             'tanggal_mulai'   => 'nullable|date',
             'tanggal_selesai' => 'nullable|date',
             'interval_bulan'  => 'nullable|integer|min:1',
@@ -62,7 +73,8 @@ class WoPeriodController extends Controller
 
         $id = DB::table('wo_periods')->insertGetId([
             'id_so'           => $request->id_so,
-            'id_site'         => $request->id_site,
+            'nama_period'     => $request->nama_period,
+            'id_site'         => $request->id_site ?: null,
             'tanggal_mulai'   => $request->tanggal_mulai,
             'tanggal_selesai' => $request->tanggal_selesai,
             'interval_bulan'  => $request->interval_bulan,
@@ -87,14 +99,16 @@ class WoPeriodController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'id_site'         => 'required|integer',
+            'nama_period'     => 'required|string|max:100',
+            'id_site'         => 'nullable|integer',
             'tanggal_mulai'   => 'nullable|date',
             'tanggal_selesai' => 'nullable|date',
             'interval_bulan'  => 'nullable|integer|min:1',
         ]);
 
         DB::table('wo_periods')->where('id_period', $id)->update([
-            'id_site'         => $request->id_site,
+            'nama_period'     => $request->nama_period,
+            'id_site'         => $request->id_site ?: null,
             'tanggal_mulai'   => $request->tanggal_mulai,
             'tanggal_selesai' => $request->tanggal_selesai,
             'interval_bulan'  => $request->interval_bulan,
@@ -123,17 +137,18 @@ class WoPeriodController extends Controller
             ->where('p.id_so', $id_so);
 
         if ($q) {
-            $query->where('brs.nama_lokasi', 'like', "%{$q}%");
+            $query->where('p.nama_period', 'like', "%{$q}%");
         }
 
         $data = $query->select([
-            'p.id_period', 'brs.nama_lokasi', 'p.tanggal_mulai', 'p.tanggal_selesai', 'p.interval_bulan',
+            'p.id_period', 'p.nama_period', 'brs.nama_lokasi', 'p.tanggal_mulai', 'p.tanggal_selesai', 'p.interval_bulan',
         ])->get();
 
         return response()->json($data->map(function ($item) {
-            $label = $item->nama_lokasi ?? 'Lokasi ?';
-            if ($item->tanggal_mulai)   $label .= ' · ' . substr($item->tanggal_mulai, 0, 7);
-            if ($item->interval_bulan)  $label .= ' · tiap ' . $item->interval_bulan . ' bln';
+            $label = $item->nama_period ?? 'Period';
+            if ($item->nama_lokasi)    $label .= ' · ' . $item->nama_lokasi;
+            if ($item->tanggal_mulai)  $label .= ' · ' . substr($item->tanggal_mulai, 0, 7);
+            if ($item->interval_bulan) $label .= ' · tiap ' . $item->interval_bulan . ' bln';
             return ['id' => $item->id_period, 'text' => $label];
         }));
     }
