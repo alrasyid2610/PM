@@ -4,9 +4,23 @@ function renderForm(res) {
     <input type="hidden" name="_token" value="${window.route.csrf}">
     <input type="hidden" name="_method" value="PUT">
 
+    ${formGroup.actionBar({
+        number: escHtml(res.nomor ?? "—"),
+        createdAt: escHtml(res.created_at ?? "—"),
+        updatedAt: escHtml(res.updated_at ?? "—"),
+        deleteId: res.id_testing_standard,
+        editText: "Edit",
+    })}
+
+
     <!-- SECTION 1: INFORMASI STANDARD -->
     ${formGroup.sectionCard(
-        { icon: 'fa-book', color: 'icon-navy', title: 'Testing Standards', subtitle: 'Data standar pengujian laboratorium', editTitle: 'Edit Testing Standard' },
+        {
+            icon: "fa-book",
+            color: "icon-navy",
+            title: "Testing Standards",
+            subtitle: "Data standar pengujian laboratorium",
+        },
         `<div class="row g-3 form-1">
                     ${formGroup.text("nomor", "Nomor", res.nomor, true, {
                         className: "col-md-4",
@@ -24,13 +38,18 @@ function renderForm(res) {
                         ],
                         { className: "col-md-2" },
                     )}
-                </div>`
+                </div>`,
     )}
 
     <!-- SECTION 2: ATTACHMENT -->
     ${formGroup.sectionCard(
-        { icon: 'fa-paperclip', color: 'icon-blue', title: 'Attachment', subtitle: 'File pendukung standard' },
-        `${renderAttachmentSection()}`
+        {
+            icon: "fa-paperclip",
+            color: "icon-blue",
+            title: "Attachment",
+            subtitle: "File pendukung standard",
+        },
+        `${renderAttachmentSection()}`,
     )}
 
 </form>

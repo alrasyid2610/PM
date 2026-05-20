@@ -45,6 +45,8 @@ class BoqController extends Controller
 
         $boqRows = DB::table('boq as b')
             ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->where('b.id_wo', $id)
             ->select([
                 'b.id_boq',
@@ -54,7 +56,7 @@ class BoqController extends Controller
                 'b.satuan',
                 'b.harga',
                 'b.keterangan',
-                'tp.nama as point_name',
+                DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
             ])
             ->get();
 
@@ -332,9 +334,21 @@ class BoqController extends Controller
 
         $data = DB::table('boq as b')
             ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->where('b.id_wo', $id_wo)
-            ->when($search, fn($q) => $q->where('tp.nama', 'like', "%$search%"))
-            ->select(['b.id_boq', 'b.id_testing_point', 'b.qty', 'b.satuan', 'tp.nama as point_name'])
+            ->when($search, fn($q) => $q
+                ->where('tp.nama', 'like', "%$search%")
+                ->orWhere('tms.judul_indonesia', 'like', "%$search%")
+                ->orWhere('ts.nomor', 'like', "%$search%")
+            )
+            ->select([
+                'b.id_boq',
+                'b.id_testing_point',
+                'b.qty',
+                'b.satuan',
+                DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
+            ])
             ->get();
 
         $boqIds = $data->pluck('id_boq');
@@ -363,8 +377,16 @@ class BoqController extends Controller
 
         $boq = DB::table('boq as b')
             ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->where('b.id_boq', $id_boq)
-            ->select(['b.id_boq', 'b.id_testing_point', 'b.qty', 'b.satuan', 'tp.nama as point_name'])
+            ->select([
+                'b.id_boq',
+                'b.id_testing_point',
+                'b.qty',
+                'b.satuan',
+                DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
+            ])
             ->first();
 
         if (!$boq) {

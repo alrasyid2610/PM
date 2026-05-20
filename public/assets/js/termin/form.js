@@ -4,8 +4,16 @@ function renderForm(res) {
     <input type="hidden" name="_token" value="${window.route.csrf}">
     <input type="hidden" name="_method" value="PUT">
 
+    ${formGroup.actionBar({
+        number: escHtml(res.nomor ?? '—'),
+        createdAt: escHtml(res.created_at ?? '—'),
+        updatedAt: escHtml(res.updated_at ?? '—'),
+        deleteId: res.id_termin,
+        editText: 'Edit Termin',
+    })}
+
     ${formGroup.sectionCard(
-        { icon: 'fa-file-invoice-dollar', color: 'icon-navy', title: 'Termin', subtitle: 'Data termin pembayaran proyek', editTitle: 'Edit Termin' },
+        { icon: 'fa-file-invoice-dollar', color: 'icon-navy', title: 'Termin', subtitle: 'Data termin pembayaran proyek' },
         `<div class="row g-3 form-1">
             ${formGroup.text("nomor", "Nomor", res.nomor, true, { className: "col-md-3" })}
             ${formGroup.text("nama", "Nama", res.nama, true, { className: "col-md-5" })}

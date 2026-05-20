@@ -102,6 +102,7 @@
 
     var dataPelanggan = '';
     var dataSO = '';
+    var preselectSoId = new URLSearchParams(window.location.search).get('id_so');
 
     var INTERVAL_LABELS = {1:'Bulanan',2:'Bimulanan',3:'Triwulan',4:'Caturwulan',6:'Semester',12:'Annual'};
 
@@ -183,16 +184,18 @@
         loadPelangganDetails();
         initBrSelect2();
 
-        const preselectSoId = new URLSearchParams(window.location.search).get('id_so');
         if (preselectSoId) {
             $.get("{{ url('sales-orders') }}/" + preselectSoId, function (so) {
                 if (!so || !so.id_so) return;
                 const opt = new Option(so.no_so + ' — ' + so.judul_order, so.id_so, true, true);
                 $('#id_sales_order').append(opt).trigger('change');
-                $("input[name='judul_order']").val(so.judul_order);
-                $("select[name='id_pelanggan']").val(so.id_pelanggan).trigger('change');
-                $("select[name='id_site_pelanggan']").val(so.id_site_pelanggan).trigger('change');
+                $("input[name='judul_order']").val(so.judul_order).prop('readonly', true);
                 loadPeriodsForSo(so.id_so);
+
+                // Kunci SO dan judul field agar tidak bisa diubah
+                $('#id_sales_order').prop('disabled', true);
+                // Hidden input supaya nilai tetap ter-submit walau select disabled
+                $('<input>').attr({ type: 'hidden', name: 'id_sales_order', value: so.id_so }).appendTo('#workOrderForm');
             });
         }
 
@@ -307,8 +310,6 @@
 
 
     function loadPelangganDetails() {
-        console.log('Memuat data pelanggan...');
-
         $.ajax({
             url: "{{ route('api.get-data-br') }}",
             method: "GET",
@@ -322,34 +323,54 @@
                     allowClear: true
                 });
             },
-            error: function(xhr) {
+            error: function() {
                 Notify.error('Gagal memuat detail pelanggan');
             }
         });
 
-        $.ajax({
-            url: "{{ route('api.get-data-site') }}",
-            method: "GET",
-            success: function(response) {
-                dataPelanggan = response;
-                $.each(dataPelanggan, function(index, item) {
-                    $("select[name='id_site_pelanggan']").append(new Option(item.nama_lokasi, item.id_site));
-                });
-                $("select[name='id_site_pelanggan']").select2({
-                    placeholder: "Pilih Site Pelanggan",
-                    allowClear: true
-                });
-            },
-            error: function(xhr) {
-                Notify.error('Gagal memuat detail pelanggan');
+        initSiteSelect2(null);
+    }
+
+    function initSiteSelect2(idBr) {
+        var $site = $("select[name='id_site_pelanggan']");
+        if ($site.hasClass('select2-hidden-accessible')) {
+            $site.val(null).trigger('change');
+            $site.select2('destroy');
+        }
+        $site.empty();
+
+        var url = idBr
+            ? "{{ url('business-relations') }}/" + idBr + "/sites"
+            : "{{ url('business-relations/sites/select2') }}";
+
+        $site.select2({
+            placeholder: 'Pilih Site Pelanggan',
+            allowClear: true,
+            ajax: {
+                url: url,
+                dataType: 'json',
+                delay: 250,
+                data: function(params) { return { q: params.term }; },
+                processResults: function(data) { return { results: data }; },
+                cache: false,
             }
         });
     }
 
+    $(document).on('change', "select[name='id_pelanggan']", function() {
+        var idBr = $(this).val();
+        initSiteSelect2(idBr || null);
+    });
+
     submitCreateForm({
         formId: "#workOrderForm",
         url: "{{ url('work-orders') }}",
-        redirect: "{{ url('work-orders') }}",
+        redirect: preselectSoId ? null : "{{ url('work-orders') }}",
+        onSuccess: preselectSoId ? function () {
+            localStorage.setItem('wo_created', JSON.stringify({ id_so: preselectSoId, ts: Date.now() }));
+            if (window.opener && !window.opener.closed) window.opener.focus();
+            setTimeout(function () { window.close(); }, 800);
+        } : null,
     });
 
 </script>

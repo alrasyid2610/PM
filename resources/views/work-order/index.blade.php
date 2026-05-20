@@ -2,7 +2,6 @@
 @section('content')
 <x-crud-index
     title="List of Work Orders"
-    create-route="work-orders.create"
     :with-history="true"
 />
 

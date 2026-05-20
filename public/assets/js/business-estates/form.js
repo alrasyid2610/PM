@@ -4,9 +4,17 @@ function renderForm(res) {
     <input type="hidden" name="_token" value="${window.route.csrf}">
     <input type="hidden" name="_method" value="PUT">
 
+    ${formGroup.actionBar({
+        number: escHtml(res.nama ?? '—'),
+        createdAt: escHtml(res.created_at ?? '—'),
+        updatedAt: escHtml(res.updated_at ?? '—'),
+        deleteId: res.id_bestate,
+        editText: 'Edit Business Estate',
+    })}
+
     <!-- SECTION 1: INFORMASI KAWASAN -->
     ${formGroup.sectionCard(
-        { icon: 'fa-industry', color: 'icon-navy', title: 'Business Estates', subtitle: 'Data kawasan industri', editTitle: 'Edit Business Estate' },
+        { icon: 'fa-industry', color: 'icon-navy', title: 'Business Estates', subtitle: 'Data kawasan industri' },
         `<div class="row g-3 form-1">
                     ${formGroup.text("nama", "Nama Kawasan", res.nama, true, {
                         className: "col-md-6 col-12",

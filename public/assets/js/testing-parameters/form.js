@@ -4,9 +4,17 @@ function renderParameterForm(res) {
     <input type="hidden" name="_token" value="${window.route.csrf}">
     <input type="hidden" name="_method" value="PUT">
 
+    ${formGroup.actionBar({
+        number: escHtml(res.kode ?? '—'),
+        createdAt: escHtml(res.created_at ?? '—'),
+        updatedAt: escHtml(res.updated_at ?? '—'),
+        deleteId: res.id_testing_parameter,
+        editText: 'Edit Parameter',
+    })}
+
     <!-- SECTION 1: INFORMASI PARAMETER -->
     ${formGroup.sectionCard(
-        { icon: 'fa-flask', color: 'icon-amber', title: 'Informasi Parameter', subtitle: 'Data parameter pengujian laboratorium', editTitle: 'Edit Parameter' },
+        { icon: 'fa-flask', color: 'icon-amber', title: 'Informasi Parameter', subtitle: 'Data parameter pengujian laboratorium',  },
         `<div class="row g-3 form-1">
                     ${formGroup.select(
                         "kelompok",
@@ -92,3 +100,4 @@ function renderParameterForm(res) {
 </form>
 `;
 }
+

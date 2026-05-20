@@ -23,6 +23,18 @@ class ContractController extends Controller
         return view('contracts.index', ['title' => 'Contracts']);
     }
 
+    private function generateNoContract(): string
+    {
+        $year = date('y');
+        $last = DB::table('contracts')
+            ->where('no_contract', 'like', "SC-{$year}-%")
+            ->orderByDesc('no_contract')
+            ->value('no_contract');
+
+        $seq = $last ? ((int) substr($last, -4)) + 1 : 1;
+        return "SC-{$year}-" . str_pad($seq, 4, '0', STR_PAD_LEFT);
+    }
+
     public function data()
     {
         $query = DB::table('contracts as c')
@@ -31,7 +43,8 @@ class ContractController extends Controller
             ->leftJoin('users as u', 'u.id', '=', 'c.id_pic_pramatek')
             ->select([
                 'c.id_contract',
-                'c.no_kontrak',
+                'c.no_contract',
+                'c.no_contract_client',
                 'br.nama as nama_pelanggan',
                 'c.tanggal_kontrak',
                 'c.tanggal_mulai',
@@ -55,7 +68,7 @@ class ContractController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'no_kontrak'           => 'required|string|max:100|unique:contracts,no_kontrak',
+            'no_contract_client'   => 'nullable|string|max:100',
             'id_business_relation' => 'nullable|integer',
             'tanggal_kontrak'      => 'nullable|date',
             'tanggal_mulai'        => 'nullable|date',
@@ -73,7 +86,8 @@ class ContractController extends Controller
         $files  = $upload['files'];
 
         $id = DB::table('contracts')->insertGetId([
-            'no_kontrak'           => $request->no_kontrak,
+            'no_contract'          => $this->generateNoContract(),
+            'no_contract_client'   => $request->no_contract_client,
             'id_business_relation' => $request->id_business_relation,
             'tanggal_kontrak'      => $request->tanggal_kontrak,
             'tanggal_mulai'        => $request->tanggal_mulai,
@@ -120,7 +134,7 @@ class ContractController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'no_kontrak'           => 'required|string|max:100|unique:contracts,no_kontrak,' . $id . ',id_contract',
+            'no_contract_client'   => 'nullable|string|max:100',
             'id_business_relation' => 'nullable|integer',
             'tanggal_kontrak'      => 'nullable|date',
             'tanggal_mulai'        => 'nullable|date',
@@ -146,7 +160,7 @@ class ContractController extends Controller
             }
 
             DB::table('contracts')->where('id_contract', $id)->update([
-                'no_kontrak'           => $request->no_kontrak,
+                'no_contract_client'   => $request->no_contract_client,
                 'id_business_relation' => $request->id_business_relation,
                 'tanggal_kontrak'      => $request->tanggal_kontrak,
                 'tanggal_mulai'        => $request->tanggal_mulai,
@@ -198,16 +212,21 @@ class ContractController extends Controller
 
         $data = DB::table('contracts as c')
             ->leftJoin('business_relations as br', 'br.id_br', '=', 'c.id_business_relation')
-            ->where('c.no_kontrak', 'like', "%{$search}%")
-            ->orWhere('br.nama', 'like', "%{$search}%")
-            ->select('c.id_contract', 'c.no_kontrak', 'br.nama as nama_pelanggan')
+            ->where(function ($q) use ($search) {
+                $q->where('c.no_contract', 'like', "%{$search}%")
+                  ->orWhere('c.no_contract_client', 'like', "%{$search}%")
+                  ->orWhere('br.nama', 'like', "%{$search}%");
+            })
+            ->select('c.id_contract', 'c.no_contract', 'c.no_contract_client', 'br.nama as nama_pelanggan')
             ->limit(10)
             ->get();
 
         return response()->json(
             $data->map(fn($item) => [
                 'id'   => $item->id_contract,
-                'text' => $item->no_kontrak . ' — ' . ($item->nama_pelanggan ?? '-'),
+                'text' => $item->no_contract
+                    . ($item->no_contract_client ? ' / ' . $item->no_contract_client : '')
+                    . ' — ' . ($item->nama_pelanggan ?? '-'),
             ])
         );
     }
@@ -219,14 +238,14 @@ class ContractController extends Controller
         $data = DB::table('contracts as c')
             ->leftJoin('business_relations as br', 'br.id_br', '=', 'c.id_business_relation')
             ->where('c.id_contract', $search)
-            ->select('c.id_contract', 'c.no_kontrak', 'br.nama as nama_pelanggan')
+            ->select('c.id_contract', 'c.no_contract', 'br.nama as nama_pelanggan')
             ->limit(10)
             ->get();
 
         return response()->json(
             $data->map(fn($item) => [
                 'id'   => $item->id_contract,
-                'text' => $item->no_kontrak . ' — ' . ($item->nama_pelanggan ?? '-'),
+                'text' => $item->no_contract . ' — ' . ($item->nama_pelanggan ?? '-'),
             ])
         );
     }

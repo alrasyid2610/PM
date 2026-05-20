@@ -1,5 +1,4 @@
 @extends('layouts.app')
-
 @section('page-title', 'Fieldwork')
 @section('page-descrip', 'Tambah data kegiatan pekerjaan lapangan')
 
@@ -20,6 +19,26 @@
 @endsection
 
 @section('content')
+
+{{-- STICKY WO INFO BANNER --}}
+<div id="woInfoBanner" style="display:none;position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #e2e8f0;padding:10px 16px;margin:-8px -12px 16px;box-shadow:0 2px 10px rgba(0,0,0,.08);">
+    <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size:13px;">
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+            <i class="fa-solid fa-location-dot" style="color:#0891b2;font-size:11px;flex-shrink:0;"></i>
+            <span id="woBannerSite" style="color:#0e7490;font-weight:600;white-space:nowrap;"></span>
+        </div>
+        <div style="width:1px;height:16px;background:#e2e8f0;flex-shrink:0;"></div>
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+            <i class="fa-solid fa-briefcase" style="color:#1a56db;font-size:11px;flex-shrink:0;"></i>
+            <span id="woBannerNoWo" style="font-weight:700;color:#1a56db;white-space:nowrap;"></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
+            <i class="fa-solid fa-file-lines" style="color:#374151;font-size:11px;flex-shrink:0;"></i>
+            <span id="woBannerJudul" style="color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        </div>
+    </div>
+</div>
+
 <section class="section">
     <form id="fieldworkForm" class="row g-3">
         @csrf
@@ -28,7 +47,7 @@
             <x-section-card icon="fa-hard-hat" color="icon-amber" title="Informasi Fieldwork" subtitle="Data kegiatan pekerjaan lapangan">
                 <div class="row g-3">
 
-                    <div class="col-md-12">
+                    <div class="col-md-12" id="woFieldWrapper">
                         <label class="form-label required">Work Order</label>
                         <select name="id_wo" id="create_id_wo" class="form-select" required>
                             <option value="">-- Pilih Work Order --</option>
@@ -41,7 +60,7 @@
                             placeholder="Judul kegiatan fieldwork">
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-md-6" id="siteFieldWrapper">
                         <label class="form-label required">Site Pelanggan</label>
                         <select name="id_site_pelanggan_pekerjaan" id="create_id_site" class="form-select" required>
                             <option value="">-- Pilih Site --</option>
@@ -103,6 +122,8 @@
 
 @section('custom-script')
 <script>
+    var preselectWoId = new URLSearchParams(window.location.search).get('id_wo');
+
     function noResultsAdd(createUrl) {
         return {
             language: {
@@ -115,34 +136,62 @@
     }
 
     $(document).ready(function () {
-        $('#create_id_wo').select2({
-            width: '100%',
-            placeholder: 'Ketik No WO...',
-            allowClear: true,
-            minimumInputLength: 0,
-            ajax: {
-                url: "{{ route('work-orders.select2') }}",
-                dataType: 'json',
-                delay: 250,
-                data: p => ({ q: p.term }),
-                processResults: d => ({ results: d }),
-                cache: true,
-            },
-        });
+        // WO Select2 (hanya jika tidak preselect)
+        if (!preselectWoId) {
+            $('#create_id_wo').select2({
+                width: '100%',
+                placeholder: 'Ketik No WO...',
+                allowClear: true,
+                minimumInputLength: 0,
+                ajax: {
+                    url: "{{ route('work-orders.select2') }}",
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term }),
+                    processResults: d => ({ results: d }),
+                    cache: true,
+                },
+            });
 
-        $('#create_id_wo').on('select2:select', function (e) {
-            $('input[name="judul_pekerjaan"]').val(e.params.data.judul || '');
-        });
+            $('#create_id_wo').on('select2:select', function (e) {
+                $('input[name="judul_pekerjaan"]').val(e.params.data.judul || '');
+            });
+        }
 
-        // Auto-fill WO dari query param ?id_wo=
-        const preId = new URLSearchParams(window.location.search).get('id_wo');
-        if (preId) {
-            $.get("{{ url('work-orders') }}/" + preId + "/detail", function (res) {
-                if (!res) return;
-                const label = (res.no_wo ?? '') + (res.judul_pekerjaan ? ' - ' + res.judul_pekerjaan : '');
-                const opt   = new Option(label, res.id_wo, true, true);
-                $('#create_id_wo').append(opt).trigger('change');
-                $('input[name="judul_pekerjaan"]').val(res.judul_pekerjaan ?? '');
+        // Auto-fill dan lock dari ?id_wo=
+        if (preselectWoId) {
+            $.get("{{ url('work-orders') }}/" + preselectWoId + "/detail", function (res) {
+                if (!res || !res.id_wo) return;
+
+                // Lock WO field
+                const woLabel = (res.no_wo ?? '') + (res.judul_pekerjaan ? ' — ' + res.judul_pekerjaan : '');
+                $('#woFieldWrapper').html(`
+                    <label class="form-label required">Work Order</label>
+                    <input type="hidden" name="id_wo" value="${res.id_wo}">
+                    <p class="form-control mb-0" style="background:#f8fafc;color:#374151;">${escHtml(woLabel)}</p>
+                `);
+
+                // Lock judul pekerjaan
+                $('input[name="judul_pekerjaan"]')
+                    .val(res.judul_pekerjaan ?? '')
+                    .prop('readonly', true)
+                    .css({ background: '#f8fafc', color: '#374151' });
+
+                // Lock site pelanggan dari WO
+                const siteNama = res['Site Pelanggan'] ?? '—';
+                const siteId   = res.id_site_pelanggan_pekerjaan ?? '';
+                $('#create_id_site').select2('destroy');
+                $('#siteFieldWrapper').html(`
+                    <label class="form-label required">Site Pelanggan</label>
+                    <input type="hidden" name="id_site_pelanggan_pekerjaan" value="${siteId}">
+                    <p class="form-control mb-0" style="background:#f8fafc;color:#374151;">${escHtml(siteNama)}</p>
+                `);
+
+                // Tampilkan sticky banner
+                $('#woBannerNoWo').text(res.no_wo ?? '—');
+                $('#woBannerJudul').text(res.judul_pekerjaan ?? '—');
+                $('#woBannerSite').text(siteNama);
+                $('#woInfoBanner').show();
             });
         }
 
@@ -239,7 +288,6 @@
             minimumResultsForSearch: Infinity,
         });
 
-        // Pre-fill user jika ada data (mis. edit ulang)
         if (userData) {
             const opt = new Option(userData.text, userData.id, true, true);
             $select.append(opt).trigger('change');
@@ -263,7 +311,12 @@
     submitCreateForm({
         formId: '#fieldworkForm',
         url: "{{ route('fieldworks.store') }}",
-        redirect: "{{ route('fieldworks.index') }}",
+        onSuccess: preselectWoId ? function (res) {
+            localStorage.setItem('fwo_created', JSON.stringify({ id_wo: preselectWoId, ts: Date.now() }));
+            if (window.opener && !window.opener.closed) window.opener.focus();
+            setTimeout(function () { window.close(); }, 800);
+        } : null,
+        redirect: preselectWoId ? null : "{{ route('fieldworks.index') }}",
     });
 </script>
 @endsection

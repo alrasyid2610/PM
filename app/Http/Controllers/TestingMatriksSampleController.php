@@ -36,6 +36,7 @@ class TestingMatriksSampleController extends Controller
                 '=',
                 'tkms.id_testing_kelompok_matriks_sample'
             )
+            ->whereNull('tms.deleted_at')
             ->select([
                 'tms.id_testing_matriks_sample',
                 'tms.kode',
@@ -90,6 +91,7 @@ class TestingMatriksSampleController extends Controller
         $search = $request->q;
 
         $data = DB::table('testing_matriks_samples')
+            ->whereNull('deleted_at')
             ->where('judul_indonesia', 'like', "%{$search}%")
             ->limit(10)
             ->get();
@@ -113,6 +115,7 @@ class TestingMatriksSampleController extends Controller
                 'b.judul_indonesia as kelompok_matriks_judul_indonesia'
             )
             ->where('a.id_testing_matriks_sample', $id)
+            ->whereNull('a.deleted_at')
             ->first();
 
         if (!$data) {
@@ -169,10 +172,11 @@ class TestingMatriksSampleController extends Controller
 
     public function destroy($id)
     {
-        DB::table('testing_matriks_samples')
-            ->where('id_testing_matriks_sample', $id)
-            ->delete();
+        $before = DB::table('testing_matriks_samples')->where('id_testing_matriks_sample', $id)->get()->toJson();
+        DB::table('testing_matriks_samples')->where('id_testing_matriks_sample', $id)->update(['deleted_at' => now()]);
+        $after = DB::table('testing_matriks_samples')->where('id_testing_matriks_sample', $id)->get()->toJson();
+        saveAudit('testing_matriks_samples', $id, 'delete', $before, $after);
 
-        return response()->json(['success' => true]);
+        return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
     }
 }

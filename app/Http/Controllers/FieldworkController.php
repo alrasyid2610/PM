@@ -27,9 +27,12 @@ class FieldworkController extends Controller
     public function data()
     {
         $query = DB::table('fieldworks as fw')
+            ->leftJoin('work_orders as wo', 'fw.id_wo', '=', 'wo.id_wo')
+            ->whereNull('fw.deleted_at')
             ->select([
                 'fw.id_fwo',
                 'fw.no_fwo',
+                'wo.no_wo',
                 'fw.judul_pekerjaan',
                 'fw.tanggal_mulai',
                 'fw.tanggal_selesai',
@@ -49,6 +52,7 @@ class FieldworkController extends Controller
             ->leftJoin('business_relation_sites as brs', 'fw.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
             ->leftJoin('business_relation_contacts as brc', 'fw.id_pic_pelanggan_pekerjaan', '=', 'brc.id_contact')
             ->where('fw.id_fwo', $id)
+            ->whereNull('fw.deleted_at')
             ->select([
                 'fw.*',
                 'wo.no_wo as wo_no_wo',
@@ -172,7 +176,10 @@ class FieldworkController extends Controller
 
     public function destroy($id)
     {
-        DB::table('fieldworks')->where('id_fwo', $id)->delete();
+        $before = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
+        DB::table('fieldworks')->where('id_fwo', $id)->update(['deleted_at' => now()]);
+        $after = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
+        saveAudit('fieldworks', $id, 'delete', $before, $after);
         return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
     }
 
@@ -229,6 +236,21 @@ class FieldworkController extends Controller
             foreach ($validated['sections'] as $sec) {
                 $boq = DB::table('boq')->where('id_boq', $sec['id_boq'])->first();
                 if (!$boq) continue;
+
+                if (!empty($sec['qty'])) {
+                    $usedQty   = (int) DB::table('fieldwork_boq')
+                        ->where('id_boq', $sec['id_boq'])
+                        ->sum('qty');
+                    $remaining = (int)($boq->qty ?? 0) - $usedQty;
+                    if ($sec['qty'] > $remaining) {
+                        $ptName = DB::table('testing_points')
+                            ->where('id_testing_point', $boq->id_testing_point)
+                            ->value('nama') ?? "BOQ #{$sec['id_boq']}";
+                        return response()->json([
+                            'message' => "Qty untuk \"{$ptName}\" melebihi sisa yang tersedia (sisa: {$remaining})",
+                        ], 422);
+                    }
+                }
 
                 $fwoBoqId = DB::table('fieldwork_boq')->insertGetId([
                     'id_fwo'           => $newId,

@@ -546,6 +546,18 @@ section .card {
 /* =====================
    DETAIL ACTION BAR
    ===================== */
+.detail-action-sticky-wrap {
+    background: #f7faff;
+    padding: 0 0 8px;
+    transition: filter 0.2s;
+}
+
+.detail-action-sticky-wrap.is-stuck {
+    background: #f7faff;
+    padding: 0 12px 8px;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,.12));
+}
+
 .detail-action-bar {
     display: flex;
     justify-content: space-between;
@@ -554,6 +566,75 @@ section .card {
     border: 0.5px solid #e5e7eb;
     border-radius: 12px;
     padding: 14px 20px;
+}
+
+/* =====================
+   DETAIL HEADER (info only card)
+   ===================== */
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    border: 0.5px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px 20px;
+}
+
+/* =====================
+   DETAIL NAV BAR (standalone button row)
+   ===================== */
+.detail-nav-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 0.5px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 6px 12px;
+}
+
+.detail-nav-bar .nav-fill {
+    flex: 1;
+}
+
+.detail-nav-bar .btn-action-edit,
+.detail-nav-bar .btn-action-danger,
+.detail-nav-bar .btn-action-secondary {
+    padding: 4px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+}
+
+.detail-nav-bar .btn-action-secondary {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+}
+
+/* =====================
+   ACTION BUTTON: DANGER
+   ===================== */
+.btn-action-danger {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    border: 1px solid #ef4444;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #ef4444;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    line-height: 1.4;
+}
+
+.btn-action-danger:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: #fff;
 }
 
 .detail-number {
@@ -942,6 +1023,16 @@ section .card {
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
+    }
+
+    .detail-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .detail-nav-bar {
+        flex-wrap: wrap;
     }
 
     .detail-section-sub {

@@ -12,6 +12,8 @@ class FieldworkBoqController extends Controller
         $rows = DB::table('fieldwork_boq as fb')
             ->leftJoin('boq as b', 'fb.id_boq', '=', 'b.id_boq')
             ->leftJoin('testing_points as tp', 'fb.id_testing_point', '=', 'tp.id_testing_point')
+            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->where('fb.id_fwo', $id_fwo)
             ->select([
                 'fb.id_fwo_boq',
@@ -19,7 +21,7 @@ class FieldworkBoqController extends Controller
                 'fb.id_testing_point',
                 'fb.qty',
                 'fb.keterangan',
-                'tp.nama as point_name',
+                DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
                 'b.qty as boq_qty',
                 'b.satuan',
                 'b.harga',

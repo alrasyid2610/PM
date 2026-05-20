@@ -44,7 +44,7 @@ class BusinessEstateController extends Controller
     public function data()
     {
 
-        $data = DB::table('business_estates')->get();
+        $data = DB::table('business_estates')->whereNull('deleted_at')->get();
 
         $header = [];
         foreach ($data as $k => $v) {
@@ -66,6 +66,7 @@ class BusinessEstateController extends Controller
     public function detail($id)
     {
         $building = DB::table('business_estates')
+            ->whereNull('deleted_at')
             ->where('id_bestate', $id)
             ->first();
 
@@ -168,6 +169,15 @@ class BusinessEstateController extends Controller
         return view('business-estates.edit', [
             'bestate' => $bestate
         ]);
+    }
+
+    public function destroy($id)
+    {
+        $before = DB::table('business_estates')->where('id_bestate', $id)->get()->toJson();
+        DB::table('business_estates')->where('id_bestate', $id)->update(['deleted_at' => now()]);
+        $after = DB::table('business_estates')->where('id_bestate', $id)->get()->toJson();
+        saveAudit('business_estates', $id, 'delete', $before, $after);
+        return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
     }
 
     public function update(Request $request, $id)

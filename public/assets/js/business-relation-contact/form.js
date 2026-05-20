@@ -5,8 +5,16 @@ function renderForm(res) {
     <input type="hidden" name="_method" value="PUT">
     <input type="hidden" name="id_contact" value="${res.id_contact}">
 
+    ${formGroup.actionBar({
+        number: escHtml(res.nama_pic ?? '—'),
+        createdAt: escHtml(res.created_at ?? '—'),
+        updatedAt: escHtml(res.updated_at ?? '—'),
+        deleteId: res.id_contact,
+        editText: 'Edit Contact',
+    })}
+
     ${formGroup.sectionCard(
-        { icon: 'fa-address-card', color: 'icon-green', title: 'Business Relation Contacts', subtitle: 'Data kontak PIC pelanggan', editTitle: 'Edit Contact' },
+        { icon: 'fa-address-card', color: 'icon-green', title: 'Business Relation Contacts', subtitle: 'Data kontak PIC pelanggan',  },
         `<div class="row g-3 form-1">
                     ${formGroup.select(
                         "id_br",
@@ -74,3 +82,4 @@ function renderForm(res) {
 </form>
 `;
 }
+

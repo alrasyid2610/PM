@@ -12,10 +12,22 @@ function renderForm(res) {
     <input type="hidden" name="_token" value="${window.route.csrf}">
     <input type="hidden" name="_method" value="PUT">
 
+    ${formGroup.actionBar({
+        number: escHtml(res.no_contract ?? '—'),
+        createdAt: escHtml(res.created_at ?? '—'),
+        updatedAt: escHtml(res.updated_at ?? '—'),
+        deleteId: res.id_contract,
+        editText: 'Edit Contract',
+    })}
+
     ${formGroup.sectionCard(
-        { icon: 'fa-file-contract', color: 'icon-blue', title: 'Informasi Kontrak', subtitle: 'Detail data kontrak pelanggan', editTitle: 'Edit Contract' },
+        { icon: 'fa-file-contract', color: 'icon-blue', title: 'Informasi Kontrak', subtitle: 'Detail data kontrak pelanggan' },
         `<div class="row g-3 form-1">
-            ${formGroup.text('no_kontrak', 'No Kontrak', res.no_kontrak, true, { className: 'col-md-4' })}
+            <div class="col-md-4 mb-3">
+                <label class="form-label">No Kontrak</label>
+                <p class="form-control mb-0">${escHtml(res.no_contract ?? '—')}</p>
+            </div>
+            ${formGroup.text('no_contract_client', 'No Kontrak Client', res.no_contract_client ?? '', false, { className: 'col-md-4' })}
             ${formGroup.date('tanggal_kontrak', 'Tanggal Kontrak', res.tanggal_kontrak, false, { className: 'col-md-4' })}
             ${formGroup.select('status', 'Status', res.status, statusOptions, { className: 'col-md-4' })}
             ${formGroup.date('tanggal_mulai', 'Tanggal Mulai', res.tanggal_mulai, false, { className: 'col-md-4' })}

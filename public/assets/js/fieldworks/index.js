@@ -25,8 +25,31 @@ $(document).ready(function () {
             dataType: 'json',
             delay: 250,
             data: p => ({ q: p.term }),
-            processResults: d => ({ results: d }),
+            processResults: function (d) {
+                return {
+                    results: d.map(function (item) {
+                        return addedBoqIds.has(String(item.id))
+                            ? Object.assign({}, item, { disabled: true })
+                            : item;
+                    }),
+                };
+            },
             cache: false,
+        },
+        templateResult: function (item) {
+            if (!item.id) return item.text;
+            if (addedBoqIds.has(String(item.id))) {
+                const $el = $('<span>').css({ display: 'flex', alignItems: 'center', gap: '8px' });
+                $('<i>').addClass('fa-solid fa-circle-check').css({ color: '#22c55e', fontSize: '13px', flexShrink: '0' }).appendTo($el);
+                $('<span>').text(item.text).css({ textDecoration: 'line-through', color: '#94a3b8' }).appendTo($el);
+                $('<span>').text('Sudah ditambahkan').css({
+                    fontSize: '11px', background: '#f0fdf4', color: '#16a34a',
+                    borderRadius: '10px', padding: '1px 8px', border: '1px solid #bbf7d0',
+                    flexShrink: '0',
+                }).appendTo($el);
+                return $el;
+            }
+            return item.text;
         },
     });
 
@@ -84,6 +107,24 @@ $(document).ready(function () {
         bootstrap.Modal.getInstance('#modalAddFwoBoq').hide();
     });
 
+    // Toggle items di modal tambah BOQ
+    $(document).on('click', '#btnToggleModalItems', function () {
+        const $list = $('#fwoBoqModalItemsList');
+        const $icon = $(this).find('i');
+        const isVisible = $list.is(':visible');
+        $list.toggle(!isVisible);
+        $icon.toggleClass('fa-eye', isVisible).toggleClass('fa-eye-slash', !isVisible);
+    });
+
+    // Toggle items di section edit mode
+    $(document).on('click', '.btn-toggle-boq-items', function () {
+        const $items = $(this).closest('.card-body').find('.fwo-boq-items');
+        const $icon  = $(this).find('i');
+        const isVisible = $items.is(':visible');
+        $items.toggle(!isVisible);
+        $icon.toggleClass('fa-eye', isVisible).toggleClass('fa-eye-slash', !isVisible);
+    });
+
     // Hapus baris personel (delegasi)
     $(document).on('click', '.btn-remove-personel-row', function () {
         $(this).closest('.personel-edit-row').remove();
@@ -130,6 +171,28 @@ $(document).ready(function () {
             },
         });
     };
+
+    $(document).on('click', '.btn-delete-record', function () {
+        const id = $(this).data('id');
+        Notify.confirm('Hapus Fieldwork?', function () {
+            $.ajax({
+                url: window.route.update + id,
+                method: 'POST',
+                data: { _token: window.route.csrf, _method: 'DELETE' },
+                success: function (res) {
+                    Notify.success(res.message || 'Data berhasil dihapus');
+                    $('#detailContent').html('');
+                    page.selectedRow.id = null;
+                    if ($.fn.DataTable.isDataTable('#masterTable')) {
+                        $('#masterTable').DataTable().ajax.reload(null, false);
+                    }
+                },
+                error: function (xhr) {
+                    Notify.error(xhr.responseJSON?.message || 'Terjadi kesalahan');
+                },
+            });
+        });
+    });
 });
 
 // ── Personel edit mode ─────────────────────────────────────────────────────────
@@ -444,7 +507,8 @@ function loadFwoBoqSectionPreview(id_boq) {
 
 function resetFwoBoqModal() {
     $('#fwoBoqModalLoading, #fwoBoqModalEmpty, #fwoBoqModalPreview').addClass('d-none');
-    $('#fwoBoqModalItemsList').empty();
+    $('#fwoBoqModalItemsList').empty().hide();
+    $('#btnToggleModalItems').find('i').removeClass('fa-eye-slash').addClass('fa-eye');
     $('#fwoBoqQtyInput').val('').removeAttr('max');
     $('#fwoBoqKetInput').val('');
     $('#fwoBoqMaxHint').html('');

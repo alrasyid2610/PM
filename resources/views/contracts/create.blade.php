@@ -29,8 +29,8 @@
             <x-section-card icon="fa-file-contract" color="icon-blue" title="Informasi Kontrak" subtitle="Detail data kontrak pelanggan">
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label required">No Kontrak</label>
-                        <input type="text" class="form-control" name="no_kontrak" required placeholder="KTR/2025/001">
+                        <label class="form-label">No Kontrak Client</label>
+                        <input type="text" class="form-control" name="no_contract_client" placeholder="Nomor kontrak dari client">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Tanggal Kontrak</label>
@@ -113,29 +113,52 @@
         select2BR:      "{{ route('business-relations.select2') }}",
         select2Contact: "{{ route('business-relation-contacts.select2') }}",
         select2User:    "{{ route('users.select2') }}",
+        createBR:       "{{ route('business-relations.create') }}",
+        createContact:  "{{ route('business-relation-contacts.create') }}",
         csrf:           "{{ csrf_token() }}",
+    }
+
+    function makeSelect2WithAdd(selector, url, placeholder, createUrl) {
+        $(selector).select2({
+            width: '100%',
+            placeholder: placeholder,
+            allowClear: true,
+            ajax: {
+                url: url,
+                dataType: 'json',
+                delay: 250,
+                data: (params) => ({ q: params.term }),
+                processResults: (data) => ({ results: data }),
+                cache: true,
+            },
+            language: {
+                noResults: function () {
+                    return `<span>Tidak ditemukan. <a href="${createUrl}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`;
+                },
+            },
+            escapeMarkup: function (m) { return m; },
+        });
     }
 
     $(document).ready(function () {
         createFileUploader(".filepond");
-        $('#status').select2({ placeholder: '-- Pilih Status --', width: '100%' });
+        $('#status').select2({ placeholder: '-- Pilih Status --', allowClear: true, width: '100%' });
 
-        $('#id_business_relation').select2({
-            width: '100%', placeholder: '-- Pilih Pelanggan --', allowClear: true, minimumInputLength: 2,
-            ajax: { url: window.route.select2BR, delay: 300, dataType: 'json',
-                    data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }) },
-        });
-
-        $('#id_pic_pelanggan').select2({
-            width: '100%', placeholder: '-- Pilih PIC Pelanggan --', allowClear: true, minimumInputLength: 2,
-            ajax: { url: window.route.select2Contact, delay: 300, dataType: 'json',
-                    data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }) },
-        });
+        makeSelect2WithAdd('#id_business_relation', window.route.select2BR,      '-- Pilih Pelanggan --',     window.route.createBR);
+        makeSelect2WithAdd('#id_pic_pelanggan',     window.route.select2Contact, '-- Pilih PIC Pelanggan --', window.route.createContact);
 
         $('#id_pic_pramatek').select2({
-            width: '100%', placeholder: '-- Pilih PIC Pramatek --', allowClear: true, minimumInputLength: 2,
-            ajax: { url: window.route.select2User, delay: 300, dataType: 'json',
-                    data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }) },
+            width: '100%',
+            placeholder: '-- Pilih PIC Pramatek --',
+            allowClear: true,
+            ajax: {
+                url: window.route.select2User,
+                dataType: 'json',
+                delay: 250,
+                data: (params) => ({ q: params.term }),
+                processResults: (data) => ({ results: data }),
+                cache: true,
+            },
         });
     });
 

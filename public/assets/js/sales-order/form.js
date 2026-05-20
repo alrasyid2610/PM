@@ -5,24 +5,17 @@ function renderForm(res) {
     <input type="hidden" name="_method" value="PUT">
     <input type="hidden" name="id_contact" value="${res.id_contact}">
 
-    <!-- ACTION BAR -->
-    <div class="col-md-12">
-        <div class="detail-action-bar">
-            <div>
-                <div class="detail-number">${res.no_so ?? "—"}</div>
-                <div class="detail-date">
-                    Dibuat ${res.created_at ?? "—"} &nbsp;·&nbsp; Diupdate ${res.updated_at ?? "—"}
-                </div>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <span class="detail-status-badge detail-status-${(res.status ?? "draft").toString().toLowerCase().replace(/\s+/g, "-")}">
-                    <span class="detail-status-dot"></span>
-                    ${res.status ?? "Draft"}
-                </span>
-                ${formGroup.editButton("Edit SO")}
-            </div>
-        </div>
-    </div>
+    ${formGroup.actionBar({
+        number: escHtml(res.no_so ?? "—"),
+        createdAt: escHtml(res.created_at ?? "—"),
+        updatedAt: escHtml(res.updated_at ?? "—"),
+        deleteId: res.id_so,
+        editText: 'Edit SO',
+        badge: `<span class="detail-status-badge detail-status-${escHtml((res.status ?? 'draft').toString().toLowerCase().replace(/\s+/g, '-'))}">
+            <span class="detail-status-dot"></span>
+            ${escHtml(res.status ?? 'Draft')}
+        </span>`,
+    })}
 
     <!-- SUMMARY CARD -->
     <div class="col-md-12">
@@ -84,6 +77,17 @@ function renderForm(res) {
                         ],
                         { className: "col-md-4" },
                     )}
+                    ${formGroup.select('id_sc', 'Sales Contract', res.id_sc, [], {
+                        mode: 'ajax',
+                        url: '/contracts/select2',
+                        placeholder: 'Cari no. kontrak atau nama pelanggan...',
+                        label: res.id_contract
+                            ? (res.contract_no ?? '') + (res.contract_no_client ? ' / ' + res.contract_no_client : '')
+                            : null,
+                        className: 'col-md-6',
+                        allowClear: true,
+                        createUrl: '/contracts/create',
+                    })}
                 </div>`,
     )}
 
@@ -407,27 +411,7 @@ function renderForm(res) {
     )}
 
 
-    <!-- SECTION 6: PERIOD JADWAL -->
-    ${formGroup.sectionCard(
-        {
-            icon: 'fa-calendar-days',
-            color: 'icon-navy',
-            title: 'Period Jadwal',
-            subtitle: 'Jadwal kunjungan per lokasi dalam SO ini',
-            id: 'so-period-section',
-            actions: `<button type="button" id="btnTambahPeriodSo" class="btn btn-sm btn-outline-primary py-0 px-2"
-                style="font-size:12px;" data-no-disable>
-                <i class="fa-solid fa-plus me-1"></i> Tambah Period
-            </button>`,
-        },
-        `<div id="soPeriodContent">
-            <div class="text-center text-muted py-3">
-                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
-            </div>
-        </div>`
-    )}
-
-    <!-- SECTION 7: WO Progress -->
+    <!-- SECTION 6: WO Progress -->
     ${formGroup.sectionCard(
         {
             icon: "fa-briefcase",

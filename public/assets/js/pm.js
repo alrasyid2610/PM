@@ -1,3 +1,11 @@
+function escHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
 $(document).ready(function () {
     if (
         document.getElementById("advanceSearchForm") &&
@@ -11,6 +19,104 @@ $(document).ready(function () {
 $(window).on('load', function () {
     $("#global-loader").fadeOut(400);
 });
+
+// Sticky action bar — scroll-based fixed positioning
+// position:sticky tidak andal dalam layout flex/card bertumpuk.
+// Solusi: gunakan position:fixed via scroll event, dijamin bekerja di semua kondisi.
+(function () {
+    var wrap = null;
+    var placeholder = null;
+    var isFixed = false;
+    var naturalTop = null;
+    var raf = null;
+
+    function findWrap() {
+        return document.querySelector('.detail-action-sticky-wrap');
+    }
+
+    function measure() {
+        wrap = findWrap();
+        if (!wrap || isFixed) return;
+        naturalTop = wrap.getBoundingClientRect().top + window.pageYOffset;
+    }
+
+    function getMainLeft() {
+        var main = document.getElementById('main');
+        return main ? main.getBoundingClientRect().left : 0;
+    }
+
+    function applyFixed() {
+        if (isFixed || !wrap) return;
+        var h = wrap.offsetHeight;
+        placeholder = document.createElement('div');
+        placeholder.style.height = h + 'px';
+        wrap.parentNode.insertBefore(placeholder, wrap);
+        wrap.style.position = 'fixed';
+        wrap.style.top = '0';
+        wrap.style.left = getMainLeft() + 'px';
+        wrap.style.right = '0';
+        wrap.style.width = 'auto'; // override col-md-12 width:100% agar left+right yg menentukan lebar
+        wrap.style.zIndex = '200';
+        wrap.style.margin = '0';
+        wrap.classList.add('is-stuck');
+        isFixed = true;
+    }
+
+    function removeFixed() {
+        if (!isFixed || !wrap) return;
+        wrap.style.position = '';
+        wrap.style.top = '';
+        wrap.style.left = '';
+        wrap.style.right = '';
+        wrap.style.width = '';
+        wrap.style.zIndex = '';
+        wrap.style.margin = '';
+        wrap.classList.remove('is-stuck');
+        isFixed = false;
+        if (placeholder) { placeholder.parentNode && placeholder.parentNode.removeChild(placeholder); placeholder = null; }
+    }
+
+    function tick() {
+        if (!wrap) { measure(); return; }
+        if (naturalTop === null) { measure(); return; }
+        var scrollY = window.pageYOffset;
+        if (scrollY > naturalTop - 1 && !isFixed) applyFixed();
+        else if (scrollY <= naturalTop - 1 && isFixed) removeFixed();
+    }
+
+    function onScroll() {
+        if (raf) cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(tick);
+    }
+
+    function reset() {
+        removeFixed();
+        wrap = null;
+        naturalTop = null;
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    window.addEventListener('resize', function () {
+        if (isFixed && wrap) wrap.style.left = getMainLeft() + 'px';
+        if (!isFixed) { naturalTop = null; measure(); }
+    });
+
+    // Re-anchor saat form baru di-render ke #detailContent
+    new MutationObserver(function (mutations) {
+        var hasBar = mutations.some(function (m) {
+            return Array.from(m.addedNodes).some(function (n) {
+                return n.nodeType === 1 && (
+                    (n.classList && n.classList.contains('detail-action-sticky-wrap')) ||
+                    (n.querySelector && n.querySelector('.detail-action-sticky-wrap'))
+                );
+            });
+        });
+        if (hasBar) { reset(); requestAnimationFrame(measure); }
+    }).observe(document.body, { childList: true, subtree: true });
+
+    measure();
+}());
 
 function toggleAdvanceSearch() {
     const advanceSearch = document.getElementById("advanceSearchForm");

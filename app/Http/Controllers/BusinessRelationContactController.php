@@ -43,6 +43,7 @@ class BusinessRelationContactController extends Controller
     {
 
         $data = DB::table('business_relation_contacts')
+            ->whereNull('deleted_at')
             ->get();
 
         $header = [];
@@ -73,7 +74,9 @@ class BusinessRelationContactController extends Controller
     {
         $testingUnit = DB::table('business_relation_contacts')
             ->leftJoin('business_relation_sites', 'business_relation_contacts.id_br', '=', 'business_relation_sites.id_site')
-            ->where('id_contact', $id)->first();
+            ->where('business_relation_contacts.id_contact', $id)
+            ->whereNull('business_relation_contacts.deleted_at')
+            ->first();
 
         if (!$testingUnit) {
             return response()->json(['message' => 'Data tidak ditemukan'], 404);
@@ -87,7 +90,9 @@ class BusinessRelationContactController extends Controller
         $testingUnit = DB::table('business_relation_contacts as brc')
             ->leftJoin('business_relations as br', 'br.id_br', '=', 'brc.id_br')
             ->select(['brc.*', 'br.nama as nama_br'])
-            ->where('id_contact', $id)->first();
+            ->where('brc.id_contact', $id)
+            ->whereNull('brc.deleted_at')
+            ->first();
         if (!$testingUnit) {
             return response()->json(['message' => 'Testing unit tidak ditemukan'], 404);
         }
@@ -141,8 +146,11 @@ class BusinessRelationContactController extends Controller
         $search = $request->q;
 
         $data = DB::table('business_relation_contacts')
-            ->where('nama_pic', 'like', "%{$search}%")
-            ->orWhere('nomor_telepon_pic', 'like', "%{$search}%")
+            ->whereNull('deleted_at')
+            ->where(function ($q) use ($search) {
+                $q->where('nama_pic', 'like', "%{$search}%")
+                  ->orWhere('nomor_telepon_pic', 'like', "%{$search}%");
+            })
             ->limit(10)
             ->get();
 
@@ -204,6 +212,15 @@ class BusinessRelationContactController extends Controller
             'success' => true,
             'id' => $id
         ]);
+    }
+
+    public function destroy($id)
+    {
+        $before = DB::table('business_relation_contacts')->where('id_contact', $id)->get()->toJson();
+        DB::table('business_relation_contacts')->where('id_contact', $id)->update(['deleted_at' => now()]);
+        $after = DB::table('business_relation_contacts')->where('id_contact', $id)->get()->toJson();
+        saveAudit('business_relation_contacts', $id, 'delete', $before, $after);
+        return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
     }
 
     public function update(Request $request, $id)

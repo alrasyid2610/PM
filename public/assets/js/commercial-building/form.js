@@ -4,9 +4,17 @@ function renderUnitForm(res) {
     <input type="hidden" name="_token" value="${window.route.csrf}">
     <input type="hidden" name="_method" value="PUT">
 
+    ${formGroup.actionBar({
+        number: escHtml(res.nama ?? '—'),
+        createdAt: escHtml(res.created_at ?? '—'),
+        updatedAt: escHtml(res.updated_at ?? '—'),
+        deleteId: res.id_building,
+        editText: 'Edit Commercial Building',
+    })}
+
     <!-- SECTION 1: INFORMASI GEDUNG -->
     ${formGroup.sectionCard(
-        { icon: 'fa-building', color: 'icon-blue', title: 'Commercial Building', subtitle: 'Data gedung komersial', editTitle: 'Edit Commercial Building' },
+        { icon: 'fa-building', color: 'icon-blue', title: 'Commercial Building', subtitle: 'Data gedung komersial',  },
         `<div class="row g-3 form-1">
                     ${formGroup.text("nama", "Nama Gedung", res.nama, true, {
                         className: "col-md-5 col-12",
@@ -76,3 +84,4 @@ function renderUnitForm(res) {
 </form>
 `;
 }
+

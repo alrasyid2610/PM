@@ -33,6 +33,7 @@ class TestingPointController extends Controller
             ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
             ->leftJoin('testing_kelompok_matriks_samples as tkms', 'tkms.id_testing_kelompok_matriks_sample', '=', 'tms.id_testing_kelompok_matriks_sample')
+            ->whereNull('tp.deleted_at')
             ->select([
                 'tp.id_testing_point',
                 DB::raw(
@@ -70,6 +71,7 @@ class TestingPointController extends Controller
 
         $data = DB::table('testing_points as tp')
             ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->whereNull('tp.deleted_at')
             ->where('tp.nama', 'like', "%{$search}%")
             ->select('tp.id_testing_point', 'tp.nama', 'tp.nomor_halaman', 'tms.kode as tms_kode')
             ->limit(20)
@@ -126,6 +128,7 @@ class TestingPointController extends Controller
             ->leftJoin('testing_standards as b', 'a.id_testing_standard', '=', 'b.id_testing_standard')
             ->leftJoin('testing_matriks_samples as c', 'c.id_testing_matriks_sample', '=', 'a.id_testing_matriks_sample')
             ->where('a.id_testing_point', $id)
+            ->whereNull('a.deleted_at')
             ->select(
                 'a.*',
                 'b.nomor as standard_nomor',
@@ -255,11 +258,12 @@ class TestingPointController extends Controller
 
     public function destroy($id)
     {
-        DB::table('testing_points')
-            ->where('id_testing_point', $id)
-            ->delete();
+        $before = DB::table('testing_points')->where('id_testing_point', $id)->get()->toJson();
+        DB::table('testing_points')->where('id_testing_point', $id)->update(['deleted_at' => now()]);
+        $after = DB::table('testing_points')->where('id_testing_point', $id)->get()->toJson();
+        saveAudit('testing_points', $id, 'delete', $before, $after);
 
-        return response()->json(['success' => true]);
+        return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
     }
 
 

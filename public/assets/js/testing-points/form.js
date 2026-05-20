@@ -6,6 +6,14 @@ function renderForm(res) {
     <input type="hidden" name="id_testing_standard" value="${res.id_testing_standard}">
     <input type="hidden" name="id_testing_matriks_sample" value="${res.id_testing_matriks_sample}">
 
+    ${formGroup.actionBar({
+        number: escHtml(res.nama ?? '—'),
+        createdAt: escHtml(res.created_at ?? '—'),
+        updatedAt: escHtml(res.updated_at ?? '—'),
+        deleteId: res.id_testing_point,
+        editText: 'Edit Testing Point',
+    })}
+
     <!-- SECTION 1: INFORMASI POINT -->
     ${formGroup.sectionCard(
         {
@@ -13,8 +21,7 @@ function renderForm(res) {
             color: "icon-navy",
             title: "Testing Points",
             subtitle: "Data titik pengujian laboratorium",
-            editTitle: "Edit Testing Point",
-        },
+                    },
         `<div class="row g-3 form-1">
                     ${formGroup.select(
                         "id_testing_standard",
@@ -185,3 +192,4 @@ function renderForm(res) {
 </form>
 `;
 }
+

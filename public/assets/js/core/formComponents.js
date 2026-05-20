@@ -255,6 +255,30 @@ const formGroup = {
         </button>`;
     },
 
+    actionBar({ number, createdAt = '', updatedAt = '', subtitle = '', deleteId = null, deleteClass = 'btn-delete-record', deleteText = 'Hapus', editText = '', editHtml = '', badge = '', extra = '', leftExtra = '' }) {
+        const editBtn = editHtml ? editHtml : (editText ? formGroup.editButton(editText) : '');
+        const deleteBtn = deleteId !== null ? `<button type="button" class="btn-action-danger ${deleteClass}" data-id="${deleteId}" data-no-disable><i class="fa-solid fa-trash"></i> ${deleteText}</button>` : '';
+        const dateHtml = subtitle
+            ? `<div class="detail-date">${subtitle}</div>`
+            : (createdAt || updatedAt ? `<div class="detail-date">Dibuat ${createdAt} &nbsp;·&nbsp; Diupdate ${updatedAt}</div>` : '');
+        return `
+        <div class="col-md-12 detail-action-sticky-wrap">
+            <div class="detail-action-bar">
+                <div>
+                    <div class="detail-number">${number}</div>
+                    ${dateHtml}
+                    ${leftExtra}
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    ${badge}
+                    ${editBtn}
+                    ${deleteBtn}
+                    ${extra}
+                </div>
+            </div>
+        </div>`;
+    },
+
     sectionCard({ icon, color, title, subtitle = null, editTitle = null, actions = '', id = null }, content) {
         return `
         <div class="col-md-12"${id ? ` id="${id}"` : ''}>

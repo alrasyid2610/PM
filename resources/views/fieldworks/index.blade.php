@@ -61,10 +61,16 @@
                             <input type="text" id="fwoBoqKetInput" class="form-control form-control-sm" placeholder="opsional">
                         </div>
                     </div>
-                    <div class="text-muted small fw-semibold mb-2">
-                        <i class="fa-solid fa-list-check me-1"></i> Items (otomatis dari BOQ)
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="text-muted small fw-semibold">
+                            <i class="fa-solid fa-list-check me-1"></i> Items (otomatis dari BOQ)
+                        </span>
+                        <button type="button" id="btnToggleModalItems"
+                            class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;" title="Lihat items">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
                     </div>
-                    <div id="fwoBoqModalItemsList"></div>
+                    <div id="fwoBoqModalItemsList" style="display:none;"></div>
                 </div>
 
             </div>

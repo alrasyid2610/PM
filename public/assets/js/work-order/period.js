@@ -42,9 +42,9 @@ function renderWoPeriodView(period, id_wo) {
                 return '<div class="d-flex align-items-center gap-2 py-1" style="border-bottom:1px solid #f1f5f9;">' +
                     '<i class="fa-solid fa-circle-dot" style="font-size:8px;color:#9ca3af;"></i>' +
                     (isThis
-                        ? '<span class="small fw-semibold" style="color:var(--primary-700);">' + escWo(wo.no_wo) + ' <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size:10px;">ini</span></span>'
-                        : '<a href="/work-orders?open=' + wo.id_wo + '" target="_blank" class="small fw-semibold text-decoration-none" style="color:var(--primary-500);">' + escWo(wo.no_wo) + '</a>') +
-                    '<span class="small text-muted">' + escWo(wo.judul_pekerjaan ?? '') + '</span>' +
+                        ? '<span class="small fw-semibold" style="color:var(--primary-700);">' + escHtml(wo.no_wo) + ' <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size:10px;">ini</span></span>'
+                        : '<a href="/work-orders?open=' + wo.id_wo + '" target="_blank" class="small fw-semibold text-decoration-none" style="color:var(--primary-500);">' + escHtml(wo.no_wo) + '</a>') +
+                    '<span class="small text-muted">' + escHtml(wo.judul_pekerjaan ?? '') + '</span>' +
                     '</div>';
             }).join('') +
             '</div>';
@@ -55,11 +55,11 @@ function renderWoPeriodView(period, id_wo) {
     return '<div class="d-flex flex-wrap gap-3">' +
         '<div style="min-width:140px;">' +
             '<div class="small text-muted mb-1">Period</div>' +
-            '<div class="small fw-semibold">' + escWo(period.nama_period ?? '—') + '</div>' +
+            '<div class="small fw-semibold">' + escHtml(period.nama_period ?? '—') + '</div>' +
         '</div>' +
         (period.nama_site ? '<div style="min-width:140px;">' +
             '<div class="small text-muted mb-1">Lokasi</div>' +
-            '<div class="small fw-semibold">' + escWo(period.nama_site) + '</div>' +
+            '<div class="small fw-semibold">' + escHtml(period.nama_site) + '</div>' +
         '</div>' : '') +
         '<div style="min-width:140px;">' +
             '<div class="small text-muted mb-1">Jadwal</div>' +
@@ -67,7 +67,7 @@ function renderWoPeriodView(period, id_wo) {
         '</div>' +
         (interval ? '<div>' +
             '<div class="small text-muted mb-1">Frekuensi</div>' +
-            '<div class="small fw-semibold">' + escWo(interval) + '</div>' +
+            '<div class="small fw-semibold">' + escHtml(interval) + '</div>' +
         '</div>' : '') +
     '</div>' + woListHtml;
 }

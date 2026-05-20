@@ -1,13 +1,20 @@
 function renderForm(res) {
-    console.log(res, " render form ", res);
     return `
 <form class="row g-3" id="detailForm" enctype="multipart/form-data">
     <input type="hidden" name="_token" value="${window.route.csrf}">
     <input type="hidden" name="_method" value="PUT">
     <input type="hidden" name="id_testing_kelompok_matriks_sample" value="${res.id_testing_kelompok_matriks_sample}">
 
+    ${formGroup.actionBar({
+        number: escHtml(res.kode ?? '—'),
+        createdAt: escHtml(res.created_at ?? '—'),
+        updatedAt: escHtml(res.updated_at ?? '—'),
+        deleteId: res.id_testing_matriks_sample,
+        editText: 'Edit Matriks Sample',
+    })}
+
     ${formGroup.sectionCard(
-        { icon: 'fa-vials', color: 'icon-teal', title: 'Testing Matriks Samples', subtitle: 'Data matriks sampel pengujian', editTitle: 'Edit Matriks Sample' },
+        { icon: 'fa-vials', color: 'icon-teal', title: 'Testing Matriks Samples', subtitle: 'Data matriks sampel pengujian',  },
         `<div class="row g-3 form-1">
                     ${formGroup.select(
                         "kelompok",
@@ -58,3 +65,4 @@ function renderForm(res) {
 </form>
 `;
 }
+

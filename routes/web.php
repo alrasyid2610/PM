@@ -332,6 +332,7 @@ Route::prefix('/commercial-buildings')
             ->name('set-edit-context');
         Route::get('/edit', [CommercialBuildingController::class, 'edit'])->name('edit');
         Route::put('/{id}', [CommercialBuildingController::class, 'update'])->name('update');
+        Route::delete('/{id}', [CommercialBuildingController::class, 'destroy'])->name('destroy')->whereNumber('id');
         Route::get('/{id}/history', [CommercialBuildingController::class, 'history'])->name('history')->whereNumber('id');
     });
 
@@ -367,6 +368,7 @@ Route::prefix('/business-estates')
         // 👉 EDIT
         Route::get('/edit', [BusinessEstateController::class, 'edit'])->name('edit');
         Route::put('/{id}', [BusinessEstateController::class, 'update'])->name('update');
+        Route::delete('/{id}', [BusinessEstateController::class, 'destroy'])->name('destroy')->whereNumber('id');
         Route::get('/{id}/history', [BusinessEstateController::class, 'history'])
             ->name('history')
             ->whereNumber('id');
@@ -406,6 +408,7 @@ Route::prefix('/business-relation-contacts')
         // 👉 EDIT
         Route::get('/edit', [BusinessRelationContactController::class, 'edit'])->name('edit');
         Route::put('/{id}', [BusinessRelationContactController::class, 'update'])->name('update');
+        Route::delete('/{id}', [BusinessRelationContactController::class, 'destroy'])->name('destroy')->whereNumber('id');
         Route::get('/{id}/history', [BusinessRelationContactController::class, 'history'])->name('history')->whereNumber('id');
     });
 

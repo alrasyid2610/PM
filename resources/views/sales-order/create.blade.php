@@ -43,6 +43,10 @@
                             <option value="2">Pramatek Bandung</option>
                         </select>
                     </div>
+                    <div class="col-md-6 col-12">
+                        <label class="form-label">Sales Contract</label>
+                        <select name="id_sc" id="id_sc" class="form-select"></select>
+                    </div>
                 </div>
             </x-section-card>
         </div>
@@ -305,6 +309,26 @@
 
     $(document).ready(function () {
         $('select[name="id_office"]').select2({ placeholder: 'Pilih Office', allowClear: true, width: '100%' });
+
+        $('#id_sc').select2({
+            width: '100%',
+            placeholder: 'Cari no. kontrak atau nama pelanggan...',
+            allowClear: true,
+            ajax: {
+                url: "{{ url('contracts/select2') }}",
+                dataType: 'json',
+                delay: 250,
+                data: (params) => ({ q: params.term }),
+                processResults: (data) => ({ results: data }),
+                cache: true,
+            },
+            language: {
+                noResults: function () {
+                    return `<span>Tidak ditemukan. <a href="{{ route('contracts.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`;
+                },
+            },
+            escapeMarkup: function (m) { return m; },
+        });
 
         loadPelangganDetails();
         //  loadPICInternal();

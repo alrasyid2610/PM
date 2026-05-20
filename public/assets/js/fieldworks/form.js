@@ -4,34 +4,27 @@ function renderFwoForm(res) {
     <input type="hidden" name="_token" value="${window.route.csrf}">
     <input type="hidden" name="_method" value="PUT">
 
-    <!-- ACTION BAR -->
-    <div class="col-md-12">
-        <div class="detail-action-bar">
-            <div>
-                <div class="detail-number">${escFwo(res.no_fwo ?? '—')}</div>
-                <div class="detail-date">
-                    Dibuat ${escFwo(res.created_at ?? '—')} &nbsp;·&nbsp; Diupdate ${escFwo(res.updated_at ?? '—')}
-                </div>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                ${res.id_wo ? `<a href="/work-orders?open=${res.id_wo}" target="_blank"
-                    style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:#e8f0fe;color:#1a56db;font-size:12px;font-weight:600;text-decoration:none;border:1px solid #c7d7f8;transition:background 0.15s;"
-                    onmouseover="this.style.background='#c7d7f8'" onmouseout="this.style.background='#e8f0fe'">
-                    <i class="fa-solid fa-briefcase" style="font-size:11px;"></i>
-                    ${escFwo(res.wo_no_wo ?? 'Lihat WO')}
-                </a>` : ''}
-                ${formGroup.editButton('Edit FWO')}
-            </div>
-        </div>
-    </div>
+    ${formGroup.actionBar({
+        number: escHtml(res.no_fwo ?? '—'),
+        createdAt: escHtml(res.created_at ?? '—'),
+        updatedAt: escHtml(res.updated_at ?? '—'),
+        deleteId: res.id_fwo,
+        editText: 'Edit FWO',
+        leftExtra: res.id_wo ? `<div class="mt-1">
+            <a href="/work-orders?open=${res.id_wo}" target="_blank"
+                style="display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:20px;background:#e8f0fe;color:#1a56db;font-size:11px;font-weight:600;text-decoration:none;border:1px solid #c7d7f8;">
+                <i class="fa-solid fa-briefcase" style="font-size:10px;"></i>
+                ${escHtml(res.wo_no_wo ?? 'Lihat WO')}
+            </a>
+        </div>` : '',
+    })}
 
     ${formGroup.sectionCard(
         {
             icon: 'fa-hard-hat',
             color: 'icon-amber',
             title: 'Informasi Fieldwork',
-            subtitle: escFwo(res.no_fwo ?? '') + (res.judul_pekerjaan ? ' — ' + escFwo(res.judul_pekerjaan) : ''),
-            editTitle: 'Edit Fieldwork',
+            subtitle: escHtml(res.no_fwo ?? '') + (res.judul_pekerjaan ? ' — ' + escHtml(res.judul_pekerjaan) : ''),
         },
         `<div class="row g-3 form-1">
             ${formGroup.select('id_wo', 'Work Order', res.id_wo, [], {
@@ -123,58 +116,35 @@ function renderFwoBoqView(sections) {
         </div>`;
     }
 
-    return sections.map(function (sec) {
-        const items    = sec.items ?? [];
-        const satuan   = sec.satuan ? ' ' + escFwo(sec.satuan) : '';
+    const TH = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';
+    const TD = 'style="padding:8px 12px;vertical-align:middle;"';
+
+    const rows = sections.map(function (sec, i) {
+        const satuan   = sec.satuan ? ' ' + escHtml(sec.satuan) : '';
         const qtyLabel = (sec.qty ?? '—') + (sec.boq_qty ? ' / ' + sec.boq_qty : '') + satuan;
-
         const pct      = (sec.boq_qty && sec.qty) ? Math.min(100, Math.round((sec.qty / sec.boq_qty) * 100)) : 0;
-        const barColor = pct >= 100 ? 'bg-success' : pct > 0 ? 'bg-primary' : 'bg-secondary';
+        const pctColor = pct >= 100 ? '#198754' : pct > 0 ? '#1d4ed8' : '#6c757d';
+        const pctBg    = pct >= 100 ? '#d1fae5' : pct > 0 ? '#dbeafe' : '#e9ecef';
 
-        const priceHtml = sec.harga > 0
-            ? `<div style="font-size:11px;color:#64748b;margin-top:3px;">
-                <span>Rp ${Number(sec.harga).toLocaleString('en-US')}${satuan ? ' /' + satuan : ''}</span>
-                <span style="margin:0 4px;">&times;</span>
-                <span>${sec.qty ?? 0}${satuan}</span>
-                <span style="margin:0 4px;">=</span>
-                <strong style="color:#1d4ed8;">Rp ${Number((sec.qty ?? 0) * sec.harga).toLocaleString('en-US')}</strong>
-               </div>`
-            : '';
-
-        const progressHtml = `
-            <div class="d-flex justify-content-between align-items-center mt-2 mb-1">
-                <span class="small text-muted">Progress kunjungan ini</span>
-                <span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;${pct >= 100 ? 'background:#198754;color:#fff;' : 'background:#dbeafe;color:#1d4ed8;'}">${pct}%</span>
-            </div>
-            <div class="progress" style="height:5px;">
-                <div class="progress-bar ${barColor}" style="width:${pct}%;transition:width .4s;"></div>
-            </div>`;
-
-        const itemsHtml = items.map(function (item, j) {
-            return `<div class="d-flex align-items-center flex-wrap gap-2 py-2" style="border-bottom:1px solid #f1f5f9;">
-                <span class="text-muted small fw-semibold">${j + 1}.</span>
-                <span class="fw-semibold small">${escFwo(item.judul_indonesia ?? '—')}</span>
-                <span class="text-muted small">/ ${escFwo(item.judul_inggris ?? '—')}</span>
-                <span class="item-meta-badge">${escFwo(item.kode_unit || '—')} · ${escFwo(String(item.nilai ?? '—'))}</span>
-            </div>`;
-        }).join('');
-
-        return formGroup.sectionCard(
-            {
-                icon: 'fa-layer-group',
-                color: 'icon-blue',
-                title: escFwo(sec.point_name ?? '—'),
-                subtitle: items.length + ' item · Qty: ' + qtyLabel,
-            },
-            `${priceHtml}
-            ${progressHtml}
-            <div class="text-muted small fw-semibold mb-1 mt-3">
-                <i class="fa-solid fa-list-check me-1"></i> Items
-            </div>
-            <div>${itemsHtml || '<div class="text-muted small py-2">Tidak ada item</div>'}</div>
-            ${sec.keterangan ? `<div class="mt-2 small text-muted"><i class="fa-solid fa-note-sticky me-1"></i>${escFwo(sec.keterangan)}</div>` : ''}`
-        );
+        return `<tr>
+            <td ${TD} style="padding:8px 12px;color:#94a3b8;text-align:center;font-size:12px;">${i + 1}</td>
+            <td ${TD} style="padding:8px 12px;color:#374151;font-weight:500;">${escHtml(sec.point_name ?? '—')}</td>
+            <td ${TD} style="padding:8px 12px;color:#374151;white-space:nowrap;">${qtyLabel}</td>
+        </tr>`;
     }).join('');
+
+    return `<div class="table-responsive">
+        <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+            <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+                <tr>
+                    <th ${TH} style="width:40px;text-align:center;">#</th>
+                    <th ${TH}>Item BOQ</th>
+                    <th ${TH} style="min-width:120px;">Qty</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </div>`;
 }
 
 // ── Edit mode: action bar ──────────────────────────────────────────────────────
@@ -191,13 +161,13 @@ function renderFwoBoqSectionEdit(sec) {
     const items       = sec.items ?? [];
     const remaining   = sec.remaining_qty ?? '';          // max yang boleh diinput FWO ini
     const unallocated = sec.unallocated_qty ?? remaining; // yang benar-benar belum dialokasikan siapapun
-    const satuan      = sec.satuan ? ' ' + escFwo(sec.satuan) : '';
+    const satuan      = sec.satuan ? ' ' + escHtml(sec.satuan) : '';
     const itemsHtml   = items.map(function (item, j) {
         return `<div class="d-flex align-items-center flex-wrap gap-2 py-1" style="border-bottom:1px solid #f1f5f9;">
             <span class="text-muted small fw-semibold">${j + 1}.</span>
-            <span class="fw-semibold small">${escFwo(item.judul_indonesia ?? '—')}</span>
-            <span class="text-muted small">/ ${escFwo(item.judul_inggris ?? '—')}</span>
-            <span class="item-meta-badge">${escFwo(item.kode_unit || '—')} · ${escFwo(String(item.nilai ?? '—'))}</span>
+            <span class="fw-semibold small">${escHtml(item.judul_indonesia ?? '—')}</span>
+            <span class="text-muted small">/ ${escHtml(item.judul_inggris ?? '—')}</span>
+            <span class="item-meta-badge">${escHtml(item.kode_unit || '—')} · ${escHtml(String(item.nilai ?? '—'))}</span>
         </div>`;
     }).join('');
 
@@ -209,7 +179,7 @@ function renderFwoBoqSectionEdit(sec) {
             style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <i class="fa-solid fa-layer-group" style="color:#2563eb;"></i>
-                <span class="fw-semibold">${escFwo(sec.point_name ?? '—')}</span>
+                <span class="fw-semibold">${escHtml(sec.point_name ?? '—')}</span>
                 <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary" style="font-size:11px;">
                     ${items.length} item
                 </span>
@@ -230,13 +200,18 @@ function renderFwoBoqSectionEdit(sec) {
                 <div class="col-md-8">
                     <label class="form-label form-label-sm text-muted mb-1">Keterangan</label>
                     <input type="text" class="form-control form-control-sm input-fwo-ket"
-                        placeholder="opsional" value="${escFwo(sec.keterangan ?? '')}">
+                        placeholder="opsional" value="${escHtml(sec.keterangan ?? '')}">
                 </div>
             </div>
-            <div class="text-muted small fw-semibold mb-1">
-                <i class="fa-solid fa-list-check me-1"></i> Items (otomatis dari BOQ)
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="text-muted small fw-semibold">
+                    <i class="fa-solid fa-list-check me-1"></i> Items (otomatis dari BOQ)
+                </span>
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-toggle-boq-items" style="font-size:11px;" title="Lihat items">
+                    <i class="fa-solid fa-eye"></i>
+                </button>
             </div>
-            <div class="fwo-boq-items">${itemsHtml || '<div class="text-muted small py-2">Tidak ada item</div>'}</div>
+            <div class="fwo-boq-items" style="display:none;">${itemsHtml || '<div class="text-muted small py-2">Tidak ada item</div>'}</div>
         </div>
     </div>`;
 }
@@ -246,10 +221,10 @@ function renderFwoBoqModalItem(item, j) {
     return `<div class="d-flex align-items-center gap-3 py-2" style="border-bottom:1px solid #f1f5f9;">
         <span class="text-muted small fw-semibold">${j + 1}.</span>
         <div>
-            <span class="fw-semibold small">${escFwo(item.judul_indonesia ?? '—')}</span>
-            <span class="text-muted small ms-1">/ ${escFwo(item.judul_inggris ?? '—')}</span>
+            <span class="fw-semibold small">${escHtml(item.judul_indonesia ?? '—')}</span>
+            <span class="text-muted small ms-1">/ ${escHtml(item.judul_inggris ?? '—')}</span>
         </div>
-        <span class="item-meta-badge ms-auto flex-shrink-0">${escFwo(item.kode_unit || '—')} · ${escFwo(String(item.nilai ?? '—'))}</span>
+        <span class="item-meta-badge ms-auto flex-shrink-0">${escHtml(item.kode_unit || '—')} · ${escHtml(String(item.nilai ?? '—'))}</span>
     </div>`;
 }
 
@@ -258,13 +233,6 @@ function fwoDatetimeLocal(val) {
     return String(val).replace(' ', 'T').substring(0, 16);
 }
 
-function escFwo(str) {
-    return String(str ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
 
 // ── Personel view ──────────────────────────────────────────────────────────────
 function renderPersonelView(personels) {
@@ -281,21 +249,31 @@ function renderPersonelView(personels) {
         'Anggota': { bg: '#f0fdf4', color: '#166534' },
     };
 
-    return `<div style="display:flex;flex-direction:column;gap:8px;">` +
-        personels.map(function (p) {
-            const rc  = roleColors[p.role] || { bg: '#f1f5f9', color: '#475569' };
-            const role = p.role
-                ? `<span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;background:${rc.bg};color:${rc.color};">${escFwo(p.role)}</span>`
-                : `<span style="font-size:11px;color:#94a3b8;">—</span>`;
-            return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">
-                <div style="width:32px;height:32px;border-radius:50%;background:#ede9fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="fa-solid fa-user" style="color:#7c3aed;font-size:12px;"></i>
-                </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:13px;font-weight:600;color:#1e293b;">${escFwo(p.user_name)}</div>
-                </div>
-                ${role}
-            </div>`;
-        }).join('') +
-    `</div>`;
+    const TH = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';
+    const TD = 'style="padding:8px 12px;vertical-align:middle;"';
+
+    const rows = personels.map(function (p, i) {
+        const rc   = roleColors[p.role] || { bg: '#f1f5f9', color: '#475569' };
+        const role = p.role
+            ? `<span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;background:${rc.bg};color:${rc.color};">${escHtml(p.role)}</span>`
+            : `<span style="font-size:11px;color:#94a3b8;">—</span>`;
+        return `<tr>
+            <td ${TD} style="padding:8px 12px;color:#94a3b8;text-align:center;font-size:12px;">${i + 1}</td>
+            <td ${TD} style="padding:8px 12px;color:#1e293b;font-weight:500;">${escHtml(p.user_name)}</td>
+            <td ${TD} style="padding:8px 12px;">${role}</td>
+        </tr>`;
+    }).join('');
+
+    return `<div class="table-responsive">
+        <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+            <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+                <tr>
+                    <th ${TH} style="width:40px;text-align:center;">#</th>
+                    <th ${TH}>Nama</th>
+                    <th ${TH} style="min-width:100px;">Role</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </div>`;
 }

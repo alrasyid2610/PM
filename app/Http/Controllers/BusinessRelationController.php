@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use SebastianBergmann\Environment\Console;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistoryWithLines;
 
@@ -97,6 +96,7 @@ class BusinessRelationController extends Controller
         // =========================
         $query = DB::table('business_relation_sites as s')
             ->join('business_relations as br', 'br.id_br', '=', 's.id_br')
+            ->whereNull('s.deleted_at')
             ->select([
                 's.id_site',
                 'br.id_br',
@@ -426,19 +426,11 @@ class BusinessRelationController extends Controller
 
     public function destroy($id)
     {
-        $deleted = DB::table('business_relations')
-            ->where('id_br', $id)
-            ->delete();
-
-        if (!$deleted) {
-            return response()->json([
-                'message' => 'Data tidak ditemukan atau sudah dihapus'
-            ], 404);
-        }
-
-        return response()->json([
-            'message' => 'Data berhasil dihapus'
-        ]);
+        $before = DB::table('business_relation_sites')->where('id_site', $id)->get()->toJson();
+        DB::table('business_relation_sites')->where('id_site', $id)->update(['deleted_at' => now()]);
+        $after = DB::table('business_relation_sites')->where('id_site', $id)->get()->toJson();
+        saveAudit('business_relation_sites', $id, 'delete', $before, $after);
+        return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
     }
 
 
@@ -487,6 +479,8 @@ class BusinessRelationController extends Controller
             $query->where('br.nama', 'like', '%' . $request->filter_value . '%');
         }
 
+        $query->whereNull('s.deleted_at');
+
         $kantorPusat = (clone $query)
             ->where('s.is_kantor_pusat', 1)
             ->count();
@@ -508,6 +502,7 @@ class BusinessRelationController extends Controller
             ->leftJoin('commercial_buildings as cb', 'cb.id_building', '=', 's.gedung')
             ->leftJoin('business_estates as be', 'be.id_bestate', '=', 's.kawasan_bisnis')
             ->where('s.id_site', $id)
+            ->whereNull('s.deleted_at')
             ->select([
                 'br.id_br',
                 'br.nama as nama_br',

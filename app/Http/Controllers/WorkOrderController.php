@@ -74,8 +74,12 @@ class WorkOrderController extends Controller
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
+        if (!$request->filled('id_so')) {
+            return redirect()->route('work-orders.index');
+        }
+
         return view('work-order.create', [
             'title' => 'Create Work Order',
         ]);
@@ -155,6 +159,7 @@ class WorkOrderController extends Controller
         $search = $request->q;
 
         $data = DB::table('work_orders')
+            ->whereNull('deleted_at')
             ->where('no_wo', 'like', "%{$search}%")
             ->get();
 
@@ -183,6 +188,7 @@ class WorkOrderController extends Controller
             ->leftJoin('sales_orders as s', 'wo.id_so', '=', 's.id_so')
             ->leftJoin('business_relations as br', 'wo.id_pelanggan_pekerjaan', '=', 'br.id_br')
             ->leftJoin('business_relation_sites as brs', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
+            ->whereNull('wo.deleted_at')
             ->select([
                 'wo.id_wo',
                 's.id_so',
@@ -220,6 +226,15 @@ class WorkOrderController extends Controller
         ]);
     }
 
+
+    public function destroy($id)
+    {
+        $before = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
+        DB::table('work_orders')->where('id_wo', $id)->update(['deleted_at' => now()]);
+        $after = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
+        saveAudit('work_orders', $id, 'delete', $before, $after);
+        return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
+    }
 
     public function duplicate(int $id)
     {
@@ -302,6 +317,7 @@ class WorkOrderController extends Controller
                 's.created_at',
             ])
             ->where('wo.id_wo', $id)
+            ->whereNull('wo.deleted_at')
             ->first();
 
         if (!$wo) {
@@ -328,18 +344,26 @@ class WorkOrderController extends Controller
     {
         $boqSections = DB::table('boq as b')
             ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->where('b.id_wo', $id)
-            ->select(['b.id_boq', 'tp.nama as point_name', 'b.qty as boq_qty', 'b.satuan', 'b.harga'])
+            ->select([
+                'b.id_boq',
+                DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
+                'b.qty as boq_qty',
+                'b.satuan',
+                'b.harga',
+            ])
             ->get();
 
         $boqIds = $boqSections->pluck('id_boq');
 
         $fwoQtyByBoq = $boqIds->isNotEmpty()
             ? DB::table('fieldwork_boq')
-                ->whereIn('id_boq', $boqIds)
-                ->selectRaw('id_boq, SUM(COALESCE(qty, 0)) as fwo_qty')
-                ->groupBy('id_boq')
-                ->pluck('fwo_qty', 'id_boq')
+            ->whereIn('id_boq', $boqIds)
+            ->selectRaw('id_boq, SUM(COALESCE(qty, 0)) as fwo_qty')
+            ->groupBy('id_boq')
+            ->pluck('fwo_qty', 'id_boq')
             : collect();
 
         $totalBoqQty    = (int) $boqSections->sum('boq_qty');
@@ -350,18 +374,19 @@ class WorkOrderController extends Controller
         // FWO contributions per BOQ item
         $fwoDetailsByBoq = $boqIds->isNotEmpty()
             ? DB::table('fieldwork_boq as fb')
-                ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
-                ->whereIn('fb.id_boq', $boqIds)
-                ->select(['fb.id_boq', 'fw.id_fwo', 'fw.no_fwo', 'fw.tanggal_mulai', 'fb.qty'])
-                ->orderBy('fw.id_fwo')
-                ->get()
-                ->groupBy('id_boq')
+            ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
+            ->whereIn('fb.id_boq', $boqIds)
+            ->select(['fb.id_boq', 'fw.id_fwo', 'fw.no_fwo', 'fw.tanggal_mulai', 'fb.qty'])
+            ->orderBy('fw.id_fwo')
+            ->get()
+            ->groupBy('id_boq')
             : collect();
 
         // All FWOs linked to this WO
         $allFwos = DB::table('fieldworks')
             ->where('id_wo', $id)
-            ->select(['id_fwo', 'no_fwo', 'tanggal_mulai'])
+            ->whereNull('deleted_at')
+            ->select(['id_fwo', 'no_fwo', 'judul_pekerjaan', 'tanggal_mulai', 'tanggal_selesai'])
             ->orderBy('id_fwo')
             ->get();
 
@@ -371,9 +396,11 @@ class WorkOrderController extends Controller
             'progress_pct'     => $pct,
             'total_boq_amount' => $totalBoqAmount,
             'fwos'             => $allFwos->map(fn($f) => [
-                'id_fwo'        => $f->id_fwo,
-                'no_fwo'        => $f->no_fwo,
-                'tanggal_mulai' => $f->tanggal_mulai,
+                'id_fwo'          => $f->id_fwo,
+                'no_fwo'          => $f->no_fwo,
+                'judul_pekerjaan' => $f->judul_pekerjaan,
+                'tanggal_mulai'   => $f->tanggal_mulai,
+                'tanggal_selesai' => $f->tanggal_selesai,
             ])->values(),
             'sections'         => $boqSections->map(fn($s) => [
                 'id_boq'       => $s->id_boq,
@@ -386,12 +413,12 @@ class WorkOrderController extends Controller
                 'progress_pct' => ($s->boq_qty ?? 0) > 0
                     ? round((int)($fwoQtyByBoq[$s->id_boq] ?? 0) / $s->boq_qty * 100)
                     : 0,
-                'fwos' => ($fwoDetailsByBoq[$s->id_boq] ?? collect())->map(fn($f) => [
-                    'id_fwo'        => $f->id_fwo,
-                    'no_fwo'        => $f->no_fwo,
-                    'tanggal_mulai' => $f->tanggal_mulai,
-                    'qty'           => (int)$f->qty,
-                ])->values(),
+                // 'fwos' => ($fwoDetailsByBoq[$s->id_boq] ?? collect())->map(fn($f) => [
+                //     'id_fwo'        => $f->id_fwo,
+                //     'no_fwo'        => $f->no_fwo,
+                //     'tanggal_mulai' => $f->tanggal_mulai,
+                //     'qty'           => (int)$f->qty,
+                // ])->values(),
             ])->values(),
         ]);
     }
@@ -407,6 +434,7 @@ class WorkOrderController extends Controller
             ->leftJoin('wo_periods as wp', 'wp.id_period', '=', 'wo.id_period')
             ->leftJoin('business_relation_sites as brs_period', 'brs_period.id_site', '=', 'wp.id_site')
             ->where('wo.id_wo', $id)
+            ->whereNull('wo.deleted_at')
             ->select([
                 'wo.id_wo',
                 'wo.no_wo',

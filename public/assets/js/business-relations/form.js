@@ -1,17 +1,18 @@
 function renderForm(res) {
-    console.log(
-        "sebelum render kawasan:",
-        res.id_bestate,
-        res.nama_kawasan_bisnis,
-    );
-    console.log("sebelum render gedung:", res.id_building, res.nama_gedung);
-
     return `
 <form class="row g-3" id="detailForm">
     <input type="hidden" name="_method" value="PUT">
     <input type="hidden" name="_token" value="${window.route.csrf}">
     <input type="hidden" name="id_br" value="${res.id_br}">
     <input type="hidden" name="id_site" value="${res.id_site}">
+
+    ${formGroup.actionBar({
+        number: escHtml(res.nama_br ?? '—'),
+        createdAt: escHtml(res.s_created_at ?? '—'),
+        updatedAt: escHtml(res.s_updated_at ?? '—'),
+        deleteId: res.id_site,
+        editText: 'Edit Business Relation',
+    })}
 
     <!-- SECTION 1: BUSINESS RELATION -->
     ${formGroup.sectionCard(
@@ -20,7 +21,6 @@ function renderForm(res) {
             color: "icon-navy",
             title: "Business Relation",
             subtitle: "Data utama perusahaan klien",
-            editTitle: "Edit Business Relation",
         },
         `<div class="row g-3 form-1">
                     ${formGroup.text(
@@ -205,3 +205,4 @@ function renderForm(res) {
 </form>
 `;
 }
+

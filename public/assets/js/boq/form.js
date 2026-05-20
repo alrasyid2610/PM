@@ -7,16 +7,16 @@ function renderBoqForm(res) {
             icon: 'fa-file-lines',
             color: 'icon-navy',
             title: 'BOQ',
-            subtitle: escBoq(res.no_wo ?? '') + ' — ' + escBoq(res.judul_pekerjaan ?? ''),
+            subtitle: escHtml(res.no_wo ?? '') + ' — ' + escHtml(res.judul_pekerjaan ?? ''),
         },
         `<div class="row g-3">
             <div class="col-md-3">
                 <label class="form-label form-label-sm text-muted mb-1">No WO</label>
-                <p class="form-control form-control-sm mb-0">${escBoq(res.no_wo ?? '—')}</p>
+                <p class="form-control form-control-sm mb-0">${escHtml(res.no_wo ?? '—')}</p>
             </div>
             <div class="col-md-9">
                 <label class="form-label form-label-sm text-muted mb-1">Judul Pekerjaan</label>
-                <p class="form-control form-control-sm mb-0">${escBoq(res.judul_pekerjaan ?? '—')}</p>
+                <p class="form-control form-control-sm mb-0">${escHtml(res.judul_pekerjaan ?? '—')}</p>
             </div>
         </div>`
     );
@@ -33,14 +33,14 @@ function renderBoqForm(res) {
         : sections.map(function (sec) {
             const items = sec.items ?? [];
             const itemsHtml = items.map(function (item, j) {
-                const unit  = escBoq(item.kode_unit  || '—');
-                const nilai = escBoq(String(item.nilai ?? '—'));
+                const unit  = escHtml(item.kode_unit  || '—');
+                const nilai = escHtml(String(item.nilai ?? '—'));
                 return `
                     <div class="d-flex align-items-center flex-wrap gap-2 py-2"
                         style="border-bottom:1px solid #f1f5f9;">
                         <span class="text-muted small fw-semibold">${j + 1}.</span>
-                        <span class="fw-semibold small">${escBoq(item.judul_indonesia ?? '—')}</span>
-                        <span class="text-muted small">/ ${escBoq(item.judul_inggris ?? '—')}</span>
+                        <span class="fw-semibold small">${escHtml(item.judul_indonesia ?? '—')}</span>
+                        <span class="text-muted small">/ ${escHtml(item.judul_inggris ?? '—')}</span>
                         <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:#f1f5f9;border:1px solid #e2e8f0;color:#475569;white-space:nowrap;">
                             ${unit} · ${nilai}
                         </span>
@@ -52,7 +52,7 @@ function renderBoqForm(res) {
             const totalLine   = totalAmount !== null
                 ? `<div class="col-md-12">
                     <div style="font-size:12px;color:#64748b;text-align:right;padding-top:2px;">
-                        ${escBoq(String(sec.qty))} qty &times; Rp ${Number(sec.harga).toLocaleString('en-US')} =
+                        ${escHtml(String(sec.qty))} qty &times; Rp ${Number(sec.harga).toLocaleString('en-US')} =
                         <strong style="color:#1d4ed8;">Rp ${Number(totalAmount).toLocaleString('en-US')}</strong>
                     </div>
                    </div>`
@@ -63,15 +63,15 @@ function renderBoqForm(res) {
                     <div class="row g-2">
                         <div class="col-md-6">
                             <label class="form-label form-label-sm text-muted mb-1">Item Produk Alternatif</label>
-                            <p class="form-control form-control-sm mb-0">${escBoq(sec.item_produk_alternate ?? '—')}</p>
+                            <p class="form-control form-control-sm mb-0">${escHtml(sec.item_produk_alternate ?? '—')}</p>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label form-label-sm text-muted mb-1">Qty</label>
-                            <p class="form-control form-control-sm mb-0">${escBoq(String(sec.qty ?? '—'))}</p>
+                            <p class="form-control form-control-sm mb-0">${escHtml(String(sec.qty ?? '—'))}</p>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label form-label-sm text-muted mb-1">Satuan</label>
-                            <p class="form-control form-control-sm mb-0">${escBoq(sec.satuan ?? '—')}</p>
+                            <p class="form-control form-control-sm mb-0">${escHtml(sec.satuan ?? '—')}</p>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
@@ -80,7 +80,7 @@ function renderBoqForm(res) {
                         ${totalLine}
                         <div class="col-md-12">
                             <label class="form-label form-label-sm text-muted mb-1">Keterangan</label>
-                            <p class="form-control form-control-sm mb-0">${escBoq(sec.keterangan ?? '—')}</p>
+                            <p class="form-control form-control-sm mb-0">${escHtml(sec.keterangan ?? '—')}</p>
                         </div>
                     </div>
                 </div>
@@ -93,7 +93,7 @@ function renderBoqForm(res) {
                 {
                     icon: 'fa-layer-group',
                     color: 'icon-blue',
-                    title: escBoq(sec.point_name ?? '—'),
+                    title: escHtml(sec.point_name ?? '—'),
                     subtitle: items.length + ' item',
                 },
                 bodyHtml
@@ -103,29 +103,19 @@ function renderBoqForm(res) {
     return `
 <div class="row g-3" id="detailForm">
 
-    <!-- ACTION BAR -->
-    <div class="col-md-12">
-        <div class="detail-action-bar">
-            <div>
-                <div class="detail-number">${escBoq(res.no_wo ?? '—')}</div>
-                <div class="detail-date">${escBoq(res.judul_pekerjaan ?? '—')}</div>
-                ${grandTotal > 0 ? `<div style="font-size:13px;font-weight:600;color:#1d4ed8;margin-top:3px;">
-                    Total BOQ: Rp ${Number(grandTotal).toLocaleString('en-US')}
-                </div>` : ''}
-            </div>
-            <div class="d-flex align-items-center gap-2">
+    ${formGroup.actionBar({
+        number: escHtml(res.no_wo ?? '—'),
+        subtitle: escHtml(res.judul_pekerjaan ?? '—'),
+        leftExtra: `${grandTotal > 0 ? `<div style="font-size:13px;font-weight:600;color:#1d4ed8;margin-top:3px;">Total BOQ: Rp ${Number(grandTotal).toLocaleString('en-US')}</div>` : ''}
+            <div class="mt-1">
                 <a href="/work-orders?open=${res.id_wo}" target="_blank"
-                    style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:#e8f0fe;color:#1a56db;font-size:12px;font-weight:600;text-decoration:none;border:1px solid #c7d7f8;transition:background 0.15s;"
-                    onmouseover="this.style.background='#c7d7f8'" onmouseout="this.style.background='#e8f0fe'">
-                    <i class="fa-solid fa-briefcase" style="font-size:11px;"></i>
-                    ${escBoq(res.no_wo ?? 'Lihat WO')}
+                    style="display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:20px;background:#e8f0fe;color:#1a56db;font-size:11px;font-weight:600;text-decoration:none;border:1px solid #c7d7f8;">
+                    <i class="fa-solid fa-briefcase" style="font-size:10px;"></i>
+                    ${escHtml(res.no_wo ?? 'Lihat WO')}
                 </a>
-                <button type="button" class="btn-boq-edit btn-action-edit ms-0">
-                    <i class="fa-solid fa-pen"></i> Edit
-                </button>
-            </div>
-        </div>
-    </div>
+            </div>`,
+        editHtml: `<button type="button" class="btn-boq-edit btn-action-edit ms-0"><i class="fa-solid fa-pen"></i> Edit</button>`,
+    })}
 
     ${woSection}
     ${sectionsHtml}
@@ -139,16 +129,16 @@ function renderBoqEditMode(res) {
             icon: 'fa-file-lines',
             color: 'icon-navy',
             title: 'Work Order',
-            subtitle: escBoq(res.no_wo ?? '') + ' — ' + escBoq(res.judul_pekerjaan ?? ''),
+            subtitle: escHtml(res.no_wo ?? '') + ' — ' + escHtml(res.judul_pekerjaan ?? ''),
         },
         `<div class="row g-3">
             <div class="col-md-3">
                 <label class="form-label form-label-sm text-muted mb-1">No WO</label>
-                <p class="form-control form-control-sm mb-0">${escBoq(res.no_wo ?? '—')}</p>
+                <p class="form-control form-control-sm mb-0">${escHtml(res.no_wo ?? '—')}</p>
             </div>
             <div class="col-md-9">
                 <label class="form-label form-label-sm text-muted mb-1">Judul Pekerjaan</label>
-                <p class="form-control form-control-sm mb-0">${escBoq(res.judul_pekerjaan ?? '—')}</p>
+                <p class="form-control form-control-sm mb-0">${escHtml(res.judul_pekerjaan ?? '—')}</p>
             </div>
         </div>`
     );
@@ -160,8 +150,8 @@ function renderBoqEditMode(res) {
     <div class="col-md-12">
         <div class="detail-action-bar">
             <div>
-                <div class="detail-number">${escBoq(res.no_wo ?? '—')}</div>
-                <div class="detail-date">${escBoq(res.judul_pekerjaan ?? '—')}</div>
+                <div class="detail-number">${escHtml(res.no_wo ?? '—')}</div>
+                <div class="detail-date">${escHtml(res.judul_pekerjaan ?? '—')}</div>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <button type="button" id="btnCancelEdit" class="btn-action-edit editing">
@@ -205,7 +195,7 @@ function renderSectionCard(pointId, pointText, items) {
             <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <i class="fa-solid fa-layer-group" style="color:#2563eb;"></i>
-                    <span class="fw-semibold section-point-name">${escBoq(pointText)}</span>
+                    <span class="fw-semibold section-point-name">${escHtml(pointText)}</span>
                     <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary section-item-count"
                         style="font-size:11px;">${items.length} item</span>
                 </div>
@@ -263,17 +253,9 @@ function renderItem(pointId, item, num) {
             data-item-id="${item.id_testing_item}"
             data-point-id="${pointId}">
             <span class="text-muted small fw-semibold item-num">${num}.</span>
-            <span class="fw-semibold small">${escBoq(item.judul_indonesia ?? '—')}</span>
-            <span class="text-muted small">/ ${escBoq(item.judul_inggris ?? '—')}</span>
-            <span class="item-meta-badge">${escBoq(unit)} · ${escBoq(String(nilai))}</span>
+            <span class="fw-semibold small">${escHtml(item.judul_indonesia ?? '—')}</span>
+            <span class="text-muted small">/ ${escHtml(item.judul_inggris ?? '—')}</span>
+            <span class="item-meta-badge">${escHtml(unit)} · ${escHtml(String(nilai))}</span>
         </div>`;
 }
 
-// ── Escape HTML ────────────────────────────────────────────────────────────────
-function escBoq(str) {
-    return String(str ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
