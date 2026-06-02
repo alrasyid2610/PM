@@ -54,7 +54,8 @@ function initDataTable(tableSelector, onReady) {
             ];
 
             keys.forEach((key) => {
-                columns.push({ data: key });
+                const renderer = window.datatableColumnRenderers?.[key];
+                columns.push(renderer ? { data: key, render: renderer } : { data: key });
             });
 
             let exportFilename = (window.currentMenuSlug || tableSelector.replace('#', '').replace('-table', '')).replace(/-/g, '_');

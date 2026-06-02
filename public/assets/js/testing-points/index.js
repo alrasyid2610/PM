@@ -1,5 +1,13 @@
 let page;
 
+// ── Tab switch ────────────────────────────────────────────────────────────────
+$(document).on('shown.bs.tab', '#pointDetailTabs button[data-bs-toggle="tab"]', function (e) {
+    const target = $(e.target).data('bs-target');
+    $('#pointTabActionsInfo, #pointTabActionsItems').addClass('d-none');
+    if (target === '#tabPointInfo')  $('#pointTabActionsInfo').removeClass('d-none');
+    if (target === '#tabPointItems') $('#pointTabActionsItems').removeClass('d-none');
+});
+
 $(document).ready(function () {
     page = new CrudPageController({
         primaryKey: "id_testing_point",

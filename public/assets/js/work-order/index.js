@@ -4,12 +4,39 @@ let currentBoqWoId = null;
 let currentWoData = null;
 let sourceFwoId = null;
 let copyFwoPersonelIdx = 0;
+let currentOutputWoId = null;
+let outputDataMap = {};
+let outputFilePond = null;
 
-window.addEventListener('storage', function (e) {
-    if (e.key === 'fwo_created' && e.newValue) {
+window.addEventListener("storage", function (e) {
+    if (e.key === "fwo_created" && e.newValue) {
         try {
             var data = JSON.parse(e.newValue);
             var target = data.id_wo || currentBoqWoId;
+            var fwoModal = bootstrap.Modal.getInstance(
+                document.getElementById("modalCreateFwo"),
+            );
+            if (fwoModal) {
+                fwoModal.hide();
+                document.getElementById("iframeCreateFwo").src = "";
+            }
+            if (target && String(target) === String(currentBoqWoId)) {
+                loadBoqProgress(target);
+            }
+        } catch (_) {}
+    }
+
+    if (e.key === "boq_created" && e.newValue) {
+        try {
+            var data = JSON.parse(e.newValue);
+            var target = data.id_wo || currentBoqWoId;
+            var modal = bootstrap.Modal.getInstance(
+                document.getElementById("modalCreateBoq"),
+            );
+            if (modal) {
+                modal.hide();
+                document.getElementById("iframeCreateBoq").src = "";
+            }
             if (target && String(target) === String(currentBoqWoId)) {
                 loadBoqProgress(target);
             }
@@ -17,75 +44,68 @@ window.addEventListener('storage', function (e) {
     }
 });
 
-// ── BOQ Summary Card ───────────────────────────────────────────────────────────
+// ── Tab switch: show/hide action buttons ──────────────────────────────────────
+$(document).on(
+    "shown.bs.tab",
+    '#woDetailTabs button[data-bs-toggle="tab"]',
+    function (e) {
+        const target = $(e.target).data("bs-target");
+        $("#woTabActionsInfo, #woTabActionsBoq, #woTabActionsFwo, #woTabActionsOutput").addClass("d-none");
+        if (target === "#tabInfo")   $("#woTabActionsInfo").removeClass("d-none");
+        if (target === "#tabBoq")    $("#woTabActionsBoq").removeClass("d-none");
+        if (target === "#tabFwo")    $("#woTabActionsFwo").removeClass("d-none");
+        if (target === "#tabOutput") $("#woTabActionsOutput").removeClass("d-none");
+    },
+);
+
+$(document).on("click", ".btn-add-fwo-modal", function () {
+    var woId = $(this).data("wo-id");
+    document.getElementById("iframeCreateFwo").src =
+        "/fieldworks/create?id_wo=" + woId + "&embed=1";
+    new bootstrap.Modal(document.getElementById("modalCreateFwo")).show();
+});
+
+$(document).on("click", ".btn-add-boq-modal", function () {
+    var woId = $(this).data("wo-id");
+    document.getElementById("iframeCreateBoq").src =
+        "/boq/create?id_wo=" + woId + "&embed=1";
+    new bootstrap.Modal(document.getElementById("modalCreateBoq")).show();
+});
+
+// ── BOQ Summary Card (2 cards) ─────────────────────────────────────────────────
 function renderBoqSummary(data) {
     const totalBoqItems = (data.sections || []).length;
-    const totalFwo = (data.fwos || []).length;
-    const totalBoqQty = data.total_boq_qty || 0;
-    const totalFwoQty = data.total_fwo_qty || 0;
-    const pct = data.progress_pct || 0;
-    const totalNilai = data.total_boq_amount || 0;
+    const totalFwo      = data.total_fwo ?? 0;
+    const fwoCompleted  = data.fwo_completed ?? 0;
 
-    const nilaiLabel =
-        totalNilai >= 1e9
-            ? "Rp " + (totalNilai / 1e9).toFixed(1) + " M"
-            : totalNilai >= 1e6
-              ? "Rp " + (totalNilai / 1e6).toFixed(1) + " jt"
-              : totalNilai > 0
-                ? "Rp " + Number(totalNilai).toLocaleString("en-US")
-                : "—";
+    const fwoColor = fwoCompleted >= totalFwo && totalFwo > 0 ? "#16a34a"
+                   : fwoCompleted > 0 ? "#d97706" : "#94a3b8";
 
-    const pctBarColor =
-        pct >= 100
-            ? "#16a34a"
-            : pct > 0
-              ? "var(--primary-500, #1d4ed8)"
-              : "#94a3b8";
-    const pctTextColor =
-        pct >= 100
-            ? "#15803d"
-            : pct > 0
-              ? "var(--primary-700, #1e40af)"
-              : "#64748b";
-
-    const card = (icon, label, value, iconBg) => `
-        <div style="flex:1;min-width:110px;background:#fff;border:1px solid var(--primary-200,#bcd0f8);border-radius:8px;box-shadow:0 1px 3px rgba(26,95,190,.06);padding:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;"
-            onclick="document.getElementById('boq-section')?.scrollIntoView({behavior:'smooth',block:'start'})">
-            <div style="width:30px;height:30px;border-radius:7px;background:${iconBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="${icon}" style="color:#fff;font-size:13px;"></i>
+    const kpiCard = (icon, iconBg, label, value, sub = '') => `
+        <div class="pm-kpi-card">
+            <div class="pm-kpi-icon" style="background:${iconBg};">
+                <i class="fa-solid ${icon}"></i>
             </div>
             <div>
-                <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;line-height:1;">${label}</div>
-                <div style="font-size:15px;font-weight:700;color:var(--primary-700,#18386b);margin-top:2px;line-height:1.2;">${value}</div>
+                <div class="pm-kpi-label">${label}</div>
+                <div class="pm-kpi-value">${value}</div>
+                ${sub ? `<div class="pm-kpi-sub">${sub}</div>` : ''}
             </div>
         </div>`;
 
-    const progressCard = `
-        <div style="flex:2;min-width:180px;background:#fff;border:1px solid var(--primary-200,#bcd0f8);border-radius:8px;box-shadow:0 1px 3px rgba(26,95,190,.06);padding:10px 14px;cursor:pointer;"
-            onclick="document.getElementById('boq-section')?.scrollIntoView({behavior:'smooth',block:'start'})">
-            <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">
-                <i class="fa-solid fa-chart-line me-1"></i>Progress Keseluruhan
+    $("#boqSummaryCard").html(
+        kpiCard("fa-layer-group", "#0891b2", "Total BOQ", totalBoqItems + " item") +
+        `<div class="pm-kpi-card">
+            <div class="pm-kpi-icon" style="background:${fwoColor};">
+                <i class="fa-solid fa-hard-hat"></i>
             </div>
-            <div style="display:flex;align-items:center;gap:12px;">
-                <div style="flex:1;">
-                    <div style="height:6px;background:var(--primary-100,#e8f0fe);border-radius:3px;overflow:hidden;">
-                        <div style="height:100%;width:${pct}%;background:${pctBarColor};border-radius:3px;transition:width .5s;"></div>
-                    </div>
-                    <div style="font-size:10px;color:#94a3b8;margin-top:4px;">${totalFwoQty} / ${totalBoqQty} qty terpenuhi</div>
-                </div>
-                <div style="font-size:18px;font-weight:800;color:${pctTextColor};white-space:nowrap;min-width:44px;text-align:right;">${pct}%</div>
+            <div>
+                <div class="pm-kpi-label">Total FWO</div>
+                <div class="pm-kpi-value" style="color:${fwoColor};">${fwoCompleted}<span style="font-size:12px;font-weight:500;color:#94a3b8;">/${totalFwo}</span></div>
+                <div class="pm-kpi-sub">FWO selesai</div>
             </div>
-        </div>`;
-
-    $("#boqSummaryCard").html(`
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
-            ${card("fa-solid fa-layer-group", "Total BOQ", totalBoqItems + " item", "#0891b2")}
-            ${card("fa-solid fa-hard-hat", "Total FWO", totalFwo, "var(--primary-700,#18386b)")}
-            ${card("fa-solid fa-cubes", "Total Qty BOQ", totalBoqQty + " qty", "var(--primary-500,#1a5fbe)")}
-            ${card("fa-solid fa-tag", "Total Nilai", nilaiLabel, "#0f766e")}
-            ${progressCard}
-        </div>
-    `);
+        </div>`
+    );
 }
 
 // Load FWO
@@ -191,7 +211,7 @@ function renderBoqProgressTable(data, id_wo) {
             const boqRow = `<tr class="boq-data-row${hasFwos ? " boq-expandable" : ""}" data-boq-id="${sec.id_boq}"
             style="cursor:${hasFwos ? "pointer" : "default"};">
             <td ${TD} style="width:40px;text-align:center;">${leadIcon}</td>
-            <td ${TD}><a href="/boq?open=${id_wo}" target="_blank" class="text-decoration-none fw-semibold" style="color:#1a56db;">${escHtml(sec.point_name)}</a></td>
+            <td ${TD}><a href="/boq?open=${id_wo}" class="text-decoration-none fw-semibold" style="color:#1a56db;">${escHtml(sec.point_name)}</a></td>
             <td ${TD} style="color:#64748b;">${satuan}</td>
             <td ${TD} style="text-align:right;font-weight:600;">${sec.boq_qty}</td>
             <td ${TD} style="text-align:right;color:#7c3aed;font-weight:600;">${sec.fwo_qty}</td>
@@ -354,7 +374,7 @@ function renderBoqProgressContent(data, id_wo) {
                     <i class="fa-solid fa-hard-hat" style="color:#7c3aed;font-size:10px;flex-shrink:0;"></i>
                     <div style="flex:1;min-width:0;">
                         <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
-                            <a href="/fieldworks?open=${fwo.id_fwo}" target="_blank"
+                            <a href="/fieldworks?open=${fwo.id_fwo}"
                                 class="text-decoration-none fw-semibold" style="font-size:12px;color:#7c3aed;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(fwo.no_fwo)}</a>
                             <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">
                                 <span style="font-size:11px;font-weight:700;color:#7c3aed;">${fwo.qty} ${satuan || "qty"}</span>
@@ -382,7 +402,7 @@ function renderBoqProgressContent(data, id_wo) {
             <div style="flex:1;min-width:0;padding:12px 14px;border-right:1px solid #e2e8f0;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
                     <div style="min-width:0;">
-                        <a href="/boq?open=${id_wo}" target="_blank"
+                        <a href="/boq?open=${id_wo}"
                             class="text-decoration-none"
                             style="font-size:13px;font-weight:600;color:#1a56db;">${escHtml(sec.point_name)}</a>
                         ${priceHtml}
@@ -421,37 +441,61 @@ function renderFwoProgressTable(data, id_wo) {
     const fwos = data.fwos || [];
 
     if (!fwos.length) {
-        return '<div class="text-center text-muted py-4">' +
+        return (
+            '<div class="text-center text-muted py-4">' +
             '<i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>' +
-            'Belum ada FWO untuk Work Order ini</div>';
+            "Belum ada FWO untuk Work Order ini</div>"
+        );
     }
 
-    const TH = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';
+    const TH =
+        'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';
     const TD = 'style="padding:8px 12px;vertical-align:middle;"';
 
-    const rows = fwos.map(function (f) {
-        const tglMulai   = f.tanggal_mulai   ? f.tanggal_mulai.substring(0, 10)   : '—';
-        const tglSelesai = f.tanggal_selesai ? f.tanggal_selesai.substring(0, 10) : '—';
-        const search     = [f.no_fwo, f.judul_pekerjaan].join(' ').toLowerCase();
+    const rows = fwos
+        .map(function (f) {
+            const tglMulai = f.tanggal_mulai
+                ? f.tanggal_mulai.substring(0, 10)
+                : "—";
+            const tglSelesai = f.tanggal_selesai
+                ? f.tanggal_selesai.substring(0, 10)
+                : "—";
+            const isCompleted = f.status === 'completed';
+            const statusBadge = isCompleted
+                ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;background:#f0fdf4;color:#15803d;font-size:11px;font-weight:600;border:1px solid #bbf7d0;white-space:nowrap;">
+                       <i class="fa-solid fa-circle-check" style="font-size:10px;"></i> Completed
+                   </span>`
+                : `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;background:#fffbeb;color:#b45309;font-size:11px;font-weight:600;border:1px solid #fde68a;white-space:nowrap;">
+                       <i class="fa-solid fa-hourglass-half" style="font-size:10px;"></i> Planned
+                   </span>`;
+            const search = [f.no_fwo, f.judul_pekerjaan, f.status]
+                .join(" ")
+                .toLowerCase();
 
-        return `<tr class="fwo-data-row" data-search="${escHtml(search)}">
+            return `<tr class="fwo-data-row" data-search="${escHtml(search)}">
             <td ${TD}>
-                <a href="/fieldworks?open=${f.id_fwo}" target="_blank"
+                <a href="/fieldworks?open=${f.id_fwo}"
                     class="fw-semibold text-decoration-none" style="color:#1a56db;white-space:nowrap;">
-                    ${escHtml(f.no_fwo ?? '—')}
+                    ${escHtml(f.no_fwo ?? "—")}
                 </a>
             </td>
-            <td ${TD} style="color:#374151;">${escHtml(f.judul_pekerjaan ?? '—')}</td>
+            <td ${TD} style="color:#374151;">${escHtml(f.judul_pekerjaan ?? "—")}</td>
+            <td ${TD}>${statusBadge}</td>
             <td ${TD} style="color:#64748b;white-space:nowrap;">${tglMulai}</td>
             <td ${TD} style="color:#64748b;white-space:nowrap;">${tglSelesai}</td>
-            <td ${TD} style="text-align:center;">
-                <a href="/fieldworks?open=${f.id_fwo}" target="_blank"
+            <td ${TD} style="text-align:center;white-space:nowrap;">
+                <a href="/fieldworks?open=${f.id_fwo}"
                     class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;" title="Buka detail FWO">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i>
                 </a>
+                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 ms-1 btn-copy-fwo"
+                    style="font-size:11px;" title="Salin FWO ini" data-fwo-id="${f.id_fwo}">
+                    <i class="fa-solid fa-copy"></i>
+                </button>
             </td>
         </tr>`;
-    }).join('');
+        })
+        .join("");
 
     const searchBar = `<div class="mb-2 d-flex align-items-center gap-2">
         <div class="input-group input-group-sm" style="max-width:280px;">
@@ -468,13 +512,15 @@ function renderFwoProgressTable(data, id_wo) {
         <span id="fwoSearchCount" class="text-muted" style="font-size:11px;"></span>
     </div>`;
 
-    return searchBar +
+    return (
+        searchBar +
         `<div class="table-responsive">
         <table class="table table-sm table-hover mb-0" style="font-size:13px;min-width:600px;">
             <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
                 <tr>
                     <th ${TH} style="min-width:140px;">No FWO</th>
                     <th ${TH} style="min-width:220px;">Judul Pekerjaan</th>
+                    <th ${TH} style="min-width:110px;">Status</th>
                     <th ${TH} style="min-width:110px;">Tgl Mulai</th>
                     <th ${TH} style="min-width:110px;">Tgl Selesai</th>
                     <th ${TH} style="min-width:60px;"></th>
@@ -482,7 +528,231 @@ function renderFwoProgressTable(data, id_wo) {
             </thead>
             <tbody>${rows}</tbody>
         </table>
-    </div>`;
+    </div>`
+    );
+}
+
+// ── Output Pekerjaan ───────────────────────────────────────────────────────────
+function loadOutputProgress(id_wo) {
+    currentOutputWoId = id_wo;
+    $("#outputContent").html(
+        '<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>',
+    );
+    $.get(window.route.update + id_wo + "/outputs", function (data) {
+        outputDataMap = {};
+        (data || []).forEach(function (item) {
+            outputDataMap[item.id_output] = item;
+        });
+        $("#outputContent").html(renderOutputTable(data));
+    }).fail(function () {
+        $("#outputContent").html(
+            '<div class="text-center text-danger py-3"><i class="fa-solid fa-circle-exclamation me-1"></i> Gagal memuat data</div>',
+        );
+    });
+}
+
+function outputFileName(path) {
+    var base = path.split("/").pop();
+    var parts = base.split("_");
+    // "output_pekerjaan_TIMESTAMP_originalname" → skip first 3 segments
+    return parts.length > 3 ? parts.slice(3).join("_") : base;
+}
+
+function renderOutputTable(outputs) {
+    const TH =
+        'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';
+    const TD = 'style="padding:8px 12px;vertical-align:middle;"';
+
+    var bodyHtml;
+    if (!outputs || !outputs.length) {
+        bodyHtml =
+            '<tr><td colspan="5" class="text-center text-muted py-4">' +
+            '<i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>Belum ada output pekerjaan</td></tr>';
+    } else {
+        bodyHtml = outputs
+            .map(function (item, idx) {
+                var attachHtml = "—";
+                try {
+                    var files =
+                        typeof item.attachments === "string"
+                            ? JSON.parse(item.attachments)
+                            : item.attachments || [];
+                    if (files && files.length) {
+                        attachHtml = files
+                            .map(function (p) {
+                                return (
+                                    '<a href="/storage/' +
+                                    p +
+                                    '" target="_blank" ' +
+                                    'class="d-inline-flex align-items-center gap-1 me-1" ' +
+                                    'style="font-size:11px;color:#1a56db;text-decoration:none;">' +
+                                    '<i class="fa-solid fa-paperclip" style="font-size:10px;"></i>' +
+                                    escHtml(outputFileName(p)) +
+                                    "</a>"
+                                );
+                            })
+                            .join("");
+                    }
+                } catch (e) {}
+                return (
+                    '<tr class="output-data-row" data-id="' +
+                    item.id_output +
+                    '">' +
+                    "<td " +
+                    TD +
+                    ' style="width:40px;text-align:center;color:#94a3b8;">' +
+                    (idx + 1) +
+                    "</td>" +
+                    "<td " +
+                    TD +
+                    ' style="font-weight:500;">' +
+                    escHtml(item.judul_output) +
+                    "</td>" +
+                    "<td " +
+                    TD +
+                    ' style="color:#64748b;">' +
+                    (item.judul_dokumen ? escHtml(item.judul_dokumen) : "—") +
+                    "</td>" +
+                    "<td " +
+                    TD +
+                    ">" +
+                    attachHtml +
+                    "</td>" +
+                    "<td " +
+                    TD +
+                    ' style="white-space:nowrap;text-align:right;">' +
+                    '<button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 me-1 btn-edit-output" ' +
+                    'data-id="' +
+                    item.id_output +
+                    '" data-no-disable style="font-size:11px;"><i class="fa-solid fa-pen"></i></button>' +
+                    '<button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-delete-output" ' +
+                    'data-id="' +
+                    item.id_output +
+                    '" data-no-disable style="font-size:11px;"><i class="fa-solid fa-trash"></i></button>' +
+                    "</td></tr>"
+                );
+            })
+            .join("");
+    }
+
+    return (
+        '<div class="table-responsive">' +
+        '<table class="table table-sm table-hover mb-0" style="font-size:13px;">' +
+        '<thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;"><tr>' +
+        "<th " +
+        TH +
+        ' style="width:40px;">#</th>' +
+        "<th " +
+        TH +
+        ' style="min-width:200px;">Judul Output (LHU)</th>' +
+        "<th " +
+        TH +
+        ' style="min-width:180px;">Judul Dokumen</th>' +
+        "<th " +
+        TH +
+        ' style="min-width:150px;">Lampiran</th>' +
+        "<th " +
+        TH +
+        ' style="min-width:80px;"></th>' +
+        "</tr></thead>" +
+        "<tbody>" +
+        bodyHtml +
+        "</tbody>" +
+        "</table></div>" +
+        '<div id="outputFormWrap"></div>'
+    );
+}
+
+function showOutputForm(data) {
+    var isEdit = data && data.id_output;
+    var existingFilesHtml = "";
+    if (isEdit && data.attachments) {
+        try {
+            var files =
+                typeof data.attachments === "string"
+                    ? JSON.parse(data.attachments)
+                    : data.attachments;
+            if (files && files.length) {
+                existingFilesHtml = files
+                    .map(function (p, i) {
+                        return (
+                            '<div class="d-inline-flex align-items-center gap-1 me-2 mb-1 existing-file-item" ' +
+                            'style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:2px 8px;">' +
+                            '<a href="/storage/' +
+                            p +
+                            '" target="_blank" style="font-size:11px;color:#166534;text-decoration:none;">' +
+                            '<i class="fa-solid fa-paperclip me-1" style="font-size:10px;"></i>' +
+                            escHtml(outputFileName(p)) +
+                            "</a>" +
+                            '<button type="button" class="btn-remove-existing-file" data-index="' +
+                            i +
+                            '" ' +
+                            'style="border:none;background:none;color:#dc2626;padding:0 2px;cursor:pointer;font-size:11px;line-height:1;">' +
+                            '<i class="fa-solid fa-times"></i></button>' +
+                            '<input type="hidden" class="existing-file-path" value="' +
+                            escHtml(p) +
+                            '">' +
+                            "</div>"
+                        );
+                    })
+                    .join("");
+            }
+        } catch (e) {}
+    }
+
+    var html =
+        '<div id="outputForm" class="mt-3 p-3" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">' +
+        '<div class="d-flex align-items-center mb-3">' +
+        '<span class="fw-semibold" style="font-size:13px;color:#374151;">' +
+        '<i class="fa-solid fa-' +
+        (isEdit ? "pen" : "plus") +
+        ' me-2" style="color:#0f766e;"></i>' +
+        (isEdit ? "Edit Output" : "Tambah Output") +
+        "</span></div>" +
+        (isEdit
+            ? '<input type="hidden" id="outputEditId" value="' +
+              data.id_output +
+              '">'
+            : "") +
+        '<div class="row g-3">' +
+        '<div class="col-md-6">' +
+        '<label class="form-label form-label-sm text-muted mb-1">Judul Output (LHU) <span class="text-danger">*</span></label>' +
+        '<input type="text" id="outputJudulOutput" class="form-control form-control-sm" placeholder="Judul LHU" maxlength="255" ' +
+        'value="' +
+        (isEdit ? escHtml(data.judul_output || "") : "") +
+        '">' +
+        "</div>" +
+        '<div class="col-md-6">' +
+        '<label class="form-label form-label-sm text-muted mb-1">Judul Dokumen (Lab)</label>' +
+        '<input type="text" id="outputJudulDokumen" class="form-control form-control-sm" placeholder="Penamaan dokumen dari lab" maxlength="255" ' +
+        'value="' +
+        (isEdit ? escHtml(data.judul_dokumen || "") : "") +
+        '">' +
+        "</div>" +
+        '<div class="col-md-12">' +
+        '<label class="form-label form-label-sm text-muted mb-1">Lampiran</label>' +
+        (existingFilesHtml
+            ? '<div id="existingFilesWrap" class="mb-2">' +
+              existingFilesHtml +
+              "</div>"
+            : "") +
+        '<input type="file" id="outputAttachments" multiple>' +
+        "</div></div>" +
+        '<div class="d-flex gap-2 mt-3">' +
+        '<button type="button" id="btnSaveOutput" class="btn btn-sm btn-primary" data-no-disable>' +
+        '<i class="fa-solid fa-floppy-disk me-1"></i> Simpan</button>' +
+        '<button type="button" id="btnCancelOutput" class="btn btn-sm btn-outline-secondary" data-no-disable>Batal</button>' +
+        "</div></div>";
+
+    if (outputFilePond) {
+        outputFilePond.destroy();
+        outputFilePond = null;
+    }
+    $("#outputFormWrap").html(html);
+    outputFilePond = createFileUploader("#outputAttachments");
+    var wrap = document.getElementById("outputFormWrap");
+    if (wrap) wrap.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    $("#outputJudulOutput").focus();
 }
 
 // ── Event handlers ─────────────────────────────────────────────────────────────
@@ -558,13 +828,134 @@ $(document).ready(function () {
         $("#fwoSearchInput").val("").trigger("input");
     });
 
+    // ── Output Pekerjaan ─────────────────────────────────────────────────────
+    $(document).on("click", "#btnAddOutput", function () {
+        if ($("#outputForm").length && !$("#outputEditId").length) {
+            $("#outputFormWrap").html("");
+            return;
+        }
+        if (!$("#outputFormWrap").length) {
+            $("#outputContent").append('<div id="outputFormWrap"></div>');
+        }
+        showOutputForm(null);
+    });
+
+    $(document).on("click", "#btnCancelOutput", function () {
+        if (outputFilePond) {
+            outputFilePond.destroy();
+            outputFilePond = null;
+        }
+        $("#outputFormWrap").html("");
+    });
+
+    $(document).on("click", ".btn-edit-output", function () {
+        var id = $(this).data("id");
+        var item = outputDataMap[id];
+        if (item) {
+            showOutputForm(item);
+        }
+    });
+
+    $(document).on("click", ".btn-remove-existing-file", function () {
+        $(this).closest(".existing-file-item").remove();
+    });
+
+    $(document).on("click", "#btnSaveOutput", function () {
+        var judulOutput = $("#outputJudulOutput").val().trim();
+        if (!judulOutput) {
+            Swal.fire({
+                icon: "warning",
+                title: "Field wajib diisi",
+                text: "Judul Output (LHU) harus diisi.",
+            });
+            return;
+        }
+        var isEdit = $("#outputEditId").length > 0;
+        var editId = isEdit ? $("#outputEditId").val() : null;
+
+        var fd = new FormData();
+        fd.append("_token", window.route.csrf);
+        fd.append("judul_output", judulOutput);
+        fd.append("judul_dokumen", $("#outputJudulDokumen").val().trim());
+        if (!isEdit) {
+            fd.append("id_wo", currentOutputWoId);
+        }
+
+        $("#existingFilesWrap .existing-file-path").each(function () {
+            fd.append("existing_attachments[]", $(this).val());
+        });
+
+        if (outputFilePond) {
+            outputFilePond.getFiles().forEach(function (f) {
+                fd.append("attachments[]", f.file);
+            });
+        }
+
+        var url = isEdit
+            ? window.route.outputBase + editId
+            : window.route.outputBase;
+        var $btn = $("#btnSaveOutput");
+        $btn.prop("disabled", true).html(
+            '<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...',
+        );
+
+        $.ajax({
+            url: url,
+            method: "POST",
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function () {
+                Notify.success(
+                    isEdit
+                        ? "Output berhasil diperbarui"
+                        : "Output berhasil ditambahkan",
+                );
+                if (outputFilePond) {
+                    outputFilePond.destroy();
+                    outputFilePond = null;
+                }
+                $("#outputFormWrap").html("");
+                loadOutputProgress(currentOutputWoId);
+            },
+            error: function (xhr) {
+                Notify.error(xhr.responseJSON?.message || "Terjadi kesalahan");
+                $btn.prop("disabled", false).html(
+                    '<i class="fa-solid fa-floppy-disk me-1"></i> Simpan',
+                );
+            },
+        });
+    });
+
+    $(document).on("click", ".btn-delete-output", function () {
+        var id = $(this).data("id");
+        Notify.confirm("Hapus output pekerjaan ini?", function () {
+            $.ajax({
+                url: window.route.outputBase + id,
+                method: "POST",
+                data: { _token: window.route.csrf, _method: "DELETE" },
+                success: function () {
+                    Notify.success("Output berhasil dihapus");
+                    loadOutputProgress(currentOutputWoId);
+                },
+                error: function (xhr) {
+                    Notify.error(
+                        xhr.responseJSON?.message || "Terjadi kesalahan",
+                    );
+                },
+            });
+        });
+    });
+
     // FWO Refresh
     $(document).on("click", "#btnRefreshFwoProgress", function () {
         const woId = $(this).data("wo-id");
         const $icon = $(this).find("i");
         $icon.addClass("fa-spin");
         loadBoqProgress(woId);
-        setTimeout(function () { $icon.removeClass("fa-spin"); }, 600);
+        setTimeout(function () {
+            $icon.removeClass("fa-spin");
+        }, 600);
     });
 
     // ── Copy FWO ─────────────────────────────────────────────────────────────
@@ -578,11 +969,11 @@ $(document).ready(function () {
 
         $.when(
             $.get(window.route.fwoDetail + sourceFwoId),
-            $.get(window.route.fwoBoqDetail + sourceFwoId),
+            $.get(window.route.fwoBoqForCopy + sourceFwoId),
         )
             .done(function (fwoRes, boqRes) {
-                fillCopyFwoModal(fwoRes[0], boqRes[0]);
-                $("#btnConfirmCopyFwo").prop("disabled", false);
+                const allFull = fillCopyFwoModal(fwoRes[0], boqRes[0]);
+                $("#btnConfirmCopyFwo").prop("disabled", allFull);
             })
             .fail(function () {
                 $("#modalCopyFwoBody").html(
@@ -680,6 +1071,7 @@ $(document).ready(function () {
         afterLoad: function (res) {
             currentWoData = res;
             loadBoqProgress(res.id_wo);
+            loadOutputProgress(res.id_wo);
         },
     });
 
@@ -779,29 +1171,32 @@ function fillCopyFwoModal(fwo, boqs) {
 
     let boqHtml = "";
     if (boqs && boqs.length > 0) {
-        const secRows = boqs
-            .map(function (sec) {
-                const unallocated = sec.unallocated_qty ?? 0;
-                const isFull = unallocated <= 0;
-                const satuan = sec.satuan ? " " + escHtml(sec.satuan) : "";
-                const defaultQty = isFull
-                    ? ""
-                    : Math.min(sec.qty || 0, unallocated);
+        function renderBoqCard(sec) {
+            const unallocated = sec.unallocated_qty ?? 0;
+            const isFull = unallocated <= 0;
+            const satuan = sec.satuan ? " " + escHtml(sec.satuan) : "";
+            const defaultQty = isFull
+                ? ""
+                : Math.min(sec.qty || 0, unallocated);
 
-                const sisaHtml = isFull
-                    ? `<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:#dcfce7;color:#166534;">Terpenuhi ✓</span>`
-                    : `<span style="font-size:10px;color:#64748b;">Sisa: <strong style="color:${unallocated < (sec.qty || 0) ? "#dc2626" : "#1d4ed8"};">${unallocated}${satuan}</strong></span>`;
+            const sisaHtml = isFull
+                ? `<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:#dcfce7;color:#166534;">Terpenuhi ✓</span>`
+                : `<span style="font-size:10px;color:#64748b;">Sisa: <strong style="color:${unallocated < (sec.qty || 0) ? "#dc2626" : "#1d4ed8"};">${unallocated}${satuan}</strong></span>`;
 
-                const input = isFull
-                    ? `<input type="number" class="form-control form-control-sm text-end copy-boq-qty"
-                        data-boq-id="${sec.id_boq}" value="" min="1" max="0" placeholder="—" disabled
-                        style="background:#f1f5f9;color:#94a3b8;">`
-                    : `<input type="number" class="form-control form-control-sm text-end copy-boq-qty"
-                        data-boq-id="${sec.id_boq}" value="${defaultQty}"
-                        min="1" max="${unallocated}" placeholder="qty"
-                        oninput="this.classList.toggle('is-invalid', this.value > ${unallocated})">`;
+            const input = isFull
+                ? `<div style="width:90px;text-align:center;font-size:11px;color:#94a3b8;">—</div>`
+                : `<input type="number" class="form-control form-control-sm text-end copy-boq-qty"
+                    data-boq-id="${sec.id_boq}" value="${defaultQty}"
+                    min="1" max="${unallocated}" placeholder="qty"
+                    oninput="this.classList.toggle('is-invalid', this.value > ${unallocated})">`;
 
-                return `<div class="d-flex align-items-center gap-3 p-2"
+            const fullNotice = isFull
+                ? `<div style="font-size:11px;color:#dc2626;margin-top:4px;">
+                       <i class="fa-solid fa-circle-xmark me-1"></i>Qty sudah terpenuhi, tidak bisa ditambahkan
+                   </div>`
+                : "";
+
+            return `<div class="d-flex align-items-center gap-3 p-2"
                 style="background:${isFull ? "#f0fdf4" : "#f8fafc"};border:1px solid ${isFull ? "#bbf7d0" : "#e2e8f0"};border-radius:8px;">
                 <div style="flex:1;min-width:0;">
                     <div class="fw-semibold small">${escHtml(sec.point_name)}</div>
@@ -809,14 +1204,52 @@ function fillCopyFwoModal(fwo, boqs) {
                         <span style="font-size:11px;color:#64748b;">Total BOQ: ${sec.boq_qty}${satuan}</span>
                         ${sisaHtml}
                     </div>
+                    ${fullNotice}
                 </div>
                 <div style="width:90px;">${input}</div>
             </div>`;
-            })
-            .join("");
+        }
+
+        // Pisahkan: item dari source FWO (qty !== null) vs item tambahan dari WO
+        const sourceItems = boqs.filter(function (s) {
+            return s.qty !== null;
+        });
+        const extraItems = boqs.filter(function (s) {
+            return s.qty === null;
+        });
+
+        const sourceRows = sourceItems.map(renderBoqCard).join("");
+        const extraRows = extraItems.map(renderBoqCard).join("");
+
+        const divider =
+            extraItems.length > 0
+                ? `<div style="display:flex;align-items:center;gap:10px;margin:4px 0;">
+                   <hr style="flex:1;border-color:#e2e8f0;margin:0;">
+                   <span style="font-size:11px;color:#94a3b8;white-space:nowrap;font-weight:600;letter-spacing:.3px;">
+                       <i class="fa-solid fa-plus me-1" style="font-size:10px;"></i>Tambahkan item lainnya
+                   </span>
+                   <hr style="flex:1;border-color:#e2e8f0;margin:0;">
+               </div>
+               <div class="d-flex flex-column gap-2">${extraRows}</div>`
+                : "";
+
+        const allFull = boqs.every(function (sec) {
+            return (sec.unallocated_qty ?? 0) <= 0;
+        });
+        const allFullBanner = allFull
+            ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:12px;color:#dc2626;display:flex;align-items:center;gap:8px;">
+                   <i class="fa-solid fa-triangle-exclamation"></i>
+                   <span>Semua BOQ item sudah terpenuhi. FWO baru tidak dapat menyertakan BOQ pada WO ini.</span>
+               </div>`
+            : "";
+
         boqHtml = `<div class="mb-3">
-            <label class="form-label fw-semibold">Qty per BOQ Section</label>
-            <div class="d-flex flex-column gap-2">${secRows}</div>
+            <label class="form-label fw-semibold">Qty per BOQ Item</label>
+            ${allFullBanner}
+            <div class="d-flex flex-column gap-2">
+                ${sourceRows}
+            </div>
+            ${divider}
         </div>`;
     }
 
@@ -850,9 +1283,18 @@ function fillCopyFwoModal(fwo, boqs) {
         <button type="button" id="btnAddCopyPersonel" class="btn btn-outline-primary btn-sm">
             <i class="fa-solid fa-plus me-1"></i> Tambah Personel
         </button>
+        <div style="height:220px;"></div>
     `);
 
     $("#copyFwoPersonelContainer .copy-personel-user-select").each(function () {
         initCopyPersonelSelect2($(this));
     });
+
+    const allFull =
+        boqs &&
+        boqs.length > 0 &&
+        boqs.every(function (sec) {
+            return (sec.unallocated_qty ?? 0) <= 0;
+        });
+    return allFull;
 }

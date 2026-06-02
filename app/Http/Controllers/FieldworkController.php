@@ -31,6 +31,7 @@ class FieldworkController extends Controller
             ->whereNull('fw.deleted_at')
             ->select([
                 'fw.id_fwo',
+                'fw.status',
                 'fw.no_fwo',
                 'wo.no_wo',
                 'fw.judul_pekerjaan',
@@ -110,6 +111,7 @@ class FieldworkController extends Controller
             'tanggal_mulai'               => 'nullable|date',
             'tanggal_selesai'             => 'nullable|date',
             'waktu_kedatangan'            => 'nullable|date',
+            'status'                      => 'nullable|string|in:planned,completed',
             'keterangan'                  => 'nullable|string',
             'personels'                   => 'nullable|array',
             'personels.*.id_user'         => 'required|integer',
@@ -124,6 +126,7 @@ class FieldworkController extends Controller
             'tanggal_mulai'               => $validated['tanggal_mulai'] ?? null,
             'tanggal_selesai'             => $validated['tanggal_selesai'] ?? null,
             'waktu_kedatangan'            => $validated['waktu_kedatangan'] ?? null,
+            'status'                      => $validated['status'] ?? 'planned',
             'keterangan'                  => $validated['keterangan'] ?? null,
             'no_fwo'                      => $this->generateNoFwo(),
             'created_at'                  => now(),
@@ -174,6 +177,27 @@ class FieldworkController extends Controller
         return response()->json(['success' => true, 'message' => 'Fieldwork berhasil diperbarui']);
     }
 
+    public function complete($id)
+    {
+        $fwo = DB::table('fieldworks')->where('id_fwo', $id)->whereNull('deleted_at')->first();
+        if (!$fwo) {
+            return response()->json(['message' => 'FWO tidak ditemukan'], 404);
+        }
+        if ($fwo->status === 'completed') {
+            return response()->json(['message' => 'FWO sudah berstatus Completed'], 422);
+        }
+
+        $before = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
+        DB::table('fieldworks')->where('id_fwo', $id)->update([
+            'status'     => 'completed',
+            'updated_at' => now(),
+        ]);
+        $after = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
+        saveAudit('fieldworks', $id, 'update', $before, $after);
+
+        return response()->json(['success' => true, 'message' => 'FWO berhasil diselesaikan']);
+    }
+
     public function destroy($id)
     {
         $before = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
@@ -204,53 +228,59 @@ class FieldworkController extends Controller
             'sections.*.keterangan' => 'nullable|string',
         ]);
 
-        $no_fwo = $this->generateNoFwo();
-
-        $newId = DB::table('fieldworks')->insertGetId([
-            'id_wo'                       => $source->id_wo,
-            'no_fwo'                      => $no_fwo,
-            'judul_pekerjaan'             => $validated['judul_pekerjaan'],
-            'id_site_pelanggan_pekerjaan' => $source->id_site_pelanggan_pekerjaan,
-            'id_pic_pelanggan_pekerjaan'  => $source->id_pic_pelanggan_pekerjaan,
-            'tanggal_mulai'               => $validated['tanggal_mulai'] ?? null,
-            'tanggal_selesai'             => $validated['tanggal_selesai'] ?? null,
-            'waktu_kedatangan'            => null,
-            'keterangan'                  => $validated['keterangan'] ?? null,
-            'created_at'                  => now(),
-            'updated_at'                  => now(),
-        ]);
-
-        if (!empty($validated['personels'])) {
-            DB::table('fieldwork_personels')->insert(
-                array_map(fn($p) => [
-                    'id_fwo'     => $newId,
-                    'id_user'    => $p['id_user'],
-                    'role'       => $p['role'] ?? null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ], $validated['personels'])
-            );
+        // Validasi qty semua sections SEBELUM insert apapun
+        foreach ($validated['sections'] ?? [] as $sec) {
+            if (empty($sec['qty'])) continue;
+            $boq = DB::table('boq')->where('id_boq', $sec['id_boq'])->first();
+            if (!$boq) continue;
+            $usedQty   = (int) DB::table('fieldwork_boq as fb')
+                ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
+                ->where('fb.id_boq', $sec['id_boq'])
+                ->whereNull('fw.deleted_at')
+                ->sum('fb.qty');
+            $remaining = (int)($boq->qty ?? 0) - $usedQty;
+            if ($sec['qty'] > $remaining) {
+                $ptName = DB::table('testing_points')
+                    ->where('id_testing_point', $boq->id_testing_point)
+                    ->value('nama') ?? "BOQ #{$sec['id_boq']}";
+                return response()->json([
+                    'message' => "Qty untuk \"{$ptName}\" melebihi sisa yang tersedia (sisa: {$remaining})",
+                ], 422);
+            }
         }
 
-        if (!empty($validated['sections'])) {
-            foreach ($validated['sections'] as $sec) {
+        $no_fwo = $this->generateNoFwo();
+
+        DB::transaction(function () use ($source, $no_fwo, $validated, &$newId) {
+            $newId = DB::table('fieldworks')->insertGetId([
+                'id_wo'                       => $source->id_wo,
+                'no_fwo'                      => $no_fwo,
+                'judul_pekerjaan'             => $validated['judul_pekerjaan'],
+                'id_site_pelanggan_pekerjaan' => $source->id_site_pelanggan_pekerjaan,
+                'id_pic_pelanggan_pekerjaan'  => $source->id_pic_pelanggan_pekerjaan,
+                'tanggal_mulai'               => $validated['tanggal_mulai'] ?? null,
+                'tanggal_selesai'             => $validated['tanggal_selesai'] ?? null,
+                'waktu_kedatangan'            => null,
+                'keterangan'                  => $validated['keterangan'] ?? null,
+                'created_at'                  => now(),
+                'updated_at'                  => now(),
+            ]);
+
+            if (!empty($validated['personels'])) {
+                DB::table('fieldwork_personels')->insert(
+                    array_map(fn($p) => [
+                        'id_fwo'     => $newId,
+                        'id_user'    => $p['id_user'],
+                        'role'       => $p['role'] ?? null,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ], $validated['personels'])
+                );
+            }
+
+            foreach ($validated['sections'] ?? [] as $sec) {
                 $boq = DB::table('boq')->where('id_boq', $sec['id_boq'])->first();
                 if (!$boq) continue;
-
-                if (!empty($sec['qty'])) {
-                    $usedQty   = (int) DB::table('fieldwork_boq')
-                        ->where('id_boq', $sec['id_boq'])
-                        ->sum('qty');
-                    $remaining = (int)($boq->qty ?? 0) - $usedQty;
-                    if ($sec['qty'] > $remaining) {
-                        $ptName = DB::table('testing_points')
-                            ->where('id_testing_point', $boq->id_testing_point)
-                            ->value('nama') ?? "BOQ #{$sec['id_boq']}";
-                        return response()->json([
-                            'message' => "Qty untuk \"{$ptName}\" melebihi sisa yang tersedia (sisa: {$remaining})",
-                        ], 422);
-                    }
-                }
 
                 $fwoBoqId = DB::table('fieldwork_boq')->insertGetId([
                     'id_fwo'           => $newId,
@@ -274,7 +304,7 @@ class FieldworkController extends Controller
                     );
                 }
             }
-        }
+        });
 
         $after = DB::table('fieldworks')->where('id_fwo', $newId)->get()->toJson();
         saveAudit('fieldworks', $newId, 'create', null, $after);

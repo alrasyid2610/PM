@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(request('embed') ? 'layouts.embed' : 'layouts.app')
 @section('page-title', 'Fieldwork')
 @section('page-descrip', 'Tambah data kegiatan pekerjaan lapangan')
 
@@ -114,7 +114,7 @@
             </x-section-card>
         </div>
 
-        <x-form-actions back-route="{{ route('fieldworks.index') }}" submit-label="Simpan Fieldwork" />
+        <x-form-actions :back-route="request('embed') ? null : route('fieldworks.index')" submit-label="Simpan Fieldwork" />
 
     </form>
 </section>

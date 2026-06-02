@@ -8,8 +8,39 @@ window.addEventListener('storage', function (e) {
             var data = JSON.parse(e.newValue);
             var target = data.id_so || currentSoId;
             if (target) loadWoProgress(target);
+            var modal = bootstrap.Modal.getInstance(document.getElementById('modalCreateWo'));
+            if (modal) {
+                modal.hide();
+                document.getElementById('iframeCreateWo').src = '';
+            }
         } catch (_) {}
     }
+    if (e.key === 'termin_created' && e.newValue) {
+        try {
+            var data = JSON.parse(e.newValue);
+            var target = data.id_so || currentSoId;
+            if (target) loadTerminList(target);
+            var modal = bootstrap.Modal.getInstance(document.getElementById('modalCreateTermin'));
+            if (modal) {
+                modal.hide();
+                document.getElementById('iframeCreateTermin').src = '';
+            }
+        } catch (_) {}
+    }
+});
+
+$(document).on('click', '.btn-add-wo-modal', function () {
+    var soId = $(this).data('so-id');
+    document.getElementById('iframeCreateWo').src = '/work-orders/create?id_so=' + soId + '&embed=1';
+    var modal = new bootstrap.Modal(document.getElementById('modalCreateWo'));
+    modal.show();
+});
+
+$(document).on('click', '.btn-add-termin-modal', function () {
+    var soId = $(this).data('so-id');
+    document.getElementById('iframeCreateTermin').src = '/termin/create?id_so=' + soId + '&embed=1';
+    var modal = new bootstrap.Modal(document.getElementById('modalCreateTermin'));
+    modal.show();
 });
 
 function loadWoProgress(id_so, onDone) {
@@ -21,7 +52,7 @@ function loadWoProgress(id_so, onDone) {
     $.get(window.route.woProgress + id_so + "/wo-progress", function (wos) {
         currentWosData = wos;
         $("#woBadgeCount").text(wos ? wos.length : 0);
-        if (wos && wos.length) renderWoSummary(wos);
+        renderSoSummary(wos);
         renderWoProgressView(wos);
         if (onDone) onDone();
     }).fail(function () {
@@ -41,87 +72,58 @@ function filterWos(wos, term) {
         if ((wo.no_wo ?? "").toLowerCase().includes(lower)) return true;
         if ((wo.judul_pekerjaan ?? "").toLowerCase().includes(lower))
             return true;
-        if ((wo.nama_period ?? "").toLowerCase().includes(lower)) return true;
         return false;
     });
 }
 
-function renderWoSummary(wos) {
-    const totalWo = wos.length;
-    const totalFwo = wos.reduce(function (s, w) {
-        return s + (w.fwo_count || 0);
-    }, 0);
-    const totalBoqQty = wos.reduce(function (s, w) {
-        return s + (w.total_boq_qty || 0);
-    }, 0);
-    const totalFwoQty = wos.reduce(function (s, w) {
-        return s + (w.total_fwo_qty || 0);
-    }, 0);
-    const totalHarga = wos.reduce(function (s, w) {
-        return s + (w.total_boq_amount || 0);
-    }, 0);
-    const pct =
-        totalBoqQty > 0 ? Math.round((totalFwoQty / totalBoqQty) * 100) : 0;
-    const pctBarColor =
-        pct >= 100
-            ? "#22c55e"
-            : pct > 0
-              ? "var(--primary-400,#4a9eff)"
-              : "#cbd5e1";
-    const pctTextColor =
-        pct >= 100
-            ? "#16a34a"
-            : pct > 0
-              ? "var(--primary-500,#1a5fbe)"
-              : "#94a3b8";
+function renderSoSummary(wos) {
+    const totalWo    = wos.length;
+    const totalFwo   = wos.reduce(function (s, w) { return s + (w.fwo_count || 0); }, 0);
+    const totalBoqQty = wos.reduce(function (s, w) { return s + (w.total_boq_qty || 0); }, 0);
+    const totalFwoQty = wos.reduce(function (s, w) { return s + (w.total_fwo_qty || 0); }, 0);
+    const totalHarga  = wos.reduce(function (s, w) { return s + (w.total_boq_amount || 0); }, 0);
 
-    const harga =
-        totalHarga > 0
-            ? totalHarga >= 1e9
-                ? "Rp " + (totalHarga / 1e9).toFixed(1) + " M"
-                : "Rp " + (totalHarga / 1e6).toFixed(1) + " jt"
+    const pct = totalBoqQty > 0 ? Math.round((totalFwoQty / totalBoqQty) * 100) : 0;
+    const barColor  = pct >= 100 ? "#16a34a" : pct > 0 ? "#d97706" : "#94a3b8";
+    const pctColor  = pct >= 100 ? "#16a34a" : pct > 0 ? "#d97706" : "#94a3b8";
+
+    const harga = totalHarga >= 1e9
+        ? "Rp " + (totalHarga / 1e9).toFixed(1) + " M"
+        : totalHarga >= 1e6
+          ? "Rp " + (totalHarga / 1e6).toFixed(1) + " jt"
+          : totalHarga > 0
+            ? "Rp " + Number(totalHarga).toLocaleString("en-US")
             : "—";
 
-    const card = function (icon, label, value, iconBg) {
-        return `<div style="flex:1;min-width:120px;background:#fff;border-radius:8px;
-                     border:1px solid var(--primary-200,#bcd0f8);
-                     box-shadow:0 1px 3px rgba(26,95,190,.06);
-                     display:flex;align-items:center;gap:10px;padding:10px 12px;">
-            <div style="width:30px;height:30px;border-radius:7px;background:${iconBg};
-                         display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="${icon}" style="font-size:13px;color:#fff;"></i>
+    const kpiCard = function (icon, iconBg, label, value) {
+        return `<div class="pm-kpi-card">
+            <div class="pm-kpi-icon" style="background:${iconBg};">
+                <i class="fa-solid ${icon}"></i>
             </div>
             <div>
-                <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;line-height:1;">${label}</div>
-                <div style="font-size:15px;font-weight:700;color:var(--primary-700,#18386b);margin-top:2px;line-height:1.2;">${value}</div>
+                <div class="pm-kpi-label">${label}</div>
+                <div class="pm-kpi-value">${value}</div>
             </div>
         </div>`;
     };
 
-    $("#woSummaryCard").html(
-        `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;cursor:pointer;" title="Lihat daftar Work Order"
-              onclick="document.getElementById('wo-section')?.scrollIntoView({behavior:'smooth',block:'start'})">
-            ${card("fa-solid fa-briefcase", "Total WO", totalWo, "var(--primary-500,#1a5fbe)")}
-            ${card("fa-solid fa-hard-hat", "Total FWO", totalFwo, "var(--primary-700,#18386b)")}
-            ${card("fa-solid fa-layer-group", "Total BOQ", totalBoqQty + " qty", "#0891b2")}
-            ${card("fa-solid fa-tag", "Total Nilai", harga, "#0f766e")}
-            <div style="flex:2;min-width:200px;background:#fff;border-radius:8px;
-                         border:1px solid var(--primary-200,#bcd0f8);
-                         box-shadow:0 1px 3px rgba(26,95,190,.06);padding:10px 14px;">
-                <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">
-                    <i class="fa-solid fa-chart-line me-1"></i>Progress Keseluruhan
-                </div>
-                <div style="display:flex;align-items:center;gap:12px;">
-                    <div style="flex:1;">
-                        <div style="height:6px;background:var(--primary-100,#e8f0fe);border-radius:3px;overflow:hidden;">
-                            <div style="height:100%;width:${pct}%;background:${pctBarColor};border-radius:3px;transition:width .5s;"></div>
-                        </div>
-                        <div style="font-size:10px;color:#94a3b8;margin-top:4px;">${totalFwoQty} / ${totalBoqQty} qty terpenuhi</div>
-                    </div>
-                    <div style="font-size:18px;font-weight:800;color:${pctTextColor};white-space:nowrap;min-width:44px;text-align:right;">${pct}%</div>
-                </div>
-            </div>
-        </div>`,
+    const progressCard = `<div class="pm-kpi-card pm-kpi-card--progress">
+        <div class="pm-kpi-progress-header">
+            <span class="pm-kpi-label"><i class="fa-solid fa-chart-line me-1"></i>Progress Keseluruhan</span>
+            <span class="pm-kpi-pct" style="color:${pctColor};">${pct}%</span>
+        </div>
+        <div class="pm-kpi-bar-wrap">
+            <div class="pm-kpi-bar-fill" style="width:${pct}%;background:${barColor};"></div>
+        </div>
+        <div class="pm-kpi-progress-sub">${totalFwoQty} / ${totalBoqQty} qty terpenuhi</div>
+    </div>`;
+
+    $("#soSummaryCard").html(
+        kpiCard("fa-briefcase",  "var(--primary-500,#1a5fbe)", "Total WO",    totalWo + " WO") +
+        kpiCard("fa-hard-hat",   "var(--primary-700,#18386b)", "Total FWO",   totalFwo + " FWO") +
+        kpiCard("fa-layer-group","#0891b2",                    "Total QTY",   totalBoqQty + " qty") +
+        kpiCard("fa-tag",        "#0f766e",                    "Total Nilai",  harga) +
+        progressCard
     );
 }
 
@@ -150,64 +152,36 @@ function renderWoProgressView(wos) {
     }
 }
 
+const SO_INTERVAL_LABELS = {1:'Bulanan',2:'Bimulanan',3:'Triwulan',4:'Caturwulan',6:'Semester',12:'Annual'};
+
 function renderWoProgressTable(wos) {
-    const rows = wos
-        .map(function (wo) {
-            const INTERVAL_LABELS = {
-                1: "Bulanan",
-                2: "Bimulanan",
-                3: "Triwulan",
-                4: "Caturwulan",
-                6: "Semester",
-                12: "Annual",
-            };
-            const amount =
-                wo.total_boq_amount > 0
-                    ? "Rp " +
-                      Number(wo.total_boq_amount).toLocaleString("en-US")
-                    : "—";
-            const period = wo.nama_period
-                ? `<div class="fw-semibold" style="font-size:12px;color:#166534;">${escHtml(wo.nama_period)}</div>` +
-                  (wo.tanggal_mulai || wo.tanggal_selesai
-                      ? `<div style="font-size:11px;color:#64748b;margin-top:1px;">
-                       <i class="fa-solid fa-calendar-days me-1" style="font-size:10px;"></i>${(wo.tanggal_mulai || "").substring(0, 7)} s/d ${(wo.tanggal_selesai || "").substring(0, 7)}
-                   </div>`
-                      : "") +
-                  (wo.interval_bulan
-                      ? `<div style="font-size:11px;color:#64748b;">
-                       <i class="fa-solid fa-rotate me-1" style="font-size:10px;"></i>${INTERVAL_LABELS[wo.interval_bulan] || wo.interval_bulan + " bln"}
-                   </div>`
-                      : "")
-                : `<span class="text-muted">—</span>`;
+    const rows = wos.map(function (wo) {
+        const amount = wo.total_boq_amount > 0
+            ? "Rp " + Number(wo.total_boq_amount).toLocaleString("en-US")
+            : "—";
+        const periodBadge = (wo.interval_bulan && wo.no_urut_period)
+            ? `<span class="pm-badge pm-badge--blue">
+                <i class="fa-solid fa-calendar-days" style="font-size:9px;"></i>
+                ${escHtml(SO_INTERVAL_LABELS[wo.interval_bulan] || wo.interval_bulan + ' bln')} ke-${wo.no_urut_period}
+               </span>`
+            : '';
 
-            const pctColor =
-                wo.progress_pct >= 100
-                    ? "#198754"
-                    : wo.progress_pct > 0
-                      ? "#1d4ed8"
-                      : "#6c757d";
-            const pctBg =
-                wo.progress_pct >= 100
-                    ? "#d1fae5"
-                    : wo.progress_pct > 0
-                      ? "#dbeafe"
-                      : "#e9ecef";
-
-            const TD = 'class="align-middle" style="padding:8px 12px;"';
-            return `<tr>
-            <td ${TD}>
-                <a href="/work-orders?open=${wo.id_wo}" target="_blank"
-                    class="fw-semibold text-decoration-none" style="color:#1d4ed8;font-size:13px;white-space:nowrap;">
+        return `<tr>
+            <td>
+                <a href="/work-orders?open=${wo.id_wo}" class="pm-link-record">
                     ${escHtml(wo.no_wo ?? "—")}
                 </a>
             </td>
-            <td ${TD} style="padding:8px 12px;color:#374151;">${escHtml(wo.nama_pelanggan ?? "—")}</td>
-            <td ${TD} style="padding:8px 12px;color:#374151;">${escHtml(wo.nama_site_pelanggan ?? "—")}</td>
-            <td ${TD} style="padding:8px 12px;color:#374151;">${escHtml(wo.judul_pekerjaan ?? "—")}</td>
-            <td ${TD} style="padding:8px 12px;text-align:center;color:#7c3aed;font-weight:600;">${wo.fwo_count}</td>
-            <td ${TD} style="padding:8px 12px;color:#1d4ed8;font-weight:600;white-space:nowrap;">${amount}</td>
-            <td ${TD} style="padding:8px 12px;text-align:center;white-space:nowrap;">
-                <a href="/work-orders?open=${wo.id_wo}" target="_blank"
+            <td>${escHtml(wo.nama_pelanggan ?? "—")}</td>
+            <td>${escHtml(wo.nama_site_pelanggan ?? "—")}</td>
+            <td>
+                <div>${escHtml(wo.judul_pekerjaan ?? "—")}</div>
+                ${periodBadge ? `<div class="mt-1">${periodBadge}</div>` : ''}
+            </td>
+            <td class="text-center" style="color:#7c3aed;font-weight:600;">${wo.fwo_count}</td>
+            <td style="color:#1d4ed8;font-weight:600;white-space:nowrap;">${amount}</td>
+            <td class="text-center" style="white-space:nowrap;">
+                <a href="/work-orders?open=${wo.id_wo}"
                     class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;" title="Buka detail WO">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i>
                 </a>
@@ -217,25 +191,99 @@ function renderWoProgressTable(wos) {
                 </button>
             </td>
         </tr>`;
-        })
-        .join("");
+    }).join("");
 
-    const TH_BASE =
-        'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;"';
     return `<div class="table-responsive">
-        <table class="table table-sm table-hover mb-0" style="font-size:13px;min-width:1400px;">
-            <thead class="text-muted fw-semibold" style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+        <table class="pm-table" style="min-width:1400px;">
+            <thead>
                 <tr>
-                    <th ${TH_BASE} style="min-width:120px;">No WO</th>
-                    <th ${TH_BASE} style="min-width:220px;">Pelanggan</th>
-                    <th ${TH_BASE} style="min-width:200px;">Site Pelanggan</th>
-                    <th ${TH_BASE} style="min-width:240px;">Judul Pekerjaan</th>
-                    <th ${TH_BASE} style="min-width:90px;text-align:center;">Total FWO</th>
-                    <th ${TH_BASE} style="min-width:130px;">Total Harga</th>
-                    <th ${TH_BASE} style="min-width:90px;">Action</th>
+                    <th style="min-width:120px;">No WO</th>
+                    <th style="min-width:220px;">Pelanggan</th>
+                    <th style="min-width:200px;">Site Pelanggan</th>
+                    <th style="min-width:240px;">Judul Pekerjaan</th>
+                    <th style="min-width:90px;text-align:center;">Total FWO</th>
+                    <th style="min-width:130px;">Total Harga</th>
+                    <th style="min-width:90px;">Action</th>
                 </tr>
             </thead>
             <tbody>${rows}</tbody>
+        </table>
+    </div>`;
+}
+
+// ── Tab switch — show/hide action buttons ─────────────────────────────────────
+$(document).on('shown.bs.tab', '#soDetailTabs button[data-bs-toggle="tab"]', function (e) {
+    const target = $(e.target).data('bs-target');
+    $('#soTabActionsInfo, #soTabActionsWo, #soTabActionsTermin').addClass('d-none');
+    if (target === '#tabInfoSo') $('#soTabActionsInfo').removeClass('d-none');
+    if (target === '#tabWo')     $('#soTabActionsWo').removeClass('d-none');
+    if (target === '#tabTermin') $('#soTabActionsTermin').removeClass('d-none');
+});
+
+// ── Load Termin ────────────────────────────────────────────────────────────────
+function loadTerminList(id_so, onDone) {
+    $('#terminContent').html(
+        '<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>'
+    );
+    $.get(window.route.terminBySo + id_so, function (data) {
+        $('#terminContent').html(renderTerminTable(data));
+        if (onDone) onDone();
+    }).fail(function () {
+        $('#terminContent').html(
+            '<div class="text-center text-danger py-3"><i class="fa-solid fa-circle-exclamation me-1"></i> Gagal memuat data</div>'
+        );
+        if (onDone) onDone();
+    });
+}
+
+function renderTerminTable(rows) {
+    if (!rows || !rows.length) {
+        return '<div class="text-center text-muted py-4">'
+            + '<i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>'
+            + 'Belum ada Termin untuk Sales Order ini</div>';
+    }
+
+    const statusClass = { pending: 'pm-badge--pending', proses: 'pm-badge--proses', selesai: 'pm-badge--selesai' };
+    const statusLabel = { pending: 'Pending', proses: 'Proses', selesai: 'Selesai' };
+
+    const rows_html = rows.map(function (t) {
+        const cls   = statusClass[t.status] || 'pm-badge--pending';
+        const lbl   = statusLabel[t.status] || t.status;
+        const badge = `<span class="pm-badge ${cls}">${lbl}</span>`;
+        const nilai = t.nilai ? 'Rp ' + Number(t.nilai).toLocaleString('id-ID') : '—';
+        const pct   = t.persentase ? t.persentase + '%' : '—';
+        const tgl   = t.tanggal ? t.tanggal.substring(0, 10) : '—';
+
+        return `<tr>
+            <td><a href="/termin?open=${t.id_termin}" class="pm-link-record">${escHtml(t.nomor ?? '—')}</a></td>
+            <td>${escHtml(t.nama ?? '—')}</td>
+            <td class="text-center">${pct}</td>
+            <td style="color:#1d4ed8;font-weight:600;">${nilai}</td>
+            <td>${tgl}</td>
+            <td>${badge}</td>
+            <td class="text-center">
+                <a href="/termin?open=${t.id_termin}"
+                    class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;" title="Buka detail Termin">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                </a>
+            </td>
+        </tr>`;
+    }).join('');
+
+    return `<div class="table-responsive">
+        <table class="pm-table">
+            <thead>
+                <tr>
+                    <th style="min-width:120px;">Nomor</th>
+                    <th style="min-width:200px;">Nama</th>
+                    <th style="min-width:90px;text-align:center;">%</th>
+                    <th style="min-width:130px;">Nilai</th>
+                    <th style="min-width:110px;">Tanggal</th>
+                    <th style="min-width:100px;">Status</th>
+                    <th style="min-width:70px;">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>${rows_html}</tbody>
         </table>
     </div>`;
 }
@@ -294,11 +342,20 @@ $(document).ready(function () {
         });
     });
 
+    // Refresh Termin
+    $(document).on('click', '#btnRefreshTermin', function () {
+        const soId = $(this).data('so-id');
+        const $icon = $(this).find('i');
+        $icon.addClass('fa-spin');
+        loadTerminList(soId, function () { $icon.removeClass('fa-spin'); });
+    });
+
     page = new CrudPageController({
         primaryKey: "id_so",
         renderForm: renderForm,
         afterLoad: function (res) {
             loadWoProgress(res.id_so);
+            loadTerminList(res.id_so);
         },
     });
 

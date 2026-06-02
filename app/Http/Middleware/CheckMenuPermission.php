@@ -23,7 +23,6 @@ class CheckMenuPermission
     private const SLUG_MAP = [
         'business-relation-sites' => 'business-relations',
         'testing-items'           => 'testing-points',
-        'wo-periods'              => 'work-orders',
     ];
 
     public function handle(Request $request, Closure $next): mixed

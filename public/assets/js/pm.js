@@ -118,6 +118,113 @@ $(window).on('load', function () {
     measure();
 }());
 
+// Sticky pm-tab-header — sticks just below detail-action-sticky-wrap when fixed
+(function () {
+    var tabHeader  = null;
+    var placeholder = null;
+    var isFixed    = false;
+    var naturalTop = null;
+    var raf        = null;
+
+    function findTabHeader() {
+        // Only target pm-tab-header that contains pm-tab-nav (main nav, not inner accordions)
+        var headers = document.querySelectorAll('.pm-tab-header');
+        for (var i = 0; i < headers.length; i++) {
+            if (headers[i].querySelector('.pm-tab-nav')) return headers[i];
+        }
+        return null;
+    }
+
+    function getActionBarHeight() {
+        var wrap = document.querySelector('.detail-action-sticky-wrap');
+        return wrap ? wrap.offsetHeight : 0;
+    }
+
+    function getMainLeft() {
+        var main = document.getElementById('main');
+        return main ? main.getBoundingClientRect().left : 0;
+    }
+
+    function measure() {
+        tabHeader = findTabHeader();
+        if (!tabHeader || isFixed) return;
+        naturalTop = tabHeader.getBoundingClientRect().top + window.pageYOffset;
+    }
+
+    function applyFixed() {
+        if (isFixed || !tabHeader) return;
+        var h = tabHeader.offsetHeight;
+        placeholder = document.createElement('div');
+        placeholder.style.height = h + 'px';
+        tabHeader.parentNode.insertBefore(placeholder, tabHeader);
+        var actionH = getActionBarHeight();
+        tabHeader.style.position = 'fixed';
+        tabHeader.style.top      = actionH + 'px';
+        tabHeader.style.left     = getMainLeft() + 'px';
+        tabHeader.style.right    = '0';
+        tabHeader.style.width    = 'auto';
+        tabHeader.style.zIndex   = '199';
+        tabHeader.classList.add('is-stuck');
+        isFixed = true;
+    }
+
+    function removeFixed() {
+        if (!isFixed || !tabHeader) return;
+        tabHeader.style.position = '';
+        tabHeader.style.top      = '';
+        tabHeader.style.left     = '';
+        tabHeader.style.right    = '';
+        tabHeader.style.width    = '';
+        tabHeader.style.zIndex   = '';
+        tabHeader.classList.remove('is-stuck');
+        isFixed = false;
+        if (placeholder) { placeholder.parentNode && placeholder.parentNode.removeChild(placeholder); placeholder = null; }
+    }
+
+    function tick() {
+        if (!tabHeader) { measure(); return; }
+        if (naturalTop === null) { measure(); return; }
+        var scrollY  = window.pageYOffset;
+        var actionH  = getActionBarHeight();
+        var triggerAt = naturalTop - actionH;
+        if (scrollY > triggerAt - 1 && !isFixed) applyFixed();
+        else if (scrollY <= triggerAt - 1 && isFixed) removeFixed();
+        if (isFixed) tabHeader.style.top = actionH + 'px'; // update saat action bar height berubah
+    }
+
+    function onScroll() {
+        if (raf) cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(tick);
+    }
+
+    function reset() {
+        removeFixed();
+        tabHeader  = null;
+        naturalTop = null;
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    window.addEventListener('resize', function () {
+        if (isFixed && tabHeader) tabHeader.style.left = getMainLeft() + 'px';
+        if (!isFixed) { naturalTop = null; measure(); }
+    });
+
+    new MutationObserver(function (mutations) {
+        var hasNav = mutations.some(function (m) {
+            return Array.from(m.addedNodes).some(function (n) {
+                return n.nodeType === 1 && (
+                    (n.classList && n.classList.contains('pm-tab-header')) ||
+                    (n.querySelector && n.querySelector('.pm-tab-header .pm-tab-nav'))
+                );
+            });
+        });
+        if (hasNav) { reset(); requestAnimationFrame(measure); }
+    }).observe(document.body, { childList: true, subtree: true });
+
+    measure();
+}());
+
 function toggleAdvanceSearch() {
     const advanceSearch = document.getElementById("advanceSearchForm");
     const toggleBtn = document.getElementById("toggleAdvanceSearch");
@@ -306,7 +413,8 @@ function getAllFormsData() {
 
         classes.forEach((cls) => {
             if (cls.startsWith("form-")) {
-                result[cls] = getFormData(this);
+                if (!result[cls]) result[cls] = {};
+                Object.assign(result[cls], getFormData(this));
             }
         });
     });

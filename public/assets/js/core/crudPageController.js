@@ -31,7 +31,7 @@ class CrudPageController {
                 self.loadDetail(id);
             },
             onAttachmentDeleted: function (id) {
-                self.loadDetail(id); // 🔥 reload detail di sini
+                self.loadDetail(id, true);
             },
         });
 
@@ -46,10 +46,12 @@ class CrudPageController {
         if (openId) {
             const id = parseInt(openId);
             if (!isNaN(id)) {
+                // replaceState agar state object ter-set tanpa menambah history entry
+                history.replaceState({ open: id }, '', '?open=' + id);
                 // Tunggu DataTable selesai render baru buka detail
                 setTimeout(function () {
                     self.selectedRow.id = id;
-                    self.loadDetail(id);
+                    self.loadDetail(id, true);
 
                     // Pindah ke tab Detail jika ada tab system
                     const $detailTab = $('#detail-tab');
@@ -59,10 +61,34 @@ class CrudPageController {
                 }, 400);
             }
         }
+
+        // Tangani tombol Back/Forward browser
+        window.addEventListener('popstate', function (e) {
+            var stateId = e.state && e.state.open;
+            if (!stateId) {
+                var param = new URLSearchParams(window.location.search).get('open');
+                stateId = param ? parseInt(param) : null;
+            }
+            if (stateId) {
+                self.selectedRow.id = stateId;
+                self.loadDetail(stateId, true);
+                var $detailTab = $('#detail-tab');
+                if ($detailTab.length) new bootstrap.Tab($detailTab[0]).show();
+            } else {
+                self.selectedRow.id = null;
+                $('#detailContent').html('');
+                $('#history-tab').addClass('disabled').attr('disabled', true);
+            }
+        });
     }
 
-    loadDetail(id) {
+    loadDetail(id, skipPushState = false) {
         const self = this;
+
+        // Update URL agar tombol Back browser bisa kembali ke panel ini
+        if (!skipPushState) {
+            history.pushState({ open: id }, '', '?open=' + id);
+        }
 
         // Enable history tab setelah row diklik
         $("#history-tab").removeClass("disabled").removeAttr("disabled");

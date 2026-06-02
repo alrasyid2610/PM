@@ -255,41 +255,89 @@ const formGroup = {
         </button>`;
     },
 
-    actionBar({ number, createdAt = '', updatedAt = '', subtitle = '', deleteId = null, deleteClass = 'btn-delete-record', deleteText = 'Hapus', editText = '', editHtml = '', badge = '', extra = '', leftExtra = '' }) {
-        const editBtn = editHtml ? editHtml : (editText ? formGroup.editButton(editText) : '');
-        const deleteBtn = deleteId !== null ? `<button type="button" class="btn-action-danger ${deleteClass}" data-id="${deleteId}" data-no-disable><i class="fa-solid fa-trash"></i> ${deleteText}</button>` : '';
+    actionBar({
+        number,
+        createdAt = "",
+        updatedAt = "",
+        subtitle = "",
+        deleteId = null,
+        deleteClass = "btn-delete-record",
+        deleteText = "Hapus",
+        editText = "",
+        editHtml = "",
+        badge = "",
+        extra = "",
+        leftExtra = "",
+        statusBadge = "",
+        tags = "",
+        noWrap = false,
+    }) {
+        const editBtn = editHtml
+            ? editHtml
+            : editText
+              ? formGroup.editButton(editText)
+              : "";
+        const deleteBtn =
+            deleteId !== null
+                ? `<button type="button" class="btn-action-danger ${deleteClass}" data-id="${deleteId}" data-no-disable><i class="fa-solid fa-trash"></i> ${deleteText}</button>`
+                : "";
         const dateHtml = subtitle
             ? `<div class="detail-date">${subtitle}</div>`
-            : (createdAt || updatedAt ? `<div class="detail-date">Dibuat ${createdAt} &nbsp;·&nbsp; Diupdate ${updatedAt}</div>` : '');
+            : createdAt || updatedAt
+              ? `<div class="detail-date">Dibuat ${createdAt} &nbsp;·&nbsp; Diupdate ${updatedAt}</div>`
+              : "";
+        const numberEl = statusBadge
+            ? `<div class="detail-number-row"><span class="detail-number">${number}</span>${statusBadge}</div>`
+            : `<div class="detail-number">${number}</div>`;
+        const tagsHtml = tags
+            ? `<div class="detail-action-tags">${tags}</div>`
+            : "";
+        const wrapClass = noWrap
+            ? "detail-action-sticky-wrap"
+            : "col-md-12 detail-action-sticky-wrap";
         return `
-        <div class="col-md-12 detail-action-sticky-wrap">
-            <div class="detail-action-bar">
-                <div>
-                    <div class="detail-number">${number}</div>
-                    ${dateHtml}
-                    ${leftExtra}
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    ${badge}
-                    ${editBtn}
-                    ${deleteBtn}
-                    ${extra}
+        <div>
+            <div class="${wrapClass}">
+                <div class="detail-action-bar">
+                    <div>
+                        ${numberEl}
+                        ${dateHtml}
+                        ${tagsHtml}
+                        ${leftExtra}
+                    </div>
+                    <div class="d-flex align-items-center gap-2" style="transform: translateY(-20px)">
+                        ${badge}
+                        ${editBtn}
+                        ${deleteBtn}
+                        ${extra}
+                    </div>
                 </div>
             </div>
         </div>`;
     },
 
-    sectionCard({ icon, color, title, subtitle = null, editTitle = null, actions = '', id = null }, content) {
+    sectionCard(
+        {
+            icon,
+            color,
+            title,
+            subtitle = null,
+            editTitle = null,
+            actions = "",
+            id = null,
+        },
+        content,
+    ) {
         return `
-        <div class="col-md-12"${id ? ` id="${id}"` : ''}>
+        <div class="col-md-12"${id ? ` id="${id}"` : ""}>
             <div class="detail-section-card" data-sc-open="true">
                 <div class="detail-section-header">
                     <div class="detail-section-icon ${color}">
                         <i class="fa-solid ${icon}"></i>
                     </div>
                     <div class="detail-section-title">${title}</div>
-                    ${subtitle ? `<div class="detail-section-sub">${subtitle}</div>` : ''}
-                    ${editTitle ? formGroup.editButton(editTitle) : ''}
+                    ${subtitle ? `<div class="detail-section-sub">${subtitle}</div>` : ""}
+                    ${editTitle ? formGroup.editButton(editTitle) : ""}
                     ${actions}
                     <div class="detail-section-icon" style="background-color:#e5e5e5;flex-shrink:0;cursor:pointer;" onclick="scToggle(this, event)">
                         <i class="fa-solid fa-chevron-up sc-chevron" style="transition:transform 0.25s;"></i>
@@ -306,13 +354,13 @@ const formGroup = {
 };
 
 function scToggle(chevronDiv) {
-    var card = chevronDiv.closest('.detail-section-card');
-    var body = card.querySelector('.sc-body');
-    var chevron = card.querySelector('.sc-chevron');
-    var open = card.dataset.scOpen !== 'false';
-    card.dataset.scOpen = open ? 'false' : 'true';
-    body.style.display = open ? 'none' : '';
-    chevron.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+    var card = chevronDiv.closest(".detail-section-card");
+    var body = card.querySelector(".sc-body");
+    var chevron = card.querySelector(".sc-chevron");
+    var open = card.dataset.scOpen !== "false";
+    card.dataset.scOpen = open ? "false" : "true";
+    body.style.display = open ? "none" : "";
+    chevron.style.transform = open ? "rotate(180deg)" : "rotate(0deg)";
 }
 
 function initDynamicSelect(scope = document) {
@@ -339,14 +387,18 @@ function initDynamicSelect(scope = document) {
             let cachedData = null;
             let currentTerm = "";
 
-            const noResultsConfig = createUrl ? {
-                language: {
-                    noResults: function () {
-                        return `<span>Tidak ditemukan. <a href="${createUrl}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`;
-                    },
-                },
-                escapeMarkup: function (m) { return m; },
-            } : {};
+            const noResultsConfig = createUrl
+                ? {
+                      language: {
+                          noResults: function () {
+                              return `<span>Tidak ditemukan. <a href="${createUrl}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`;
+                          },
+                      },
+                      escapeMarkup: function (m) {
+                          return m;
+                      },
+                  }
+                : {};
 
             $el.select2({
                 width: "100%",

@@ -56,7 +56,7 @@ class SalesOrderController extends Controller
         // ==========================
         $id = DB::table('sales_orders')->insertGetId([
             'no_so'      => $soNumber,
-            'id_sc'      => $request->id_sc ?: null,
+            'id_sc'      => $request->filled('id_sc') ? (int)$request->id_sc : null,
             'tanggal_so' => $request->tanggal_so,
             'judul_order' => $request->judul_order,
             'tidak_ada_po' => $request->tidak_ada_po ?? 0,
@@ -97,24 +97,6 @@ class SalesOrderController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-
-        // Simpan periods jika ada
-        $periods = json_decode($request->input('periods_json', '[]'), true);
-        if (is_array($periods)) {
-            foreach ($periods as $p) {
-                if (empty($p['id_site'])) continue;
-                DB::table('wo_periods')->insert([
-                    'id_so'           => $id,
-                    'id_site'         => $p['id_site'],
-                    'tanggal_mulai'   => $p['tanggal_mulai']   ?? null,
-                    'tanggal_selesai' => $p['tanggal_selesai'] ?? null,
-                    'interval_bulan'  => $p['interval_bulan']  ?? null,
-                    'keterangan'      => $p['keterangan']      ?? null,
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
-                ]);
-            }
-        }
 
         $after = DB::table('sales_orders')->where('id_so', $id)->get()->toJson();
         saveAudit('sales_orders', $id, 'Create', '', $after);
@@ -167,7 +149,7 @@ class SalesOrderController extends Controller
             ->leftJoin('business_relation_sites as site_pay', 'so.id_site_pelanggan_payment', '=', 'site_pay.id_site')
             ->leftJoin('business_relation_contacts as brc_pay', 'brc_pay.id_contact', '=', 'so.id_pic_pelanggan_payment')
             ->leftJoin('business_relation_contacts as pic_i', 'pic_i.id_contact', '=', 'so.pic_input')
-            ->leftJoin('business_relation_contacts as pic_o', 'pic_o.id_contact', '=', 'so.pic_input')
+            ->leftJoin('business_relation_contacts as pic_o', 'pic_o.id_contact', '=', 'so.pic_order')
             ->leftJoin('business_relation_contacts as marketing_internal', 'marketing_internal.id_contact', '=', 'so.pic_marketing_internal')
             ->leftJoin('business_relation_contacts as marketing_eksternal', 'marketing_eksternal.id_contact', '=', 'so.pic_marketing_eksternal')
             ->leftJoin('contracts as ct', 'ct.id_contract', '=', 'so.id_sc')
@@ -187,7 +169,7 @@ class SalesOrderController extends Controller
                 'site_pay.nama_lokasi as pelanggan_site_pay',
                 'brc_pay.id_contact as id_pic_pelanggan_payment',
                 'brc_pay.nama_pic as pic_pelanggan_pay',
-                'pic_i.nama_pic as pic_input',
+                'pic_i.nama_pic as pic_input_name',
                 'pic_o.nama_pic as pic_ordername',
                 'marketing_internal.nama_pic as marketing_internal_name',
                 'marketing_internal.id_contact as marketing_internal_id',
@@ -214,7 +196,14 @@ class SalesOrderController extends Controller
         $so = DB::table('sales_orders as so')
             ->leftJoin('business_relations as pelanggan', 'so.id_pelanggan', '=', 'pelanggan.id_br')
             ->leftJoin('business_relation_sites as site_pelanggan', 'so.id_site_pelanggan', '=', 'site_pelanggan.id_site')
-            ->select('so.*', 'pelanggan.nama as nama_pelanggan', 'site_pelanggan.nama_lokasi as nama_site_pelanggan')
+            ->leftJoin('contracts as ct', 'ct.id_contract', '=', 'so.id_sc')
+            ->select(
+                'so.*',
+                'pelanggan.nama as nama_pelanggan',
+                'site_pelanggan.nama_lokasi as nama_site_pelanggan',
+                'ct.no_contract as contract_no',
+                'ct.no_contract_client as contract_no_client',
+            )
             ->where('so.id_so', $id)
             ->whereNull('so.deleted_at')
             ->first();
@@ -279,7 +268,7 @@ class SalesOrderController extends Controller
             DB::table('sales_orders')
                 ->where('id_so', $id)
                 ->update([
-                    'id_sc'      => $validated['id_sc'] ?: null,
+                    'id_sc'      => !empty($validated['id_sc']) ? (int)$validated['id_sc'] : null,
                     'tanggal_so' => $validated['tanggal_so'],
                     'judul_order' => $validated['judul_order'],
                     'tidak_ada_po' => $validated['tidak_ada_po'],
@@ -333,12 +322,11 @@ class SalesOrderController extends Controller
     public function woProgress(int $id_so)
     {
         $wos = DB::table('work_orders as wo')
-            ->leftJoin('wo_periods as p', 'p.id_period', '=', 'wo.id_period')
             ->leftJoin('business_relations as br', 'br.id_br', '=', 'wo.id_pelanggan_pekerjaan')
             ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
             ->where('wo.id_so', $id_so)
             ->whereNull('wo.deleted_at')
-            ->select(['wo.id_wo', 'wo.no_wo', 'wo.judul_pekerjaan', 'wo.id_period', 'p.nama_period', 'p.tanggal_mulai', 'p.tanggal_selesai', 'p.interval_bulan', 'br.nama as nama_pelanggan', 'brs.nama_lokasi as nama_site_pelanggan'])
+            ->select(['wo.id_wo', 'wo.no_wo', 'wo.judul_pekerjaan', 'wo.interval_bulan', 'wo.no_urut_period', 'br.nama as nama_pelanggan', 'brs.nama_lokasi as nama_site_pelanggan'])
             ->orderBy('wo.id_wo')
             ->get();
 
@@ -404,14 +392,11 @@ class SalesOrderController extends Controller
             ])->values()->toArray();
 
             return [
-                'id_wo'           => $wo->id_wo,
-                'no_wo'           => $wo->no_wo,
-                'judul_pekerjaan' => $wo->judul_pekerjaan,
-                'id_period'           => $wo->id_period,
-                'nama_period'         => $wo->nama_period,
-                'tanggal_mulai'       => $wo->tanggal_mulai,
-                'tanggal_selesai'     => $wo->tanggal_selesai,
+                'id_wo'               => $wo->id_wo,
+                'no_wo'               => $wo->no_wo,
+                'judul_pekerjaan'     => $wo->judul_pekerjaan,
                 'interval_bulan'      => $wo->interval_bulan,
+                'no_urut_period'      => $wo->no_urut_period,
                 'nama_pelanggan'      => $wo->nama_pelanggan,
                 'nama_site_pelanggan' => $wo->nama_site_pelanggan,
                 'fwo_count'           => (int)($fwoCountByWo[$wo->id_wo] ?? 0),

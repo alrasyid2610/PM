@@ -5,9 +5,41 @@
     :with-history="true"
 />
 
+{{-- Modal: Create FWO --}}
+<div class="modal fade" id="modalCreateFwo" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width:92vw;">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title"><i class="fa-solid fa-hard-hat me-2 text-primary"></i> Tambah Fieldwork Order</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                    onclick="document.getElementById('iframeCreateFwo').src=''"></button>
+            </div>
+            <div class="modal-body p-0" style="min-height:500px;">
+                <iframe id="iframeCreateFwo" src="" style="width:100%;height:75vh;border:none;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal: Create BOQ --}}
+<div class="modal fade" id="modalCreateBoq" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width:92vw;">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title"><i class="fa-solid fa-layer-group me-2 text-success"></i> Tambah BOQ</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                    onclick="document.getElementById('iframeCreateBoq').src=''"></button>
+            </div>
+            <div class="modal-body p-0" style="min-height:500px;">
+                <iframe id="iframeCreateBoq" src="" style="width:100%;height:75vh;border:none;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- Modal: Copy FWO --}}
 <div class="modal fade" id="modalCopyFwo" tabindex="-1" aria-labelledby="modalCopyFwoLabel">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalCopyFwoLabel">
@@ -43,10 +75,11 @@
         fwoDuplicate:  "{{ url('fieldworks') }}/",
         fwoDetail:     "{{ url('fieldworks') }}/",
         fwoBoqDetail:  "{{ url('fieldwork-boq/by-fwo') }}/",
+        fwoBoqForCopy: "{{ url('fieldwork-boq/for-copy') }}/",
         usersSelect2:  "{{ route('users.select2') }}",
+        outputBase:    "{{ url('output-pekerjaan') }}/",
     }
 </script>
 <script src="{{ asset('assets/js/work-order/index.js') }}"></script>
 <script src="{{ asset('assets/js/work-order/form.js') }}"></script>
-<script src="{{ asset('assets/js/work-order/period.js') }}"></script>
 @endsection

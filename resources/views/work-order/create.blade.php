@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(request('embed') ? 'layouts.embed' : 'layouts.app')
 
 @section('page-title', 'Work Orders')
 @section('page-descrip', 'Kelola data Work Orders')
@@ -21,6 +21,22 @@
 @endsection
 
 @section('content')
+
+{{-- STICKY SO INFO BANNER --}}
+<div id="soInfoBanner" style="display:none;position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #e2e8f0;padding:10px 16px;margin:-8px -12px 16px;box-shadow:0 2px 10px rgba(0,0,0,.08);">
+    <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size:13px;">
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+            <i class="fa-solid fa-file-contract" style="color:#1a56db;font-size:11px;flex-shrink:0;"></i>
+            <span id="soBannerNoSo" style="font-weight:700;color:#1a56db;white-space:nowrap;"></span>
+        </div>
+        <div style="width:1px;height:16px;background:#e2e8f0;flex-shrink:0;"></div>
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
+            <i class="fa-solid fa-file-lines" style="color:#374151;font-size:11px;flex-shrink:0;"></i>
+            <span id="soBannerJudul" style="color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        </div>
+    </div>
+</div>
+
 <section class="section">
     <form id="workOrderForm" class="row g-3">
         @csrf
@@ -63,7 +79,26 @@
                         </select>
                     </div>
     
-                     <div class="col-md-2 col-12">
+                    <div class="col-md-2 col-12">
+                        <label class="form-label">Frekuensi</label>
+                        <select name="interval_bulan" id="interval_bulan" class="form-select">
+                            <option value="">— Tidak ada —</option>
+                            <option value="1">Bulanan</option>
+                            <option value="2">Bimulanan</option>
+                            <option value="3">Triwulan</option>
+                            <option value="4">Caturwulan</option>
+                            <option value="6">Semester</option>
+                            <option value="12">Annual</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-1 col-12" id="noUrutWrap" style="display:none;">
+                        <label class="form-label">Urutan ke-</label>
+                        <input type="number" name="no_urut_period" id="no_urut_period"
+                            class="form-control" min="1" placeholder="Auto">
+                    </div>
+
+                    <div class="col-md-2 col-12">
                         <label class="form-label">PIC Pekerjaan</label>
                         <select name="pic_pekerjaan"
                             id="pic_pekerjaan"
@@ -72,15 +107,9 @@
                         </select>
                     </div>
 
-                    <div class="col-md-12 col-12" id="periodFieldWrap" style="display:none;">
-                        <label class="form-label">
-                            <i class="fa-solid fa-calendar-days me-1 text-primary"></i>
-                            Assign ke Period
-                        </label>
-                        <select name="id_period" id="id_period" class="form-select">
-                            <option value="">— Tidak assign ke period —</option>
-                        </select>
-                        <div class="form-text text-muted" id="periodFieldHint"></div>
+                    <!-- Preview WO di lokasi yang sama -->
+                    <div class="col-md-12" id="woSitePreviewWrap" style="display:none;">
+                        <div id="woSitePreviewContent"></div>
                     </div>
 
                     <div class="col-md-12">
@@ -91,7 +120,7 @@
             </x-section-card>
         </div>
 
-        <x-form-actions back-route="{{ url('work-orders') }}" submit-label="Simpan Work Order" />
+        <x-form-actions :back-route="request('embed') ? null : url('work-orders')" submit-label="Simpan Work Order" />
 
     </form>
 </section>
@@ -104,81 +133,6 @@
     var dataSO = '';
     var preselectSoId = new URLSearchParams(window.location.search).get('id_so');
 
-    var INTERVAL_LABELS = {1:'Bulanan',2:'Bimulanan',3:'Triwulan',4:'Caturwulan',6:'Semester',12:'Annual'};
-
-    function calcExpected(p) {
-        if (!p.tanggal_mulai || !p.tanggal_selesai || !p.interval_bulan) return null;
-        var months = Math.round(
-            (new Date(p.tanggal_selesai) - new Date(p.tanggal_mulai)) / (1000 * 60 * 60 * 24 * 30)
-        );
-        return Math.floor(months / p.interval_bulan);
-    }
-
-    function loadPeriodsForSo(id_so) {
-        $.get("{{ url('wo-periods/by-so') }}/" + id_so, function(periods) {
-            var $wrap   = $('#periodFieldWrap');
-            var $select = $('#id_period');
-
-            $select.find('option:not(:first)').remove();
-
-            if (!periods || !periods.length) {
-                $wrap.slideUp(200);
-                if ($select.hasClass('select2-hidden-accessible')) $select.val('').trigger('change');
-                return;
-            }
-
-            var availableCount = 0;
-            periods.forEach(function(p) {
-                var assigned = p.wos ? p.wos.length : 0;
-                var expected = calcExpected(p);
-                var isFull   = expected !== null && assigned >= expected;
-
-                var label = p.nama_period || '—';
-                if (p.nama_site)      label += ' · ' + p.nama_site;
-                if (p.tanggal_mulai)  label += ' · ' + p.tanggal_mulai.substring(0, 7);
-                if (p.interval_bulan) label += ' · ' + (INTERVAL_LABELS[p.interval_bulan] || p.interval_bulan + ' bln');
-
-                if (isFull) {
-                    label += ' — Penuh (' + assigned + '/' + expected + ')';
-                    var $opt = $(new Option(label, p.id_period));
-                    $opt.prop('disabled', true);
-                    $select.append($opt);
-                } else {
-                    var slot = expected !== null ? ' (' + assigned + '/' + expected + ' slot)' : '';
-                    $select.append(new Option(label + slot, p.id_period));
-                    availableCount++;
-                }
-            });
-
-            if (availableCount === 0) {
-                $('#periodFieldHint').html(
-                    '<i class="fa-solid fa-circle-xmark me-1 text-danger"></i>' +
-                    'Semua period untuk SO ini sudah penuh'
-                );
-            } else {
-                $('#periodFieldHint').html(
-                    '<i class="fa-solid fa-circle-info me-1 text-primary"></i>' +
-                    availableCount + ' period tersedia'
-                );
-            }
-
-            $wrap.slideDown(200);
-            if ($select.hasClass('select2-hidden-accessible')) {
-                $select.trigger('change');
-            } else {
-                $select.select2({ placeholder: '— Tidak assign ke period —', allowClear: true, width: '100%' });
-            }
-        });
-    }
-
-    function clearPeriodField() {
-        $('#periodFieldWrap').slideUp(200);
-        var $select = $('#id_period');
-        $select.find('option:not(:first)').remove();
-        if ($select.hasClass('select2-hidden-accessible')) $select.val('').trigger('change');
-        $('#periodFieldHint').text('');
-    }
-
     $(document).ready(function() {
 
         loadPelangganDetails();
@@ -190,12 +144,12 @@
                 const opt = new Option(so.no_so + ' — ' + so.judul_order, so.id_so, true, true);
                 $('#id_sales_order').append(opt).trigger('change');
                 $("input[name='judul_order']").val(so.judul_order).prop('readonly', true);
-                loadPeriodsForSo(so.id_so);
-
-                // Kunci SO dan judul field agar tidak bisa diubah
                 $('#id_sales_order').prop('disabled', true);
-                // Hidden input supaya nilai tetap ter-submit walau select disabled
                 $('<input>').attr({ type: 'hidden', name: 'id_sales_order', value: so.id_so }).appendTo('#workOrderForm');
+
+                $('#soBannerNoSo').text(so.no_so ?? '—');
+                $('#soBannerJudul').text(so.judul_order ?? '—');
+                $('#soInfoBanner').show();
             });
         }
 
@@ -215,7 +169,6 @@
                     $("input[name='no_po']").val(dataSO.no_po);
                     $("select[name='id_pelanggan']").val(dataSO.id_pelanggan).trigger('change');
                     $("select[name='id_site_pelanggan']").val(dataSO.id_site_pelanggan).trigger('change');
-                    loadPeriodsForSo(dataSO.id_so);
                 }
             });
         });
@@ -264,7 +217,11 @@
 
         $("select[name='id_pelanggan']").val(null).trigger('change');
         $("select[name='id_site_pelanggan']").val(null).trigger('change');
-        clearPeriodField();
+
+        $('#woSitePreviewWrap').hide();
+        $('#woSitePreviewContent').html('');
+        $('#noUrutWrap').hide();
+        $('#no_urut_period').val('');
     }
 
 
@@ -362,14 +319,107 @@
         initSiteSelect2(idBr || null);
     });
 
+    $(document).on('change', '#interval_bulan', function() {
+        var hasInterval = !!$(this).val();
+        $('#noUrutWrap').toggle(hasInterval);
+        if (!hasInterval) $('#no_urut_period').val('');
+    });
+
+    $(document).on('click', '#woSitePreviewToggle', function() {
+        var $list = $('#woSitePreviewList');
+        var $icon = $(this).find('i');
+        $list.toggle();
+        $icon.toggleClass('fa-eye fa-eye-slash');
+    });
+
+    $(document).on('change', "select[name='id_site_pelanggan']", function() {
+        var idSite = $(this).val();
+        var idSo = preselectSoId || $('#id_sales_order').val();
+        loadWoSitePreview(idSo, idSite);
+    });
+
+    const WO_INTERVAL_LABELS = {1:'Bulanan',2:'Bimulanan',3:'Triwulan',4:'Caturwulan',6:'Semester',12:'Annual'};
+
+    function loadWoSitePreview(id_so, id_site) {
+        if (!id_so || !id_site) {
+            $('#woSitePreviewWrap').hide();
+            return;
+        }
+
+        $('#woSitePreviewWrap').show();
+        $('#woSitePreviewContent').html(
+            '<div class="text-muted small py-2"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat WO di lokasi ini...</div>'
+        );
+
+        $.get("{{ url('work-orders/by-so') }}/" + id_so, function(wos) {
+            var filtered = (wos || []).filter(function(wo) {
+                return String(wo.id_site_pelanggan_pekerjaan) === String(id_site);
+            });
+
+            if (!filtered.length) {
+                $('#woSitePreviewWrap').hide();
+                if ($('#no_urut_period').val() === '') $('#no_urut_period').val(1);
+                return;
+            }
+
+            // Auto-suggest urutan berikutnya
+            if ($('#no_urut_period').val() === '') {
+                $('#no_urut_period').val(filtered.length + 1);
+            }
+
+            var rows = filtered.map(function(wo) {
+                var badge = '';
+                if (wo.interval_bulan && wo.no_urut_period) {
+                    var lbl = WO_INTERVAL_LABELS[wo.interval_bulan] || (wo.interval_bulan + ' bln');
+                    badge = '<span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;'
+                          + 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;white-space:nowrap;'
+                          + 'display:inline-flex;align-items:center;gap:4px;">'
+                          + '<i class="fa-solid fa-calendar-days" style="font-size:9px;"></i>'
+                          + lbl + ' ke-' + wo.no_urut_period + '</span>';
+                }
+                return '<tr>'
+                    + '<td style="padding:4px 10px;white-space:nowrap;font-size:12px;font-weight:600;color:#1d4ed8;">'
+                    +   (wo.no_wo || '—') + '</td>'
+                    + '<td style="padding:4px 10px;font-size:12px;color:#374151;">'
+                    +   (wo.judul_pekerjaan || '—') + '</td>'
+                    + '<td style="padding:4px 10px;">' + badge + '</td>'
+                    + '</tr>';
+            }).join('');
+
+            var tableHtml = '<div id="woSitePreviewList" style="display:none;margin-top:8px;">'
+                + '<div class="table-responsive">'
+                + '<table style="width:100%;border-collapse:collapse;"><tbody>'
+                + rows
+                + '</tbody></table></div></div>';
+
+            $('#woSitePreviewContent').html(
+                '<div style="background:#f0f7ff;border:1px solid #bcd0f8;border-radius:8px;padding:8px 14px;">'
+                + '<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" id="woSitePreviewToggle">'
+                + '<span style="font-size:11px;font-weight:700;color:#1a5fbe;text-transform:uppercase;letter-spacing:.5px;">'
+                + '<i class="fa-solid fa-briefcase me-1"></i>'
+                + 'WO yang sudah ada di lokasi ini (' + filtered.length + ')</span>'
+                + '<button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:11px;" title="Tampilkan / Sembunyikan">'
+                + '<i class="fa-solid fa-eye"></i></button>'
+                + '</div>'
+                + tableHtml
+                + '</div>'
+            );
+        }).fail(function() {
+            $('#woSitePreviewWrap').hide();
+        });
+    }
+
     submitCreateForm({
         formId: "#workOrderForm",
         url: "{{ url('work-orders') }}",
         redirect: preselectSoId ? null : "{{ url('work-orders') }}",
         onSuccess: preselectSoId ? function () {
             localStorage.setItem('wo_created', JSON.stringify({ id_so: preselectSoId, ts: Date.now() }));
-            if (window.opener && !window.opener.closed) window.opener.focus();
-            setTimeout(function () { window.close(); }, 800);
+            var inIframe = window.self !== window.top;
+            if (!inIframe) {
+                if (window.opener && !window.opener.closed) window.opener.focus();
+                setTimeout(function () { window.close(); }, 800);
+            }
         } : null,
     });
 

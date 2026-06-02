@@ -54,6 +54,7 @@ return [
             ['slug' => 'boq',          'label' => 'BOQ',         'icon' => 'fa-layer-group'],
             ['slug' => 'fieldworks',   'label' => 'Fieldworks',  'icon' => 'fa-helmet-safety'],
             ['slug' => 'termin',       'label' => 'Termin'],
+            // ['slug' => 'output-pekerjaan',   'label' => 'output pekerjaan',  'icon' => 'fa-helmet-safety'],
         ],
     ],
     [

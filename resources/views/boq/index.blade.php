@@ -30,7 +30,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalSectionTitle">
-                    <i class="fa-solid fa-layer-group me-2 text-primary"></i> Tambah Section
+                    <i class="fa-solid fa-layer-group me-2 text-primary"></i> Tambah Item
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -38,7 +38,7 @@
 
                 <div class="mb-4">
                     <label class="form-label fw-semibold">
-                        Testing Point <span class="text-danger">*</span>
+                        Item <span class="text-danger">*</span>
                     </label>
                     <select id="selectTestingPoint" style="width:100%"></select>
                 </div>
@@ -76,7 +76,7 @@
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
                 <button type="button" id="btnConfirmSection" class="btn btn-primary btn-sm" disabled>
                     <i class="fa-solid fa-check me-1"></i>
-                    <span id="btnConfirmText">Tambah Section</span>
+                    <span id="btnConfirmText">Tambah Item</span>
                 </button>
             </div>
         </div>

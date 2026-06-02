@@ -30,6 +30,7 @@
         update:           "{{ url('termin') }}/",
         deleteAttachment: "{{ route('termin.delete-attachment') }}",
         history:          "{{ url('termin') }}/",
+        outputsBySo:      "{{ url('termin/outputs-by-so') }}/",
         csrf:             "{{ csrf_token() }}"
     }
 </script>

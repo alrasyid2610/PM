@@ -44,35 +44,41 @@ const WilayahEngine = {
         const self = this;
         const s2 = { width: "100%", dropdownParent: $(container) };
 
-        $(`${container} .wilayah-provinsi`).select2(s2);
-        $(`${container} .wilayah-kota`).select2(s2);
-        $(`${container} .wilayah-kecamatan`).select2(s2);
-        $(`${container} .wilayah-kelurahan`).select2(s2);
+        const $provinsi   = $(`${container} .wilayah-provinsi`);
+        const $kota       = $(`${container} .wilayah-kota`);
+        const $kecamatan  = $(`${container} .wilayah-kecamatan`);
+        const $kelurahan  = $(`${container} .wilayah-kelurahan`);
+
+        // Init select2 hanya jika belum di-init
+        if (!$provinsi.hasClass('select2-hidden-accessible'))  $provinsi.select2(s2);
+        if (!$kota.hasClass('select2-hidden-accessible'))      $kota.select2(s2);
+        if (!$kecamatan.hasClass('select2-hidden-accessible')) $kecamatan.select2(s2);
+        if (!$kelurahan.hasClass('select2-hidden-accessible')) $kelurahan.select2(s2);
 
         let provinsiData = await self.fetchProvinces();
-        let selProvinsi = $(`${container} .wilayah-provinsi`).data("value");
-        self.populate(`${container} .wilayah-provinsi`, provinsiData, selProvinsi);
+        let selProvinsi  = $provinsi.data("value");
+        self.populate($provinsi, provinsiData, selProvinsi);
 
         if (selProvinsi) {
             let provCode = self.getCodeByName(provinsiData, selProvinsi);
             if (provCode) {
                 let kotaData = await self.fetchChildren(provCode);
-                let selKota = $(`${container} .wilayah-kota`).data("value");
-                self.populate(`${container} .wilayah-kota`, kotaData, selKota);
+                let selKota  = $kota.data("value");
+                self.populate($kota, kotaData, selKota);
 
                 if (selKota) {
                     let kotaCode = self.getCodeByName(kotaData, selKota);
                     if (kotaCode) {
                         let kecData = await self.fetchChildren(kotaCode);
-                        let selKec = $(`${container} .wilayah-kecamatan`).data("value");
-                        self.populate(`${container} .wilayah-kecamatan`, kecData, selKec);
+                        let selKec  = $kecamatan.data("value");
+                        self.populate($kecamatan, kecData, selKec);
 
                         if (selKec) {
                             let kecCode = self.getCodeByName(kecData, selKec);
                             if (kecCode) {
                                 let kelData = await self.fetchChildren(kecCode);
-                                let selKel = $(`${container} .wilayah-kelurahan`).data("value");
-                                self.populate(`${container} .wilayah-kelurahan`, kelData, selKel);
+                                let selKel  = $kelurahan.data("value");
+                                self.populate($kelurahan, kelData, selKel);
                             }
                         }
                     }
@@ -80,40 +86,38 @@ const WilayahEngine = {
             }
         }
 
-        self.bindEvents(container);
+        self.bindEvents($provinsi, $kota, $kecamatan, $kelurahan);
     },
 
-    bindEvents(container = "#detailContent") {
+    bindEvents($provinsi, $kota, $kecamatan, $kelurahan) {
         const self = this;
 
-        $(document)
-            .off("change", `${container} .wilayah-provinsi`)
-            .on("change", `${container} .wilayah-provinsi`, async function () {
-                let code = $(this).find(":selected").data("code");
-                self.reset(`${container} .wilayah-kota`, `${container} .wilayah-kecamatan`, `${container} .wilayah-kelurahan`);
-                if (!code) return;
-                let data = await self.fetchChildren(code);
-                self.populate(`${container} .wilayah-kota`, data);
-            });
+        // Gunakan direct binding (bukan delegated) agar select2 change terpicu dengan benar
+        $provinsi.off("change.wilayah").on("change.wilayah", async function () {
+            const code = $(this).find(":selected").attr("data-code");
+            $kota.empty().append('<option value="">-- Pilih --</option>').trigger("change");
+            $kecamatan.empty().append('<option value="">-- Pilih --</option>').trigger("change");
+            $kelurahan.empty().append('<option value="">-- Pilih --</option>').trigger("change");
+            if (!code) return;
+            const data = await self.fetchChildren(code);
+            self.populate($kota, data);
+        });
 
-        $(document)
-            .off("change", `${container} .wilayah-kota`)
-            .on("change", `${container} .wilayah-kota`, async function () {
-                let code = $(this).find(":selected").data("code");
-                self.reset(`${container} .wilayah-kecamatan`, `${container} .wilayah-kelurahan`);
-                if (!code) return;
-                let data = await self.fetchChildren(code);
-                self.populate(`${container} .wilayah-kecamatan`, data);
-            });
+        $kota.off("change.wilayah").on("change.wilayah", async function () {
+            const code = $(this).find(":selected").attr("data-code");
+            $kecamatan.empty().append('<option value="">-- Pilih --</option>').trigger("change");
+            $kelurahan.empty().append('<option value="">-- Pilih --</option>').trigger("change");
+            if (!code) return;
+            const data = await self.fetchChildren(code);
+            self.populate($kecamatan, data);
+        });
 
-        $(document)
-            .off("change", `${container} .wilayah-kecamatan`)
-            .on("change", `${container} .wilayah-kecamatan`, async function () {
-                let code = $(this).find(":selected").data("code");
-                self.reset(`${container} .wilayah-kelurahan`);
-                if (!code) return;
-                let data = await self.fetchChildren(code);
-                self.populate(`${container} .wilayah-kelurahan`, data);
-            });
+        $kecamatan.off("change.wilayah").on("change.wilayah", async function () {
+            const code = $(this).find(":selected").attr("data-code");
+            $kelurahan.empty().append('<option value="">-- Pilih --</option>').trigger("change");
+            if (!code) return;
+            const data = await self.fetchChildren(code);
+            self.populate($kelurahan, data);
+        });
     },
 };

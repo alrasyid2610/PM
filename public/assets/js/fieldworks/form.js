@@ -1,6 +1,18 @@
 function renderFwoForm(res) {
+    const isCompleted = res.status === 'completed';
+
+    const woBadge = res.id_wo
+        ? `<a href="/work-orders?open=${res.id_wo}" class="pm-badge pm-badge--blue" style="text-decoration:none;">
+               <i class="fa-solid fa-briefcase" style="font-size:10px;"></i>
+               ${escHtml(res.wo_no_wo ?? 'Lihat WO')}
+           </a>`
+        : '';
+
+    const statusClass = isCompleted ? 'detail-status-selesai' : 'detail-status-pending';
+    const statusLabel = isCompleted ? 'Completed' : 'Planned';
+
     return `
-<form class="row g-3" id="detailForm">
+<form id="detailForm">
     <input type="hidden" name="_token" value="${window.route.csrf}">
     <input type="hidden" name="_method" value="PUT">
 
@@ -10,101 +22,142 @@ function renderFwoForm(res) {
         updatedAt: escHtml(res.updated_at ?? '—'),
         deleteId: res.id_fwo,
         editText: 'Edit FWO',
-        leftExtra: res.id_wo ? `<div class="mt-1">
-            <a href="/work-orders?open=${res.id_wo}" target="_blank"
-                style="display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:20px;background:#e8f0fe;color:#1a56db;font-size:11px;font-weight:600;text-decoration:none;border:1px solid #c7d7f8;">
-                <i class="fa-solid fa-briefcase" style="font-size:10px;"></i>
-                ${escHtml(res.wo_no_wo ?? 'Lihat WO')}
-            </a>
-        </div>` : '',
+        statusBadge: `<span class="detail-status-inline ${statusClass}">${statusLabel}</span>`,
+        tags: woBadge,
+        extra: !isCompleted
+            ? `<button type="button" id="btnCompleteFwo" data-fwo-id="${res.id_fwo}" data-no-disable
+                class="btn btn-sm btn-success" style="font-size:12px;">
+                <i class="fa-solid fa-circle-check me-1"></i> Selesaikan FWO
+               </button>`
+            : '',
+        noWrap: true,
     })}
 
-    ${formGroup.sectionCard(
-        {
-            icon: 'fa-hard-hat',
-            color: 'icon-amber',
-            title: 'Informasi Fieldwork',
-            subtitle: escHtml(res.no_fwo ?? '') + (res.judul_pekerjaan ? ' — ' + escHtml(res.judul_pekerjaan) : ''),
-        },
-        `<div class="row g-3 form-1">
-            ${formGroup.select('id_wo', 'Work Order', res.id_wo, [], {
-                mode: 'ajax',
-                url: window.route.woSelect2,
-                placeholder: 'Pilih Work Order',
-                label: res.wo_no_wo,
-                className: 'col-md-12',
-            })}
-            ${formGroup.text('judul_pekerjaan', 'Judul Pekerjaan', res.judul_pekerjaan, true, {
-                className: 'col-md-12',
-            })}
-            ${formGroup.select('id_site_pelanggan_pekerjaan', 'Site Pelanggan', res.id_site_pelanggan_pekerjaan, [], {
-                mode: 'ajax',
-                url: window.route.siteSelect2,
-                placeholder: 'Pilih Site',
-                label: res.site_name,
-                className: 'col-md-6',
-                createUrl: '/business-relations/create',
-            })}
-            ${formGroup.select('id_pic_pelanggan_pekerjaan', 'PIC Pelanggan', res.id_pic_pelanggan_pekerjaan, [], {
-                mode: 'ajax',
-                url: window.route.picSelect2,
-                placeholder: 'Pilih PIC',
-                label: res.pic_name,
-                className: 'col-md-6',
-                createUrl: '/business-relation-contacts/create',
-            })}
-            ${formGroup.date('tanggal_mulai', 'Tanggal Mulai', res.tanggal_mulai ?? '', false, {
-                className: 'col-md-4',
-            })}
-            ${formGroup.date('tanggal_selesai', 'Tanggal Selesai', res.tanggal_selesai ?? '', false, {
-                className: 'col-md-4',
-            })}
-            <div class="col-md-4 mb-3">
-                <label class="form-label">Waktu Kedatangan</label>
-                <input type="datetime-local" name="waktu_kedatangan"
-                    class="form-control disabled"
-                    value="${fwoDatetimeLocal(res.waktu_kedatangan)}">
+    <div class="pm-tab-card">
+        <div class="pm-tab-header">
+            <ul class="pm-tab-nav" id="fwoDetailTabs" role="tablist">
+                <li role="presentation">
+                    <button class="pm-tab-btn active" type="button" role="tab"
+                        data-bs-toggle="tab" data-bs-target="#tabFwoInfo">
+                        <i class="fa-solid fa-hard-hat me-1" style="color:#d97706;font-size:11px;"></i>
+                        Informasi Fieldwork
+                    </button>
+                </li>
+                <li role="presentation">
+                    <button class="pm-tab-btn" type="button" role="tab"
+                        data-bs-toggle="tab" data-bs-target="#tabFwoPersonel">
+                        <i class="fa-solid fa-users me-1" style="color:#7c3aed;font-size:11px;"></i>
+                        Personel
+                    </button>
+                </li>
+                <li role="presentation">
+                    <button class="pm-tab-btn" type="button" role="tab"
+                        data-bs-toggle="tab" data-bs-target="#tabFwoBoq">
+                        <i class="fa-solid fa-clipboard-list me-1" style="color:#16a34a;font-size:11px;"></i>
+                        Fieldwork BOQ
+                    </button>
+                </li>
+            </ul>
+            <div class="pm-tab-actions">
+                <div id="fwoTabActionsInfo" class="d-flex align-items-center gap-2">
+                    <!-- Edit/Hapus di action bar atas -->
+                </div>
+                <div id="fwoTabActionsPersonel" class="d-flex align-items-center gap-2 d-none">
+                    <!-- Edit personel via tombol Edit FWO di atas -->
+                </div>
+                <div id="fwoTabActionsBoq" class="d-flex align-items-center gap-2 d-none">
+                    <button type="button" id="btnAddFwoBoqDirect" data-no-disable
+                        class="pm-btn-pill pm-btn-pill--green">
+                        <i class="fa-solid fa-plus" style="font-size:10px;"></i>
+                        <i class="fa-solid fa-clipboard-list" style="font-size:11px;"></i> Tambah BOQ
+                    </button>
+                </div>
             </div>
-            ${formGroup.textarea('keterangan', 'Keterangan', res.keterangan ?? '', {
-                className: 'col-md-12',
-            })}
-        </div>`
-    )}
+        </div>
+        <div class="pm-tab-body">
+            <div class="tab-content">
+
+                <!-- TAB: INFORMASI FIELDWORK -->
+                <div class="tab-pane fade show active" id="tabFwoInfo" role="tabpanel">
+                    <div class="row g-3">
+                        ${formGroup.sectionCard(
+                            {
+                                icon: 'fa-hard-hat',
+                                color: 'icon-amber',
+                                title: 'Informasi Fieldwork',
+                                subtitle: 'Data dan jadwal kunjungan lapangan',
+                            },
+                            `<div class="row g-3 form-1">
+                                <div class="mb-3 col-md-12">
+                                    <label class="form-label">
+                                        Work Order
+                                        ${res.id_wo ? `<a href="/work-orders?open=${res.id_wo}"
+                                            class="ms-2 text-decoration-none small" title="Buka halaman Work Order"
+                                            style="color:var(--primary-500,#1a5fbe);">
+                                            <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:11px;"></i>
+                                        </a>` : ''}
+                                    </label>
+                                    <select name="id_wo" class="form-select form-select-dynamic disabled"
+                                        id="detail_id_wo"
+                                        data-mode="ajax" data-url="${window.route.woSelect2}"
+                                        data-allow-clear="false" data-placeholder="Pilih Work Order"
+                                        data-minimum-input="0" data-show-all="false">
+                                        ${res.id_wo && res.wo_no_wo
+                                            ? `<option value="${res.id_wo}" selected>${escHtml(res.wo_no_wo)}</option>`
+                                            : '<option value=""></option>'}
+                                    </select>
+                                </div>
+                                ${formGroup.text('judul_pekerjaan', 'Judul Pekerjaan', res.judul_pekerjaan, true, { className: 'col-md-12' })}
+                                ${formGroup.select('id_site_pelanggan_pekerjaan', 'Site Pelanggan', res.id_site_pelanggan_pekerjaan, [], {
+                                    mode: 'ajax', url: window.route.siteSelect2, placeholder: 'Pilih Site',
+                                    label: res.site_name, className: 'col-md-6', createUrl: '/business-relations/create',
+                                })}
+                                ${formGroup.select('id_pic_pelanggan_pekerjaan', 'PIC Pelanggan', res.id_pic_pelanggan_pekerjaan, [], {
+                                    mode: 'ajax', url: window.route.picSelect2, placeholder: 'Pilih PIC',
+                                    label: res.pic_name, className: 'col-md-6', createUrl: '/business-relation-contacts/create',
+                                })}
+                                ${formGroup.date('tanggal_mulai', 'Tanggal Mulai', res.tanggal_mulai ?? '', false, { className: 'col-md-4' })}
+                                ${formGroup.date('tanggal_selesai', 'Tanggal Selesai', res.tanggal_selesai ?? '', false, { className: 'col-md-4' })}
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Waktu Kedatangan</label>
+                                    <input type="datetime-local" name="waktu_kedatangan"
+                                        class="form-control disabled"
+                                        value="${fwoDatetimeLocal(res.waktu_kedatangan)}">
+                                </div>
+                                ${formGroup.textarea('keterangan', 'Keterangan', res.keterangan ?? '', { className: 'col-md-12' })}
+                            </div>`
+                        )}
+                    </div>
+                </div>
+
+                <!-- TAB: PERSONEL -->
+                <div class="tab-pane fade" id="tabFwoPersonel" role="tabpanel">
+                    <div class="card card-body">
+                        <div id="fwoPersonelContent">
+                            <div class="text-center text-muted py-3">
+                                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: FIELDWORK BOQ -->
+                <div class="tab-pane fade" id="tabFwoBoq" role="tabpanel">
+                    <div class="card card-body">
+                        <div id="fwoBoqContent">
+                            <div class="text-center text-muted py-4">
+                                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
 </form>
-
-<div class="row g-3 mt-1">
-    ${formGroup.sectionCard(
-        {
-            icon: 'fa-users',
-            color: 'icon-purple',
-            title: 'Personel',
-            subtitle: 'Teknisi / personel yang bertugas pada fieldwork ini',
-            id: 'fwoPersonelSection',
-        },
-        `<div id="fwoPersonelContent">
-            <div class="text-center text-muted py-3">
-                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
-            </div>
-        </div>`
-    )}
-</div>
-
-<div class="row g-3 mt-1">
-    ${formGroup.sectionCard(
-        {
-            icon: 'fa-clipboard-list',
-            color: 'icon-green',
-            title: 'Fieldwork BOQ',
-            subtitle: 'BOQ yang dikerjakan pada kunjungan lapangan ini',
-            id: 'fwoBoqSection',
-        },
-        `<div id="fwoBoqContent">
-            <div class="text-center text-muted py-4">
-                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
-            </div>
-        </div>`
-    )}
-</div>`;
+`;
 }
 
 // ── View mode ──────────────────────────────────────────────────────────────────
@@ -151,7 +204,7 @@ function renderFwoBoqView(sections) {
 function renderFwoBoqEditBar() {
     return `<div class="d-flex justify-content-start align-items-center mb-3">
         <button type="button" id="btnAddFwoBoqSection" class="btn btn-outline-primary btn-sm">
-            <i class="fa-solid fa-plus me-1"></i> Tambah Section
+            <i class="fa-solid fa-plus me-1"></i> Tambah Item
         </button>
     </div>`;
 }

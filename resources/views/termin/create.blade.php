@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(request('embed') ? 'layouts.embed' : 'layouts.app')
 
 @section('page-title', 'Termin')
 @section('page-descrip', 'Kelola data termin pembayaran proyek')
@@ -61,11 +61,26 @@
                         <label for="keterangan" class="form-label">Keterangan</label>
                         <textarea class="form-control" id="keterangan" name="keterangan" rows="1"></textarea>
                     </div>
+                    <div class="col-md-12">
+                        <label for="id_so" class="form-label">Sales Order</label>
+                        <select class="form-select" id="id_so" name="id_so">
+                            <option value="">— Tidak ada —</option>
+                        </select>
+                    </div>
                 </div>
             </x-section-card>
         </div>
 
-        <!-- SECTION 2: ATTACHMENT -->
+        <!-- SECTION 2: OUTPUT PEKERJAAN -->
+        <div class="col-12" id="outputSelectionWrap" style="display:none;">
+            <x-section-card icon="fa-file-circle-check" color="icon-teal" title="Output Pekerjaan" subtitle="Pilih output yang akan ditagihkan pada termin ini">
+                <div id="outputSelectionContent">
+                    <div class="text-center text-muted py-3">Pilih Sales Order terlebih dahulu</div>
+                </div>
+            </x-section-card>
+        </div>
+
+        <!-- SECTION 3: ATTACHMENT -->
         <div class="col-12">
             <x-section-card icon="fa-paperclip" color="icon-blue" title="Attachment" subtitle="File pendukung termin">
                 <input type="file" class="filepond" name="attachments[]" multiple>
@@ -80,16 +95,129 @@
 
 @section('custom-script')
 <script>
+    var preselectSoId = new URLSearchParams(window.location.search).get('id_so');
+
     $(document).ready(function () {
         createFileUploader(".filepond");
         $('#status').select2({ placeholder: 'Pilih Status', width: '100%' });
+
+        $('#id_so').select2({
+            placeholder: '— Tidak ada —',
+            allowClear: true,
+            width: '100%',
+            ajax: {
+                url: '/sales-orders/select2',
+                dataType: 'json',
+                delay: 200,
+                data: function (p) { return { q: p.term }; },
+                processResults: function (d) { return { results: d }; },
+                cache: true,
+            },
+        });
+
+        if (preselectSoId) {
+            $.get('/sales-orders/' + preselectSoId, function (so) {
+                if (!so || !so.id_so) return;
+                var opt = new Option(so.no_so + ' — ' + so.judul_order, so.id_so, true, true);
+                $('#id_so').append(opt).trigger('change');
+                $('#id_so').prop('disabled', true);
+                $('<input>').attr({ type: 'hidden', name: 'id_so', value: so.id_so }).appendTo('#terminForm');
+            });
+        }
+
+        $('#id_so').on('change', function () {
+            var soId = $(this).val();
+            if (!soId) {
+                $('#outputSelectionWrap').hide();
+                $('#outputSelectionContent').html('');
+                return;
+            }
+            $('#outputSelectionWrap').show();
+            $('#outputSelectionContent').html('<div class="text-center py-3"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>');
+            $.get('/termin/outputs-by-so/' + soId, function (data) {
+                $('#outputSelectionContent').html(renderOutputSelection(data));
+            }).fail(function () {
+                $('#outputSelectionContent').html('<div class="text-center text-danger py-3">Gagal memuat output pekerjaan</div>');
+            });
+        });
+    });
+
+    function renderOutputSelection(outputs) {
+        if (!outputs.length) {
+            return '<div class="text-center text-muted py-4">' +
+                '<i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>' +
+                'Tidak ada output pekerjaan yang tersedia untuk SO ini</div>';
+        }
+
+        var TH = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:8px 12px;color:#64748b;font-weight:600;"';
+        var TD = 'style="padding:8px 12px;vertical-align:middle;"';
+
+        var rows = outputs.map(function (item) {
+            return '<tr>' +
+                '<td ' + TD + ' style="width:40px;text-align:center;">' +
+                    '<input type="checkbox" class="form-check-input output-check" ' +
+                    'name="selected_outputs[]" value="' + item.id_output + '">' +
+                '</td>' +
+                '<td ' + TD + ' style="font-size:12px;color:#64748b;white-space:nowrap;">' + escHtml(item.no_wo) + '</td>' +
+                '<td ' + TD + '>' + escHtml(item.judul_output) + '</td>' +
+                '<td ' + TD + '>' +
+                    '<input type="text" name="judul_tagihan[' + item.id_output + ']" ' +
+                    'class="form-control form-control-sm judul-tagihan-input" ' +
+                    'placeholder="Sama seperti judul output" maxlength="255" readonly ' +
+                    'style="background:#f8fafc;color:#94a3b8;">' +
+                '</td>' +
+            '</tr>';
+        }).join('');
+
+        return '<div class="mb-2 d-flex align-items-center gap-2">' +
+            '<input type="checkbox" class="form-check-input" id="checkAllOutputs">' +
+            '<label for="checkAllOutputs" class="form-label mb-0" style="font-size:12px;cursor:pointer;">Pilih Semua</label>' +
+            '<span class="text-muted ms-2" id="outputCheckCount" style="font-size:11px;"></span>' +
+            '</div>' +
+            '<div class="table-responsive">' +
+            '<table class="table table-sm table-hover mb-0" style="font-size:13px;">' +
+            '<thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;"><tr>' +
+            '<th ' + TH + ' style="width:40px;"></th>' +
+            '<th ' + TH + ' style="min-width:110px;">No WO</th>' +
+            '<th ' + TH + ' style="min-width:200px;">Judul Output</th>' +
+            '<th ' + TH + ' style="min-width:220px;">Judul Tagihan <span style="font-size:10px;color:#94a3b8;">(opsional)</span></th>' +
+            '</tr></thead>' +
+            '<tbody>' + rows + '</tbody>' +
+            '</table></div>';
+    }
+
+    $(document).on('change', '.output-check', function () {
+        var checked = this.checked;
+        var $input = $(this).closest('tr').find('.judul-tagihan-input');
+        if (checked) {
+            $input.removeAttr('readonly').css({ background: '', color: '' });
+        } else {
+            $input.val('').attr('readonly', true).css({ background: '#f8fafc', color: '#94a3b8' });
+        }
+        var total = $('.output-check').length;
+        var selected = $('.output-check:checked').length;
+        $('#outputCheckCount').text(selected + ' dari ' + total + ' dipilih');
+        $('#checkAllOutputs').prop('indeterminate', selected > 0 && selected < total);
+        $('#checkAllOutputs').prop('checked', selected === total);
+    });
+
+    $(document).on('change', '#checkAllOutputs', function () {
+        $('.output-check').prop('checked', this.checked).trigger('change');
     });
 
     submitCreateForm({
         formId:   "#terminForm",
         url:      "{{ route('termin.store') }}",
-        redirect: "{{ route('termin.index') }}",
+        redirect: preselectSoId ? null : "{{ route('termin.index') }}",
         filepond: ".filepond",
+        onSuccess: preselectSoId ? function () {
+            localStorage.setItem('termin_created', JSON.stringify({ id_so: preselectSoId, ts: Date.now() }));
+            var inIframe = window.self !== window.top;
+            if (!inIframe) {
+                if (window.opener && !window.opener.closed) window.opener.focus();
+                setTimeout(function () { window.close(); }, 800);
+            }
+        } : null,
     });
 </script>
 @endsection

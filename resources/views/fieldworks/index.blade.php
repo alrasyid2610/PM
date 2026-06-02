@@ -29,14 +29,14 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fa-solid fa-layer-group me-2 text-primary"></i> Tambah BOQ Section
+                    <i class="fa-solid fa-layer-group me-2 text-primary"></i> Tambah BOQ Item
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
 
                 <div class="mb-3">
-                    <label class="form-label fw-semibold">BOQ Section <span class="text-danger">*</span></label>
+                    <label class="form-label fw-semibold">BOQ Item <span class="text-danger">*</span></label>
                     <select id="selectFwoBoq" style="width:100%"></select>
                 </div>
 
@@ -77,7 +77,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
                 <button type="button" id="btnConfirmFwoBoq" class="btn btn-primary btn-sm" disabled>
-                    <i class="fa-solid fa-check me-1"></i> Tambah Section
+                    <i class="fa-solid fa-check me-1"></i> Tambah Item
                 </button>
             </div>
         </div>
@@ -100,6 +100,7 @@
         boqSelect2ByWo:   "{{ url('boq/select2-by-wo') }}/",
         boqSectionItems:  "{{ url('boq') }}/",
         personelUpdate:   "{{ url('fieldworks') }}/",
+        fwoComplete:      "{{ url('fieldworks') }}/",
         userSelect2:      "{{ route('users.select2') }}",
     }
 </script>

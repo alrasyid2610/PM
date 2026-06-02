@@ -8,8 +8,29 @@ let selectedBoq         = null;
 let currentPersonelData = [];
 let personelViewHtml    = null;
 let personelEditIdx     = 0;
+let fwoBoqDirectMode    = false;
+
+// ── Tab switch: show/hide action buttons ──────────────────────────────────────
+$(document).on('shown.bs.tab', '#fwoDetailTabs button[data-bs-toggle="tab"]', function (e) {
+    const target = $(e.target).data('bs-target');
+    $('#fwoTabActionsInfo, #fwoTabActionsPersonel, #fwoTabActionsBoq').addClass('d-none');
+    if (target === '#tabFwoInfo')     $('#fwoTabActionsInfo').removeClass('d-none');
+    if (target === '#tabFwoPersonel') $('#fwoTabActionsPersonel').removeClass('d-none');
+    if (target === '#tabFwoBoq')      $('#fwoTabActionsBoq').removeClass('d-none');
+});
 
 // ── Init ───────────────────────────────────────────────────────────────────────
+window.datatableColumnRenderers = {
+    status: function (data) {
+        if (data === 'completed') {
+            return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:6px;background:#f0fdf4;color:#15803d;font-size:11px;font-weight:600;border:1px solid #bbf7d0;white-space:nowrap;">'
+                + '<i class="fa-solid fa-circle-check" style="font-size:10px;"></i> Completed</span>';
+        }
+        return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:6px;background:#fffbeb;color:#b45309;font-size:11px;font-weight:600;border:1px solid #fde68a;white-space:nowrap;">'
+            + '<i class="fa-solid fa-hourglass-half" style="font-size:10px;"></i> Planned</span>';
+    },
+};
+
 $(document).ready(function () {
 
     // Select2 untuk modal (di-init tanpa URL dulu — URL disetel saat modal buka)
@@ -72,9 +93,21 @@ $(document).ready(function () {
         $('#btnConfirmFwoBoq').prop('disabled', true);
     });
 
+    // Tombol tambah BOQ langsung (tanpa masuk edit mode)
+    $(document).on('click', '#btnAddFwoBoqDirect', function () {
+        addedBoqIds.clear();
+        (fwoBoqData || []).forEach(function (s) { addedBoqIds.add(String(s.id_boq)); });
+        fwoBoqDirectMode = true;
+        selectedBoq = null;
+        resetFwoBoqModal();
+        $('#selectFwoBoq').val(null).trigger('change');
+        new bootstrap.Modal('#modalAddFwoBoq').show();
+    });
+
     // Reset modal saat ditutup
     $('#modalAddFwoBoq').on('hidden.bs.modal', function () {
         selectedBoq = null;
+        fwoBoqDirectMode = false;
         $('#selectFwoBoq').val(null).trigger('change');
         resetFwoBoqModal();
     });
@@ -85,7 +118,6 @@ $(document).ready(function () {
         const qty = $('#fwoBoqQtyInput').val() ? parseInt($('#fwoBoqQtyInput').val()) : null;
         const ket = $('#fwoBoqKetInput').val() || null;
 
-        // client-side qty validation: pakai remaining_qty (sisa dari FWO lain)
         const maxAllowed = selectedBoq.remaining_qty ?? selectedBoq.qty_boq ?? null;
         if (qty && maxAllowed !== null && qty > maxAllowed) {
             const boqHint = selectedBoq.qty_boq ? ` (maks BOQ: ${selectedBoq.qty_boq})` : ` (maks: ${maxAllowed})`;
@@ -93,18 +125,49 @@ $(document).ready(function () {
             return;
         }
 
-        addFwoBoqSection({
-            id_boq:           selectedBoq.id,
-            id_testing_point: selectedBoq.id_testing_point,
-            point_name:       selectedBoq.text,
-            qty:              qty,
-            boq_qty:          selectedBoq.qty_boq,
-            remaining_qty:    selectedBoq.remaining_qty,
-            satuan:           selectedBoq.satuan,
-            keterangan:       ket,
-            items:            window._fwoBoqPreviewItems ?? [],
-        });
-        bootstrap.Modal.getInstance('#modalAddFwoBoq').hide();
+        if (fwoBoqDirectMode) {
+            const $btn = $(this);
+            $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
+
+            const existingSections = (fwoBoqData || []).map(function (s) {
+                return { id_boq: s.id_boq, qty: s.qty, keterangan: s.keterangan };
+            });
+            const allSections = existingSections.concat([{
+                id_boq:     selectedBoq.id,
+                qty:        qty,
+                keterangan: ket,
+            }]);
+
+            $.ajax({
+                url:         window.route.fwoBoqUpdate + currentFwoData.id_fwo,
+                method:      'PUT',
+                contentType: 'application/json',
+                headers:     { 'X-CSRF-TOKEN': window.route.csrf },
+                data:        JSON.stringify({ sections: allSections }),
+                success: function () {
+                    Notify.success('BOQ berhasil ditambahkan');
+                    bootstrap.Modal.getInstance('#modalAddFwoBoq').hide();
+                    loadFwoBoqList(currentFwoData.id_fwo);
+                },
+                error: function (xhr) {
+                    Notify.error(xhr.responseJSON?.message || 'Gagal menambahkan BOQ');
+                    $btn.prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i> Tambah Item');
+                },
+            });
+        } else {
+            addFwoBoqSection({
+                id_boq:           selectedBoq.id,
+                id_testing_point: selectedBoq.id_testing_point,
+                point_name:       selectedBoq.text,
+                qty:              qty,
+                boq_qty:          selectedBoq.qty_boq,
+                remaining_qty:    selectedBoq.remaining_qty,
+                satuan:           selectedBoq.satuan,
+                keterangan:       ket,
+                items:            window._fwoBoqPreviewItems ?? [],
+            });
+            bootstrap.Modal.getInstance('#modalAddFwoBoq').hide();
+        }
     });
 
     // Toggle items di modal tambah BOQ
@@ -137,6 +200,38 @@ $(document).ready(function () {
         addedBoqIds.delete(boqId);
         $(this).closest('.fwo-boq-section').remove();
         checkFwoBoqEmpty();
+    });
+
+    // Selesaikan FWO
+    $(document).on('click', '#btnCompleteFwo', function () {
+        const fwoId = $(this).data('fwo-id');
+        const $btn  = $(this);
+        Swal.fire({
+            title: 'Selesaikan FWO?',
+            html:  'Status akan berubah menjadi <strong>Completed</strong>.<br><span style="font-size:13px;color:#6b7280;">Status tidak dapat dikembalikan ke Planned.</span>',
+            icon:  'question',
+            showCancelButton:    true,
+            confirmButtonText:   '<i class="fa-solid fa-circle-check me-1"></i> Ya, Selesaikan',
+            cancelButtonText:    'Batal',
+            confirmButtonColor:  '#16a34a',
+            cancelButtonColor:   '#6b7280',
+            reverseButtons:      true,
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+            $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin" style="font-size:10px;"></i> Memproses...');
+            $.ajax({
+                url:     window.route.fwoComplete + fwoId + '/complete',
+                method:  'POST',
+                headers: { 'X-CSRF-TOKEN': window.route.csrf },
+                success: function () {
+                    page.loadDetail(page.selectedRow.id);
+                },
+                error: function (xhr) {
+                    Notify.error(xhr.responseJSON?.message || 'Gagal menyelesaikan FWO');
+                    $btn.prop('disabled', false).html('<i class="fa-solid fa-circle-check" style="font-size:10px;"></i> Selesaikan');
+                },
+            });
+        });
     });
 
     page = new CrudPageController({
@@ -331,7 +426,7 @@ function enterFwoBoqEditMode() {
     editHtml += '<div id="fwoBoqEmpty" style="display:none;">' +
         '<div class="card"><div class="card-body text-center text-muted py-4">' +
         '<i class="fa-solid fa-layer-group fa-2x mb-2 d-block opacity-25"></i>' +
-        'Belum ada section. Klik <strong>+ Tambah Section</strong> untuk menambahkan.' +
+        'Belum ada item. Klik <strong>+ Tambah Item</strong> untuk menambahkan.' +
         '</div></div></div>';
 
     $('#fwoBoqContent').html(editHtml);
@@ -348,6 +443,7 @@ function enterFwoBoqEditMode() {
     fwoBoqSnapshot = JSON.stringify(collectFwoBoqSections());
 
     $('#btnAddFwoBoqSection').on('click', function () {
+        fwoBoqDirectMode = false;
         selectedBoq = null;
         resetFwoBoqModal();
         $('#selectFwoBoq').val(null).trigger('change');
