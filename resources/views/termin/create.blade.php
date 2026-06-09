@@ -27,18 +27,14 @@
         <div class="col-12">
             <x-section-card icon="fa-file-invoice-dollar" color="icon-navy" title="Termin" subtitle="Data termin pembayaran proyek">
                 <div class="row g-3">
-                    <div class="col-md-3 col-12">
-                        <label for="nomor" class="form-label required">Nomor</label>
-                        <input type="text" class="form-control" id="nomor" name="nomor" required>
-                    </div>
-                    <div class="col-md-5 col-12">
+                    <div class="col-md-8 col-12">
                         <label for="nama" class="form-label required">Nama</label>
                         <input type="text" class="form-control" id="nama" name="nama" required>
                     </div>
                     <div class="col-md-2 col-12">
-                        <label for="persentase" class="form-label required">Persentase (%)</label>
+                        <label for="persentase" class="form-label">Persentase (%)</label>
                         <input type="number" class="form-control" id="persentase" name="persentase"
-                               step="0.01" min="0" max="100" required>
+                               step="0.01" min="0" max="100">
                     </div>
                     <div class="col-md-2 col-12">
                         <label for="status" class="form-label required">Status</label>
@@ -152,39 +148,107 @@
         var TH = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:8px 12px;color:#64748b;font-weight:600;"';
         var TD = 'style="padding:8px 12px;vertical-align:middle;"';
 
-        var rows = outputs.map(function (item) {
-            return '<tr>' +
-                '<td ' + TD + ' style="width:40px;text-align:center;">' +
-                    '<input type="checkbox" class="form-check-input output-check" ' +
-                    'name="selected_outputs[]" value="' + item.id_output + '">' +
-                '</td>' +
-                '<td ' + TD + ' style="font-size:12px;color:#64748b;white-space:nowrap;">' + escHtml(item.no_wo) + '</td>' +
-                '<td ' + TD + '>' + escHtml(item.judul_output) + '</td>' +
-                '<td ' + TD + '>' +
-                    '<input type="text" name="judul_tagihan[' + item.id_output + ']" ' +
-                    'class="form-control form-control-sm judul-tagihan-input" ' +
-                    'placeholder="Sama seperti judul output" maxlength="255" readonly ' +
-                    'style="background:#f8fafc;color:#94a3b8;">' +
-                '</td>' +
-            '</tr>';
-        }).join('');
+        // Kelompokkan per WO
+        var woGroups = new Map();
+        outputs.forEach(function (item) {
+            var key = item.no_wo || '—';
+            if (!woGroups.has(key)) woGroups.set(key, []);
+            woGroups.get(key).push(item);
+        });
 
-        return '<div class="mb-2 d-flex align-items-center gap-2">' +
-            '<input type="checkbox" class="form-check-input" id="checkAllOutputs">' +
-            '<label for="checkAllOutputs" class="form-label mb-0" style="font-size:12px;cursor:pointer;">Pilih Semua</label>' +
-            '<span class="text-muted ms-2" id="outputCheckCount" style="font-size:11px;"></span>' +
+        var accordionItems = '';
+        woGroups.forEach(function (list, noWo) {
+            var rows = list.map(function (item) {
+                return '<tr>' +
+                    '<td ' + TD + ' style="text-align:center;">' +
+                        '<input type="checkbox" class="form-check-input output-check" ' +
+                        'name="selected_outputs[]" value="' + item.id_output + '">' +
+                    '</td>' +
+                    '<td ' + TD + '>' + escHtml(item.judul_output) + '</td>' +
+                    '<td ' + TD + '>' +
+                        '<input type="text" name="judul_tagihan[' + item.id_output + ']" ' +
+                        'class="form-control form-control-sm judul-tagihan-input" ' +
+                        'placeholder="Sama seperti judul output" maxlength="255" readonly ' +
+                        'style="background:#f8fafc;color:#94a3b8;">' +
+                    '</td>' +
+                '</tr>';
+            }).join('');
+
+            accordionItems +=
+                '<div class="termin-output-accordion-item" style="border-bottom:1px solid #e2e8f0;">' +
+                    '<div class="termin-output-accordion-header" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f8fafc;cursor:pointer;user-select:none;">' +
+                        '<i class="fa-solid fa-chevron-down" style="color:#1a56db;font-size:10px;transition:transform .2s;"></i>' +
+                        '<i class="fa-solid fa-briefcase" style="color:#1a56db;font-size:12px;"></i>' +
+                        '<span style="font-size:13px;font-weight:600;color:#1e293b;">' + escHtml(noWo) + '</span>' +
+                        '<span style="font-size:11px;font-weight:600;padding:1px 8px;border-radius:20px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">' + list.length + ' output</span>' +
+                    '</div>' +
+                    '<div class="termin-output-accordion-body">' +
+                        '<div class="table-responsive">' +
+                        '<table class="table table-sm table-hover mb-0" style="font-size:13px;table-layout:fixed;width:100%;">' +
+                        '<colgroup><col style="width:44px;"><col style="width:50%;"><col style="width:50%;"></colgroup>' +
+                        '<thead style="background:#f8fafc;border-bottom:1px solid #e2e8f0;"><tr>' +
+                        '<th ' + TH + '></th>' +
+                        '<th ' + TH + '>Judul Output</th>' +
+                        '<th ' + TH + '>Judul Tagihan <span style="font-size:10px;color:#94a3b8;">(opsional)</span></th>' +
+                        '</tr></thead>' +
+                        '<tbody>' + rows + '</tbody>' +
+                        '</table></div>' +
+                    '</div>' +
+                '</div>';
+        });
+
+        return '<div class="mb-2 d-flex align-items-center gap-2 flex-wrap">' +
+                '<input type="checkbox" class="form-check-input" id="checkAllOutputs">' +
+                '<label for="checkAllOutputs" class="form-label mb-0" style="font-size:12px;cursor:pointer;">Pilih Semua</label>' +
+                '<span class="text-muted ms-2" id="outputCheckCount" style="font-size:11px;"></span>' +
+                '<div class="ms-auto" style="position:relative;min-width:220px;">' +
+                    '<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:12px;pointer-events:none;">' +
+                        '<i class="fa-solid fa-magnifying-glass"></i>' +
+                    '</span>' +
+                    '<input type="text" id="outputSearchInput" placeholder="Cari judul output..." ' +
+                        'style="width:100%;padding:5px 10px 5px 30px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;outline:none;">' +
+                '</div>' +
             '</div>' +
-            '<div class="table-responsive">' +
-            '<table class="table table-sm table-hover mb-0" style="font-size:13px;">' +
-            '<thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;"><tr>' +
-            '<th ' + TH + ' style="width:40px;"></th>' +
-            '<th ' + TH + ' style="min-width:110px;">No WO</th>' +
-            '<th ' + TH + ' style="min-width:200px;">Judul Output</th>' +
-            '<th ' + TH + ' style="min-width:220px;">Judul Tagihan <span style="font-size:10px;color:#94a3b8;">(opsional)</span></th>' +
-            '</tr></thead>' +
-            '<tbody>' + rows + '</tbody>' +
-            '</table></div>';
+            '<div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;" id="outputAccordionWrap">' +
+            accordionItems +
+            '</div>' +
+            '<div id="outputSearchEmpty" style="display:none;" class="text-center text-muted py-4">' +
+                '<i class="fa-solid fa-magnifying-glass fa-2x d-block mb-2 opacity-25"></i>Tidak ditemukan hasil pencarian</div>';
     }
+
+    $(document).on('input', '#outputSearchInput', function () {
+        var q = $(this).val().toLowerCase().trim();
+        var anyVisible = false;
+
+        $('.termin-output-accordion-item').each(function () {
+            var $item = $(this);
+            var matchCount = 0;
+            $item.find('tbody tr').each(function () {
+                var text = $(this).find('td:nth-child(2)').text().toLowerCase();
+                var match = !q || text.includes(q);
+                $(this).toggle(match);
+                if (match) matchCount++;
+            });
+            var visible = matchCount > 0 || !q;
+            $item.toggle(visible);
+            if (visible && q) {
+                $item.find('.termin-output-accordion-body').show();
+                $item.find('.fa-chevron-down').css('transform', 'rotate(0deg)');
+            }
+            if (visible) anyVisible = true;
+        });
+
+        $('#outputAccordionWrap').toggle(anyVisible);
+        $('#outputSearchEmpty').toggle(!anyVisible);
+    });
+
+    $(document).on('click', '.termin-output-accordion-header', function () {
+        var $body = $(this).next('.termin-output-accordion-body');
+        var $chevron = $(this).find('.fa-chevron-down');
+        var isOpen = $body.is(':visible');
+        $body.slideToggle(150);
+        $chevron.css('transform', isOpen ? 'rotate(-90deg)' : 'rotate(0deg)');
+    });
 
     $(document).on('change', '.output-check', function () {
         var checked = this.checked;
@@ -194,15 +258,19 @@
         } else {
             $input.val('').attr('readonly', true).css({ background: '#f8fafc', color: '#94a3b8' });
         }
-        var total = $('.output-check').length;
-        var selected = $('.output-check:checked').length;
-        $('#outputCheckCount').text(selected + ' dari ' + total + ' dipilih');
+        var $visible = $('.termin-output-accordion-item:visible tbody tr:visible .output-check');
+        var total    = $visible.length;
+        var selected = $visible.filter(':checked').length;
+        var totalAll = $('.output-check:checked').length;
+        $('#outputCheckCount').text(totalAll + ' dari ' + $('.output-check').length + ' dipilih');
         $('#checkAllOutputs').prop('indeterminate', selected > 0 && selected < total);
-        $('#checkAllOutputs').prop('checked', selected === total);
+        $('#checkAllOutputs').prop('checked', total > 0 && selected === total);
     });
 
     $(document).on('change', '#checkAllOutputs', function () {
-        $('.output-check').prop('checked', this.checked).trigger('change');
+        var checked = this.checked;
+        $('.termin-output-accordion-item:visible tbody tr:visible .output-check')
+            .prop('checked', checked).trigger('change');
     });
 
     submitCreateForm({

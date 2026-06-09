@@ -470,9 +470,10 @@ Route::prefix('work-orders')->name('work-orders.')->group(function () {
 });
 
 Route::prefix('output-pekerjaan')->name('output-pekerjaan.')->group(function () {
-    Route::post('/',      [OutputPekerjaanController::class, 'store'])->name('store');
-    Route::post('/{id}',  [OutputPekerjaanController::class, 'update'])->name('update');
-    Route::delete('/{id}',[OutputPekerjaanController::class, 'destroy'])->name('destroy');
+    Route::post('/',              [OutputPekerjaanController::class, 'store'])->name('store');
+    Route::post('/{id}',         [OutputPekerjaanController::class, 'update'])->name('update');
+    Route::post('/{id}/status',  [OutputPekerjaanController::class, 'updateStatus'])->name('updateStatus');
+    Route::delete('/{id}',       [OutputPekerjaanController::class, 'destroy'])->name('destroy');
 });
 
 
@@ -493,7 +494,8 @@ Route::prefix('fieldworks')->name('fieldworks.')->group(function () {
     Route::get('/{id}/history',   [FieldworkController::class, 'history'])->name('history')->whereNumber('id');
     Route::put('/{id}/personels',  [FieldworkController::class, 'updatePersonels'])->name('updatePersonels')->whereNumber('id');
     Route::post('/{id}/duplicate', [FieldworkController::class, 'duplicate'])->name('duplicate')->whereNumber('id');
-    Route::post('/{id}/complete',  [FieldworkController::class, 'complete'])->name('complete')->whereNumber('id');
+    Route::post('/{id}/complete',    [FieldworkController::class, 'complete'])->name('complete')->whereNumber('id');
+    Route::post('/{id}/attachments', [FieldworkController::class, 'updateAttachments'])->name('updateAttachments')->whereNumber('id');
 });
 
 Route::prefix('termin')->name('termin.')->group(function () {

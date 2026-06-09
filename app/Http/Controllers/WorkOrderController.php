@@ -429,24 +429,37 @@ class WorkOrderController extends Controller
         $allFwos = DB::table('fieldworks')
             ->where('id_wo', $id)
             ->whereNull('deleted_at')
-            ->select(['id_fwo', 'no_fwo', 'judul_pekerjaan', 'tanggal_mulai', 'tanggal_selesai', 'status'])
+            ->select(['id_fwo', 'no_fwo', 'judul_pekerjaan', 'keterangan', 'tanggal_mulai', 'tanggal_selesai', 'status'])
             ->orderBy('id_fwo')
             ->get();
 
-        $totalFwoCount    = $allFwos->count();
+        $totalFwoCount     = $allFwos->count();
         $totalFwoCompleted = $allFwos->where('status', 'completed')->count();
 
+        $outputStats = DB::table('output_pekerjaan')
+            ->where('id_wo', $id)
+            ->selectRaw("
+                SUM(CASE WHEN status = 'belum_siap' THEN 1 ELSE 0 END) as belum_siap,
+                SUM(CASE WHEN status = 'siap'       THEN 1 ELSE 0 END) as siap,
+                SUM(CASE WHEN status = 'terkirim'   THEN 1 ELSE 0 END) as terkirim
+            ")
+            ->first();
+
         return response()->json([
-            'total_boq_qty'     => $totalBoqQty,
-            'total_fwo_qty'     => $totalFwoQty,
-            'progress_pct'      => $pct,
-            'total_boq_amount'  => $totalBoqAmount,
-            'total_fwo'         => $totalFwoCount,
-            'fwo_completed'     => $totalFwoCompleted,
+            'total_boq_qty'      => $totalBoqQty,
+            'total_fwo_qty'      => $totalFwoQty,
+            'progress_pct'       => $pct,
+            'total_boq_amount'   => $totalBoqAmount,
+            'total_fwo'          => $totalFwoCount,
+            'fwo_completed'      => $totalFwoCompleted,
+            'output_belum_siap'  => (int) ($outputStats->belum_siap ?? 0),
+            'output_siap'        => (int) ($outputStats->siap ?? 0),
+            'output_terkirim'    => (int) ($outputStats->terkirim ?? 0),
             'fwos'              => $allFwos->map(fn($f) => [
                 'id_fwo'          => $f->id_fwo,
                 'no_fwo'          => $f->no_fwo,
                 'judul_pekerjaan' => $f->judul_pekerjaan,
+                'keterangan'      => $f->keterangan,
                 'tanggal_mulai'   => $f->tanggal_mulai,
                 'tanggal_selesai' => $f->tanggal_selesai,
                 'status'          => $f->status,

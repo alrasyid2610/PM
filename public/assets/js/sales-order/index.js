@@ -155,32 +155,33 @@ function renderWoProgressView(wos) {
 const SO_INTERVAL_LABELS = {1:'Bulanan',2:'Bimulanan',3:'Triwulan',4:'Caturwulan',6:'Semester',12:'Annual'};
 
 function renderWoProgressTable(wos) {
-    const rows = wos.map(function (wo) {
-        const amount = wo.total_boq_amount > 0
-            ? "Rp " + Number(wo.total_boq_amount).toLocaleString("en-US")
-            : "—";
-        const periodBadge = (wo.interval_bulan && wo.no_urut_period)
-            ? `<span class="pm-badge pm-badge--blue">
-                <i class="fa-solid fa-calendar-days" style="font-size:9px;"></i>
-                ${escHtml(SO_INTERVAL_LABELS[wo.interval_bulan] || wo.interval_bulan + ' bln')} ke-${wo.no_urut_period}
-               </span>`
-            : '';
+    // Level 1: kelompokkan per Site Pelanggan
+    const siteGroups = new Map();
+    wos.forEach(function (wo) {
+        const key = wo.nama_site_pelanggan || "—";
+        if (!siteGroups.has(key)) siteGroups.set(key, []);
+        siteGroups.get(key).push(wo);
+    });
 
+    const TH = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';
+    const TD = 'style="padding:8px 12px;vertical-align:middle;"';
+
+    function buildRow(wo, idx) {
+        const periodeKe = wo.no_urut_period
+            ? wo.no_urut_period
+            : '<span style="color:#94a3b8;">—</span>';
         return `<tr>
-            <td>
-                <a href="/work-orders?open=${wo.id_wo}" class="pm-link-record">
+            <td ${TD} style="text-align:center;color:#94a3b8;font-size:12px;">${idx}</td>
+            <td ${TD}>
+                <a href="/work-orders?open=${wo.id_wo}" class="pm-link-record" style="white-space:nowrap;">
                     ${escHtml(wo.no_wo ?? "—")}
                 </a>
             </td>
-            <td>${escHtml(wo.nama_pelanggan ?? "—")}</td>
-            <td>${escHtml(wo.nama_site_pelanggan ?? "—")}</td>
-            <td>
-                <div>${escHtml(wo.judul_pekerjaan ?? "—")}</div>
-                ${periodBadge ? `<div class="mt-1">${periodBadge}</div>` : ''}
-            </td>
-            <td class="text-center" style="color:#7c3aed;font-weight:600;">${wo.fwo_count}</td>
-            <td style="color:#1d4ed8;font-weight:600;white-space:nowrap;">${amount}</td>
-            <td class="text-center" style="white-space:nowrap;">
+            <td ${TD} style="color:#374151;">${escHtml(wo.judul_pekerjaan ?? "—")}</td>
+            <td ${TD} style="color:#64748b;">${wo.keterangan ? escHtml(wo.keterangan) : '<span style="color:#94a3b8;">—</span>'}</td>
+            <td ${TD} style="text-align:center;">${periodeKe}</td>
+            <td ${TD} style="text-align:center;color:#7c3aed;font-weight:600;">${wo.fwo_count}</td>
+            <td ${TD} style="text-align:center;white-space:nowrap;">
                 <a href="/work-orders?open=${wo.id_wo}"
                     class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;" title="Buka detail WO">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i>
@@ -191,25 +192,109 @@ function renderWoProgressTable(wos) {
                 </button>
             </td>
         </tr>`;
-    }).join("");
+    }
 
-    return `<div class="table-responsive">
-        <table class="pm-table" style="min-width:1400px;">
-            <thead>
-                <tr>
-                    <th style="min-width:120px;">No WO</th>
-                    <th style="min-width:220px;">Pelanggan</th>
-                    <th style="min-width:200px;">Site Pelanggan</th>
-                    <th style="min-width:240px;">Judul Pekerjaan</th>
-                    <th style="min-width:90px;text-align:center;">Total FWO</th>
-                    <th style="min-width:130px;">Total Harga</th>
-                    <th style="min-width:90px;">Action</th>
-                </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-        </table>
-    </div>`;
+    function buildPeriodSection(list, interval) {
+        const label = interval
+            ? (SO_INTERVAL_LABELS[interval] || interval + ' bln')
+            : 'Tidak Ada Periode';
+        const badgeColor  = interval ? '#0d9488' : '#64748b';
+        const badgeBg     = interval ? '#ccfbf1'  : '#f1f5f9';
+        const badgeBorder = interval ? '#5eead4' : '#e2e8f0';
+
+        const rows = list.map(function(wo, i) { return buildRow(wo, i + 1); }).join('');
+
+        return `<div style="border-top:1px solid #e2e8f0;">
+            <div class="wo-period-header" style="display:flex;align-items:center;gap:8px;padding:8px 14px 8px 32px;background:#fafbfc;cursor:pointer;user-select:none;">
+                <i class="fa-solid fa-chevron-down" style="color:${badgeColor};font-size:10px;transition:transform .2s;"></i>
+                <i class="fa-solid fa-calendar-days" style="color:${badgeColor};font-size:11px;"></i>
+                <span style="font-size:12px;font-weight:700;color:${badgeColor};text-transform:uppercase;letter-spacing:.5px;">${escHtml(label)}</span>
+                <span style="font-size:11px;font-weight:700;padding:1px 8px;border-radius:20px;background:${badgeBg};color:${badgeColor};border:1px solid ${badgeBorder};">${list.length} WO</span>
+            </div>
+            <div class="wo-period-body">
+                <div class="table-responsive" style="padding-left:32px;">
+                    <table class="table table-sm table-hover table-striped mb-0" style="font-size:13px;min-width:700px;">
+                        <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+                            <tr>
+                                <th ${TH} style="width:40px;text-align:center;">No</th>
+                                <th ${TH} style="min-width:120px;">No WO</th>
+                                <th ${TH} style="min-width:200px;">Judul Pekerjaan</th>
+                                <th ${TH} style="min-width:180px;">Keterangan</th>
+                                <th ${TH} style="min-width:90px;text-align:center;">Urutan ke-</th>
+                                <th ${TH} style="min-width:90px;text-align:center;">Total FWO</th>
+                                <th ${TH} style="min-width:90px;text-align:center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    let items = "";
+    siteGroups.forEach(function (list, site) {
+        // Level 2: kelompokkan per Period (interval_bulan)
+        const periodGroups = new Map();
+        list.forEach(function (wo) {
+            const key = wo.interval_bulan || null;
+            if (!periodGroups.has(key)) periodGroups.set(key, []);
+            periodGroups.get(key).push(wo);
+        });
+
+        // Urutkan: interval_bulan bernilai dulu (kecil ke besar), null terakhir
+        const sortedPeriods = Array.from(periodGroups.entries()).sort(function (a, b) {
+            if (a[0] === null) return 1;
+            if (b[0] === null) return -1;
+            return Number(a[0]) - Number(b[0]);
+        });
+
+        const periodSections = sortedPeriods.map(function (entry) {
+            return buildPeriodSection(entry[1], entry[0]);
+        }).join('');
+
+        items += `<div class="pm-accordion-item">
+            <div class="pm-accordion-header" aria-expanded="false">
+                <div class="pm-accordion-toggle">
+                    <i class="fa-solid fa-chevron-right pm-accordion-chevron"></i>
+                    <i class="fa-solid fa-location-dot" style="color:#1a56db;font-size:12px;flex-shrink:0;"></i>
+                    <span style="font-size:13px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(site)}</span>
+                </div>
+                <div class="pm-accordion-meta">
+                    <span class="pm-badge pm-badge--blue">${list.length} WO</span>
+                </div>
+            </div>
+            <div class="pm-accordion-collapse" style="display:none;">
+                <div class="pm-accordion-body" style="padding:0;">
+                    ${periodSections}
+                </div>
+            </div>
+        </div>`;
+    });
+
+    return `<div class="pm-accordion" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">${items}</div>`;
 }
+
+// Accordion toggle (grup Site Pelanggan pada tab Work Orders)
+$(document).on("click", "#woProgressContent .pm-accordion-header", function (e) {
+    if ($(e.target).closest("a, button").length) return;
+    const $header = $(this);
+    const $body = $header.next(".pm-accordion-collapse");
+    const isOpen = $header.attr("aria-expanded") === "true";
+    $header.attr("aria-expanded", !isOpen);
+    $body.slideToggle(150);
+});
+
+// Toggle period (sub-grup Period dalam site accordion)
+$(document).on("click", "#woProgressContent .wo-period-header", function (e) {
+    if ($(e.target).closest("a, button").length) return;
+    const $header = $(this);
+    const $body = $header.next(".wo-period-body");
+    const $chevron = $header.find(".fa-chevron-down");
+    const isOpen = $body.is(":visible");
+    $body.slideToggle(150);
+    $chevron.css("transform", isOpen ? "rotate(-90deg)" : "rotate(0deg)");
+});
 
 // ── Tab switch — show/hide action buttons ─────────────────────────────────────
 $(document).on('shown.bs.tab', '#soDetailTabs button[data-bs-toggle="tab"]', function (e) {
@@ -255,7 +340,7 @@ function renderTerminTable(rows) {
         const tgl   = t.tanggal ? t.tanggal.substring(0, 10) : '—';
 
         return `<tr>
-            <td><a href="/termin?open=${t.id_termin}" class="pm-link-record">${escHtml(t.nomor ?? '—')}</a></td>
+            <td><a href="/termin?open=${t.id_termin}" class="pm-link-record">${escHtml(t.no_termin ?? '—')}</a></td>
             <td>${escHtml(t.nama ?? '—')}</td>
             <td class="text-center">${pct}</td>
             <td style="color:#1d4ed8;font-weight:600;">${nilai}</td>
@@ -274,7 +359,7 @@ function renderTerminTable(rows) {
         <table class="pm-table">
             <thead>
                 <tr>
-                    <th style="min-width:120px;">Nomor</th>
+                    <th style="min-width:120px;">No Termin</th>
                     <th style="min-width:200px;">Nama</th>
                     <th style="min-width:90px;text-align:center;">%</th>
                     <th style="min-width:130px;">Nilai</th>

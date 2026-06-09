@@ -187,7 +187,7 @@ class FieldworkBoqController extends Controller
     public function update(Request $request, int $id_fwo)
     {
         $validated = $request->validate([
-            'sections'                => 'required|array|min:1',
+            'sections'                => 'present|array',
             'sections.*.id_boq'       => 'required|integer',
             'sections.*.qty'          => 'nullable|integer|min:1',
             'sections.*.keterangan'   => 'nullable|string',

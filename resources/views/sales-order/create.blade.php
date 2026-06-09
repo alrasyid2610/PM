@@ -273,9 +273,64 @@
         });
 
         loadPelangganDetails();
-        //  loadPICInternal();
-        loadAllContacts();
+        initPicInternal();
+
+        // Ketika perusahaan billing berubah → reload PIC billing
+        $('#id_pelanggan').on('select2:select select2:clear', function () {
+            const id_br = $(this).val() || null;
+            initPicSelect('#id_pic_pelanggan', id_br, 'Pilih PIC');
+        });
+
+        // Ketika perusahaan delivery berubah → reload PIC delivery
+        $('select[name="id_pelanggan_delivery"]').on('select2:select select2:clear', function () {
+            const id_br = $(this).val() || null;
+            initPicSelect('#id_pic_pelanggan_delivery', id_br, 'Pilih PIC');
+        });
+
+        // Ketika perusahaan payment berubah → reload PIC payment
+        $('select[name="id_pelanggan_payment"]').on('select2:select select2:clear', function () {
+            const id_br = $(this).val() || null;
+            initPicSelect('#id_pic_pelanggan_payment', id_br, 'Pilih PIC');
+        });
+
+        // Init PIC pelanggan tanpa filter (sebelum perusahaan dipilih)
+        initPicSelect('#id_pic_pelanggan', null, 'Pilih PIC');
+        initPicSelect('#id_pic_pelanggan_delivery', null, 'Pilih PIC');
+        initPicSelect('#id_pic_pelanggan_payment', null, 'Pilih PIC');
     });
+
+    function initPicSelect(selector, id_br, placeholder) {
+        const $el = $(selector);
+        if ($el.hasClass('select2-hidden-accessible')) {
+            $el.val(null).trigger('change');
+            $el.select2('destroy');
+        }
+        $el.empty();
+
+        $el.select2({
+            placeholder: placeholder,
+            allowClear: true,
+            minimumInputLength: 0,
+            ajax: {
+                url: "{{ route('business-relation-contacts.select2') }}",
+                dataType: 'json',
+                delay: 200,
+                data: function (params) {
+                    return { q: params.term || '', id_br: id_br || '' };
+                },
+                processResults: function (data) {
+                    return { results: data };
+                },
+                cache: false,
+            },
+            language: {
+                noResults: function () {
+                    return '<span>Tidak ditemukan. <a href="{{ route("business-relation-contacts.create") }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>';
+                },
+            },
+            escapeMarkup: function (m) { return m; },
+        });
+    }
 
     function loadPelangganDetails() {
         $.ajax({
@@ -325,68 +380,28 @@
         });
     }
 
-    function loadPICInternal() {
-        $.ajax({
-            url: "{{ route('business-relation-contacts.select2') }}",
-            method: "GET",
-            data: { q: "" }, // ← kirim kosong agar return semua data
-            success: function (response) {
-                const selects = [
-                    { id: "#pic_input",               placeholder: "Pilih PIC Input"            },
-                    { id: "#pic_order",               placeholder: "Pilih PIC Order"            },
-                    { id: "#pic_marketing_internal",  placeholder: "Pilih Marketing Internal"   },
-                    { id: "#pic_marketing_eksternal", placeholder: "Pilih Marketing Eksternal"  },
-                ];
+    function initPicInternal() {
+        const selects = [
+            { id: "#pic_input",               placeholder: "Pilih PIC Input"           },
+            { id: "#pic_order",               placeholder: "Pilih PIC Order"           },
+            { id: "#pic_marketing_internal",  placeholder: "Pilih Marketing Internal"  },
+            { id: "#pic_marketing_eksternal", placeholder: "Pilih Marketing Eksternal" },
+        ];
 
-                selects.forEach(function (item) {
-                    // Populate options
-                    $.each(response, function (index, opt) {
-                        $(item.id).append(new Option(opt.text, opt.id));
-                    });
-
-                    // Init select2 — filter di client, tidak ada ajax
-                    $(item.id).select2({
-                        placeholder: item.placeholder,
-                        allowClear: true,
-                    });
-                });
-            },
-            error: function () {
-                Notify.error('Gagal memuat data PIC internal');
-            }
-        });
-    }
-
-    function loadAllContacts() {
-        $.ajax({
-            url: "{{ route('business-relation-contacts.select2') }}",
-            method: "GET",
-            data: { q: "" },
-            success: function (response) {
-                const selects = [
-                    { id: "#id_pic_pelanggan",         placeholder: "Pilih PIC"                  },
-                    { id: "#id_pic_pelanggan_delivery", placeholder: "Pilih PIC"                  },
-                    { id: "#id_pic_pelanggan_payment",  placeholder: "Pilih PIC"                  },
-                    { id: "#pic_input",                 placeholder: "Pilih PIC Input"            },
-                    { id: "#pic_order",                 placeholder: "Pilih PIC Order"            },
-                    { id: "#pic_marketing_internal",    placeholder: "Pilih Marketing Internal"   },
-                    { id: "#pic_marketing_eksternal",   placeholder: "Pilih Marketing Eksternal"  },
-                ];
-
-                selects.forEach(function (item) {
-                    $(item.id).append(new Option("", ""));
-                    $.each(response, function (index, opt) {
-                        $(item.id).append(new Option(opt.text, opt.id));
-                    });
-                    $(item.id).select2({
-                        placeholder: item.placeholder,
-                        allowClear: true,
-                    });
-                });
-            },
-            error: function () {
-                Notify.error('Gagal memuat data PIC');
-            }
+        selects.forEach(function (item) {
+            $(item.id).select2({
+                placeholder: item.placeholder,
+                allowClear: true,
+                minimumInputLength: 0,
+                ajax: {
+                    url: "{{ route('business-relation-contacts.select2') }}",
+                    dataType: 'json',
+                    delay: 200,
+                    data: function (params) { return { q: params.term || '' }; },
+                    processResults: function (data) { return { results: data }; },
+                    cache: true,
+                },
+            });
         });
     }
 

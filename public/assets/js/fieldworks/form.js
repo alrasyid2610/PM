@@ -40,7 +40,7 @@ function renderFwoForm(res) {
                     <button class="pm-tab-btn active" type="button" role="tab"
                         data-bs-toggle="tab" data-bs-target="#tabFwoInfo">
                         <i class="fa-solid fa-hard-hat me-1" style="color:#d97706;font-size:11px;"></i>
-                        Informasi Fieldwork
+                        Informasi
                     </button>
                 </li>
                 <li role="presentation">
@@ -57,6 +57,13 @@ function renderFwoForm(res) {
                         Fieldwork BOQ
                     </button>
                 </li>
+                <li role="presentation">
+                    <button class="pm-tab-btn" type="button" role="tab"
+                        data-bs-toggle="tab" data-bs-target="#tabFwoAttachment">
+                        <i class="fa-solid fa-paperclip me-1" style="color:#7c3aed;font-size:11px;"></i>
+                        Attachment
+                    </button>
+                </li>
             </ul>
             <div class="pm-tab-actions">
                 <div id="fwoTabActionsInfo" class="d-flex align-items-center gap-2">
@@ -69,8 +76,11 @@ function renderFwoForm(res) {
                     <button type="button" id="btnAddFwoBoqDirect" data-no-disable
                         class="pm-btn-pill pm-btn-pill--green">
                         <i class="fa-solid fa-plus" style="font-size:10px;"></i>
-                        <i class="fa-solid fa-clipboard-list" style="font-size:11px;"></i> Tambah BOQ
+                        <i class="fa-solid fa-clipboard-list" style="font-size:11px;"></i> Kelola BOQ
                     </button>
+                </div>
+                <div id="fwoTabActionsAttachment" class="d-flex align-items-center gap-2 d-none">
+                    <!-- Attachment dikelola via tombol Edit FWO di atas -->
                 </div>
             </div>
         </div>
@@ -152,6 +162,17 @@ function renderFwoForm(res) {
                     </div>
                 </div>
 
+                <!-- TAB: ATTACHMENT -->
+                <div class="tab-pane fade" id="tabFwoAttachment" role="tabpanel">
+                    <div class="card card-body">
+                        <div id="fwoAttachmentContent">
+                            <div class="text-center text-muted py-4">
+                                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -175,14 +196,18 @@ function renderFwoBoqView(sections) {
     const rows = sections.map(function (sec, i) {
         const satuan   = sec.satuan ? ' ' + escHtml(sec.satuan) : '';
         const qtyLabel = (sec.qty ?? '—') + (sec.boq_qty ? ' / ' + sec.boq_qty : '') + satuan;
-        const pct      = (sec.boq_qty && sec.qty) ? Math.min(100, Math.round((sec.qty / sec.boq_qty) * 100)) : 0;
-        const pctColor = pct >= 100 ? '#198754' : pct > 0 ? '#1d4ed8' : '#6c757d';
-        const pctBg    = pct >= 100 ? '#d1fae5' : pct > 0 ? '#dbeafe' : '#e9ecef';
 
         return `<tr>
             <td ${TD} style="padding:8px 12px;color:#94a3b8;text-align:center;font-size:12px;">${i + 1}</td>
             <td ${TD} style="padding:8px 12px;color:#374151;font-weight:500;">${escHtml(sec.point_name ?? '—')}</td>
             <td ${TD} style="padding:8px 12px;color:#374151;white-space:nowrap;">${qtyLabel}</td>
+            <td ${TD} style="padding:8px 8px;text-align:center;width:40px;">
+                <button type="button" class="btn-fwo-boq-delete" data-boq-id="${sec.id_boq}"
+                    title="Hapus item ini"
+                    style="background:none;border:none;padding:2px 4px;cursor:pointer;color:#cbd5e1;font-size:13px;line-height:1;">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
         </tr>`;
     }).join('');
 
@@ -193,6 +218,7 @@ function renderFwoBoqView(sections) {
                     <th ${TH} style="width:40px;text-align:center;">#</th>
                     <th ${TH}>Item BOQ</th>
                     <th ${TH} style="min-width:120px;">Qty</th>
+                    <th ${TH} style="width:40px;"></th>
                 </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -328,5 +354,113 @@ function renderPersonelView(personels) {
             </thead>
             <tbody>${rows}</tbody>
         </table>
+    </div>`;
+}
+
+// ── Attachment constants ───────────────────────────────────────────────────────
+const FWO_ATTACHMENT_TYPES = ['Berita Acara', 'Foto Lapangan', 'Laporan Teknis', 'Dokumen Lainnya'];
+
+const FWO_ATT_ICON = {
+    pdf:  { icon: 'fa-file-pdf',   bg: '#fee2e2', color: '#dc2626' },
+    jpg:  { icon: 'fa-image',      bg: '#e8f0fe', color: '#1a5fbe' },
+    jpeg: { icon: 'fa-image',      bg: '#e8f0fe', color: '#1a5fbe' },
+    png:  { icon: 'fa-image',      bg: '#e8f0fe', color: '#1a5fbe' },
+    xls:  { icon: 'fa-file-excel', bg: '#dcfce7', color: '#166534' },
+    xlsx: { icon: 'fa-file-excel', bg: '#dcfce7', color: '#166534' },
+    doc:  { icon: 'fa-file-word',  bg: '#dbeafe', color: '#1d4ed8' },
+    docx: { icon: 'fa-file-word',  bg: '#dbeafe', color: '#1d4ed8' },
+};
+
+// ── Attachment view mode ───────────────────────────────────────────────────────
+function renderFwoAttachmentView(groups) {
+    if (!groups || !groups.length) {
+        return `<div class="text-center text-muted py-4">
+            <i class="fa-solid fa-paperclip fa-2x d-block mb-2 opacity-25"></i>
+            Belum ada attachment
+        </div>`;
+    }
+
+    return groups.map(function (group) {
+        const files = (group.files || []).map(function (path) {
+            const ext  = path.split('.').pop().toLowerCase();
+            const name = path.split('/').pop();
+            const ic   = FWO_ATT_ICON[ext] || { icon: 'fa-file', bg: '#f3f4f6', color: '#6b7280' };
+            const url  = '/storage/' + path;
+            return `<div class="att-row">
+                <div class="att-icon" style="background:${ic.bg};color:${ic.color};">
+                    <i class="fa-solid ${ic.icon}"></i>
+                </div>
+                <div class="att-info">
+                    <span class="att-name" title="${escHtml(name)}">${escHtml(name)}</span>
+                    <span class="att-ext">${ext.toUpperCase()}</span>
+                </div>
+                <div class="att-actions">
+                    <a href="${url}" download class="att-btn att-btn-download" title="Download">
+                        <i class="fa-solid fa-download"></i>
+                    </a>
+                </div>
+            </div>`;
+        }).join('');
+
+        return `<div class="mb-4">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="fa-solid fa-folder-open" style="color:#7c3aed;font-size:13px;"></i>
+                <span class="fw-semibold" style="font-size:13px;color:#374151;">${escHtml(group.type)}</span>
+                <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;">${group.files?.length ?? 0} file</span>
+            </div>
+            <div class="att-list">${files || '<div class="text-muted small">Tidak ada file</div>'}</div>
+        </div>`;
+    }).join('<hr style="margin:8px 0;border-color:#f1f5f9;">');
+}
+
+// ── Attachment edit mode ───────────────────────────────────────────────────────
+function renderFwoAttachmentEditBar() {
+    return `<div class="d-flex justify-content-start mb-3">
+        <button type="button" id="btnAddAttachmentGroup" class="btn btn-outline-primary btn-sm">
+            <i class="fa-solid fa-plus me-1"></i> Tambah Tipe Dokumen
+        </button>
+    </div>`;
+}
+
+function renderFwoAttachmentGroupEdit(group, idx) {
+    const typeOptions = FWO_ATTACHMENT_TYPES.map(function (t) {
+        return `<option value="${escHtml(t)}" ${(group.type === t) ? 'selected' : ''}>${escHtml(t)}</option>`;
+    }).join('');
+
+    const existingFiles = (group.files || []).map(function (path) {
+        const ext  = path.split('.').pop().toLowerCase();
+        const name = path.split('/').pop();
+        const ic   = FWO_ATT_ICON[ext] || { icon: 'fa-file', bg: '#f3f4f6', color: '#6b7280' };
+        return `<div class="att-row att-existing-file" data-path="${escHtml(path)}">
+            <input type="hidden" class="fwo-att-existing" value="${escHtml(path)}">
+            <div class="att-icon" style="background:${ic.bg};color:${ic.color};">
+                <i class="fa-solid ${ic.icon}"></i>
+            </div>
+            <div class="att-info">
+                <span class="att-name" title="${escHtml(name)}">${escHtml(name)}</span>
+                <span class="att-ext">${ext.toUpperCase()}</span>
+            </div>
+            <div class="att-actions">
+                <button type="button" class="att-btn att-btn-delete btn-remove-att-existing" title="Hapus">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        </div>`;
+    }).join('');
+
+    return `<div class="card mb-3 fwo-att-group" data-idx="${idx}">
+        <div class="card-header d-flex justify-content-between align-items-center py-2 px-3"
+            style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+            <select class="form-select form-select-sm fwo-att-type" style="width:220px;">
+                ${typeOptions}
+            </select>
+            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-att-group py-1 px-2" style="font-size:12px;">
+                <i class="fa-solid fa-trash me-1"></i> Hapus Grup
+            </button>
+        </div>
+        <div class="card-body px-3 py-3">
+            ${existingFiles ? `<div class="att-list mb-3">${existingFiles}</div>` : ''}
+            <input type="file" class="fwo-att-filepond" multiple>
+        </div>
     </div>`;
 }

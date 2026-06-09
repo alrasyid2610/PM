@@ -25,6 +25,11 @@
 {{-- STICKY SO INFO BANNER --}}
 <div id="soInfoBanner" style="display:none;position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #e2e8f0;padding:10px 16px;margin:-8px -12px 16px;box-shadow:0 2px 10px rgba(0,0,0,.08);">
     <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size:13px;">
+        <div id="soBannerSiteWrap" style="display:none;align-items:center;gap:6px;min-width:0;">
+            <i class="fa-solid fa-location-dot" style="color:#0891b2;font-size:11px;flex-shrink:0;"></i>
+            <span id="soBannerSite" style="color:#0e7490;font-weight:600;white-space:nowrap;"></span>
+        </div>
+        <div id="soBannerSiteSep" style="display:none;width:1px;height:16px;background:#e2e8f0;flex-shrink:0;"></div>
         <div style="display:flex;align-items:center;gap:6px;min-width:0;">
             <i class="fa-solid fa-file-contract" style="color:#1a56db;font-size:11px;flex-shrink:0;"></i>
             <span id="soBannerNoSo" style="font-weight:700;color:#1a56db;white-space:nowrap;"></span>
@@ -132,6 +137,7 @@
     var dataPelanggan = '';
     var dataSO = '';
     var preselectSoId = new URLSearchParams(window.location.search).get('id_so');
+    var currentSiteWos = [];
 
     $(document).ready(function() {
 
@@ -143,10 +149,15 @@
                 if (!so || !so.id_so) return;
                 const opt = new Option(so.no_so + ' — ' + so.judul_order, so.id_so, true, true);
                 $('#id_sales_order').append(opt).trigger('change');
-                $("input[name='judul_order']").val(so.judul_order).prop('readonly', true);
+                $("input[name='judul_order']").val(so.judul_order);
                 $('#id_sales_order').prop('disabled', true);
                 $('<input>').attr({ type: 'hidden', name: 'id_sales_order', value: so.id_so }).appendTo('#workOrderForm');
 
+                if (so.nama_site_pelanggan) {
+                    $('#soBannerSite').text(so.nama_site_pelanggan);
+                    $('#soBannerSiteWrap').css('display', 'flex');
+                    $('#soBannerSiteSep').css('display', 'block');
+                }
                 $('#soBannerNoSo').text(so.no_so ?? '—');
                 $('#soBannerJudul').text(so.judul_order ?? '—');
                 $('#soInfoBanner').show();
@@ -319,10 +330,26 @@
         initSiteSelect2(idBr || null);
     });
 
+    function autoFillUrutan() {
+        var interval = $('#interval_bulan').val();
+        if (!interval) {
+            $('#no_urut_period').val('');
+            return;
+        }
+        var count = currentSiteWos.filter(function(wo) {
+            return String(wo.interval_bulan) === String(interval);
+        }).length;
+        $('#no_urut_period').val(count + 1);
+    }
+
     $(document).on('change', '#interval_bulan', function() {
         var hasInterval = !!$(this).val();
         $('#noUrutWrap').toggle(hasInterval);
-        if (!hasInterval) $('#no_urut_period').val('');
+        if (!hasInterval) {
+            $('#no_urut_period').val('');
+        } else {
+            autoFillUrutan();
+        }
     });
 
     $(document).on('click', '#woSitePreviewToggle', function() {
@@ -355,17 +382,15 @@
             var filtered = (wos || []).filter(function(wo) {
                 return String(wo.id_site_pelanggan_pekerjaan) === String(id_site);
             });
+            currentSiteWos = filtered;
 
             if (!filtered.length) {
                 $('#woSitePreviewWrap').hide();
-                if ($('#no_urut_period').val() === '') $('#no_urut_period').val(1);
+                autoFillUrutan();
                 return;
             }
 
-            // Auto-suggest urutan berikutnya
-            if ($('#no_urut_period').val() === '') {
-                $('#no_urut_period').val(filtered.length + 1);
-            }
+            autoFillUrutan();
 
             var rows = filtered.map(function(wo) {
                 var badge = '';

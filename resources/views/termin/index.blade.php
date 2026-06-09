@@ -18,7 +18,6 @@
 @section('content')
 <x-crud-index
     title="List of Termin"
-    create-route="termin.create"
     :with-history="true"
 />
 @endsection
@@ -27,6 +26,7 @@
 <script>
     window.route = {
         data:             "{{ route('termin.data') }}",
+        show:             "{{ url('termin') }}/",
         update:           "{{ url('termin') }}/",
         deleteAttachment: "{{ route('termin.delete-attachment') }}",
         history:          "{{ url('termin') }}/",

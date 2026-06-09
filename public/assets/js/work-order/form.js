@@ -16,10 +16,10 @@ function renderForm(res) {
                ${escHtml(res.no_so ?? 'SO')}
            </a>`
         : '';
-    const pelangganTag = res.nama_pelanggan_pekerjaan
+    const pelangganTag = res.nama_site_pelanggan_pekerjaan
         ? `<span class="pm-badge" style="background:#f1f5f9;color:#475569;">
-               <i class="fa-solid fa-building" style="font-size:10px;"></i>
-               ${escHtml(res.nama_pelanggan_pekerjaan)}
+               <i class="fa-solid fa-location-dot" style="font-size:10px;"></i>
+               ${escHtml(res.nama_site_pelanggan_pekerjaan)}
            </span>`
         : '';
 

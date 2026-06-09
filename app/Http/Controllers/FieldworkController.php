@@ -177,6 +177,46 @@ class FieldworkController extends Controller
         return response()->json(['success' => true, 'message' => 'Fieldwork berhasil diperbarui']);
     }
 
+    public function updateAttachments(Request $request, $id)
+    {
+        $request->validate([
+            'groups'                   => 'nullable|array',
+            'groups.*.type'            => 'required|string|max:100',
+            'groups.*.existing'        => 'nullable|array',
+            'groups.*.existing.*'      => 'nullable|string',
+            'groups.*.files'           => 'nullable|array',
+            'groups.*.files.*'         => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:10240',
+        ]);
+
+        $groups = $request->input('groups', []);
+        $result = [];
+
+        foreach ($groups as $i => $group) {
+            $existing = $group['existing'] ?? [];
+            $newFiles = [];
+
+            if ($request->hasFile("groups.{$i}.files")) {
+                $uploaded = uploadAttachment($request->file("groups.{$i}.files"), 'fieldworks');
+                $newFiles = $uploaded['files'];
+            }
+
+            $allFiles = array_merge($existing, $newFiles);
+            if (empty($allFiles)) continue;
+
+            $result[] = [
+                'type'  => $group['type'],
+                'files' => $allFiles,
+            ];
+        }
+
+        DB::table('fieldworks')->where('id_fwo', $id)->update([
+            'attachments' => $result ? json_encode($result) : null,
+            'updated_at'  => now(),
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Attachment berhasil disimpan']);
+    }
+
     public function complete($id)
     {
         $fwo = DB::table('fieldworks')->where('id_fwo', $id)->whereNull('deleted_at')->first();

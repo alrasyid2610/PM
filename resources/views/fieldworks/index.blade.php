@@ -83,6 +83,36 @@
         </div>
     </div>
 </div>
+{{-- Modal: Bulk Tambah BOQ (direct mode) --}}
+<div class="modal fade" id="modalBulkAddFwoBoq" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fa-solid fa-clipboard-list me-2 text-success"></i> Tambah / Edit BOQ
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="bulkBoqLoading" class="text-center text-muted py-4">
+                    <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data BOQ...
+                </div>
+                <div id="bulkBoqEmpty" class="text-center text-muted py-4 d-none">
+                    <i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>
+                    Belum ada BOQ terdaftar di Work Order ini
+                </div>
+                <div id="bulkBoqList" class="d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <small class="text-muted me-auto">Item dengan Qty = 0 tidak akan disimpan</small>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                <button type="button" id="btnSaveBulkBoq" class="btn btn-success btn-sm" disabled>
+                    <i class="fa-solid fa-floppy-disk me-1"></i> Simpan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('custom-script')
@@ -101,6 +131,7 @@
         boqSectionItems:  "{{ url('boq') }}/",
         personelUpdate:   "{{ url('fieldworks') }}/",
         fwoComplete:      "{{ url('fieldworks') }}/",
+        fwoAttachments:   "{{ url('fieldworks') }}/",
         userSelect2:      "{{ route('users.select2') }}",
     }
 </script>

@@ -2,6 +2,17 @@ function renderAssignedOutputsInner(outputs) {
     const TH = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:8px 12px;color:#64748b;font-weight:600;"';
     const TD = 'style="padding:8px 12px;vertical-align:middle;"';
 
+    function outputStatusBadge(status) {
+        const map = {
+            'belum_siap': ['#fee2e2','#dc2626','Belum Siap'],
+            'siap':       ['#dcfce7','#16a34a','Siap'],
+            'terkirim':   ['#dbeafe','#1d4ed8','Terkirim'],
+        };
+        const s = (status || 'belum_siap').toString();
+        const [bg, color, label] = map[s] || map['belum_siap'];
+        return `<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:${bg};color:${color};">${label}</span>`;
+    }
+
     if (outputs && outputs.length) {
         const rows = outputs.map(function (item) {
             return `<tr class="assigned-output-row" data-id="${item.id_output}">
@@ -13,6 +24,7 @@ function renderAssignedOutputsInner(outputs) {
                     }
                 </td>
                 <td ${TD}>${escHtml(item.judul_output)}</td>
+                <td ${TD}>${outputStatusBadge(item.status)}</td>
                 <td ${TD}>
                     <input type="text" name="judul_tagihan[${item.id_output}]"
                         class="form-control form-control-sm disabled"
@@ -28,12 +40,14 @@ function renderAssignedOutputsInner(outputs) {
             </tr>`;
         }).join('');
         return `<div class="table-responsive" id="assignedOutputsTableWrap">
-            <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+            <table class="table table-sm table-hover mb-0" style="font-size:13px;table-layout:fixed;width:100%;">
+                <colgroup><col style="width:120px;"><col style="width:35%;"><col style="width:100px;"><col style="width:30%;"><col style="width:64px;"></colgroup>
                 <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;"><tr>
-                    <th ${TH} style="min-width:110px;">No WO</th>
-                    <th ${TH} style="min-width:200px;">Judul Output</th>
-                    <th ${TH} style="min-width:200px;">Judul Tagihan <span style="font-size:10px;color:#94a3b8;">(opsional)</span></th>
-                    <th ${TH} style="min-width:60px;"></th>
+                    <th ${TH}>No WO</th>
+                    <th ${TH}>Judul Output</th>
+                    <th ${TH}>Status</th>
+                    <th ${TH}>Judul Tagihan <span style="font-size:10px;color:#94a3b8;">(opsional)</span></th>
+                    <th ${TH}></th>
                 </tr></thead>
                 <tbody id="assignedOutputsTbody">${rows}</tbody>
             </table>
@@ -43,12 +57,14 @@ function renderAssignedOutputsInner(outputs) {
     return `<div id="noAssignedOutputMsg" class="text-center text-muted py-3">
             <i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>Belum ada output yang ditagihkan
         </div>
-        <table class="table table-sm mb-0" style="display:none;font-size:13px;" id="assignedOutputsTableWrap">
+        <table class="table table-sm mb-0" style="display:none;font-size:13px;table-layout:fixed;width:100%;" id="assignedOutputsTableWrap">
+            <colgroup><col style="width:120px;"><col style="width:35%;"><col style="width:100px;"><col style="width:30%;"><col style="width:64px;"></colgroup>
             <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;"><tr>
-                <th ${TH} style="min-width:110px;">No WO</th>
-                <th ${TH} style="min-width:200px;">Judul Output</th>
-                <th ${TH} style="min-width:200px;">Judul Tagihan <span style="font-size:10px;color:#94a3b8;">(opsional)</span></th>
-                <th ${TH} style="min-width:60px;"></th>
+                <th ${TH}>No WO</th>
+                <th ${TH}>Judul Output</th>
+                <th ${TH}>Status</th>
+                <th ${TH}>Judul Tagihan <span style="font-size:10px;color:#94a3b8;">(opsional)</span></th>
+                <th ${TH}></th>
             </tr></thead>
             <tbody id="assignedOutputsTbody"></tbody>
         </table>`;
@@ -62,6 +78,12 @@ function renderForm(res) {
                ${escHtml(res.no_so ?? 'SO')}
            </a>`
         : '';
+    const pelangganTag = res.nama_pelanggan_billing
+        ? `<span class="pm-badge" style="background:#f1f5f9;color:#475569;">
+               <i class="fa-solid fa-building" style="font-size:10px;"></i>
+               ${escHtml(res.nama_pelanggan_billing)}
+           </span>`
+        : '';
 
     return `
 <form id="detailForm">
@@ -70,13 +92,13 @@ function renderForm(res) {
     <input type="hidden" name="id_so" value="${res.id_so || ''}">
 
     ${formGroup.actionBar({
-        number: escHtml(res.nomor ?? '—'),
+        number: escHtml(res.no_termin ?? '—'),
         createdAt: escHtml(res.created_at ?? '—'),
         updatedAt: escHtml(res.updated_at ?? '—'),
         deleteId: res.id_termin,
         editText: 'Edit Termin',
         statusBadge: `<span class="detail-status-inline detail-status-${statusKey}">${escHtml(res.status ?? 'Pending')}</span>`,
-        tags: soTag,
+        tags: soTag + pelangganTag,
         noWrap: true,
     })}
 
@@ -103,6 +125,9 @@ function renderForm(res) {
                     <!-- Edit/Hapus di action bar atas -->
                 </div>
                 <div id="terminTabActionsOutput" class="d-flex align-items-center gap-2 d-none">
+                    <button type="button" id="btnRefreshOutputTermin" class="pm-btn-icon" title="Refresh" data-no-disable>
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
                     ${res.id_so
                         ? `<button type="button" id="btnAddOutputTermin" data-so-id="${res.id_so}"
                                class="pm-btn-pill pm-btn-pill--teal" data-no-disable>
@@ -123,9 +148,8 @@ function renderForm(res) {
                         ${formGroup.sectionCard(
                             { icon: 'fa-file-invoice-dollar', color: 'icon-navy', title: 'Informasi Termin', subtitle: 'Data termin pembayaran proyek' },
                             `<div class="row g-3 form-1">
-                                ${formGroup.text("nomor", "Nomor", res.nomor, true, { className: "col-md-3" })}
-                                ${formGroup.text("nama", "Nama", res.nama, true, { className: "col-md-5" })}
-                                ${formGroup.text("persentase", "Persentase (%)", res.persentase, true, { className: "col-md-2" })}
+                                ${formGroup.text("nama", "Nama", res.nama, true, { className: "col-md-8" })}
+                                ${formGroup.text("persentase", "Persentase (%)", res.persentase, false, { className: "col-md-2" })}
                                 ${formGroup.select("status", "Status", res.status,
                                     [
                                         { value: "pending", label: "Pending" },

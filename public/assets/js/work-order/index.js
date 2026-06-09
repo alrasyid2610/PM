@@ -72,11 +72,15 @@ $(document).on("click", ".btn-add-boq-modal", function () {
     new bootstrap.Modal(document.getElementById("modalCreateBoq")).show();
 });
 
-// ── BOQ Summary Card (2 cards) ─────────────────────────────────────────────────
+// ── BOQ Summary Card ───────────────────────────────────────────────────────────
 function renderBoqSummary(data) {
     const totalBoqItems = (data.sections || []).length;
     const totalFwo      = data.total_fwo ?? 0;
     const fwoCompleted  = data.fwo_completed ?? 0;
+    const outBelumSiap  = data.output_belum_siap ?? 0;
+    const outSiap       = data.output_siap ?? 0;
+    const outTerkirim   = data.output_terkirim ?? 0;
+    const totalOutput   = outBelumSiap + outSiap + outTerkirim;
 
     const fwoColor = fwoCompleted >= totalFwo && totalFwo > 0 ? "#16a34a"
                    : fwoCompleted > 0 ? "#d97706" : "#94a3b8";
@@ -93,6 +97,30 @@ function renderBoqSummary(data) {
             </div>
         </div>`;
 
+    const outputCard = totalOutput === 0 ? kpiCard("fa-file-circle-check", "#64748b", "Output", "—", "Belum ada output") :
+        `<div class="pm-kpi-card" style="flex-direction:column;align-items:flex-start;gap:8px;min-width:220px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div class="pm-kpi-icon" style="background:#0f766e;flex-shrink:0;">
+                    <i class="fa-solid fa-file-circle-check"></i>
+                </div>
+                <div>
+                    <div class="pm-kpi-label">Output Pekerjaan</div>
+                    <div class="pm-kpi-value">${totalOutput} <span style="font-size:12px;font-weight:400;color:#94a3b8;">dokumen</span></div>
+                </div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">
+                    <i class="fa-solid fa-clock me-1" style="font-size:9px;"></i>${outBelumSiap} Belum Siap
+                </span>
+                <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;">
+                    <i class="fa-solid fa-check me-1" style="font-size:9px;"></i>${outSiap} Siap
+                </span>
+                <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">
+                    <i class="fa-solid fa-paper-plane me-1" style="font-size:9px;"></i>${outTerkirim} Terkirim
+                </span>
+            </div>
+        </div>`;
+
     $("#boqSummaryCard").html(
         kpiCard("fa-layer-group", "#0891b2", "Total BOQ", totalBoqItems + " item") +
         `<div class="pm-kpi-card">
@@ -104,7 +132,8 @@ function renderBoqSummary(data) {
                 <div class="pm-kpi-value" style="color:${fwoColor};">${fwoCompleted}<span style="font-size:12px;font-weight:500;color:#94a3b8;">/${totalFwo}</span></div>
                 <div class="pm-kpi-sub">FWO selesai</div>
             </div>
-        </div>`
+        </div>` +
+        outputCard
     );
 }
 
@@ -468,7 +497,7 @@ function renderFwoProgressTable(data, id_wo) {
                 : `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;background:#fffbeb;color:#b45309;font-size:11px;font-weight:600;border:1px solid #fde68a;white-space:nowrap;">
                        <i class="fa-solid fa-hourglass-half" style="font-size:10px;"></i> Planned
                    </span>`;
-            const search = [f.no_fwo, f.judul_pekerjaan, f.status]
+            const search = [f.no_fwo, f.judul_pekerjaan, f.keterangan, f.status]
                 .join(" ")
                 .toLowerCase();
 
@@ -480,6 +509,7 @@ function renderFwoProgressTable(data, id_wo) {
                 </a>
             </td>
             <td ${TD} style="color:#374151;">${escHtml(f.judul_pekerjaan ?? "—")}</td>
+            <td ${TD} style="color:#64748b;">${escHtml(f.keterangan ?? "—")}</td>
             <td ${TD}>${statusBadge}</td>
             <td ${TD} style="color:#64748b;white-space:nowrap;">${tglMulai}</td>
             <td ${TD} style="color:#64748b;white-space:nowrap;">${tglSelesai}</td>
@@ -519,7 +549,8 @@ function renderFwoProgressTable(data, id_wo) {
             <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
                 <tr>
                     <th ${TH} style="min-width:140px;">No FWO</th>
-                    <th ${TH} style="min-width:220px;">Judul Pekerjaan</th>
+                    <th ${TH} style="min-width:200px;">Judul Pekerjaan</th>
+                    <th ${TH} style="min-width:180px;">Keterangan</th>
                     <th ${TH} style="min-width:110px;">Status</th>
                     <th ${TH} style="min-width:110px;">Tgl Mulai</th>
                     <th ${TH} style="min-width:110px;">Tgl Selesai</th>
@@ -566,7 +597,7 @@ function renderOutputTable(outputs) {
     var bodyHtml;
     if (!outputs || !outputs.length) {
         bodyHtml =
-            '<tr><td colspan="5" class="text-center text-muted py-4">' +
+            '<tr><td colspan="9" class="text-center text-muted py-4">' +
             '<i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>Belum ada output pekerjaan</td></tr>';
     } else {
         bodyHtml = outputs
@@ -594,41 +625,58 @@ function renderOutputTable(outputs) {
                             .join("");
                     }
                 } catch (e) {}
+                // Status badge
+                var statusMap = {
+                    belum_siap: { label: 'Belum Siap', bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
+                    siap:       { label: 'Siap',       bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
+                    terkirim:   { label: 'Terkirim',   bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+                };
+                var st = statusMap[item.status] || statusMap['belum_siap'];
+                var statusBadge = '<span style="font-size:11px;padding:2px 9px;border-radius:20px;background:' + st.bg + ';color:' + st.color + ';border:1px solid ' + st.border + ';white-space:nowrap;">'
+                    + escHtml(st.label)
+                    + '</span>';
+
+                // Jenis dokumen & qty
+                var jenisBadge = '—';
+                if (item.jenis_dokumen) {
+                    var jLabel = {copy:'Copy', asli:'Asli', asli_dan_copy:'Asli & Copy'}[item.jenis_dokumen] || item.jenis_dokumen;
+                    jenisBadge = '<span style="font-size:11px;padding:2px 8px;border-radius:20px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;white-space:nowrap;">' + escHtml(jLabel) + '</span>';
+                }
+                var qtyCopyHtml = (item.qty_copy != null && (item.jenis_dokumen === 'copy' || item.jenis_dokumen === 'asli_dan_copy'))
+                    ? '<span style="font-weight:600;color:#1d4ed8;">' + item.qty_copy + '</span>'
+                    : '<span style="color:#94a3b8;">—</span>';
+                var qtyAsliHtml = (item.qty_asli != null && (item.jenis_dokumen === 'asli' || item.jenis_dokumen === 'asli_dan_copy'))
+                    ? '<span style="font-weight:600;color:#16a34a;">' + item.qty_asli + '</span>'
+                    : '<span style="color:#94a3b8;">—</span>';
+                // Link drive
+                var driveHtml = item.link_drive
+                    ? '<a href="' + escHtml(item.link_drive) + '" target="_blank" style="font-size:11px;color:#1a56db;"><i class="fa-brands fa-google-drive me-1"></i>Drive</a>'
+                    : '—';
+
                 return (
                     '<tr class="output-data-row" data-id="' +
                     item.id_output +
                     '">' +
-                    "<td " +
-                    TD +
-                    ' style="width:40px;text-align:center;color:#94a3b8;">' +
-                    (idx + 1) +
-                    "</td>" +
-                    "<td " +
-                    TD +
-                    ' style="font-weight:500;">' +
-                    escHtml(item.judul_output) +
-                    "</td>" +
-                    "<td " +
-                    TD +
-                    ' style="color:#64748b;">' +
-                    (item.judul_dokumen ? escHtml(item.judul_dokumen) : "—") +
-                    "</td>" +
-                    "<td " +
-                    TD +
-                    ">" +
-                    attachHtml +
-                    "</td>" +
-                    "<td " +
-                    TD +
-                    ' style="white-space:nowrap;text-align:right;">' +
+                    "<td " + TD + ' style="width:40px;text-align:center;color:#94a3b8;">' + (idx + 1) + "</td>" +
+                    "<td " + TD + ' style="font-weight:500;">' + escHtml(item.judul_output) + "</td>" +
+                    "<td " + TD + ' style="color:#64748b;">' + (item.judul_dokumen ? escHtml(item.judul_dokumen) : "—") + "</td>" +
+                    "<td " + TD + ">" + statusBadge + "</td>" +
+                    "<td " + TD + ">" + jenisBadge + "</td>" +
+                    "<td " + TD + ' style="text-align:center;">' + qtyCopyHtml + "</td>" +
+                    "<td " + TD + ' style="text-align:center;">' + qtyAsliHtml + "</td>" +
+                    "<td " + TD + ">" + driveHtml + "</td>" +
+                    "<td " + TD + ">" + attachHtml + "</td>" +
+                    "<td " + TD + ' style="white-space:nowrap;text-align:right;">' +
+                    (item.status === 'belum_siap'
+                        ? '<button type="button" class="btn btn-sm btn-success py-0 px-2 me-1 btn-output-status" data-id="' + item.id_output + '" data-status="siap" data-no-disable style="font-size:11px;"><i class="fa-solid fa-check me-1"></i>Siap</button>'
+                        : '') +
+                    (item.status === 'siap'
+                        ? '<button type="button" class="btn btn-sm btn-primary py-0 px-2 me-1 btn-output-status" data-id="' + item.id_output + '" data-status="terkirim" data-no-disable style="font-size:11px;"><i class="fa-solid fa-paper-plane me-1"></i>Kirim</button>'
+                        : '') +
                     '<button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 me-1 btn-edit-output" ' +
-                    'data-id="' +
-                    item.id_output +
-                    '" data-no-disable style="font-size:11px;"><i class="fa-solid fa-pen"></i></button>' +
+                    'data-id="' + item.id_output + '" data-no-disable style="font-size:11px;"><i class="fa-solid fa-pen"></i></button>' +
                     '<button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-delete-output" ' +
-                    'data-id="' +
-                    item.id_output +
-                    '" data-no-disable style="font-size:11px;"><i class="fa-solid fa-trash"></i></button>' +
+                    'data-id="' + item.id_output + '" data-no-disable style="font-size:11px;"><i class="fa-solid fa-trash"></i></button>' +
                     "</td></tr>"
                 );
             })
@@ -639,27 +687,21 @@ function renderOutputTable(outputs) {
         '<div class="table-responsive">' +
         '<table class="table table-sm table-hover mb-0" style="font-size:13px;">' +
         '<thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;"><tr>' +
-        "<th " +
-        TH +
-        ' style="width:40px;">#</th>' +
-        "<th " +
-        TH +
-        ' style="min-width:200px;">Judul Output (LHU)</th>' +
-        "<th " +
-        TH +
-        ' style="min-width:180px;">Judul Dokumen</th>' +
-        "<th " +
-        TH +
-        ' style="min-width:150px;">Lampiran</th>' +
-        "<th " +
-        TH +
-        ' style="min-width:80px;"></th>' +
+        "<th " + TH + ' style="width:40px;">#</th>' +
+        "<th " + TH + ' style="min-width:200px;">Judul Output</th>' +
+        "<th " + TH + ' style="min-width:160px;">Nomor Dokumen</th>' +
+        "<th " + TH + ' style="min-width:120px;">Status</th>' +
+        "<th " + TH + ' style="min-width:120px;">Jenis Dok.</th>' +
+        "<th " + TH + ' style="min-width:80px;text-align:center;">Qty Copy</th>' +
+        "<th " + TH + ' style="min-width:80px;text-align:center;">Qty Asli</th>' +
+        "<th " + TH + ' style="min-width:80px;">Drive</th>' +
+        "<th " + TH + ' style="min-width:150px;">Lampiran</th>' +
+        "<th " + TH + ' style="min-width:80px;"></th>' +
         "</tr></thead>" +
         "<tbody>" +
         bodyHtml +
         "</tbody>" +
-        "</table></div>" +
-        '<div id="outputFormWrap"></div>'
+        "</table></div>"
     );
 }
 
@@ -701,58 +743,72 @@ function showOutputForm(data) {
     }
 
     var html =
-        '<div id="outputForm" class="mt-3 p-3" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">' +
-        '<div class="d-flex align-items-center mb-3">' +
-        '<span class="fw-semibold" style="font-size:13px;color:#374151;">' +
-        '<i class="fa-solid fa-' +
-        (isEdit ? "pen" : "plus") +
-        ' me-2" style="color:#0f766e;"></i>' +
-        (isEdit ? "Edit Output" : "Tambah Output") +
-        "</span></div>" +
-        (isEdit
-            ? '<input type="hidden" id="outputEditId" value="' +
-              data.id_output +
-              '">'
-            : "") +
+        (isEdit ? '<input type="hidden" id="outputEditId" value="' + data.id_output + '">' : '') +
         '<div class="row g-3">' +
         '<div class="col-md-6">' +
-        '<label class="form-label form-label-sm text-muted mb-1">Judul Output (LHU) <span class="text-danger">*</span></label>' +
-        '<input type="text" id="outputJudulOutput" class="form-control form-control-sm" placeholder="Judul LHU" maxlength="255" ' +
-        'value="' +
-        (isEdit ? escHtml(data.judul_output || "") : "") +
-        '">' +
-        "</div>" +
+        '<label class="form-label form-label-sm text-muted mb-1">Judul Output <span class="text-danger">*</span></label>' +
+        '<input type="text" id="outputJudulOutput" class="form-control form-control-sm" placeholder="Judul Output" maxlength="255" value="' + (isEdit ? escHtml(data.judul_output || '') : '') + '">' +
+        '</div>' +
         '<div class="col-md-6">' +
-        '<label class="form-label form-label-sm text-muted mb-1">Judul Dokumen (Lab)</label>' +
-        '<input type="text" id="outputJudulDokumen" class="form-control form-control-sm" placeholder="Penamaan dokumen dari lab" maxlength="255" ' +
-        'value="' +
-        (isEdit ? escHtml(data.judul_dokumen || "") : "") +
-        '">' +
-        "</div>" +
+        '<label class="form-label form-label-sm text-muted mb-1">Nomor Dokumen</label>' +
+        '<input type="text" id="outputJudulDokumen" class="form-control form-control-sm" placeholder="Nomor Dokumen" maxlength="255" value="' + (isEdit ? escHtml(data.judul_dokumen || '') : '') + '">' +
+        '</div>' +
+        '<div class="col-md-3">' +
+        '<label class="form-label form-label-sm text-muted mb-1">Status</label>' +
+        '<select id="outputStatus" class="form-select form-select-sm">' +
+        '<option value="belum_siap"' + (isEdit && data.status === 'belum_siap' ? ' selected' : (!isEdit ? ' selected' : '')) + '>Belum Siap</option>' +
+        '<option value="siap"'      + (isEdit && data.status === 'siap'       ? ' selected' : '') + '>Siap</option>' +
+        '<option value="terkirim"'  + (isEdit && data.status === 'terkirim'   ? ' selected' : '') + '>Terkirim</option>' +
+        '</select>' +
+        '</div>' +
+        '<div class="col-md-3">' +
+        '<label class="form-label form-label-sm text-muted mb-1">Jenis Dokumen</label>' +
+        '<select id="outputJenisDokumen" class="form-select form-select-sm">' +
+        '<option value="">— Pilih —</option>' +
+        '<option value="copy"' + (isEdit && data.jenis_dokumen === 'copy' ? ' selected' : '') + '>Copy</option>' +
+        '<option value="asli"' + (isEdit && data.jenis_dokumen === 'asli' ? ' selected' : '') + '>Asli</option>' +
+        '<option value="asli_dan_copy"' + (isEdit && data.jenis_dokumen === 'asli_dan_copy' ? ' selected' : '') + '>Asli dan Copy</option>' +
+        '</select>' +
+        '</div>' +
+        '<div id="outputQtyCopyWrap" class="col-md-3" style="display:none;">' +
+        '<label class="form-label form-label-sm text-muted mb-1">Qty Copy</label>' +
+        '<input type="number" id="outputQtyCopy" class="form-control form-control-sm" placeholder="Jumlah copy" min="1" value="' + (isEdit && data.qty_copy ? data.qty_copy : '') + '">' +
+        '</div>' +
+        '<div id="outputQtyAsliWrap" class="col-md-3" style="display:none;">' +
+        '<label class="form-label form-label-sm text-muted mb-1">Qty Asli</label>' +
+        '<input type="number" id="outputQtyAsli" class="form-control form-control-sm" placeholder="Jumlah asli" min="1" value="' + (isEdit && data.qty_asli ? data.qty_asli : '') + '">' +
+        '</div>' +
+        '<div class="col-md-6">' +
+        '<label class="form-label form-label-sm text-muted mb-1"><i class="fa-brands fa-google-drive me-1" style="color:#1a73e8;"></i>Link Drive</label>' +
+        '<input type="url" id="outputLinkDrive" class="form-control form-control-sm" placeholder="https://drive.google.com/..." value="' + (isEdit && data.link_drive ? escHtml(data.link_drive) : '') + '">' +
+        '</div>' +
         '<div class="col-md-12">' +
         '<label class="form-label form-label-sm text-muted mb-1">Lampiran</label>' +
-        (existingFilesHtml
-            ? '<div id="existingFilesWrap" class="mb-2">' +
-              existingFilesHtml +
-              "</div>"
-            : "") +
+        (existingFilesHtml ? '<div id="existingFilesWrap" class="mb-2">' + existingFilesHtml + '</div>' : '') +
         '<input type="file" id="outputAttachments" multiple>' +
-        "</div></div>" +
-        '<div class="d-flex gap-2 mt-3">' +
-        '<button type="button" id="btnSaveOutput" class="btn btn-sm btn-primary" data-no-disable>' +
-        '<i class="fa-solid fa-floppy-disk me-1"></i> Simpan</button>' +
-        '<button type="button" id="btnCancelOutput" class="btn btn-sm btn-outline-secondary" data-no-disable>Batal</button>' +
-        "</div></div>";
+        '</div></div>';
 
     if (outputFilePond) {
         outputFilePond.destroy();
         outputFilePond = null;
     }
-    $("#outputFormWrap").html(html);
-    outputFilePond = createFileUploader("#outputAttachments");
-    var wrap = document.getElementById("outputFormWrap");
-    if (wrap) wrap.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    $("#outputJudulOutput").focus();
+
+    $('#modalOutputFormTitle').html(
+        '<i class="fa-solid fa-' + (isEdit ? 'pen' : 'plus') + ' me-2" style="color:#0f766e;"></i>' +
+        (isEdit ? 'Edit Output' : 'Tambah Output')
+    );
+    $('#modalOutputFormBody').html(html);
+    outputFilePond = createFileUploader('#outputAttachments');
+    triggerOutputQtyVisibility(isEdit ? (data.jenis_dokumen || '') : '');
+
+    var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalOutputForm'));
+    modal.show();
+    setTimeout(function () { $('#outputJudulOutput').focus(); }, 400);
+}
+
+function triggerOutputQtyVisibility(jenis) {
+    $("#outputQtyCopyWrap").toggle(jenis === 'copy' || jenis === 'asli_dan_copy');
+    $("#outputQtyAsliWrap").toggle(jenis === 'asli' || jenis === 'asli_dan_copy');
 }
 
 // ── Event handlers ─────────────────────────────────────────────────────────────
@@ -830,22 +886,46 @@ $(document).ready(function () {
 
     // ── Output Pekerjaan ─────────────────────────────────────────────────────
     $(document).on("click", "#btnAddOutput", function () {
-        if ($("#outputForm").length && !$("#outputEditId").length) {
-            $("#outputFormWrap").html("");
-            return;
-        }
-        if (!$("#outputFormWrap").length) {
-            $("#outputContent").append('<div id="outputFormWrap"></div>');
-        }
         showOutputForm(null);
     });
 
-    $(document).on("click", "#btnCancelOutput", function () {
+    $(document).on("change", "#outputJenisDokumen", function () {
+        triggerOutputQtyVisibility($(this).val());
+    });
+
+    // Tombol aksi status
+    $(document).on("click", ".btn-output-status", function () {
+        var $btn = $(this);
+        var id = $btn.data('id');
+        var newStatus = $btn.data('status');
+        var label = newStatus === 'siap' ? 'Siap' : 'Terkirim';
+
+        Notify.confirm('Ubah status menjadi <b>' + label + '</b>?', function () {
+            $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
+            $.ajax({
+                url: window.route.outputBase + id + '/status',
+                method: 'POST',
+                data: { _token: window.route.csrf, status: newStatus },
+                success: function () {
+                    Notify.success('Status diperbarui menjadi ' + label);
+                    loadOutputProgress(currentOutputWoId);
+                    loadBoqProgress(currentOutputWoId);
+                },
+                error: function () {
+                    Notify.error('Gagal mengubah status');
+                    $btn.prop('disabled', false);
+                }
+            });
+        });
+    });
+
+
+    $('#modalOutputForm').on('hidden.bs.modal', function () {
         if (outputFilePond) {
             outputFilePond.destroy();
             outputFilePond = null;
         }
-        $("#outputFormWrap").html("");
+        $('#modalOutputFormBody').html('');
     });
 
     $(document).on("click", ".btn-edit-output", function () {
@@ -866,7 +946,7 @@ $(document).ready(function () {
             Swal.fire({
                 icon: "warning",
                 title: "Field wajib diisi",
-                text: "Judul Output (LHU) harus diisi.",
+                text: "Judul Output harus diisi.",
             });
             return;
         }
@@ -877,6 +957,11 @@ $(document).ready(function () {
         fd.append("_token", window.route.csrf);
         fd.append("judul_output", judulOutput);
         fd.append("judul_dokumen", $("#outputJudulDokumen").val().trim());
+        fd.append("status", $("#outputStatus").val());
+        fd.append("jenis_dokumen", $("#outputJenisDokumen").val());
+        fd.append("qty_copy", $("#outputQtyCopy").val() || '');
+        fd.append("qty_asli", $("#outputQtyAsli").val() || '');
+        fd.append("link_drive", $("#outputLinkDrive").val().trim());
         if (!isEdit) {
             fd.append("id_wo", currentOutputWoId);
         }
@@ -906,17 +991,12 @@ $(document).ready(function () {
             processData: false,
             contentType: false,
             success: function () {
-                Notify.success(
-                    isEdit
-                        ? "Output berhasil diperbarui"
-                        : "Output berhasil ditambahkan",
-                );
-                if (outputFilePond) {
-                    outputFilePond.destroy();
-                    outputFilePond = null;
-                }
-                $("#outputFormWrap").html("");
+                Notify.success(isEdit ? "Output berhasil diperbarui" : "Output berhasil ditambahkan");
+                $btn.prop("disabled", false).html('<i class="fa-solid fa-floppy-disk me-1"></i> Simpan');
+                var modal = bootstrap.Modal.getInstance(document.getElementById('modalOutputForm'));
+                if (modal) modal.hide();
                 loadOutputProgress(currentOutputWoId);
+                loadBoqProgress(currentOutputWoId);
             },
             error: function (xhr) {
                 Notify.error(xhr.responseJSON?.message || "Terjadi kesalahan");

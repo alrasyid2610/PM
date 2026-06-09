@@ -64,8 +64,12 @@ class TerminController extends Controller
             ->make(true);
     }
 
-    public function create()
+    public function create(Request $request)
     {
+        if (!$request->filled('id_so')) {
+            return redirect()->route('termin.index');
+        }
+
         return view('termin.create', [
             'title' => 'Create Termin'
         ]);
@@ -74,9 +78,8 @@ class TerminController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nomor'         => 'required|string|max:50|unique:termin,nomor',
             'nama'          => 'required|string|max:255',
-            'persentase'    => 'required|numeric|min:0|max:100',
+            'persentase'    => 'nullable|numeric|min:0|max:100',
             'nilai'         => 'required|numeric|min:0',
             'tanggal'       => 'required|date',
             'status'        => 'required|in:pending,proses,selesai',
@@ -91,7 +94,6 @@ class TerminController extends Controller
         $id = DB::table('termin')->insertGetId([
             'id_so'      => $request->id_so ?: null,
             'no_termin'  => $this->generateNoTermin(),
-            'nomor'      => $request->nomor,
             'nama'       => $request->nama,
             'persentase' => $request->persentase,
             'nilai'      => $request->nilai,
@@ -123,8 +125,9 @@ class TerminController extends Controller
     {
         $data = DB::table('termin as t')
             ->leftJoin('sales_orders as so', 'so.id_so', '=', 't.id_so')
+            ->leftJoin('business_relations as br', 'br.id_br', '=', 'so.id_pelanggan')
             ->where('t.id_termin', $id)
-            ->select('t.*', 'so.no_so', 'so.judul_order')
+            ->select('t.*', 'so.no_so', 'so.judul_order', 'br.nama as nama_pelanggan_billing')
             ->first();
 
         if (!$data) {
@@ -134,7 +137,7 @@ class TerminController extends Controller
         $data->assigned_outputs = DB::table('output_pekerjaan as op')
             ->leftJoin('work_orders as wo', 'wo.id_wo', '=', 'op.id_wo')
             ->where('op.id_termin', $id)
-            ->select('op.id_output', 'op.id_wo', 'op.judul_output', 'op.judul_tagihan', 'wo.no_wo')
+            ->select('op.id_output', 'op.id_wo', 'op.judul_output', 'op.judul_tagihan', 'op.status', 'wo.no_wo')
             ->orderBy('wo.no_wo')
             ->orderBy('op.id_output')
             ->get();
@@ -146,8 +149,9 @@ class TerminController extends Controller
     {
         $data = DB::table('termin as t')
             ->leftJoin('sales_orders as so', 'so.id_so', '=', 't.id_so')
+            ->leftJoin('business_relations as br', 'br.id_br', '=', 'so.id_pelanggan')
             ->where('t.id_termin', $id)
-            ->select('t.*', 'so.no_so', 'so.judul_order')
+            ->select('t.*', 'so.no_so', 'so.judul_order', 'br.nama as nama_pelanggan_billing')
             ->first();
 
         if (!$data) {
@@ -157,7 +161,7 @@ class TerminController extends Controller
         $data->assigned_outputs = DB::table('output_pekerjaan as op')
             ->leftJoin('work_orders as wo', 'wo.id_wo', '=', 'op.id_wo')
             ->where('op.id_termin', $id)
-            ->select('op.id_output', 'op.id_wo', 'op.judul_output', 'op.judul_tagihan', 'wo.no_wo')
+            ->select('op.id_output', 'op.id_wo', 'op.judul_output', 'op.judul_tagihan', 'op.status', 'wo.no_wo')
             ->orderBy('wo.no_wo')
             ->orderBy('op.id_output')
             ->get();
@@ -214,7 +218,7 @@ class TerminController extends Controller
         $request->validate([
             'nomor'      => 'required|string|max:50',
             'nama'       => 'required|string|max:255',
-            'persentase' => 'required|numeric|min:0|max:100',
+            'persentase' => 'nullable|numeric|min:0|max:100',
             'nilai'      => 'required|numeric|min:0',
             'tanggal'    => 'required|date',
             'status'     => 'required|in:pending,proses,selesai',
@@ -293,8 +297,8 @@ class TerminController extends Controller
     {
         $rows = DB::table('termin')
             ->where('id_so', $id_so)
-            ->orderBy('nomor')
-            ->select(['id_termin', 'nomor', 'nama', 'persentase', 'nilai', 'tanggal', 'status', 'created_at'])
+            ->orderBy('id_termin')
+            ->select(['id_termin', 'no_termin', 'nama', 'persentase', 'nilai', 'tanggal', 'status', 'created_at'])
             ->get();
 
         return response()->json($rows->values());
@@ -321,7 +325,7 @@ class TerminController extends Controller
     private function generateNoTermin(): string
     {
         $year   = now()->format('y');
-        $prefix = "INV-{$year}-";
+        $prefix = "ST-{$year}-";
 
         $latest = DB::table('termin')
             ->whereNotNull('no_termin')

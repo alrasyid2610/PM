@@ -144,14 +144,16 @@ class BusinessRelationContactController extends Controller
     public function select2(Request $request)
     {
         $search = $request->q;
+        $id_br  = $request->id_br;
 
         $data = DB::table('business_relation_contacts')
             ->whereNull('deleted_at')
+            ->when($id_br, fn($q) => $q->where('id_br', $id_br))
             ->where(function ($q) use ($search) {
                 $q->where('nama_pic', 'like', "%{$search}%")
                   ->orWhere('nomor_telepon_pic', 'like', "%{$search}%");
             })
-            ->limit(10)
+            ->limit(50)
             ->get();
 
         return response()->json(

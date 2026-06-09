@@ -37,6 +37,29 @@
     </div>
 </div>
 
+{{-- Modal: Output Pekerjaan --}}
+<div class="modal fade" id="modalOutputForm" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title" id="modalOutputFormTitle">
+                    <i class="fa-solid fa-file-circle-check me-2 text-teal"></i> Tambah Output
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modalOutputFormBody"></div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" id="btnSaveOutput" class="btn btn-sm btn-primary" data-no-disable>
+                    <i class="fa-solid fa-floppy-disk me-1"></i> Simpan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- Modal: Copy FWO --}}
 <div class="modal fade" id="modalCopyFwo" tabindex="-1" aria-labelledby="modalCopyFwoLabel">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">

@@ -1,22 +1,27 @@
 let page;
-let currentFwoData      = null;
-let fwoBoqData          = [];
-let fwoBoqViewHtml      = null;
-let fwoBoqSnapshot      = null;
-let addedBoqIds         = new Set();
-let selectedBoq         = null;
-let currentPersonelData = [];
-let personelViewHtml    = null;
-let personelEditIdx     = 0;
-let fwoBoqDirectMode    = false;
+let currentFwoData        = null;
+let fwoBoqData            = [];
+let fwoBoqViewHtml        = null;
+let fwoBoqSnapshot        = null;
+let addedBoqIds           = new Set();
+let selectedBoq           = null;
+let currentPersonelData   = [];
+let personelViewHtml      = null;
+let personelEditIdx       = 0;
+let fwoBoqDirectMode      = false;
+let fwoAttachmentData     = [];
+let fwoAttachmentViewHtml = null;
+let fwoAttPondInstances   = [];
+let fwoAttGroupIdx        = 0;
 
 // ── Tab switch: show/hide action buttons ──────────────────────────────────────
 $(document).on('shown.bs.tab', '#fwoDetailTabs button[data-bs-toggle="tab"]', function (e) {
     const target = $(e.target).data('bs-target');
     $('#fwoTabActionsInfo, #fwoTabActionsPersonel, #fwoTabActionsBoq').addClass('d-none');
-    if (target === '#tabFwoInfo')     $('#fwoTabActionsInfo').removeClass('d-none');
-    if (target === '#tabFwoPersonel') $('#fwoTabActionsPersonel').removeClass('d-none');
-    if (target === '#tabFwoBoq')      $('#fwoTabActionsBoq').removeClass('d-none');
+    if (target === '#tabFwoInfo')       $('#fwoTabActionsInfo').removeClass('d-none');
+    if (target === '#tabFwoPersonel')   $('#fwoTabActionsPersonel').removeClass('d-none');
+    if (target === '#tabFwoBoq')        $('#fwoTabActionsBoq').removeClass('d-none');
+    if (target === '#tabFwoAttachment') $('#fwoTabActionsAttachment').removeClass('d-none');
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────────
@@ -93,23 +98,130 @@ $(document).ready(function () {
         $('#btnConfirmFwoBoq').prop('disabled', true);
     });
 
-    // Tombol tambah BOQ langsung (tanpa masuk edit mode)
+    // Tombol tambah BOQ langsung (bulk mode — tampil semua BOQ sekaligus)
     $(document).on('click', '#btnAddFwoBoqDirect', function () {
-        addedBoqIds.clear();
-        (fwoBoqData || []).forEach(function (s) { addedBoqIds.add(String(s.id_boq)); });
-        fwoBoqDirectMode = true;
-        selectedBoq = null;
-        resetFwoBoqModal();
-        $('#selectFwoBoq').val(null).trigger('change');
-        new bootstrap.Modal('#modalAddFwoBoq').show();
+        openBulkBoqModal();
     });
 
-    // Reset modal saat ditutup
+    // Reset modal lama saat ditutup
     $('#modalAddFwoBoq').on('hidden.bs.modal', function () {
         selectedBoq = null;
         fwoBoqDirectMode = false;
         $('#selectFwoBoq').val(null).trigger('change');
         resetFwoBoqModal();
+    });
+
+    // Simpan bulk BOQ
+    $(document).on('click', '#btnSaveBulkBoq', function () {
+        saveBulkBoq($(this));
+    });
+
+    // Hapus satu item BOQ dari view mode
+    $(document).on('click', '.btn-fwo-boq-delete', function () {
+        const boqId   = String($(this).data('boq-id'));
+        const ptName  = $(this).closest('tr').find('td:nth-child(2)').text().trim();
+
+        Swal.fire({
+            icon:              'warning',
+            title:             'Hapus Item BOQ?',
+            html:              '<strong>' + escHtml(ptName) + '</strong>',
+            showCancelButton:  true,
+            confirmButtonText: '<i class="fa-solid fa-trash me-1"></i> Hapus',
+            cancelButtonText:  'Batal',
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor:  '#6b7280',
+            reverseButtons:    true,
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+
+            const remaining = (fwoBoqData || []).filter(function (s) {
+                return String(s.id_boq) !== boqId;
+            });
+
+            if (!remaining.length) {
+                Notify.warning('Tidak dapat menghapus — minimal harus ada 1 item BOQ');
+                return;
+            }
+
+            const sections = remaining.map(function (s) {
+                return { id_boq: s.id_boq, qty: s.qty, keterangan: s.keterangan };
+            });
+
+            $.ajax({
+                url:         window.route.fwoBoqUpdate + currentFwoData.id_fwo,
+                method:      'PUT',
+                contentType: 'application/json',
+                headers:     { 'X-CSRF-TOKEN': window.route.csrf },
+                data:        JSON.stringify({ sections }),
+                success: function () {
+                    Notify.success('Item BOQ berhasil dihapus');
+                    loadFwoBoqList(currentFwoData.id_fwo);
+                },
+                error: function (xhr) {
+                    Notify.error(xhr.responseJSON?.message || 'Gagal menghapus item BOQ');
+                },
+            });
+        });
+    });
+
+    // Hapus file existing dalam edit mode attachment
+    $(document).on('click', '.btn-remove-att-existing', function () {
+        $(this).closest('.att-existing-file').remove();
+    });
+
+    // Hapus grup attachment
+    $(document).on('click', '.btn-remove-att-group', function () {
+        const $group = $(this).closest('.fwo-att-group');
+        const idx    = $group.data('idx');
+        const pond   = fwoAttPondInstances[idx];
+        if (pond) { pond.destroy(); delete fwoAttPondInstances[idx]; }
+        $group.remove();
+    });
+
+    // Eye toggle untuk detail items di bulk modal
+    $(document).on('click', '.btn-bulk-eye', function () {
+        const $btn     = $(this);
+        const id_boq   = $btn.data('boq-id');
+        const $detail  = $btn.siblings('.bulk-boq-items-detail');
+        const $icon    = $btn.find('i');
+
+        if ($detail.is(':visible')) {
+            $detail.hide();
+            $icon.removeClass('fa-eye-slash').addClass('fa-eye');
+            return;
+        }
+
+        if ($detail.data('loaded')) {
+            $detail.show();
+            $icon.removeClass('fa-eye').addClass('fa-eye-slash');
+            return;
+        }
+
+        $detail.html('<span class="text-muted small"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</span>').show();
+        $icon.removeClass('fa-eye').addClass('fa-eye-slash');
+
+        $.get(window.route.boqSectionItems + id_boq + '/section-items?id_fwo=' + (currentFwoData?.id_fwo ?? 0), function (res) {
+            const items = res.items ?? [];
+            if (!items.length) {
+                $detail.html('<span class="text-muted small">Tidak ada item</span>');
+            } else {
+                $detail.html(
+                    '<div style="border-left:3px solid #e2e8f0;padding-left:8px;margin-top:4px;">' +
+                    items.map(function (item, j) {
+                        return `<div class="text-muted small py-1" style="${j > 0 ? 'border-top:1px solid #f1f5f9;' : ''}">
+                            <span class="fw-semibold text-dark">${j + 1}.</span>
+                            ${escHtml(item.judul_indonesia ?? '—')}
+                            <span class="text-muted">/ ${escHtml(item.judul_inggris ?? '—')}</span>
+                            <span class="item-meta-badge ms-1">${escHtml(item.kode_unit || '—')} · ${escHtml(String(item.nilai ?? '—'))}</span>
+                        </div>`;
+                    }).join('') +
+                    '</div>'
+                );
+            }
+            $detail.data('loaded', true);
+        }).fail(function () {
+            $detail.html('<span class="text-danger small">Gagal memuat</span>');
+        });
     });
 
     // Konfirmasi tambah section
@@ -245,7 +357,13 @@ $(document).ready(function () {
         afterLoad: function (res) {
             currentFwoData      = res;
             currentPersonelData = res.personels || [];
+            try {
+                fwoAttachmentData = res.attachments
+                    ? (typeof res.attachments === 'string' ? JSON.parse(res.attachments) : res.attachments)
+                    : [];
+            } catch (e) { fwoAttachmentData = []; }
             $('#fwoPersonelContent').html(renderPersonelView(currentPersonelData));
+            $('#fwoAttachmentContent').html(renderFwoAttachmentView(fwoAttachmentData));
             loadFwoBoqList(res.id_fwo);
         },
     });
@@ -256,10 +374,12 @@ $(document).ready(function () {
             onEditStart: function () {
                 enterPersonelEditMode();
                 enterFwoBoqEditMode();
+                enterFwoAttachmentEditMode();
             },
             onEditCancel: function () {
                 exitPersonelEditMode();
                 exitFwoBoqEditMode();
+                exitFwoAttachmentEditMode();
             },
             onSave: function () {
                 saveAll(page.selectedRow.id);
@@ -494,11 +614,6 @@ function saveAll(id_fwo) {
                     headers:     { 'X-CSRF-TOKEN': window.route.csrf },
                     data:        JSON.stringify({ personels }),
                     success: function () {
-                        if (!boqSections.length) {
-                            Notify.success('Data berhasil disimpan');
-                            page.loadDetail(id_fwo);
-                            return;
-                        }
                         $.ajax({
                             url:         window.route.fwoBoqUpdate + id_fwo,
                             method:      'PUT',
@@ -506,8 +621,10 @@ function saveAll(id_fwo) {
                             headers:     { 'X-CSRF-TOKEN': window.route.csrf },
                             data:        JSON.stringify({ sections: boqSections }),
                             success: function () {
-                                Notify.success('Data berhasil disimpan');
-                                page.loadDetail(id_fwo);
+                                saveAttachments(id_fwo, function () {
+                                    Notify.success('Data berhasil disimpan');
+                                    page.loadDetail(id_fwo);
+                                });
                             },
                             error: function (xhr) {
                                 Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan Fieldwork BOQ');
@@ -601,6 +718,165 @@ function loadFwoBoqSectionPreview(id_boq) {
     });
 }
 
+// ── Bulk BOQ modal (direct mode) ───────────────────────────────────────────────
+function openBulkBoqModal() {
+    $('#bulkBoqLoading').removeClass('d-none');
+    $('#bulkBoqEmpty, #bulkBoqList').addClass('d-none');
+    $('#btnSaveBulkBoq').prop('disabled', true);
+    new bootstrap.Modal('#modalBulkAddFwoBoq').show();
+
+    $.get(
+        window.route.boqSelect2ByWo + (currentFwoData?.id_wo ?? 0) +
+        '?id_fwo=' + (currentFwoData?.id_fwo ?? 0),
+        function (data) {
+            $('#bulkBoqLoading').addClass('d-none');
+            if (!data || !data.length) {
+                $('#bulkBoqEmpty').removeClass('d-none');
+                return;
+            }
+            $('#bulkBoqList').html(renderBulkBoqList(data)).removeClass('d-none');
+            $('#btnSaveBulkBoq').prop('disabled', false);
+        }
+    ).fail(function () {
+        $('#bulkBoqLoading').addClass('d-none');
+        $('#bulkBoqEmpty').removeClass('d-none');
+    });
+}
+
+function renderBulkBoqList(boqItems) {
+    const TH = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';
+    const TD = 'style="padding:8px 10px;vertical-align:middle;"';
+
+    const added    = boqItems.filter(function (item) {
+        return (fwoBoqData || []).some(function (s) { return String(s.id_boq) === String(item.id); });
+    });
+    const notAdded = boqItems.filter(function (item) {
+        return !(fwoBoqData || []).some(function (s) { return String(s.id_boq) === String(item.id); });
+    });
+
+    function buildRow(item, num) {
+        const existing    = (fwoBoqData || []).find(function (s) { return String(s.id_boq) === String(item.id); });
+        const existingQty = existing ? (existing.qty ?? '') : '';
+        const existingKet = existing ? (existing.keterangan ?? '') : '';
+        const satuan      = item.satuan ? ' ' + escHtml(item.satuan) : '';
+        const sisaColor   = (item.remaining_qty > 0) ? '#1d4ed8' : '#dc2626';
+
+        return `<tr>
+            <td ${TD} style="padding:8px 12px;color:#94a3b8;text-align:center;font-size:12px;">${num}</td>
+            <td ${TD} style="padding:8px 12px;color:#1e293b;font-weight:500;">
+                ${escHtml(item.text ?? '—')}
+                <button type="button" class="btn-bulk-eye"
+                    data-boq-id="${item.id}" title="Lihat detail items"
+                    style="background:none;border:none;padding:0 0 0 4px;cursor:pointer;color:#94a3b8;font-size:12px;vertical-align:middle;line-height:1;">
+                    <i class="fa-solid fa-eye"></i>
+                </button>
+                <div class="bulk-boq-items-detail mt-1" style="display:none;"></div>
+            </td>
+            <td ${TD} style="padding:8px 12px;color:#475569;white-space:nowrap;">${item.qty_boq ?? '—'}${satuan}</td>
+            <td ${TD} style="padding:8px 12px;white-space:nowrap;">
+                <span style="color:${sisaColor};font-weight:600;">${item.remaining_qty ?? '—'}${satuan}</span>
+            </td>
+            <td ${TD} style="padding:8px 10px;width:110px;">
+                <input type="number" class="form-control form-control-sm bulk-boq-qty"
+                    data-boq-id="${item.id}"
+                    data-max="${item.remaining_qty ?? ''}"
+                    min="0" placeholder="0" value="${escHtml(String(existingQty))}">
+            </td>
+            <td ${TD} style="padding:8px 10px;">
+                <input type="text" class="form-control form-control-sm bulk-boq-ket"
+                    placeholder="opsional" value="${escHtml(existingKet)}">
+            </td>
+        </tr>`;
+    }
+
+    const addedRows    = added.map(function (item, i) { return buildRow(item, i + 1); }).join('');
+    const notAddedRows = notAdded.map(function (item, i) { return buildRow(item, added.length + i + 1); }).join('');
+
+    const dividerRow = (added.length && notAdded.length)
+        ? `<tr>
+            <td colspan="6" style="padding:4px 0;">
+                <hr style="margin:4px 12px;border-color:#e2e8f0;">
+                <span style="display:block;text-align:center;color:#94a3b8;font-size:11px;font-weight:600;letter-spacing:.4px;margin-bottom:4px;">
+                    + Tambahkan item lainnya
+                </span>
+            </td>
+           </tr>`
+        : '';
+
+    return `<div class="table-responsive">
+        <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+            <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+                <tr>
+                    <th ${TH} style="width:40px;text-align:center;">#</th>
+                    <th ${TH}>Item BOQ</th>
+                    <th ${TH}>Qty Kontrak</th>
+                    <th ${TH}>Sisa</th>
+                    <th ${TH} style="width:110px;">Qty FWO</th>
+                    <th ${TH}>Keterangan</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${addedRows}
+                ${dividerRow}
+                ${notAddedRows}
+            </tbody>
+        </table>
+    </div>`;
+}
+
+function saveBulkBoq($btn) {
+    const sections = [];
+    let hasError   = false;
+
+    $('#bulkBoqList .bulk-boq-qty').each(function () {
+        const qty = parseInt($(this).val()) || 0;
+        if (qty <= 0) return;
+
+        const maxRaw  = $(this).data('max');
+        const max     = maxRaw !== '' && maxRaw !== undefined ? parseInt(maxRaw) : null;
+        if (max !== null && qty > max) {
+            const namaItem = $(this).closest('tr').find('td:nth-child(2)').clone().find('.btn-bulk-eye, .bulk-boq-items-detail').remove().end().text().trim();
+            Swal.fire({
+                icon: 'warning',
+                title: 'Perhatian',
+                html: '<strong>' + escHtml(namaItem) + '</strong><br><span style="font-size:14px;">Qty melebihi sisa yang tersedia (maks: ' + max + ')</span>',
+            });
+            hasError = true;
+            return false;
+        }
+
+        const id_boq = parseInt($(this).data('boq-id'));
+        const ket    = $(this).closest('tr').find('.bulk-boq-ket').val() || null;
+        sections.push({ id_boq, qty, keterangan: ket });
+    });
+
+    if (hasError) return;
+    if (!sections.length) {
+        Notify.warning('Isi minimal 1 item dengan Qty lebih dari 0');
+        return;
+    }
+
+    $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
+
+    $.ajax({
+        url:         window.route.fwoBoqUpdate + currentFwoData.id_fwo,
+        method:      'PUT',
+        contentType: 'application/json',
+        headers:     { 'X-CSRF-TOKEN': window.route.csrf },
+        data:        JSON.stringify({ sections }),
+        success: function () {
+            $btn.prop('disabled', false).html('<i class="fa-solid fa-floppy-disk me-1"></i> Simpan');
+            Notify.success('BOQ berhasil disimpan');
+            bootstrap.Modal.getInstance('#modalBulkAddFwoBoq').hide();
+            loadFwoBoqList(currentFwoData.id_fwo);
+        },
+        error: function (xhr) {
+            Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan BOQ');
+            $btn.prop('disabled', false).html('<i class="fa-solid fa-floppy-disk me-1"></i> Simpan');
+        },
+    });
+}
+
 function resetFwoBoqModal() {
     $('#fwoBoqModalLoading, #fwoBoqModalEmpty, #fwoBoqModalPreview').addClass('d-none');
     $('#fwoBoqModalItemsList').empty().hide();
@@ -610,4 +886,111 @@ function resetFwoBoqModal() {
     $('#fwoBoqMaxHint').html('');
     $('#btnConfirmFwoBoq').prop('disabled', true);
     window._fwoBoqPreviewItems = [];
+}
+
+// ── Attachment edit mode ───────────────────────────────────────────────────────
+function enterFwoAttachmentEditMode() {
+    fwoAttachmentViewHtml = $('#fwoAttachmentContent').html();
+    fwoAttPondInstances   = [];
+    fwoAttGroupIdx        = 0;
+
+    let html = renderFwoAttachmentEditBar();
+    html += '<div id="fwoAttGroups"></div>';
+    html += '<div id="fwoAttEmpty" class="text-center text-muted py-4" style="display:none;">' +
+        '<i class="fa-solid fa-paperclip fa-2x d-block mb-2 opacity-25"></i>' +
+        'Klik <strong>+ Tambah Tipe Dokumen</strong> untuk menambahkan.' +
+        '</div>';
+
+    $('#fwoAttachmentContent').html(html);
+
+    if (fwoAttachmentData.length > 0) {
+        fwoAttachmentData.forEach(function (group) { addAttachmentGroup(group); });
+    } else {
+        $('#fwoAttEmpty').show();
+    }
+
+    $(document).on('click.attgroup', '#btnAddAttachmentGroup', function () {
+        addAttachmentGroup({ type: FWO_ATTACHMENT_TYPES[0], files: [] });
+    });
+}
+
+function addAttachmentGroup(group) {
+    $('#fwoAttEmpty').hide();
+    const idx  = fwoAttGroupIdx++;
+    const html = renderFwoAttachmentGroupEdit(group, idx);
+    const $el  = $(html);
+    $('#fwoAttGroups').append($el);
+
+    const pond = FilePond.create($el.find('.fwo-att-filepond')[0], {
+        allowMultiple: true,
+        labelIdle: 'Drag & Drop file atau <span class="filepond--label-action">Browse</span>',
+        acceptedFileTypes: ['image/*', 'application/pdf',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+    });
+    fwoAttPondInstances[idx] = pond;
+}
+
+function exitFwoAttachmentEditMode() {
+    Object.values(fwoAttPondInstances).forEach(function (p) { try { p.destroy(); } catch (e) {} });
+    fwoAttPondInstances = [];
+    fwoAttGroupIdx      = 0;
+    $(document).off('click.attgroup');
+    if (fwoAttachmentViewHtml !== null) {
+        $('#fwoAttachmentContent').html(fwoAttachmentViewHtml);
+        fwoAttachmentViewHtml = null;
+    }
+}
+
+function collectFwoAttachmentData() {
+    const groups = [];
+    $('#fwoAttGroups .fwo-att-group').each(function () {
+        const idx      = $(this).data('idx');
+        const type     = $(this).find('.fwo-att-type').val();
+        const existing = $(this).find('.fwo-att-existing').map(function () { return $(this).val(); }).get();
+        const pond     = fwoAttPondInstances[idx];
+        const newFiles = pond ? pond.getFiles().map(function (f) { return f.file; }) : [];
+        groups.push({ type, existing, newFiles });
+    });
+    return groups;
+}
+
+function saveAttachments(id_fwo, callback) {
+    const groups = collectFwoAttachmentData();
+
+    const hasNew      = groups.some(function (g) { return g.newFiles.length > 0; });
+    const hasExisting = groups.some(function (g) { return g.existing.length > 0; });
+
+    if (!hasNew && !hasExisting && !fwoAttachmentData.length) {
+        callback();
+        return;
+    }
+
+    const fd = new FormData();
+    fd.append('_token', window.route.csrf);
+    fd.append('_method', 'POST');
+
+    groups.forEach(function (group, i) {
+        fd.append('groups[' + i + '][type]', group.type);
+        group.existing.forEach(function (path, j) {
+            fd.append('groups[' + i + '][existing][' + j + ']', path);
+        });
+        group.newFiles.forEach(function (file, j) {
+            fd.append('groups[' + i + '][files][' + j + ']', file);
+        });
+    });
+
+    $.ajax({
+        url:         window.route.fwoAttachments + id_fwo + '/attachments',
+        method:      'POST',
+        data:        fd,
+        processData: false,
+        contentType: false,
+        success:     function () { callback(); },
+        error:       function (xhr) {
+            Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan attachment');
+        },
+    });
 }

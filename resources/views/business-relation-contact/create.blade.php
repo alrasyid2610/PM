@@ -30,7 +30,8 @@
                 <div class="row g-3">
                     <div class="col-md-12">
                         <label class="form-label required">Bussines Relation Site</label>
-                        <select id="id_br" name="id_br" class="form-select" required></select>
+                        <select id="select_site" class="form-select" required></select>
+                        <input type="hidden" name="id_br" id="hidden_id_br">
                     </div>
                     <div class="col-md-12">
                         <label class="form-label required">Nama PIC</label>
@@ -71,7 +72,7 @@
     $(document).ready(function () {
         $('#is_aktif').select2({ placeholder: 'Pilih Status', width: '100%' });
 
-        $("#id_br").select2({
+        $("#select_site").select2({
             placeholder: "Pilih Business Relation Site...",
             ajax: {
                 url: "{{ route('business-relation-sites.select2') }}",
@@ -87,6 +88,15 @@
                 },
             },
             escapeMarkup: function (m) { return m; },
+        });
+
+        // Ambil id_br dari data site yang dipilih, bukan id_site
+        $("#select_site").on("select2:select", function (e) {
+            $("#hidden_id_br").val(e.params.data.id_br ?? '');
+        });
+
+        $("#select_site").on("select2:clear", function () {
+            $("#hidden_id_br").val('');
         });
     });
 

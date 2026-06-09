@@ -326,7 +326,7 @@ class SalesOrderController extends Controller
             ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
             ->where('wo.id_so', $id_so)
             ->whereNull('wo.deleted_at')
-            ->select(['wo.id_wo', 'wo.no_wo', 'wo.judul_pekerjaan', 'wo.interval_bulan', 'wo.no_urut_period', 'br.nama as nama_pelanggan', 'brs.nama_lokasi as nama_site_pelanggan'])
+            ->select(['wo.id_wo', 'wo.no_wo', 'wo.judul_pekerjaan', 'wo.keterangan', 'wo.interval_bulan', 'wo.no_urut_period', 'br.nama as nama_pelanggan', 'brs.nama_lokasi as nama_site_pelanggan'])
             ->orderBy('wo.id_wo')
             ->get();
 
@@ -395,6 +395,7 @@ class SalesOrderController extends Controller
                 'id_wo'               => $wo->id_wo,
                 'no_wo'               => $wo->no_wo,
                 'judul_pekerjaan'     => $wo->judul_pekerjaan,
+                'keterangan'          => $wo->keterangan,
                 'interval_bulan'      => $wo->interval_bulan,
                 'no_urut_period'      => $wo->no_urut_period,
                 'nama_pelanggan'      => $wo->nama_pelanggan,
