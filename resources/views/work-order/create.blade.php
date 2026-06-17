@@ -117,9 +117,17 @@
                         <div id="woSitePreviewContent"></div>
                     </div>
 
-                    <div class="col-md-12">
+                    <div class="col-md-3 col-12">
+                        <label class="form-label">Tanggal Mulai</label>
+                        <input type="date" name="tanggal_mulai" class="form-control">
+                    </div>
+                    <div class="col-md-3 col-12">
+                        <label class="form-label">Tanggal Selesai</label>
+                        <input type="date" name="tanggal_selesai" class="form-control">
+                    </div>
+                    <div class="col-md-6 col-12">
                         <label class="form-label">Keterangan</label>
-                        <textarea name="keterangan" id="keterangan" class="form-control" rows="4"></textarea>
+                        <textarea name="keterangan" id="keterangan" class="form-control" rows="1"></textarea>
                     </div>
                 </div>
             </x-section-card>
@@ -153,8 +161,8 @@
                 $('#id_sales_order').prop('disabled', true);
                 $('<input>').attr({ type: 'hidden', name: 'id_sales_order', value: so.id_so }).appendTo('#workOrderForm');
 
-                if (so.nama_site_pelanggan) {
-                    $('#soBannerSite').text(so.nama_site_pelanggan);
+                if (so.nama_pelanggan) {
+                    $('#soBannerSite').text(so.nama_pelanggan);
                     $('#soBannerSiteWrap').css('display', 'flex');
                     $('#soBannerSiteSep').css('display', 'block');
                 }
@@ -382,6 +390,13 @@
             var filtered = (wos || []).filter(function(wo) {
                 return String(wo.id_site_pelanggan_pekerjaan) === String(id_site);
             });
+            // Urutkan berdasarkan tanggal_mulai
+            filtered.sort(function(a, b) {
+                if (!a.tanggal_mulai && !b.tanggal_mulai) return 0;
+                if (!a.tanggal_mulai) return 1;
+                if (!b.tanggal_mulai) return -1;
+                return a.tanggal_mulai > b.tanggal_mulai ? 1 : -1;
+            });
             currentSiteWos = filtered;
 
             if (!filtered.length) {
@@ -392,6 +407,7 @@
 
             autoFillUrutan();
 
+            var TH = 'style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:4px 10px;color:#64748b;font-weight:600;white-space:nowrap;border-bottom:1px solid #dbeafe;"';
             var rows = filtered.map(function(wo) {
                 var badge = '';
                 if (wo.interval_bulan && wo.no_urut_period) {
@@ -402,20 +418,33 @@
                           + '<i class="fa-solid fa-calendar-days" style="font-size:9px;"></i>'
                           + lbl + ' ke-' + wo.no_urut_period + '</span>';
                 }
+                var fmtWoDate = function(d) {
+                    if (!d) return '<span style="color:#94a3b8;">—</span>';
+                    var p = d.substring(0,10).split('-');
+                    var months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
+                    return parseInt(p[2]) + '-' + months[parseInt(p[1])-1] + '-' + p[0];
+                };
                 return '<tr>'
-                    + '<td style="padding:4px 10px;white-space:nowrap;font-size:12px;font-weight:600;color:#1d4ed8;">'
-                    +   (wo.no_wo || '—') + '</td>'
-                    + '<td style="padding:4px 10px;font-size:12px;color:#374151;">'
-                    +   (wo.judul_pekerjaan || '—') + '</td>'
+                    + '<td style="padding:4px 10px;white-space:nowrap;font-size:12px;font-weight:600;color:#1d4ed8;">' + (wo.no_wo || '—') + '</td>'
+                    + '<td style="padding:4px 10px;font-size:12px;color:#374151;">' + (wo.judul_pekerjaan || '—') + '</td>'
+                    + '<td style="padding:4px 10px;white-space:nowrap;font-size:12px;color:#374151;">' + fmtWoDate(wo.tanggal_mulai) + '</td>'
+                    + '<td style="padding:4px 10px;white-space:nowrap;font-size:12px;color:#374151;">' + fmtWoDate(wo.tanggal_selesai) + '</td>'
                     + '<td style="padding:4px 10px;">' + badge + '</td>'
                     + '</tr>';
             }).join('');
 
             var tableHtml = '<div id="woSitePreviewList" style="display:none;margin-top:8px;">'
                 + '<div class="table-responsive">'
-                + '<table style="width:100%;border-collapse:collapse;"><tbody>'
-                + rows
-                + '</tbody></table></div></div>';
+                + '<table style="width:100%;border-collapse:collapse;">'
+                + '<thead><tr>'
+                + '<th ' + TH + '>No WO</th>'
+                + '<th ' + TH + '>Judul Pekerjaan</th>'
+                + '<th ' + TH + '>Tgl Mulai</th>'
+                + '<th ' + TH + '>Tgl Selesai</th>'
+                + '<th ' + TH + '>Periode</th>'
+                + '</tr></thead>'
+                + '<tbody>' + rows + '</tbody>'
+                + '</table></div></div>';
 
             $('#woSitePreviewContent').html(
                 '<div style="background:#f0f7ff;border:1px solid #bcd0f8;border-radius:8px;padding:8px 14px;">'
@@ -433,6 +462,69 @@
             $('#woSitePreviewWrap').hide();
         });
     }
+
+    function getMaxTanggalSelesai() {
+        if (!currentSiteWos.length) return null;
+        var max = null;
+        currentSiteWos.forEach(function (wo) {
+            if (wo.tanggal_selesai) {
+                if (!max || wo.tanggal_selesai > max) max = wo.tanggal_selesai;
+            }
+        });
+        return max;
+    }
+
+    function validateTanggalMulai() {
+        var val = $("input[name='tanggal_mulai']").val();
+        $('#tanggalMulaiError').remove();
+        if (!val || !currentSiteWos.length) return true;
+        var max = getMaxTanggalSelesai();
+        if (!max) return true;
+        if (val <= max) {
+            var maxFmt = max.substring(0,10).split('-').reverse().join('-');
+            $("input[name='tanggal_mulai']").after(
+                '<div id="tanggalMulaiError" class="text-danger mt-1" style="font-size:12px;">' +
+                '<i class="fa-solid fa-circle-exclamation me-1"></i>' +
+                'Tanggal mulai harus setelah ' + maxFmt + ' (tanggal selesai WO terakhir di lokasi ini)</div>'
+            );
+            return false;
+        }
+        return true;
+    }
+
+    $(document).on('change', "input[name='tanggal_mulai']", function () {
+        validateTanggalMulai();
+        validateTanggalSelesai();
+    });
+
+    function validateTanggalSelesai() {
+        var mulai   = $("input[name='tanggal_mulai']").val();
+        var selesai = $("input[name='tanggal_selesai']").val();
+        $('#tanggalSelesaiError').remove();
+        if (!mulai || !selesai) return true;
+        if (selesai < mulai) {
+            $("input[name='tanggal_selesai']").after(
+                '<div id="tanggalSelesaiError" class="text-danger mt-1" style="font-size:12px;">' +
+                '<i class="fa-solid fa-circle-exclamation me-1"></i>' +
+                'Tanggal selesai tidak boleh lebih kecil dari tanggal mulai</div>'
+            );
+            return false;
+        }
+        return true;
+    }
+
+    $(document).on('change', "input[name='tanggal_selesai']", function () {
+        validateTanggalSelesai();
+    });
+
+    $('#workOrderForm').on('submit', function (e) {
+        var ok = validateTanggalMulai() & validateTanggalSelesai();
+        if (!ok) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            Notify.error('Periksa kembali isian tanggal WO.');
+        }
+    });
 
     submitCreateForm({
         formId: "#workOrderForm",

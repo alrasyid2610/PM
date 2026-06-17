@@ -99,6 +99,17 @@ function renderForm(res) {
         editText: 'Edit Termin',
         statusBadge: `<span class="detail-status-inline detail-status-${statusKey}">${escHtml(res.status ?? 'Pending')}</span>`,
         tags: soTag + pelangganTag,
+        extra: statusKey === 'siap_kirim'
+            ? `<button type="button" id="btnSelesaikanTermin" data-termin-id="${res.id_termin}" data-no-disable
+                class="btn btn-sm btn-success" style="font-size:12px;">
+                <i class="fa-solid fa-circle-check me-1"></i> Selesaikan
+               </button>`
+            : statusKey !== 'selesai'
+            ? `<button type="button" id="btnSiapKirimTermin" data-termin-id="${res.id_termin}" data-no-disable
+                class="btn btn-sm btn-primary" style="font-size:12px;">
+                <i class="fa-solid fa-paper-plane me-1"></i> Siap Kirim
+               </button>`
+            : '',
         noWrap: true,
     })}
 
@@ -152,13 +163,25 @@ function renderForm(res) {
                                 ${formGroup.text("persentase", "Persentase (%)", res.persentase, false, { className: "col-md-2" })}
                                 ${formGroup.select("status", "Status", res.status,
                                     [
-                                        { value: "pending", label: "Pending" },
-                                        { value: "proses",  label: "Proses"  },
-                                        { value: "selesai", label: "Selesai" },
+                                        { value: "pending",    label: "Pending"    },
+                                        { value: "siap_kirim", label: "Siap Kirim" },
+                                        { value: "selesai",    label: "Selesai"    },
                                     ],
                                     { className: "col-md-2" }
                                 )}
-                                ${formGroup.text("nilai", "Nilai (Rp)", res.nilai, true, { className: "col-md-4" })}
+                                <div class="col-md-2">
+                                    <label class="form-label form-label-sm text-muted mb-1">Down Payment</label>
+                                    <div class="form-check mt-1">
+                                        <input type="checkbox" class="form-check-input disabled" id="detail_is_dp" name="is_dp" value="1" ${res.is_dp ? 'checked' : ''}>
+                                        <label class="form-check-label" for="detail_is_dp">DP</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label form-label-sm text-muted mb-1">Nilai (Rp) <span class="text-danger">*</span></label>
+                                    <input type="text" inputmode="numeric" name="nilai" id="detail_nilai"
+                                        class="form-control disabled input-num-mask"
+                                        value="${res.nilai ? Number(res.nilai).toLocaleString('en-US', {maximumFractionDigits:0}) : ''}" required>
+                                </div>
                                 ${formGroup.date("tanggal", "Tanggal", res.tanggal ? res.tanggal.substring(0, 10) : '', true, { className: "col-md-4" })}
                                 ${formGroup.textarea("keterangan", "Keterangan", res.keterangan, { className: "col-md-4" })}
                                 <div class="col-md-12">

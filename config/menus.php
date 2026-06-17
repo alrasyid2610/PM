@@ -51,7 +51,7 @@ return [
         'items'   => [
             ['slug' => 'sales-orders', 'label' => 'Sales Order', 'icon' => 'fa-file-invoice-dollar'],
             ['slug' => 'work-orders',  'label' => 'Work Order',  'icon' => 'fa-briefcase'],
-            ['slug' => 'boq',          'label' => 'BOQ',         'icon' => 'fa-layer-group'],
+            // ['slug' => 'boq',          'label' => 'BOQ',         'icon' => 'fa-layer-group'],
             ['slug' => 'fieldworks',   'label' => 'Fieldworks',  'icon' => 'fa-helmet-safety'],
             ['slug' => 'termin',       'label' => 'Termin'],
             // ['slug' => 'output-pekerjaan',   'label' => 'output pekerjaan',  'icon' => 'fa-helmet-safety'],

@@ -176,6 +176,8 @@
         transition: background 0.1s;
     }
     .modal-item-row:hover { background: #f8fafc; }
+    .boq-items-toggle:hover .text-muted { color: #475569 !important; }
+    .boq-items-chevron.collapsed { transform: rotate(180deg); }
 </style>
 
 <script>
@@ -217,11 +219,13 @@ $(document).ready(function () {
 
     const preselectWoId = new URLSearchParams(window.location.search).get('id_wo');
     if (preselectWoId) {
+        $("#id_wo").prop("disabled", true);
         $.get("{{ url('work-orders') }}/" + preselectWoId, function (wo) {
             if (!wo || !wo.id_wo) return;
             const opt = new Option(wo.no_wo + ' — ' + wo.judul_pekerjaan, wo.id_wo, true, true);
             Object.assign(opt, { judul: wo.judul_pekerjaan });
             $("#id_wo").append(opt).trigger('change');
+            $("#id_wo").prop("disabled", true);
             $("#judulOrder").text(wo.judul_pekerjaan || "—").removeClass("text-muted");
             $("#btnAddSection").prop("disabled", false);
             loadExistingBoqPoints(preselectWoId);
@@ -555,8 +559,12 @@ function addSection(pointId, pointText, items) {
                         </div>
                         <div class="col-md-2">
                             <label class="form-label form-label-sm text-muted mb-1">Satuan</label>
-                            <input type="text" class="form-control form-control-sm input-satuan"
-                                placeholder="pcs, set...">
+                            <select class="form-select form-select-sm input-satuan">
+                                <option value="">— Pilih —</option>
+                                <option value="PCS">PCS</option>
+                                <option value="Titik">Titik</option>
+                                <option value="Set">Set</option>
+                            </select>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
@@ -573,8 +581,12 @@ function addSection(pointId, pointText, items) {
                         </div>
                     </div>
                 </div>
-                <div class="text-muted small fw-semibold mb-1">
-                    <i class="fa-solid fa-list-check me-1"></i> Items
+                <div class="d-flex align-items-center justify-content-between mb-1 boq-items-toggle"
+                    style="cursor:pointer;user-select:none;">
+                    <span class="text-muted small fw-semibold">
+                        <i class="fa-solid fa-list-check me-1"></i> Items
+                    </span>
+                    <i class="fa-solid fa-chevron-up text-muted boq-items-chevron" style="font-size:11px;transition:transform .2s;"></i>
                 </div>
                 <div class="boq-items">${itemsHtml}</div>
             </div>
@@ -644,10 +656,16 @@ function addExistingSection(sec) {
                         </div>
                     </div>
                 </div>
-                <div class="text-muted small fw-semibold mb-1">
-                    <i class="fa-solid fa-list-check me-1"></i> Items
+                <div class="d-flex align-items-center justify-content-between mb-1 boq-items-toggle"
+                    style="cursor:pointer;user-select:none;">
+                    <span class="text-muted small fw-semibold">
+                        <i class="fa-solid fa-list-check me-1"></i> Items
+                    </span>
+                    <i class="fa-solid fa-chevron-up text-muted boq-items-chevron" style="font-size:11px;transition:transform .2s;"></i>
                 </div>
-                <div>${itemsHtml || '<div class="text-muted small py-2">Tidak ada item</div>'}</div>
+                <div class="boq-items">
+                    ${itemsHtml || '<div class="text-muted small py-2">Tidak ada item</div>'}
+                </div>
             </div>
         </div>`;
 
@@ -751,6 +769,13 @@ function updateSectionTotal($sec) {
 
 $(document).on('input', '.input-qty, .input-harga', function () {
     updateSectionTotal($(this).closest('.boq-section'));
+});
+
+$(document).on('click', '.boq-items-toggle', function () {
+    const $items = $(this).next('.boq-items');
+    const $icon  = $(this).find('.boq-items-chevron');
+    $items.slideToggle(180);
+    $icon.toggleClass('collapsed');
 });
 </script>
 @endsection

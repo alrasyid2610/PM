@@ -37,7 +37,6 @@ class TerminController extends Controller
         $query = DB::table('termin')->select([
             'id_termin',
             'no_termin',
-            'nomor',
             'nama',
             'persentase',
             'nilai',
@@ -82,7 +81,7 @@ class TerminController extends Controller
             'persentase'    => 'nullable|numeric|min:0|max:100',
             'nilai'         => 'required|numeric|min:0',
             'tanggal'       => 'required|date',
-            'status'        => 'required|in:pending,proses,selesai',
+            'status'        => 'required|in:pending,siap_kirim,selesai',
             'keterangan'    => 'nullable|string',
             'id_so'         => 'nullable|integer',
             'attachments.*' => 'nullable|file|max:5120',
@@ -99,6 +98,7 @@ class TerminController extends Controller
             'nilai'      => $request->nilai,
             'tanggal'    => $request->tanggal,
             'status'     => $request->status,
+            'is_dp'      => $request->boolean('is_dp') ? 1 : 0,
             'keterangan' => $request->keterangan,
             'attachment' => json_encode($files),
             'created_at' => now(),
@@ -190,6 +190,24 @@ class TerminController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function siapKirim($id)
+    {
+        DB::table('termin')->where('id_termin', $id)->update([
+            'status'     => 'siap_kirim',
+            'updated_at' => now(),
+        ]);
+        return response()->json(['success' => true]);
+    }
+
+    public function selesai($id)
+    {
+        DB::table('termin')->where('id_termin', $id)->update([
+            'status'     => 'selesai',
+            'updated_at' => now(),
+        ]);
+        return response()->json(['success' => true]);
+    }
+
     public function outputsBySo($id_so)
     {
         $outputs = DB::table('output_pekerjaan as op')
@@ -205,7 +223,7 @@ class TerminController extends Controller
                           ->whereColumn('termin.id_termin', 'op.id_termin');
                   });
             })
-            ->select('op.id_output', 'op.judul_output', 'op.judul_dokumen', 'wo.no_wo', 'wo.id_wo')
+            ->select('op.id_output', 'op.judul_output', 'op.judul_dokumen', 'op.status', 'wo.no_wo', 'wo.id_wo')
             ->orderBy('wo.no_wo')
             ->orderBy('op.id_output')
             ->get();
@@ -216,12 +234,11 @@ class TerminController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'nomor'      => 'required|string|max:50',
             'nama'       => 'required|string|max:255',
             'persentase' => 'nullable|numeric|min:0|max:100',
             'nilai'      => 'required|numeric|min:0',
             'tanggal'    => 'required|date',
-            'status'     => 'required|in:pending,proses,selesai',
+            'status'     => 'required|in:pending,siap_kirim,selesai',
             'keterangan' => 'nullable|string',
             'id_so'      => 'nullable|integer',
         ]);
@@ -240,12 +257,12 @@ class TerminController extends Controller
 
         DB::table('termin')->where('id_termin', $id)->update([
             'id_so'      => $request->id_so ?: null,
-            'nomor'      => $request->nomor,
             'nama'       => $request->nama,
             'persentase' => $request->persentase,
             'nilai'      => $request->nilai,
             'tanggal'    => $request->tanggal,
             'status'     => $request->status,
+            'is_dp'      => $request->boolean('is_dp') ? 1 : 0,
             'keterangan' => $request->keterangan,
             'attachment' => json_encode($attachments),
             'updated_at' => now(),

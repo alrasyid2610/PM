@@ -10,14 +10,17 @@ $(document).ready(function () {
         width: '100%',
         placeholder: '-- Pilih Pelanggan --',
         allowClear: true,
-        minimumInputLength: 2,
+        minimumInputLength: 0,
         ajax: {
             url: window.route.select2BR,
-            delay: 300,
+            delay: 250,
             dataType: 'json',
             data: (params) => ({ q: params.term }),
             processResults: (data) => ({ results: data }),
+            cache: true,
         },
+        language: { noResults: () => `<span>Tidak ditemukan. <a href="/business-relations/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>` },
+        escapeMarkup: (m) => m,
     });
 
     // ─── Select2: PIC Pelanggan ──────────────────────────────
@@ -25,14 +28,17 @@ $(document).ready(function () {
         width: '100%',
         placeholder: '-- Pilih PIC Pelanggan --',
         allowClear: true,
-        minimumInputLength: 2,
+        minimumInputLength: 0,
         ajax: {
             url: window.route.select2Contact,
-            delay: 300,
+            delay: 250,
             dataType: 'json',
             data: (params) => ({ q: params.term }),
             processResults: (data) => ({ results: data }),
+            cache: true,
         },
+        language: { noResults: () => `<span>Tidak ditemukan. <a href="/business-relation-contacts/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>` },
+        escapeMarkup: (m) => m,
     });
 
     // ─── Select2: PIC Pramatek ───────────────────────────────
@@ -40,14 +46,17 @@ $(document).ready(function () {
         width: '100%',
         placeholder: '-- Pilih PIC Pramatek --',
         allowClear: true,
-        minimumInputLength: 2,
+        minimumInputLength: 0,
         ajax: {
             url: window.route.select2User,
-            delay: 300,
+            delay: 250,
             dataType: 'json',
             data: (params) => ({ q: params.term }),
             processResults: (data) => ({ results: data }),
+            cache: true,
         },
+        language: { noResults: () => `<span>Tidak ditemukan. <a href="/users/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>` },
+        escapeMarkup: (m) => m,
     });
 
     // ─── Form Submit ─────────────────────────────────────────

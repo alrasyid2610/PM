@@ -15,10 +15,16 @@ $(document).ready(function () {
         primaryKey: "id_termin",
         renderForm: renderForm,
         initSelect: function () {
+            initNumericMask(document.getElementById('detailContent'));
             $("#detail_status").select2({
                 width: "100%",
                 dropdownParent: $("#detailContent"),
             });
+        },
+        onSave: function (id) {
+            var el = document.getElementById('detail_nilai');
+            if (el && el._cleave) el.value = el._cleave.getRawValue();
+            submitCrudForm({ id: id, reload: page.loadDetail.bind(page), filepond: page.pondEdit });
         },
         useAttachment: true,
     });
@@ -157,6 +163,72 @@ $(document).ready(function () {
         }).fail(function () {
             $btn.prop('disabled', false).find('i').removeClass('fa-spin');
             Notify.error('Gagal memuat data output');
+        });
+    });
+
+    // Siap Kirim
+    $(document).on('click', '#btnSiapKirimTermin', function () {
+        var terminId = $(this).data('termin-id');
+        var $btn = $(this);
+        Swal.fire({
+            title: 'Tandai Siap Kirim?',
+            html: 'Status termin akan berubah menjadi <strong>Siap Kirim</strong>.<br><span style="font-size:13px;color:#6b7280;">Status tidak dapat dikembalikan.</span>',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '<i class="fa-solid fa-paper-plane me-1"></i> Ya, Siap Kirim',
+            cancelButtonText: 'Batal',
+            confirmButtonColor: '#16a34a',
+            cancelButtonColor: '#6b7280',
+            reverseButtons: true,
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+            $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin" style="font-size:10px;"></i> Memproses...');
+            $.ajax({
+                url: window.route.update + terminId + '/siap-kirim',
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': window.route.csrf },
+                success: function () {
+                    Notify.success('Termin berhasil ditandai Siap Kirim');
+                    page.loadDetail(terminId);
+                },
+                error: function () {
+                    Notify.error('Gagal mengubah status termin');
+                    $btn.prop('disabled', false).html('<i class="fa-solid fa-paper-plane me-1"></i> Siap Kirim');
+                },
+            });
+        });
+    });
+
+    // Selesaikan Termin
+    $(document).on('click', '#btnSelesaikanTermin', function () {
+        var terminId = $(this).data('termin-id');
+        var $btn = $(this);
+        Swal.fire({
+            title: 'Selesaikan Termin?',
+            html: 'Status termin akan berubah menjadi <strong>Selesai</strong>.<br><span style="font-size:13px;color:#6b7280;">Status tidak dapat dikembalikan.</span>',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '<i class="fa-solid fa-circle-check me-1"></i> Ya, Selesaikan',
+            cancelButtonText: 'Batal',
+            confirmButtonColor: '#16a34a',
+            cancelButtonColor: '#6b7280',
+            reverseButtons: true,
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+            $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin" style="font-size:10px;"></i> Memproses...');
+            $.ajax({
+                url: window.route.update + terminId + '/selesai',
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': window.route.csrf },
+                success: function () {
+                    Notify.success('Termin berhasil diselesaikan');
+                    page.loadDetail(terminId);
+                },
+                error: function () {
+                    Notify.error('Gagal mengubah status termin');
+                    $btn.prop('disabled', false).html('<i class="fa-solid fa-circle-check me-1"></i> Selesaikan');
+                },
+            });
         });
     });
 

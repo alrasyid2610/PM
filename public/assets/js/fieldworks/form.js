@@ -8,6 +8,13 @@ function renderFwoForm(res) {
            </a>`
         : '';
 
+    const siteBadge = res.site_name
+        ? `<a href="/business-relations${res.id_site_pelanggan_pekerjaan ? '?open=' + res.id_site_pelanggan_pekerjaan : ''}" class="pm-badge" style="background:#f1f5f9;color:#475569;text-decoration:none;">
+               <i class="fa-solid fa-location-dot" style="font-size:10px;"></i>
+               ${escHtml(res.site_name)}
+           </a>`
+        : '';
+
     const statusClass = isCompleted ? 'detail-status-selesai' : 'detail-status-pending';
     const statusLabel = isCompleted ? 'Completed' : 'Planned';
 
@@ -23,7 +30,7 @@ function renderFwoForm(res) {
         deleteId: res.id_fwo,
         editText: 'Edit FWO',
         statusBadge: `<span class="detail-status-inline ${statusClass}">${statusLabel}</span>`,
-        tags: woBadge,
+        tags: woBadge + siteBadge,
         extra: !isCompleted
             ? `<button type="button" id="btnCompleteFwo" data-fwo-id="${res.id_fwo}" data-no-disable
                 class="btn btn-sm btn-success" style="font-size:12px;">
@@ -202,9 +209,8 @@ function renderFwoBoqView(sections) {
             <td ${TD} style="padding:8px 12px;color:#374151;font-weight:500;">${escHtml(sec.point_name ?? '—')}</td>
             <td ${TD} style="padding:8px 12px;color:#374151;white-space:nowrap;">${qtyLabel}</td>
             <td ${TD} style="padding:8px 8px;text-align:center;width:40px;">
-                <button type="button" class="btn-fwo-boq-delete" data-boq-id="${sec.id_boq}"
-                    title="Hapus item ini"
-                    style="background:none;border:none;padding:2px 4px;cursor:pointer;color:#cbd5e1;font-size:13px;line-height:1;">
+                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-fwo-boq-delete" data-boq-id="${sec.id_boq}"
+                    title="Hapus item ini" style="font-size:11px;">
                     <i class="fa-solid fa-trash"></i>
                 </button>
             </td>
@@ -215,10 +221,10 @@ function renderFwoBoqView(sections) {
         <table class="table table-sm table-hover mb-0" style="font-size:13px;">
             <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
                 <tr>
-                    <th ${TH} style="width:40px;text-align:center;">#</th>
+                    <th ${TH} style="width:40px;text-align:center;">No</th>
                     <th ${TH}>Item BOQ</th>
                     <th ${TH} style="min-width:120px;">Qty</th>
-                    <th ${TH} style="width:40px;"></th>
+                    <th ${TH} style="width:40px;">Aksi</th>
                 </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -347,7 +353,7 @@ function renderPersonelView(personels) {
         <table class="table table-sm table-hover mb-0" style="font-size:13px;">
             <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
                 <tr>
-                    <th ${TH} style="width:40px;text-align:center;">#</th>
+                    <th ${TH} style="width:40px;text-align:center;">No</th>
                     <th ${TH}>Nama</th>
                     <th ${TH} style="min-width:100px;">Role</th>
                 </tr>

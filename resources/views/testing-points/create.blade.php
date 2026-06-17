@@ -90,15 +90,15 @@
                         <table id="Table" class="table table-bordered table-sm dynamic-table mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th width="3%">No</th>
-                                    <th width="20%">Judul Indonesia</th>
-                                    <th width="20%">Judul Inggris</th>
-                                    <th width="12%">Parameter</th>
-                                    <th width="10%">Unit</th>
-                                    <th width="10%">Nilai</th>
-                                    <th width="12%">Keterangan</th>
-                                    <th width="8%">Status</th>
-                                    <th width="5%">Aksi</th>
+                                    <th style="white-space:nowrap;width:40px">No</th>
+                                    <th style="min-width:240px">Judul Indonesia</th>
+                                    <th style="min-width:240px">Judul Inggris</th>
+                                    <th style="min-width:160px">Parameter</th>
+                                    <th style="min-width:140px">Unit</th>
+                                    <th style="min-width:120px">Nilai</th>
+                                    <th style="min-width:140px">Keterangan</th>
+                                    <th style="white-space:nowrap;width:60px">Status</th>
+                                    <th style="white-space:nowrap;width:60px">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -153,16 +153,16 @@
         $('select[name="is_aktif"]').select2({ placeholder: 'Pilih Status', width: '100%' });
 
         $("#id_testing_standard").select2({
+            width: '100%',
             placeholder: "Pilih Testing Standard...",
+            allowClear: true,
             ajax: {
-                url: "{{ route('testing-standards.data') }}",
+                url: "{{ route('testing-standards.select2') }}",
                 dataType: "json",
-                processResults: (data) => ({
-                    results: data.data.map((item) => ({
-                        id: item.id_testing_standard,
-                        text: item.nomor + " - " + item.judul,
-                    })),
-                }),
+                delay: 250,
+                data: (params) => ({ q: params.term }),
+                processResults: (data) => ({ results: data }),
+                cache: true,
             },
             language: {
                 noResults: function () {
@@ -173,16 +173,16 @@
         });
 
         $("#id_testing_matriks_sample").select2({
+            width: '100%',
             placeholder: "Pilih Matriks Sample...",
+            allowClear: true,
             ajax: {
-                url: "{{ route('testing-matriks-samples.data') }}",
+                url: "{{ route('testing-matriks-samples.select2') }}",
                 dataType: "json",
-                processResults: (data) => ({
-                    results: data.data.map((item) => ({
-                        id: item.id_testing_matriks_sample,
-                        text: item.kode + " - " + item.judul_indonesia,
-                    })),
-                }),
+                delay: 250,
+                data: (params) => ({ q: params.term }),
+                processResults: (data) => ({ results: data }),
+                cache: true,
             },
             language: {
                 noResults: function () {
@@ -191,6 +191,44 @@
             },
             escapeMarkup: function (m) { return m; },
         });
+
+        function initRowSelect2(row) {
+            $(row).find('.parameter-select').select2({
+                width: '100%',
+                placeholder: 'Pilih Parameter...',
+                allowClear: true,
+                ajax: {
+                    url: "{{ route('testing-parameters.select2') }}",
+                    dataType: 'json',
+                    delay: 250,
+                    data: (params) => ({ q: params.term }),
+                    processResults: (data) => ({ results: data }),
+                    cache: true,
+                },
+                language: { noResults: () => `<span>Tidak ditemukan. <a href="{{ route('testing-parameters.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>` },
+                escapeMarkup: (m) => m,
+                dropdownParent: $(row).find('td').eq(3),
+            });
+            $(row).find('.unit-select').select2({
+                width: '100%',
+                placeholder: 'Pilih Unit...',
+                allowClear: true,
+                ajax: {
+                    url: "{{ route('testing-units.select2') }}",
+                    dataType: 'json',
+                    delay: 250,
+                    data: (params) => ({ q: params.term }),
+                    processResults: (data) => ({ results: data }),
+                    cache: true,
+                },
+                language: { noResults: () => `<span>Tidak ditemukan. <a href="{{ route('testing-units.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>` },
+                escapeMarkup: (m) => m,
+                dropdownParent: $(row).find('td').eq(4),
+            });
+        }
+
+        // Init first row
+        $("#Table tbody tr").each(function () { initRowSelect2(this); });
 
         $(".btn-add-row").on("click", function () {
             let newRow = `
@@ -210,7 +248,9 @@
                         </button>
                     </td>
                 </tr>`;
-            $("#Table tbody").append(newRow);
+            const $newRow = $(newRow);
+            $("#Table tbody").append($newRow);
+            initRowSelect2($newRow[0]);
             updateRowNumbers();
         });
 

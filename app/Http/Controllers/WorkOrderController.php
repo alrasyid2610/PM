@@ -49,6 +49,27 @@ class WorkOrderController extends Controller
         // ==========================
         // INSERT
         // ==========================
+        // Validasi overlap tanggal dengan WO lain di lokasi yang sama
+        $id_site_check = $request->id_site_pelanggan ?: null;
+        if ($id_site_check && $request->filled('tanggal_mulai')) {
+            $tglMulaiCheck = substr($request->tanggal_mulai, 0, 10);
+            $maxSelesai = DB::table('work_orders')
+                ->where('id_site_pelanggan_pekerjaan', $id_site_check)
+                ->whereNull('deleted_at')
+                ->whereNotNull('tanggal_selesai')
+                ->where('tanggal_selesai', '>', '1000-01-01')
+                ->max(DB::raw('DATE(tanggal_selesai)'));
+
+            if ($maxSelesai && $tglMulaiCheck <= $maxSelesai) {
+                $bulanId = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
+                $tgl = \Carbon\Carbon::parse($maxSelesai);
+                $tglFormatted = $tgl->day . '-' . $bulanId[$tgl->month - 1] . '-' . $tgl->format('y');
+                return response()->json([
+                    'message' => 'Tanggal mulai harus setelah ' . $tglFormatted . ' (tanggal selesai WO terakhir di lokasi ini)',
+                ], 422);
+            }
+        }
+
         $no_wo    = $this->generateNoWo();
         $interval = $request->interval_bulan ?: null;
         $id_site  = $request->id_site_pelanggan ?: null;
@@ -77,6 +98,8 @@ class WorkOrderController extends Controller
             'keterangan'                  => $request->keterangan,
             'interval_bulan'              => $interval,
             'no_urut_period'              => $no_urut,
+            'tanggal_mulai'               => $request->tanggal_mulai ?: null,
+            'tanggal_selesai'             => $request->tanggal_selesai ?: null,
             'created_at'                  => now(),
             'updated_at'                  => now(),
         ]);
@@ -152,6 +175,8 @@ class WorkOrderController extends Controller
                     'keterangan'                  => $request->keterangan,
                     'interval_bulan'              => $interval,
                     'no_urut_period'              => $no_urut,
+                    'tanggal_mulai'               => $request->tanggal_mulai ?: null,
+                    'tanggal_selesai'             => $request->tanggal_selesai ?: null,
                     'updated_at'                  => now(),
                 ]);
 
@@ -190,6 +215,8 @@ class WorkOrderController extends Controller
                 'brs.nama_lokasi as nama_site',
                 'brc.nama_pic as nama_pic_pekerjaan',
                 'wo.keterangan',
+                'wo.tanggal_mulai',
+                'wo.tanggal_selesai',
             ])
             ->orderBy('wo.id_wo')
             ->get();
@@ -235,16 +262,16 @@ class WorkOrderController extends Controller
             ->select([
                 'wo.id_wo',
                 's.id_so',
-                's.no_so',
                 'wo.no_wo',
+                's.no_so',
                 's.judul_order',
                 'wo.id_pelanggan_pekerjaan',
                 'wo.id_site_pelanggan_pekerjaan',
                 'br.nama as Pelanggan',
                 'brs.nama_lokasi as Site Pelanggan',
                 's.tanggal_so',
-                's.tanggal_mulai',
-                's.tanggal_selesai',
+                'wo.tanggal_mulai',
+                'wo.tanggal_selesai',
                 'wo.keterangan',
                 's.created_at',
             ]);
@@ -273,13 +300,29 @@ class WorkOrderController extends Controller
     public function destroy($id)
     {
         $before = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
-        DB::table('work_orders')->where('id_wo', $id)->update(['deleted_at' => now()]);
+
+        $now = now();
+
+        // Soft delete boq_items milik BOQ WO ini
+        $boqIds = DB::table('boq')->where('id_wo', $id)->pluck('id_boq');
+        if ($boqIds->isNotEmpty()) {
+            DB::table('boq_items')->whereIn('id_boq', $boqIds)->whereNull('deleted_at')
+                ->update(['deleted_at' => $now]);
+        }
+
+        // Soft delete BOQ WO ini
+        DB::table('boq')->where('id_wo', $id)->whereNull('deleted_at')
+            ->update(['deleted_at' => $now]);
+
+        // Soft delete WO
+        DB::table('work_orders')->where('id_wo', $id)->update(['deleted_at' => $now]);
+
         $after = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
         saveAudit('work_orders', $id, 'delete', $before, $after);
         return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
     }
 
-    public function duplicate(int $id)
+    public function duplicate(Request $request, int $id)
     {
         $source = DB::table('work_orders')->where('id_wo', $id)->first();
 
@@ -287,11 +330,40 @@ class WorkOrderController extends Controller
             return response()->json(['message' => 'Work Order tidak ditemukan'], 404);
         }
 
+        // Validasi tanggal
+        $tanggalMulai   = $request->tanggal_mulai   ?: $source->tanggal_mulai;
+        $tanggalSelesai = $request->tanggal_selesai ?: $source->tanggal_selesai;
+
+        if ($tanggalMulai && $tanggalSelesai && $tanggalSelesai < $tanggalMulai) {
+            return response()->json([
+                'message' => 'Tanggal selesai tidak boleh lebih kecil dari tanggal mulai',
+            ], 422);
+        }
+
+        if ($source->id_site_pelanggan_pekerjaan) {
+            $tglMulai = substr($tanggalMulai ?? '', 0, 10);
+            $maxSelesai = DB::table('work_orders')
+                ->where('id_site_pelanggan_pekerjaan', $source->id_site_pelanggan_pekerjaan)
+                ->whereNull('deleted_at')
+                ->whereNotNull('tanggal_selesai')
+                ->where('tanggal_selesai', '>', '1000-01-01')
+                ->max(DB::raw('DATE(tanggal_selesai)'));
+
+            if ($tglMulai && $maxSelesai && $tglMulai <= $maxSelesai) {
+                $bulanId = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
+                $tgl = \Carbon\Carbon::parse($maxSelesai);
+                $tglFormatted = $tgl->day . '-' . $bulanId[$tgl->month - 1] . '-' . $tgl->format('y');
+                return response()->json([
+                    'message' => 'Tanggal mulai harus setelah ' . $tglFormatted . ' (tanggal selesai WO terakhir di lokasi ini)',
+                ], 422);
+            }
+        }
+
         $no_wo = $this->generateNoWo();
 
         $dupInterval = $source->interval_bulan;
-        $dupNoUrut   = null;
-        if ($source->id_site_pelanggan_pekerjaan && $dupInterval) {
+        $dupNoUrut   = $request->filled('no_urut_period') ? (int) $request->no_urut_period : null;
+        if (!$dupNoUrut && $source->id_site_pelanggan_pekerjaan && $dupInterval) {
             $existing = DB::table('work_orders')
                 ->where('id_so', $source->id_so)
                 ->where('id_site_pelanggan_pekerjaan', $source->id_site_pelanggan_pekerjaan)
@@ -306,9 +378,11 @@ class WorkOrderController extends Controller
             'id_so'                       => $source->id_so,
             'id_pelanggan_pekerjaan'      => $source->id_pelanggan_pekerjaan,
             'id_site_pelanggan_pekerjaan' => $source->id_site_pelanggan_pekerjaan,
-            'id_pic_pelanggan_pekerjaan'  => $source->id_pic_pelanggan_pekerjaan,
-            'judul_pekerjaan'             => $source->judul_pekerjaan,
-            'keterangan'                  => $source->keterangan,
+            'id_pic_pelanggan_pekerjaan'  => $request->id_pic_pelanggan_pekerjaan ?: $source->id_pic_pelanggan_pekerjaan,
+            'judul_pekerjaan'             => $request->judul_pekerjaan             ?: $source->judul_pekerjaan,
+            'keterangan'                  => $request->filled('keterangan')        ? $request->keterangan : $source->keterangan,
+            'tanggal_mulai'               => $tanggalMulai,
+            'tanggal_selesai'             => $tanggalSelesai,
             'interval_bulan'              => $dupInterval,
             'no_urut_period'              => $dupNoUrut,
             'created_at'                  => now(),
@@ -317,6 +391,35 @@ class WorkOrderController extends Controller
 
         $after = DB::table('work_orders')->where('id_wo', $newId)->get()->toJson();
         saveAudit('work_orders', $newId, 'create', null, $after);
+
+        // Clone BOQ items
+        $boqInput = $request->input('boq', []);
+        foreach ($boqInput as $item) {
+            if (empty($item['id_testing_point'])) continue;
+            $qty = isset($item['qty']) && $item['qty'] !== '' ? (int) $item['qty'] : null;
+
+            $newBoqId = DB::table('boq')->insertGetId([
+                'id_wo'                 => $newId,
+                'id_testing_point'      => $item['id_testing_point'],
+                'item_produk_alternate' => $item['item_produk_alternate'] ?? null,
+                'qty'                   => $qty,
+                'satuan'                => $item['satuan'] ?? null,
+                'harga'                 => $item['harga'] ?? null,
+                'keterangan'            => $item['keterangan'] ?? null,
+                'created_at'            => now(),
+                'updated_at'            => now(),
+            ]);
+
+            $testingItemIds = $item['testing_item_ids'] ?? [];
+            if (!empty($testingItemIds)) {
+                DB::table('boq_items')->insert(array_map(fn($tiId) => [
+                    'id_boq'          => $newBoqId,
+                    'id_testing_item' => $tiId,
+                    'created_at'      => now(),
+                    'updated_at'      => now(),
+                ], $testingItemIds));
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -352,20 +455,25 @@ class WorkOrderController extends Controller
             ->leftJoin('sales_orders as s', 'wo.id_so', '=', 's.id_so')
             ->leftJoin('business_relations as br', 'wo.id_pelanggan_pekerjaan', '=', 'br.id_br')
             ->leftJoin('business_relation_sites as brs', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
+            ->leftJoin('business_relation_contacts as pic', 'wo.id_pic_pelanggan_pekerjaan', '=', 'pic.id_contact')
             ->select([
                 'wo.id_wo',
                 's.id_so',
                 's.tanggal_so',
-                's.tanggal_mulai',
-                's.tanggal_selesai',
+                'wo.tanggal_mulai',
+                'wo.tanggal_selesai',
                 'wo.id_pelanggan_pekerjaan',
                 'wo.id_site_pelanggan_pekerjaan',
+                'wo.id_pic_pelanggan_pekerjaan',
+                'pic.nama_pic as nama_pic_pelanggan_pekerjaan',
                 's.no_po',
                 's.tanggal_po',
                 'wo.no_wo',
                 'wo.judul_pekerjaan',
                 's.tidak_ada_po',
                 's.no_so',
+                'wo.interval_bulan',
+                'wo.no_urut_period',
                 'br.nama as Pelanggan',
                 'brs.nama_lokasi as Site Pelanggan',
                 's.judul_order',
@@ -383,7 +491,68 @@ class WorkOrderController extends Controller
             ], 404);
         }
 
-        return response()->json($wo);
+        $siteWos = $wo->id_site_pelanggan_pekerjaan
+            ? DB::table('work_orders as w2')
+                ->leftJoin('business_relation_contacts as p2', 'w2.id_pic_pelanggan_pekerjaan', '=', 'p2.id_contact')
+                ->where('w2.id_so', $wo->id_so)
+                ->where('w2.id_site_pelanggan_pekerjaan', $wo->id_site_pelanggan_pekerjaan)
+                ->whereNull('w2.deleted_at')
+                ->select([
+                    'w2.id_wo',
+                    'w2.no_wo',
+                    'w2.judul_pekerjaan',
+                    'w2.no_urut_period',
+                    'w2.interval_bulan',
+                    'w2.tanggal_mulai',
+                    'w2.tanggal_selesai',
+                    'p2.nama_pic as nama_pic',
+                ])
+                ->orderBy('w2.no_urut_period')
+                ->orderBy('w2.id_wo')
+                ->get()
+            : collect();
+
+        $boqSections = DB::table('boq as b')
+            ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
+            ->where('b.id_wo', $id)
+            ->select([
+                'b.id_boq',
+                'b.id_testing_point',
+                'b.qty',
+                'b.satuan',
+                'b.harga',
+                'b.keterangan',
+                'b.item_produk_alternate',
+                DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
+            ])
+            ->get();
+
+        $boqIds = $boqSections->pluck('id_boq');
+        $boqItemsByBoq = $boqIds->isNotEmpty()
+            ? DB::table('boq_items')->whereIn('id_boq', $boqIds)
+                ->select(['id_boq', 'id_testing_item'])->get()->groupBy('id_boq')
+            : collect();
+
+        $boqData = $boqSections->map(function ($b) use ($boqItemsByBoq) {
+            return [
+                'id_boq'                => $b->id_boq,
+                'id_testing_point'      => $b->id_testing_point,
+                'point_name'            => $b->point_name ?? '—',
+                'qty'                   => $b->qty,
+                'satuan'                => $b->satuan,
+                'harga'                 => $b->harga,
+                'keterangan'            => $b->keterangan,
+                'item_produk_alternate' => $b->item_produk_alternate,
+                'testing_item_ids'      => ($boqItemsByBoq->get($b->id_boq) ?? collect())->pluck('id_testing_item')->toArray(),
+            ];
+        })->values();
+
+        return response()->json(array_merge((array) $wo, [
+            'site_wos'  => $siteWos,
+            'boq_items' => $boqData,
+        ]));
     }
 
     public function boqProgress(int $id)
@@ -510,6 +679,8 @@ class WorkOrderController extends Controller
                 'brc.nama_pic as nama_pic_pelanggan_pekerjaan',
                 'wo.interval_bulan',
                 'wo.no_urut_period',
+                'wo.tanggal_mulai',
+                'wo.tanggal_selesai',
                 'wo.created_at',
                 'wo.updated_at',
             ])

@@ -92,7 +92,8 @@ class SalesOrderController extends Controller
             // STATUS
             'status' => $request->status,
             'keterangan_status' => $request->keterangan_status,
-            'keterangan' => $request->keterangan,
+            'cara_pembayaran'   => $request->cara_pembayaran,
+            'keterangan'        => $request->keterangan,
 
             'created_at' => now(),
             'updated_at' => now(),
@@ -255,7 +256,8 @@ class SalesOrderController extends Controller
             'id_sc' => 'nullable|integer',
             'status' => 'required|string|max:50',
             'keterangan_status' => 'nullable|string',
-            'keterangan' => 'nullable|string',
+            'cara_pembayaran'   => 'nullable|string',
+            'keterangan'        => 'nullable|string',
         ]);
 
         try {
@@ -297,7 +299,8 @@ class SalesOrderController extends Controller
 
                     'status' => $validated['status'],
                     'keterangan_status' => $validated['keterangan_status'],
-                    'keterangan' => $validated['keterangan'],
+                    'cara_pembayaran'   => $validated['cara_pembayaran'],
+                    'keterangan'        => $validated['keterangan'],
 
                     'updated_at' => now(),
                 ]);
@@ -326,7 +329,8 @@ class SalesOrderController extends Controller
             ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
             ->where('wo.id_so', $id_so)
             ->whereNull('wo.deleted_at')
-            ->select(['wo.id_wo', 'wo.no_wo', 'wo.judul_pekerjaan', 'wo.keterangan', 'wo.interval_bulan', 'wo.no_urut_period', 'br.nama as nama_pelanggan', 'brs.nama_lokasi as nama_site_pelanggan'])
+            ->select(['wo.id_wo', 'wo.no_wo', 'wo.judul_pekerjaan', 'wo.keterangan', 'wo.interval_bulan', 'wo.no_urut_period', 'wo.tanggal_mulai', 'wo.tanggal_selesai', 'br.nama as nama_pelanggan', 'brs.nama_lokasi as nama_site_pelanggan'])
+            ->orderByRaw('ISNULL(wo.tanggal_mulai), wo.tanggal_mulai ASC')
             ->orderBy('wo.id_wo')
             ->get();
 
@@ -400,6 +404,8 @@ class SalesOrderController extends Controller
                 'no_urut_period'      => $wo->no_urut_period,
                 'nama_pelanggan'      => $wo->nama_pelanggan,
                 'nama_site_pelanggan' => $wo->nama_site_pelanggan,
+                'tanggal_mulai'       => $wo->tanggal_mulai,
+                'tanggal_selesai'     => $wo->tanggal_selesai,
                 'fwo_count'           => (int)($fwoCountByWo[$wo->id_wo] ?? 0),
                 'total_boq_qty'   => $totalBoqQty,
                 'total_fwo_qty'   => $totalFwoQty,

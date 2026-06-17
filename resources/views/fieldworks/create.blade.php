@@ -160,6 +160,15 @@
 
         // Auto-fill dan lock dari ?id_wo=
         if (preselectWoId) {
+            // Langsung lock field sebelum AJAX selesai
+            $('#woFieldWrapper').html(`
+                <label class="form-label required">Work Order</label>
+                <input type="hidden" name="id_wo" value="${preselectWoId}">
+                <p class="form-control mb-0" style="background:#f8fafc;color:#374151;">
+                    <i class="fa-solid fa-spinner fa-spin me-1" style="color:#94a3b8;"></i> Memuat...
+                </p>
+            `);
+
             $.get("{{ url('work-orders') }}/" + preselectWoId + "/detail", function (res) {
                 if (!res || !res.id_wo) return;
 

@@ -4,10 +4,10 @@ function renderForm(res) {
         .toLowerCase()
         .replace(/\s+/g, "-");
     const pelangganTag = res.nama_pelanggan
-        ? `<span class="pm-badge" style="background:#f1f5f9;color:#475569;">
+        ? `<a href="/business-relations${res.id_site_pelanggan ? '?open=' + res.id_site_pelanggan : ''}" class="pm-badge" style="background:#f1f5f9;color:#475569;text-decoration:none;">
                <i class="fa-solid fa-building" style="font-size:10px;"></i>
                ${escHtml(res.nama_pelanggan)}
-           </span>`
+           </a>`
         : "";
 
     return `
@@ -217,13 +217,13 @@ function renderForm(res) {
                 <!-- Desktop: party header -->
                 <div class="detail-party-header d-none d-md-grid">
                     <div class="detail-party-label">
-                        <i class="fa-solid fa-file-invoice me-1"></i> Billing (Pemesan)
+                        <i class="fa-solid fa-file-invoice me-1"></i> Data Pemesan
                     </div>
                     <div class="detail-party-label">
-                        <i class="fa-solid fa-truck me-1"></i> Delivery (Pengiriman)
+                        <i class="fa-solid fa-truck me-1"></i> Data Pengiriman
                     </div>
                     <div class="detail-party-label">
-                        <i class="fa-solid fa-money-bill me-1"></i> Payment (Pembayaran)
+                        <i class="fa-solid fa-money-bill me-1"></i> Data Pembayaran
                     </div>
                 </div>
 
@@ -231,7 +231,7 @@ function renderForm(res) {
                 <div class="row g-3 form-1">
                     <div class="col-12 d-md-none">
                         <div class="detail-mobile-section-label">
-                            <i class="fa-solid fa-file-invoice me-1"></i> Billing (Pemesan)
+                            <i class="fa-solid fa-file-invoice me-1"></i> Data Pemesan
                         </div>
                     </div>
                     ${formGroup.select(
@@ -250,7 +250,7 @@ function renderForm(res) {
                     )}
                     <div class="col-12 d-md-none">
                         <div class="detail-mobile-section-label">
-                            <i class="fa-solid fa-truck me-1"></i> Delivery (Pengiriman)
+                            <i class="fa-solid fa-truck me-1"></i> Data Pengiriman
                         </div>
                     </div>
                     ${formGroup.select(
@@ -269,7 +269,7 @@ function renderForm(res) {
                     )}
                     <div class="col-12 d-md-none">
                         <div class="detail-mobile-section-label">
-                            <i class="fa-solid fa-money-bill me-1"></i> Payment (Pembayaran)
+                            <i class="fa-solid fa-money-bill me-1"></i> Data Pembayaran
                         </div>
                     </div>
                     ${formGroup.select(
@@ -478,6 +478,14 @@ function renderForm(res) {
                         false,
                         {
                             className: "col-md-9",
+                        },
+                    )}
+                    ${formGroup.textarea(
+                        "cara_pembayaran",
+                        "Cara Pembayaran",
+                        res.cara_pembayaran,
+                        {
+                            className: "col-md-12",
                         },
                     )}
                     ${formGroup.textarea(

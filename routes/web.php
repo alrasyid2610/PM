@@ -512,6 +512,8 @@ Route::prefix('termin')->name('termin.')->group(function () {
     Route::get('/{id}/history',       [TerminController::class, 'history'])->name('history')->whereNumber('id');
     Route::post('/{id}/add-output',    [TerminController::class, 'addOutput'])->name('add-output')->whereNumber('id');
     Route::post('/{id}/remove-output', [TerminController::class, 'removeOutput'])->name('remove-output')->whereNumber('id');
+    Route::post('/{id}/siap-kirim',    [TerminController::class, 'siapKirim'])->name('siap-kirim')->whereNumber('id');
+    Route::post('/{id}/selesai',       [TerminController::class, 'selesai'])->name('selesai')->whereNumber('id');
     Route::put('/{id}',               [TerminController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}',            [TerminController::class, 'destroy'])->name('destroy')->whereNumber('id');
 });

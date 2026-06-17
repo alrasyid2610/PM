@@ -721,6 +721,26 @@ section .card {
     background: #fee2e2;
     color: #991b1b;
 }
+.detail-status-inline.detail-status-draft {
+    background: #f1f5f9;
+    color: #475569;
+}
+.detail-status-inline.detail-status-confirmed {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+.detail-status-inline.detail-status-on-progress {
+    background: #fef3c7;
+    color: #92400e;
+}
+.detail-status-inline.detail-status-done {
+    background: #dcfce7;
+    color: #166534;
+}
+.detail-status-inline.detail-status-siap_kirim {
+    background: #dcfce7;
+    color: #15803d;
+}
 
 /* =====================
    DETAIL ACTION TAGS (badges row below dates)
@@ -2260,4 +2280,8 @@ tr.shown td.dt-control i {
 }
 .boq-item-edit-actions.active {
     display: flex;
+}
+
+.boq-items-toggle {
+    border-bottom: 1px solid #c3c3c3;
 }

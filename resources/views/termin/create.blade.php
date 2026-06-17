@@ -40,14 +40,20 @@
                         <label for="status" class="form-label required">Status</label>
                         <select class="form-select" id="status" name="status" required>
                             <option value="pending">Pending</option>
-                            <option value="proses">Proses</option>
+                            <option value="siap_kirim">Siap Kirim</option>
                             <option value="selesai">Selesai</option>
                         </select>
                     </div>
+                    <div class="col-md-2 col-12">
+                        <label class="form-label">Down Payment</label>
+                        <div class="form-check mt-1">
+                            <input type="checkbox" class="form-check-input" id="is_dp" name="is_dp" value="1">
+                            <label class="form-check-label" for="is_dp">DP</label>
+                        </div>
+                    </div>
                     <div class="col-md-4 col-12">
                         <label for="nilai" class="form-label required">Nilai (Rp)</label>
-                        <input type="number" class="form-control" id="nilai" name="nilai"
-                               step="1" min="0" required>
+                        <input type="text" inputmode="numeric" class="form-control input-num-mask" id="nilai" name="nilai" required>
                     </div>
                     <div class="col-md-4 col-12">
                         <label for="tanggal" class="form-label required">Tanggal</label>
@@ -94,6 +100,7 @@
     var preselectSoId = new URLSearchParams(window.location.search).get('id_so');
 
     $(document).ready(function () {
+        initNumericMask(document);
         createFileUploader(".filepond");
         $('#status').select2({ placeholder: 'Pilih Status', width: '100%' });
 
@@ -156,15 +163,24 @@
             woGroups.get(key).push(item);
         });
 
+        var statusMap = {
+            belum_siap: { label: 'Belum Siap', bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
+            siap:       { label: 'Siap',        bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
+            terkirim:   { label: 'Terkirim',    bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+        };
+
         var accordionItems = '';
         woGroups.forEach(function (list, noWo) {
             var rows = list.map(function (item) {
+                var st = statusMap[item.status] || statusMap['belum_siap'];
+                var statusBadge = '<span style="font-size:11px;padding:2px 9px;border-radius:20px;white-space:nowrap;background:' + st.bg + ';color:' + st.color + ';border:1px solid ' + st.border + ';">' + st.label + '</span>';
                 return '<tr>' +
                     '<td ' + TD + ' style="text-align:center;">' +
                         '<input type="checkbox" class="form-check-input output-check" ' +
                         'name="selected_outputs[]" value="' + item.id_output + '">' +
                     '</td>' +
                     '<td ' + TD + '>' + escHtml(item.judul_output) + '</td>' +
+                    '<td ' + TD + '>' + statusBadge + '</td>' +
                     '<td ' + TD + '>' +
                         '<input type="text" name="judul_tagihan[' + item.id_output + ']" ' +
                         'class="form-control form-control-sm judul-tagihan-input" ' +
@@ -185,10 +201,11 @@
                     '<div class="termin-output-accordion-body">' +
                         '<div class="table-responsive">' +
                         '<table class="table table-sm table-hover mb-0" style="font-size:13px;table-layout:fixed;width:100%;">' +
-                        '<colgroup><col style="width:44px;"><col style="width:50%;"><col style="width:50%;"></colgroup>' +
+                        '<colgroup><col style="width:44px;"><col><col style="width:110px;"><col style="width:40%;"></colgroup>' +
                         '<thead style="background:#f8fafc;border-bottom:1px solid #e2e8f0;"><tr>' +
                         '<th ' + TH + '></th>' +
                         '<th ' + TH + '>Judul Output</th>' +
+                        '<th ' + TH + '>Status</th>' +
                         '<th ' + TH + '>Judul Tagihan <span style="font-size:10px;color:#94a3b8;">(opsional)</span></th>' +
                         '</tr></thead>' +
                         '<tbody>' + rows + '</tbody>' +
@@ -271,6 +288,11 @@
         var checked = this.checked;
         $('.termin-output-accordion-item:visible tbody tr:visible .output-check')
             .prop('checked', checked).trigger('change');
+    });
+
+    $('#terminForm').on('submit', function () {
+        var el = document.getElementById('nilai');
+        if (el && el._cleave) el.value = el._cleave.getRawValue();
     });
 
     submitCreateForm({

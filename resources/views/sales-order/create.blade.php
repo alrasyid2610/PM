@@ -87,13 +87,13 @@
                 <!-- Party header desktop -->
                 <div class="detail-party-header d-none d-md-grid">
                     <div class="detail-party-label">
-                        <i class="fa-solid fa-file-invoice me-1"></i> Billing (Pemesan)
+                        <i class="fa-solid fa-file-invoice me-1"></i> Data Pemesan
                     </div>
                     <div class="detail-party-label">
-                        <i class="fa-solid fa-truck me-1"></i> Delivery (Pengiriman)
+                        <i class="fa-solid fa-truck me-1"></i> Data Pengiriman
                     </div>
                     <div class="detail-party-label">
-                        <i class="fa-solid fa-money-bill me-1"></i> Payment (Pembayaran)
+                        <i class="fa-solid fa-money-bill me-1"></i> Data Pembayaran
                     </div>
                 </div>
     
@@ -101,7 +101,7 @@
                 <div class="row g-3 mb-1">
                     <div class="col-12 d-md-none">
                         <div class="detail-mobile-section-label">
-                            <i class="fa-solid fa-file-invoice me-1"></i> Billing (Pemesan)
+                            <i class="fa-solid fa-file-invoice me-1"></i> Data Pemesan
                         </div>
                     </div>
                     <div class="col-md-4 col-12">
@@ -112,7 +112,7 @@
                     </div>
                     <div class="col-12 d-md-none">
                         <div class="detail-mobile-section-label">
-                            <i class="fa-solid fa-truck me-1"></i> Delivery (Pengiriman)
+                            <i class="fa-solid fa-truck me-1"></i> Data Pengiriman
                         </div>
                     </div>
                     <div class="col-md-4 col-12">
@@ -123,7 +123,7 @@
                     </div>
                     <div class="col-12 d-md-none">
                         <div class="detail-mobile-section-label">
-                            <i class="fa-solid fa-money-bill me-1"></i> Payment (Pembayaran)
+                            <i class="fa-solid fa-money-bill me-1"></i> Data Pembayaran
                         </div>
                     </div>
                     <div class="col-md-4 col-12">
@@ -230,6 +230,10 @@
                     <div class="col-md-9 col-12">
                         <label class="form-label">Keterangan Status</label>
                         <textarea name="keterangan_status" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Cara Pembayaran</label>
+                        <textarea name="cara_pembayaran" class="form-control" rows="2"></textarea>
                     </div>
                     <div class="col-md-12">
                         <label class="form-label">Keterangan</label>

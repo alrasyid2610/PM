@@ -95,15 +95,15 @@ function renderForm(res) {
                                     <table id="Table" class="table table-bordered table-sm dynamic-table mb-0">
                                         <thead class="table-light">
                                             <tr>
-                                                <th width="3%">No</th>
-                                                <th width="18%">Judul Indonesia</th>
-                                                <th width="18%">Judul Inggris</th>
-                                                <th width="12%">Parameter</th>
-                                                <th width="10%">Unit</th>
-                                                <th width="9%">Nilai</th>
-                                                <th width="12%">Keterangan</th>
-                                                <th width="8%">Status</th>
-                                                <th width="10%">Aksi</th>
+                                                <th style="white-space:nowrap;width:40px">No</th>
+                                                <th style="min-width:240px">Judul Indonesia</th>
+                                                <th style="min-width:240px">Judul Inggris</th>
+                                                <th style="min-width:160px">Parameter</th>
+                                                <th style="min-width:140px">Unit</th>
+                                                <th style="min-width:120px">Nilai</th>
+                                                <th style="min-width:140px">Keterangan</th>
+                                                <th style="white-space:nowrap;width:60px">Status</th>
+                                                <th style="white-space:nowrap;width:60px">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody>

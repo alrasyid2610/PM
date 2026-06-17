@@ -8,6 +8,7 @@ class CrudPageController {
         this.historyConfig = options.historyConfig || null;
         this.onSave = options.onSave || null;
         this.afterLoad = options.afterLoad || null;
+        this.noEditBind = options.noEditBind || false;
 
         this.selectedRow = { id: null };
 
@@ -157,7 +158,7 @@ class CrudPageController {
                     renderAttachments(self.attachmentData);
                 }
 
-                self.bindEditBehaviour();
+                if (!self.noEditBind) self.bindEditBehaviour();
                 initDynamicSelect("#detailContent");
 
                 // 🔥 SEKARANG BARU AMBIL INITIAL STATE

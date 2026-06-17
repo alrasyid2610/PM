@@ -17,10 +17,10 @@ function renderForm(res) {
            </a>`
         : '';
     const pelangganTag = res.nama_site_pelanggan_pekerjaan
-        ? `<span class="pm-badge" style="background:#f1f5f9;color:#475569;">
+        ? `<a href="/business-relations${res.id_site_pelanggan_pekerjaan ? '?open=' + res.id_site_pelanggan_pekerjaan : ''}" class="pm-badge" style="background:#f1f5f9;color:#475569;text-decoration:none;">
                <i class="fa-solid fa-location-dot" style="font-size:10px;"></i>
                ${escHtml(res.nama_site_pelanggan_pekerjaan)}
-           </span>`
+           </a>`
         : '';
 
     return `
@@ -58,7 +58,7 @@ function renderForm(res) {
                         <button class="pm-tab-btn" id="tab-boq-btn" type="button" role="tab"
                             data-bs-toggle="tab" data-bs-target="#tabBoq">
                             <i class="fa-solid fa-layer-group me-1" style="color:#16a34a;font-size:11px;"></i>
-                            BOQ Progress
+                            BOQ
                         </button>
                     </li>
                     <li role="presentation">
@@ -185,6 +185,8 @@ function renderForm(res) {
                 placeholder: "Pilih PIC", label: res.nama_pic_pelanggan_pekerjaan,
                 className: "col-md-7", createUrl: "/business-relation-contacts/create",
             })}
+            ${formGroup.date("tanggal_mulai", "Tanggal Mulai", res.tanggal_mulai ? res.tanggal_mulai.substring(0,10) : '', false, { className: "col-md-3" })}
+            ${formGroup.date("tanggal_selesai", "Tanggal Selesai", res.tanggal_selesai ? res.tanggal_selesai.substring(0,10) : '', false, { className: "col-md-3" })}
         </div>`
     )}
 
