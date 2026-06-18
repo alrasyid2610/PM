@@ -127,6 +127,32 @@ class TestingPointController extends Controller
             'updated_at' => now(),
         ]);
 
+        // Insert testing items
+        $judulIndonesia = $request->judul_indonesia ?? [];
+        $judulInggris   = $request->judul_inggris   ?? [];
+        $parameter      = $request->parameter       ?? [];
+        $unit           = $request->unit            ?? [];
+        $nilai          = $request->nilai           ?? [];
+        $itemKeterangan = $request->item_keterangan ?? [];
+        $status         = $request->status          ?? [];
+        $nomor          = $request->nomor           ?? [];
+
+        foreach ($judulIndonesia as $i => $val) {
+            DB::table('testing_items')->insert([
+                'id_testing_point'     => $id,
+                'nomor'                => $nomor[$i] ?? ($i + 1),
+                'judul_indonesia'      => $val,
+                'judul_inggris'        => $judulInggris[$i]   ?? null,
+                'id_testing_parameter' => $parameter[$i]      ?? null,
+                'id_testing_unit'      => $unit[$i]           ?? null,
+                'nilai'                => $nilai[$i]          ?? null,
+                'keterangan'           => $itemKeterangan[$i] ?? null,
+                'is_aktif'             => isset($status[$i]) ? $status[$i] : 0,
+                'created_at'           => now(),
+                'updated_at'           => now(),
+            ]);
+        }
+
         $after = DB::table('testing_points')->where('id_testing_point', $id)->get()->toJson();
         saveAudit('testing_points', $id, 'Create', '', $after);
 
@@ -195,7 +221,7 @@ class TestingPointController extends Controller
             $parameter      = $request->parameter ?? [];
             $unit           = $request->unit ?? [];
             $nilai          = $request->nilai ?? [];
-            $keterangan     = $request->keterangan ?? [];
+            $keterangan     = $request->item_keterangan ?? [];
             $status         = $request->status ?? [];
             $nomor          = $request->nomor ?? [];
 
