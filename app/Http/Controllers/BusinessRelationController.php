@@ -292,19 +292,21 @@ class BusinessRelationController extends Controller
                 DB::table('business_relation_sites')
                     ->where('id_site', $request->site_id)
                     ->update([
-                        'nama_lokasi'     => $request->nama_lokasi,
-                        'is_kantor_pusat'     => $request->is_kantor_pusat,
-                        'alamat_lengkap'  => $request->alamat_lengkap,
-                        'provinsi'        => $request->provinsi,
-                        'kota_kabupaten'  => $request->kota_kabupaten,
-                        'kecamatan'       => $request->kecamatan,
-                        'kelurahan'       => $request->kelurahan,
-                        'kode_pos'        => $request->kode_pos,
-                        'kawasan_bisnis'  => $request->kawasan_bisnis,
-                        'gedung'          => $request->gedung,
-                        'npwp_cabang'     => $request->npwp_cabang,
-                        'is_aktif'        => 1,
-                        'updated_at'      => now(),
+                        'nama_lokasi'      => $request->nama_lokasi,
+                        'is_kantor_pusat'  => $request->is_kantor_pusat,
+                        'nama_jalan'       => $request->nama_jalan,
+                        'alamat_lengkap'   => $request->alamat_lengkap,
+                        'keterangan_alamat'=> $request->keterangan_alamat,
+                        'provinsi'         => $request->provinsi,
+                        'kota_kabupaten'   => $request->kota_kabupaten,
+                        'kecamatan'        => $request->kecamatan,
+                        'kelurahan'        => $request->kelurahan,
+                        'kode_pos'         => $request->kode_pos,
+                        'kawasan_bisnis'   => $request->kawasan_bisnis,
+                        'gedung'           => $request->gedung,
+                        'npwp_cabang'      => $request->npwp_cabang,
+                        'is_aktif'         => 1,
+                        'updated_at'       => now(),
                     ]);
             }
 
@@ -376,19 +378,21 @@ class BusinessRelationController extends Controller
             DB::table('business_relation_sites')
                 ->where('id_site', $request->id_site)
                 ->update([
-                    'nama_lokasi'     => $request->nama_lokasi,
-                    'is_kantor_pusat' => $request->is_kantor_pusat,
-                    'alamat_lengkap'  => $request->alamat_lengkap,
-                    'provinsi'        => $request->provinsi,
-                    'kota_kabupaten'  => $request->kota_kabupaten,
-                    'kecamatan'       => $request->kecamatan,
-                    'kelurahan'       => $request->kelurahan,
-                    'kode_pos'        => $request->kode_pos,
-                    'kawasan_bisnis'  => $request->kawasan_bisnis,
-                    'gedung'          => $request->gedung,
-                    'npwp_cabang'     => $request->npwp_cabang,
-                    'is_aktif'        => $request->s_is_aktif ?? 1,
-                    'updated_at'      => now(),
+                    'nama_lokasi'       => $request->nama_lokasi,
+                    'is_kantor_pusat'   => $request->is_kantor_pusat,
+                    'nama_jalan'        => $request->nama_jalan,
+                    'alamat_lengkap'    => $request->alamat_lengkap,
+                    'keterangan_alamat' => $request->keterangan_alamat,
+                    'provinsi'          => $request->provinsi,
+                    'kota_kabupaten'    => $request->kota_kabupaten,
+                    'kecamatan'         => $request->kecamatan,
+                    'kelurahan'         => $request->kelurahan,
+                    'kode_pos'          => $request->kode_pos,
+                    'kawasan_bisnis'    => $request->kawasan_bisnis,
+                    'gedung'            => $request->gedung,
+                    'npwp_cabang'       => $request->npwp_cabang,
+                    'is_aktif'          => $request->s_is_aktif ?? 1,
+                    'updated_at'        => now(),
                 ]);
 
             // Capture AFTER state
@@ -528,6 +532,7 @@ class BusinessRelationController extends Controller
                 'be.nama as nama_kawasan_bisnis',
                 's.gedung as id_building',    // ← ID untuk value select2
                 'cb.nama as nama_gedung',
+                's.nama_jalan',
                 's.keterangan_alamat',
                 's.npwp_cabang',
                 's.is_aktif as s_is_aktif',

@@ -148,7 +148,9 @@ function renderForm(res) {
                                     ],
                                     { className: "col-md-4" }
                                 )}
+                                ${formGroup.text("nama_jalan", "Nama Jalan", res.nama_jalan, false, { className: "col-md-12" })}
                                 ${formGroup.textarea("alamat_lengkap", "Alamat Lengkap", res.alamat_lengkap, { className: "col-md-12" })}
+                                ${formGroup.textarea("keterangan_alamat", "Keterangan Alamat", res.keterangan_alamat, { className: "col-md-12" })}
                             </div>`
                         )}
 
