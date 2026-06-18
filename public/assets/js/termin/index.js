@@ -1,4 +1,5 @@
 let page;
+let currentTerminData = null;
 const TH_STYLE = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:8px 12px;color:#64748b;font-weight:600;"';
 const TD_STYLE = 'style="padding:8px 12px;vertical-align:middle;"';
 
@@ -13,7 +14,7 @@ $(document).on('shown.bs.tab', '#terminDetailTabs button[data-bs-toggle="tab"]',
 $(document).ready(function () {
     page = new CrudPageController({
         primaryKey: "id_termin",
-        renderForm: renderForm,
+        renderForm: function (res) { currentTerminData = res; return renderForm(res); },
         initSelect: function () {
             initNumericMask(document.getElementById('detailContent'));
             $("#detail_status").select2({
@@ -346,10 +347,15 @@ $(document).ready(function () {
                 data: { _token: window.route.csrf, _method: 'DELETE' },
                 success: function (res) {
                     Notify.success(res.message || 'Data berhasil dihapus');
-                    $('#detailContent').html('');
-                    page.selectedRow.id = null;
-                    if ($.fn.DataTable.isDataTable('#masterTable')) {
-                        $('#masterTable').DataTable().ajax.reload(null, false);
+                    const soId = currentTerminData && currentTerminData.id_so;
+                    if (soId) {
+                        window.location.href = '/sales-orders?open=' + soId;
+                    } else {
+                        $('#detailContent').html('');
+                        page.selectedRow.id = null;
+                        if ($.fn.DataTable.isDataTable('#masterTable')) {
+                            $('#masterTable').DataTable().ajax.reload(null, false);
+                        }
                     }
                 },
                 error: function (xhr) {

@@ -396,10 +396,15 @@ $(document).ready(function () {
                 data: { _token: window.route.csrf, _method: 'DELETE' },
                 success: function (res) {
                     Notify.success(res.message || 'Data berhasil dihapus');
-                    $('#detailContent').html('');
-                    page.selectedRow.id = null;
-                    if ($.fn.DataTable.isDataTable('#masterTable')) {
-                        $('#masterTable').DataTable().ajax.reload(null, false);
+                    const woId = currentFwoData && currentFwoData.id_wo;
+                    if (woId) {
+                        window.location.href = '/work-orders?open=' + woId;
+                    } else {
+                        $('#detailContent').html('');
+                        page.selectedRow.id = null;
+                        if ($.fn.DataTable.isDataTable('#masterTable')) {
+                            $('#masterTable').DataTable().ajax.reload(null, false);
+                        }
                     }
                 },
                 error: function (xhr) {

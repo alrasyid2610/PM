@@ -480,6 +480,14 @@
     $('#createBusinessRelationForm').on('submit', function (e) {
         e.preventDefault();
 
+        // Pastikan nama_br_hidden terisi dari nilai Select2 saat ini
+        if (!$('#nama_br_hidden').val()) {
+            const selected = $('#nama_br').select2('data');
+            if (selected && selected.length && selected[0].text) {
+                $('#nama_br_hidden').val(selected[0].text);
+            }
+        }
+
         const form = $(this);
         const btn = $('#btnSubmit');
 

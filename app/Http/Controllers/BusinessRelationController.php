@@ -199,8 +199,8 @@ class BusinessRelationController extends Controller
             'website' => 'nullable|string|max:255',
             'nomor_telepon' => 'nullable|string|max:50',
 
-            'nama_lokasi' => 'required_if:site_id,null|string|max:255',
-            'alamat_lengkap' => 'required_if:site_id,null|string',
+            'nama_lokasi' => 'required_without:site_id|nullable|string|max:255',
+            'alamat_lengkap' => 'nullable|string',
         ]);
 
         // dd($request->all());
