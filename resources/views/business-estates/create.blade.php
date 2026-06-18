@@ -97,7 +97,9 @@
     submitCreateForm({
         formId: "#createBusinessEstateForm",
         url: "{{ route('business-estates.store') }}",
-        redirect: "{{ route('business-estates.index') }}",
+        onSuccess: function (res) {
+            window.location.href = "{{ route('business-estates.index') }}?open=" + res.id;
+        },
     });
 </script>
 @endsection

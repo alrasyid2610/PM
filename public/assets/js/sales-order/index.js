@@ -478,7 +478,7 @@ $(document).ready(function () {
                     </div>
                     <div class="col-md-4">
                         <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
-                        <input type="number" class="form-control form-control-sm copy-wo-boq-harga"
+                        <input type="text" inputmode="numeric" class="form-control form-control-sm copy-wo-boq-harga input-num-mask input-num-int"
                             value="${escHtml(harga)}" placeholder="0">
                     </div>
                     <div class="col-12">
@@ -500,6 +500,7 @@ $(document).ready(function () {
             loadCopyWoBoqItems($row, tpId, preCheckedIds);
         }
 
+        initNumericMask($panel[0]);
         $panel.slideDown(150);
         $btn.html('<i class="fa-solid fa-chevron-up me-1"></i> Selesai');
     });
@@ -543,7 +544,7 @@ $(document).ready(function () {
                 id_testing_point:      parseInt(idTp),
                 qty:                   qty ? parseInt(qty) : null,
                 satuan:                useInputs ? ($row.find('.copy-wo-boq-satuan').val() || '') : ($row.attr('data-satuan') || ''),
-                harga:                 useInputs ? ($row.find('.copy-wo-boq-harga').val() || null) : ($row.attr('data-harga') || null),
+                harga:                 useInputs ? (rawNumVal($row.find('.copy-wo-boq-harga')[0]) ?? null) : ($row.attr('data-harga') || null),
                 keterangan:            useInputs ? ($row.find('.copy-wo-boq-ket').val() || null) : ($row.attr('data-keterangan') || null),
                 item_produk_alternate: useInputs ? ($row.find('.copy-wo-boq-item-produk').val() || null) : ($row.attr('data-item-produk-alternate') || null),
                 testing_item_ids:      testingItemIds,
@@ -879,7 +880,7 @@ function addCopyWoBoqRow() {
                 </div>
                 <div class="col-md-2">
                     <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
-                    <input type="number" class="form-control form-control-sm copy-wo-boq-harga" min="0" placeholder="0">
+                    <input type="text" inputmode="numeric" class="form-control form-control-sm copy-wo-boq-harga input-num-mask input-num-int" placeholder="0">
                 </div>
                 <div class="col-12">
                     <label class="form-label form-label-sm text-muted mb-1">Keterangan</label>
@@ -895,6 +896,7 @@ function addCopyWoBoqRow() {
     </div>`);
 
     $("#copyWoBoqContainer").append(row);
+    initNumericMask(row[0]);
 
     const $sel = row.find('.copy-wo-boq-tp-select');
     $sel.select2({

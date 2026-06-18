@@ -30,9 +30,9 @@ function initDataTable(tableSelector, onReady) {
             thead += "<th>No</th>";
 
             keys.forEach((key) => {
-                let label = key
-                    .replaceAll("_", " ")
-                    .replace(/\b\w/g, (l) => l.toUpperCase());
+                let label = (window.datatableHeaderLabels && window.datatableHeaderLabels[key])
+                    ? window.datatableHeaderLabels[key]
+                    : key.replaceAll("_", " ").replace(/\b\w/g, (l) => l.toUpperCase());
 
                 thead += `<th>${label}</th>`;
             });

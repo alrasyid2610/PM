@@ -103,7 +103,9 @@
     submitCreateForm({
         formId: "#createBusinesRelationContact",
         url: "{{ route('business-relation-contacts.store') }}",
-        redirect: "{{ route('business-relation-contacts.index') }}",
+        onSuccess: function (res) {
+            window.location.href = "{{ route('business-relation-contacts.index') }}?open=" + res.id;
+        },
     });
 </script>
 @endsection

@@ -59,7 +59,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Nilai Kontrak (Rp)</label>
-                        <input type="number" class="form-control" name="nilai_kontrak" min="0" placeholder="150000000">
+                        <input type="text" inputmode="numeric" class="form-control input-num-mask input-num-int" name="nilai_kontrak" placeholder="150,000,000">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Catatan</label>
@@ -141,6 +141,8 @@
     }
 
     $(document).ready(function () {
+        initNumericMask(document.body);
+
         createFileUploader(".filepond");
         $('#status').select2({ placeholder: '-- Pilih Status --', allowClear: true, width: '100%' });
 
@@ -162,11 +164,20 @@
         });
     });
 
+    // Strip format koma dari input-num-mask sebelum submit
+    $('#contractForm').on('submit', function () {
+        $(this).find('.input-num-mask').each(function () {
+            $(this).val(rawNumVal(this) ?? '');
+        });
+    });
+
     submitCreateForm({
         formId:   "#contractForm",
         url:      "{{ route('contracts.store') }}",
-        redirect: "{{ route('contracts.index') }}",
         filepond: ".filepond",
+        onSuccess: function (res) {
+            window.location.href = "{{ route('contracts.index') }}?open=" + res.id;
+        },
     });
 </script>
 @endsection

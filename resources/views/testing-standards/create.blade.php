@@ -70,8 +70,10 @@
     submitCreateForm({
         formId: "#testingStandardForm",
         url: "{{ route('testing-standards.store') }}",
-        redirect: "{{ route('testing-standards.index') }}",
         filepond: ".filepond",
+        onSuccess: function (res) {
+            window.location.href = "{{ route('testing-standards.index') }}?open=" + res.id;
+        },
     });
 </script>
 @endsection

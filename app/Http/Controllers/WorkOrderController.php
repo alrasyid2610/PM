@@ -373,60 +373,74 @@ class WorkOrderController extends Controller
             $dupNoUrut = $existing + 1;
         }
 
-        $newId = DB::table('work_orders')->insertGetId([
-            'no_wo'                       => $no_wo,
-            'id_so'                       => $source->id_so,
-            'id_pelanggan_pekerjaan'      => $source->id_pelanggan_pekerjaan,
-            'id_site_pelanggan_pekerjaan' => $source->id_site_pelanggan_pekerjaan,
-            'id_pic_pelanggan_pekerjaan'  => $request->id_pic_pelanggan_pekerjaan ?: $source->id_pic_pelanggan_pekerjaan,
-            'judul_pekerjaan'             => $request->judul_pekerjaan             ?: $source->judul_pekerjaan,
-            'keterangan'                  => $request->filled('keterangan')        ? $request->keterangan : $source->keterangan,
-            'tanggal_mulai'               => $tanggalMulai,
-            'tanggal_selesai'             => $tanggalSelesai,
-            'interval_bulan'              => $dupInterval,
-            'no_urut_period'              => $dupNoUrut,
-            'created_at'                  => now(),
-            'updated_at'                  => now(),
-        ]);
-
-        $after = DB::table('work_orders')->where('id_wo', $newId)->get()->toJson();
-        saveAudit('work_orders', $newId, 'create', null, $after);
-
-        // Clone BOQ items
-        $boqInput = $request->input('boq', []);
-        foreach ($boqInput as $item) {
-            if (empty($item['id_testing_point'])) continue;
-            $qty = isset($item['qty']) && $item['qty'] !== '' ? (int) $item['qty'] : null;
-
-            $newBoqId = DB::table('boq')->insertGetId([
-                'id_wo'                 => $newId,
-                'id_testing_point'      => $item['id_testing_point'],
-                'item_produk_alternate' => $item['item_produk_alternate'] ?? null,
-                'qty'                   => $qty,
-                'satuan'                => $item['satuan'] ?? null,
-                'harga'                 => $item['harga'] ?? null,
-                'keterangan'            => $item['keterangan'] ?? null,
-                'created_at'            => now(),
-                'updated_at'            => now(),
+        return DB::transaction(function () use ($request, $source, $no_wo, $dupInterval, $dupNoUrut, $tanggalMulai, $tanggalSelesai) {
+            $newId = DB::table('work_orders')->insertGetId([
+                'no_wo'                       => $no_wo,
+                'id_so'                       => $source->id_so,
+                'id_pelanggan_pekerjaan'      => $source->id_pelanggan_pekerjaan,
+                'id_site_pelanggan_pekerjaan' => $source->id_site_pelanggan_pekerjaan,
+                'id_pic_pelanggan_pekerjaan'  => $request->id_pic_pelanggan_pekerjaan ?: $source->id_pic_pelanggan_pekerjaan,
+                'judul_pekerjaan'             => $request->judul_pekerjaan             ?: $source->judul_pekerjaan,
+                'keterangan'                  => $request->filled('keterangan')        ? $request->keterangan : $source->keterangan,
+                'tanggal_mulai'               => $tanggalMulai,
+                'tanggal_selesai'             => $tanggalSelesai,
+                'interval_bulan'              => $dupInterval,
+                'no_urut_period'              => $dupNoUrut,
+                'created_at'                  => now(),
+                'updated_at'                  => now(),
             ]);
 
-            $testingItemIds = $item['testing_item_ids'] ?? [];
-            if (!empty($testingItemIds)) {
-                DB::table('boq_items')->insert(array_map(fn($tiId) => [
-                    'id_boq'          => $newBoqId,
-                    'id_testing_item' => $tiId,
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
-                ], $testingItemIds));
-            }
-        }
+            $after = DB::table('work_orders')->where('id_wo', $newId)->get()->toJson();
+            saveAudit('work_orders', $newId, 'create', null, $after);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Work Order berhasil disalin',
-            'no_wo'   => $no_wo,
-            'id_wo'   => $newId,
-        ]);
+            // Clone BOQ items
+            $boqInput = $request->input('boq', []);
+            foreach ($boqInput as $index => $item) {
+                if (empty($item['id_testing_point'])) continue;
+
+                $no = $index + 1;
+                if (!isset($item['qty']) || $item['qty'] === '' || $item['qty'] === null) {
+                    abort(response()->json(['success' => false, 'message' => "Qty wajib diisi pada item BOQ ke-{$no}"], 422));
+                }
+                if (!isset($item['satuan']) || $item['satuan'] === '' || $item['satuan'] === null) {
+                    abort(response()->json(['success' => false, 'message' => "Satuan wajib diisi pada item BOQ ke-{$no}"], 422));
+                }
+                if (!isset($item['harga']) || $item['harga'] === '' || $item['harga'] === null) {
+                    abort(response()->json(['success' => false, 'message' => "Harga wajib diisi pada item BOQ ke-{$no}"], 422));
+                }
+
+                $qty = (int) $item['qty'];
+
+                $newBoqId = DB::table('boq')->insertGetId([
+                    'id_wo'                 => $newId,
+                    'id_testing_point'      => $item['id_testing_point'],
+                    'item_produk_alternate' => $item['item_produk_alternate'] ?? null,
+                    'qty'                   => $qty,
+                    'satuan'                => $item['satuan'] !== '' ? $item['satuan'] : null,
+                    'harga'                 => $item['harga'],
+                    'keterangan'            => $item['keterangan'] ?? null,
+                    'created_at'            => now(),
+                    'updated_at'            => now(),
+                ]);
+
+                $testingItemIds = $item['testing_item_ids'] ?? [];
+                if (!empty($testingItemIds)) {
+                    DB::table('boq_items')->insert(array_map(fn($tiId) => [
+                        'id_boq'          => $newBoqId,
+                        'id_testing_item' => $tiId,
+                        'created_at'      => now(),
+                        'updated_at'      => now(),
+                    ], $testingItemIds));
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Work Order berhasil disalin',
+                'no_wo'   => $no_wo,
+                'id_wo'   => $newId,
+            ]);
+        });
     }
 
     private function generateNoWo()

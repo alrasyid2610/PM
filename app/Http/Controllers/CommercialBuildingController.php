@@ -124,6 +124,7 @@ class CommercialBuildingController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Commercial Building berhasil disimpan',
+            'id'      => $id,
         ]);
     }
 

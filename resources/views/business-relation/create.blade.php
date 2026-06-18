@@ -500,7 +500,7 @@
                 data: form.serialize(),
                 success: function (res) {
                     Notify.success('Data berhasil disimpan!');
-                    console.log(res);
+                    window.location.href = "{{ route('business-relations.index') }}?open=" + res.id;
                 },
                 error: function (xhr) {
                     btn.prop('disabled', false).text('Simpan Data');

@@ -123,6 +123,7 @@ class BusinessEstateController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Business Estate berhasil disimpan',
+            'id'      => $id,
         ]);
     }
 

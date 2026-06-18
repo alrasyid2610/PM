@@ -271,8 +271,10 @@
     submitCreateForm({
         formId: "#testingPointForm",
         url: "{{ route('testing-points.store') }}",
-        redirect: "{{ route('testing-points.index') }}",
         filepond: ".filepond",
+        onSuccess: function (res) {
+            window.location.href = "{{ route('testing-points.index') }}?open=" + res.id;
+        },
     });
 </script>
 @endsection

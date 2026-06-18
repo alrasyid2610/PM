@@ -149,8 +149,8 @@ class BusinessRelationController extends Controller
             // Status
             ->editColumn('is_aktif', function ($row) {
                 return $row->is_aktif
-                    ? '<span class="badge bg-success">Aktif</span>'
-                    : '<span class="badge bg-secondary">Non Aktif</span>';
+                    ? '<span class="badge rounded-pill" style="background:#dcfce7;color:#166534;font-size:11px;font-weight:600;">Aktif</span>'
+                    : '<span class="badge rounded-pill" style="background:#fee2e2;color:#991b1b;font-size:11px;font-weight:600;">Tidak Aktif</span>';
             })
 
             // ->addColumn('action', function ($row) {
@@ -287,8 +287,9 @@ class BusinessRelationController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
-                DB::table('business_relation_sites')->insert($data);
+                $idSite = DB::table('business_relation_sites')->insertGetId($data);
             } else {
+                $idSite = $request->site_id;
                 DB::table('business_relation_sites')
                     ->where('id_site', $request->site_id)
                     ->update([
@@ -314,7 +315,8 @@ class BusinessRelationController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data Business Relation berhasil disimpan'
+                'message' => 'Data Business Relation berhasil disimpan',
+                'id'      => $idSite,
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();

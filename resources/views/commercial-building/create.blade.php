@@ -96,7 +96,9 @@
     submitCreateForm({
         formId: "#createCommercialBuildingForm",
         url: "{{ route('commercial-buildings.store') }}",
-        redirect: "{{ route('commercial-buildings.index') }}",
+        onSuccess: function (res) {
+            window.location.href = "{{ route('commercial-buildings.index') }}?open=" + res.id;
+        },
     });
 </script>
 @endsection

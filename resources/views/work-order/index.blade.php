@@ -87,9 +87,9 @@
 
 {{-- Modal: Copy FWO --}}
 <div class="modal fade" id="modalCopyFwo" tabindex="-1" aria-labelledby="modalCopyFwoLabel">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width:92vw;">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header py-2" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
                 <h5 class="modal-title" id="modalCopyFwoLabel">
                     <i class="fa-solid fa-copy me-2 text-primary"></i> Salin Fieldwork Order
                 </h5>

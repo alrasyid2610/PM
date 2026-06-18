@@ -364,7 +364,7 @@
         var $list = $('#woSitePreviewList');
         var $icon = $(this).find('i');
         $list.toggle();
-        $icon.toggleClass('fa-eye fa-eye-slash');
+        $icon.toggleClass('fa-chevron-down fa-chevron-up');
     });
 
     $(document).on('change', "select[name='id_site_pelanggan']", function() {
@@ -452,8 +452,8 @@
                 + '<span style="font-size:11px;font-weight:700;color:#1a5fbe;text-transform:uppercase;letter-spacing:.5px;">'
                 + '<i class="fa-solid fa-briefcase me-1"></i>'
                 + 'WO yang sudah ada di lokasi ini (' + filtered.length + ')</span>'
-                + '<button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:11px;" title="Tampilkan / Sembunyikan">'
-                + '<i class="fa-solid fa-eye"></i></button>'
+                + '<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;" title="Tampilkan / Sembunyikan">'
+                + '<i class="fa-solid fa-chevron-down"></i></button>'
                 + '</div>'
                 + tableHtml
                 + '</div>'

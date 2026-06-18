@@ -61,7 +61,9 @@
     submitCreateForm({
         formId: "#testingUnitForm",
         url: "{{ route('testing-units.store') }}",
-        redirect: "{{ route('testing-units.index') }}",
+        onSuccess: function (res) {
+            window.location.href = "{{ route('testing-units.index') }}?open=" + res.id;
+        },
     });
 </script>
 @endsection
