@@ -85,7 +85,7 @@
                     </div>
     
                     <div class="col-md-2 col-12">
-                        <label class="form-label">Frekuensi</label>
+                        <label class="form-label required">Frekuensi</label>
                         <select name="interval_bulan" id="interval_bulan" class="form-select">
                             <option value="">— Tidak ada —</option>
                             <option value="1">Bulanan</option>
@@ -98,13 +98,13 @@
                     </div>
 
                     <div class="col-md-1 col-12" id="noUrutWrap" style="display:none;">
-                        <label class="form-label">Urutan ke-</label>
+                        <label class="form-label required">Urutan ke-</label>
                         <input type="number" name="no_urut_period" id="no_urut_period"
                             class="form-control" min="1" placeholder="Auto">
                     </div>
 
                     <div class="col-md-2 col-12">
-                        <label class="form-label">PIC Pekerjaan</label>
+                        <label class="form-label required">PIC Pekerjaan</label>
                         <select name="pic_pekerjaan"
                             id="pic_pekerjaan"
                             class="form-select">
@@ -118,11 +118,11 @@
                     </div>
 
                     <div class="col-md-3 col-12">
-                        <label class="form-label">Tanggal Mulai</label>
+                        <label class="form-label required">Tanggal Mulai</label>
                         <input type="date" name="tanggal_mulai" class="form-control">
                     </div>
                     <div class="col-md-3 col-12">
-                        <label class="form-label">Tanggal Selesai</label>
+                        <label class="form-label required">Tanggal Selesai</label>
                         <input type="date" name="tanggal_selesai" class="form-control">
                     </div>
                     <div class="col-md-6 col-12">
@@ -518,11 +518,24 @@
     });
 
     $('#workOrderForm').on('submit', function (e) {
-        var ok = validateTanggalMulai() & validateTanggalSelesai();
-        if (!ok) {
+        var errors = [];
+
+        if (!validateTanggalMulai())  errors.push('Tanggal Mulai tidak valid');
+        if (!validateTanggalSelesai()) errors.push('Tanggal Selesai tidak valid');
+        if (!$("select[name='interval_bulan']").val()) errors.push('Frekuensi wajib dipilih');
+        if ($("select[name='interval_bulan']").val() && !$("input[name='no_urut_period']").val()) errors.push('Urutan ke- wajib diisi');
+        if (!$("input[name='tanggal_mulai']").val())  errors.push('Tanggal Mulai wajib diisi');
+        if (!$("input[name='tanggal_selesai']").val()) errors.push('Tanggal Selesai wajib diisi');
+        if (!$("select[name='pic_pekerjaan']").val()) errors.push('PIC Pekerjaan wajib dipilih');
+
+        if (errors.length) {
             e.stopImmediatePropagation();
             e.preventDefault();
-            Notify.error('Periksa kembali isian tanggal WO.');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Periksa kembali isian',
+                html: errors.map(function(m) { return '• ' + m; }).join('<br>'),
+            });
         }
     });
 

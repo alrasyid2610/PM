@@ -814,10 +814,10 @@ function renderCopyWoBoq(sourceItems) {
                         value="${item.qty || ''}" min="1" placeholder="qty"
                         style="font-size:12px;width:90px;flex-shrink:0;">
                     <button type="button" class="btn btn-outline-primary btn-sm btn-edit-copy-wo-boq py-0 px-2 flex-shrink-0"
-                        style="font-size:11px;white-space:nowrap;">
+                        style="font-size:11px;white-space:nowrap;" tabindex="-1">
                         <i class="fa-solid fa-pen me-1"></i> Edit
                     </button>
-                    <button type="button" class="btn btn-outline-danger btn-sm btn-remove-copy-wo-boq py-0 px-2 flex-shrink-0" title="Hapus">
+                    <button type="button" class="btn btn-outline-danger btn-sm btn-remove-copy-wo-boq py-0 px-2 flex-shrink-0" title="Hapus" tabindex="-1">
                         <i class="fa-solid fa-times" style="font-size:11px;"></i>
                     </button>
                 </div>

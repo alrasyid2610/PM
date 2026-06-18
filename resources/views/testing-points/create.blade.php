@@ -121,7 +121,7 @@
                                         <input type="text" name="nilai[]" class="form-control form-control-sm">
                                     </td>
                                     <td>
-                                        <input type="text" name="keterangan[]" class="form-control form-control-sm">
+                                        <input type="text" name="item_keterangan[]" class="form-control form-control-sm">
                                     </td>
                                     <td class="text-center">
                                         <input type="checkbox" name="status[]" value="1">
@@ -240,7 +240,7 @@
                     <td><select name="parameter[]" class="form-control form-control-sm parameter-select"></select></td>
                     <td><select name="unit[]" class="form-control form-control-sm unit-select"></select></td>
                     <td><input type="text" name="nilai[]" class="form-control form-control-sm"></td>
-                    <td><input type="text" name="keterangan[]" class="form-control form-control-sm"></td>
+                    <td><input type="text" name="item_keterangan[]" class="form-control form-control-sm"></td>
                     <td class="text-center"><input type="checkbox" name="status[]" value="1"></td>
                     <td class="text-center">
                         <button type="button" class="btn btn-danger btn-sm btn-remove">
