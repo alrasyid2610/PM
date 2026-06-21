@@ -9,6 +9,17 @@ function periodBadge(interval, urutan) {
     </span>`;
 }
 
+function woStatusBadge(status) {
+    if (status === 'selesai') {
+        return `<span class="pm-badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;">
+            <i class="fa-solid fa-circle-check" style="font-size:10px;"></i> Selesai
+        </span>`;
+    }
+    return `<span class="pm-badge" style="background:#eff6ff;color:#1a56db;border:1px solid #bfdbfe;">
+        <i class="fa-solid fa-spinner" style="font-size:10px;"></i> On Progress
+    </span>`;
+}
+
 function renderForm(res) {
     const soTag = res.id_so
         ? `<a href="/sales-orders?open=${res.id_so}" class="pm-badge pm-badge--blue" style="text-decoration:none;">
@@ -35,6 +46,13 @@ function renderForm(res) {
         deleteId: res.id_wo,
         editText: "Edit WO",
         tags: soTag + pelangganTag,
+        statusBadge: woStatusBadge(res.status),
+        extra: res.status !== 'selesai'
+            ? `<button type="button" id="btnSelesaikanWo" data-wo-id="${res.id_wo}" data-no-disable
+                class="btn btn-sm btn-success" style="font-size:12px;">
+                <i class="fa-solid fa-circle-check me-1"></i> Selesaikan WO
+               </button>`
+            : '',
         noWrap: true,
     })}
 
@@ -79,7 +97,6 @@ function renderForm(res) {
 
                 <div class="pm-tab-actions">
                     <div id="woTabActionsInfo" class="d-flex align-items-center gap-2">
-                        <!-- Edit/Hapus ada di action bar atas -->
                     </div>
                     <div id="woTabActionsBoq" class="d-flex align-items-center gap-2 d-none">
                         <button type="button" id="btnRefreshBoqProgress" data-wo-id="${res.id_wo}"

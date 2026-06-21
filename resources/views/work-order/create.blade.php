@@ -493,8 +493,8 @@
     }
 
     $(document).on('change', "input[name='tanggal_mulai']", function () {
-        validateTanggalMulai();
-        validateTanggalSelesai();
+        // validateTanggalMulai dan validateTanggalSelesai sengaja tidak dijalankan
+        // karena tanggal mulai/selesai boleh sama atau lebih kecil
     });
 
     function validateTanggalSelesai() {
@@ -514,14 +514,12 @@
     }
 
     $(document).on('change', "input[name='tanggal_selesai']", function () {
-        validateTanggalSelesai();
+        // validateTanggalSelesai sengaja tidak dijalankan
     });
 
     $('#workOrderForm').on('submit', function (e) {
         var errors = [];
 
-        if (!validateTanggalMulai())  errors.push('Tanggal Mulai tidak valid');
-        if (!validateTanggalSelesai()) errors.push('Tanggal Selesai tidak valid');
         if (!$("select[name='interval_bulan']").val()) errors.push('Frekuensi wajib dipilih');
         if ($("select[name='interval_bulan']").val() && !$("input[name='no_urut_period']").val()) errors.push('Urutan ke- wajib diisi');
         if (!$("input[name='tanggal_mulai']").val())  errors.push('Tanggal Mulai wajib diisi');

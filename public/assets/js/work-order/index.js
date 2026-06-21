@@ -988,6 +988,17 @@ $(document).ready(function () {
             $("#outputTanggalSelesai").addClass("is-invalid").focus();
             return;
         }
+        var woSelesai = currentWoData && currentWoData.tanggal_selesai
+            ? currentWoData.tanggal_selesai.substring(0, 10) : null;
+        if (selesai && woSelesai && selesai > woSelesai) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Periksa Tanggal',
+                text: 'Tanggal selesai output tidak boleh melebihi tanggal selesai WO (' + woSelesai + ')',
+            });
+            return;
+        }
+
         var judulOutput = $("#outputJudulOutput").val().trim();
         if (!judulOutput) {
             Swal.fire({
@@ -1128,21 +1139,21 @@ $(document).ready(function () {
             return;
         }
 
+        const fwoTglMulai   = $("#copyFwoTglMulai").val();
+        const fwoTglSelesai = $("#copyFwoTglSelesai").val();
+        if (fwoTglMulai && fwoTglSelesai && fwoTglSelesai < fwoTglMulai) {
+            Notify.warning("Tanggal selesai tidak boleh kurang dari tanggal mulai");
+            return;
+        }
+
         const personels = [];
-        let personelValid = true;
         $("#copyFwoPersonelContainer .copy-personel-row").each(function () {
             const userId = $(this).find(".copy-personel-user-select").val();
             const role = $(this).find(".copy-personel-role-select").val();
-            if (!userId) {
-                personelValid = false;
-                return false;
+            if (userId) {
+                personels.push({ id_user: parseInt(userId), role: role || null });
             }
-            personels.push({ id_user: parseInt(userId), role: role || null });
         });
-        if (!personelValid) {
-            Notify.warning("Pilih personel untuk semua baris");
-            return;
-        }
 
         const sections = [];
         $(".copy-boq-qty").each(function () {
@@ -1192,6 +1203,29 @@ $(document).ready(function () {
         $("#btnConfirmCopyFwo")
             .prop("disabled", false)
             .html('<i class="fa-solid fa-copy me-1"></i> Buat Salinan');
+    });
+
+    // ── Selesaikan WO ────────────────────────────────────────────────────────
+    $(document).on("click", "#btnSelesaikanWo", function () {
+        const woId = $(this).data("wo-id");
+        Notify.confirm("Selesaikan WO ini? Semua output harus berstatus siap.", function () {
+            $.ajax({
+                url: window.route.update + woId + "/complete",
+                method: "POST",
+                headers: { "X-CSRF-TOKEN": window.route.csrf },
+                success: function (res) {
+                    Notify.success(res.message || "Work Order berhasil diselesaikan");
+                    page.loadDetail(parseInt(woId));
+                },
+                error: function (xhr) {
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Tidak dapat diselesaikan",
+                        text: xhr.responseJSON?.message || "Terjadi kesalahan",
+                    });
+                },
+            });
+        });
     });
 
     // ── Copy WO ──────────────────────────────────────────────────────────────
@@ -1779,6 +1813,24 @@ function fillCopyFwoModal(fwo, boqs) {
     }
 
     $("#modalCopyFwoBody").html(`
+        <div style="position:sticky;top:0;z-index:10;background:#fff;border-bottom:2px solid #e2e8f0;padding:10px 16px;margin:-16px -16px 16px;box-shadow:0 2px 10px rgba(0,0,0,.08);">
+            <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size:13px;">
+                <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+                    <i class="fa-solid fa-location-dot" style="color:#0891b2;font-size:11px;flex-shrink:0;"></i>
+                    <span style="color:#0e7490;font-weight:600;white-space:nowrap;">${escHtml(fwo.wo_site_name || '—')}</span>
+                </div>
+                <div style="width:1px;height:16px;background:#e2e8f0;flex-shrink:0;"></div>
+                <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+                    <i class="fa-solid fa-briefcase" style="color:#1a56db;font-size:11px;flex-shrink:0;"></i>
+                    <span style="font-weight:700;color:#1a56db;white-space:nowrap;">${escHtml(fwo.wo_no_wo || '—')}</span>
+                </div>
+                <div style="width:1px;height:16px;background:#e2e8f0;flex-shrink:0;"></div>
+                <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
+                    <i class="fa-solid fa-file-lines" style="color:#374151;font-size:11px;flex-shrink:0;"></i>
+                    <span style="color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(fwo.wo_judul_pekerjaan || '—')}</span>
+                </div>
+            </div>
+        </div>
         <div class="alert alert-light border mb-3 py-2" style="font-size:12px;">
             <i class="fa-solid fa-copy me-1 text-primary"></i>
             Menyalin dari: <strong>${escHtml(fwo.no_fwo)}</strong>

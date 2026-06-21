@@ -54,12 +54,14 @@ class FieldworkController extends Controller
             ->leftJoin('business_relation_contacts as brc', 'fw.id_pic_pelanggan_pekerjaan', '=', 'brc.id_contact')
             ->where('fw.id_fwo', $id)
             ->whereNull('fw.deleted_at')
+            ->leftJoin('business_relation_sites as brs_wo', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs_wo.id_site')
             ->select([
                 'fw.*',
                 'wo.no_wo as wo_no_wo',
                 'wo.judul_pekerjaan as wo_judul_pekerjaan',
                 'brs.nama_lokasi as site_name',
                 'brc.nama_pic as pic_name',
+                'brs_wo.nama_lokasi as wo_site_name',
             ])
             ->first();
 
@@ -117,6 +119,27 @@ class FieldworkController extends Controller
             'personels.*.id_user'         => 'required|integer',
             'personels.*.role'            => 'nullable|string|max:500',
         ]);
+
+        $wo = DB::table('work_orders')->where('id_wo', $validated['id_wo'])->first();
+        if ($wo) {
+            $woMulai   = $wo->tanggal_mulai   ? substr($wo->tanggal_mulai, 0, 10)   : null;
+            $woSelesai = $wo->tanggal_selesai ? substr($wo->tanggal_selesai, 0, 10) : null;
+            $fwoMulai   = !empty($validated['tanggal_mulai'])   ? substr($validated['tanggal_mulai'], 0, 10)   : null;
+            $fwoSelesai = !empty($validated['tanggal_selesai']) ? substr($validated['tanggal_selesai'], 0, 10) : null;
+
+            if ($fwoMulai && $woMulai && $fwoMulai < $woMulai) {
+                return response()->json(['message' => 'Tanggal mulai FWO tidak boleh sebelum tanggal mulai WO (' . $woMulai . ')'], 422);
+            }
+            if ($fwoMulai && $woSelesai && $fwoMulai > $woSelesai) {
+                return response()->json(['message' => 'Tanggal mulai FWO tidak boleh setelah tanggal selesai WO (' . $woSelesai . ')'], 422);
+            }
+            if ($fwoSelesai && $woMulai && $fwoSelesai < $woMulai) {
+                return response()->json(['message' => 'Tanggal selesai FWO tidak boleh sebelum tanggal mulai WO (' . $woMulai . ')'], 422);
+            }
+            if ($fwoSelesai && $woSelesai && $fwoSelesai > $woSelesai) {
+                return response()->json(['message' => 'Tanggal selesai FWO tidak boleh setelah tanggal selesai WO (' . $woSelesai . ')'], 422);
+            }
+        }
 
         $id = DB::table('fieldworks')->insertGetId([
             'id_wo'                       => $validated['id_wo'],
@@ -267,6 +290,28 @@ class FieldworkController extends Controller
             'sections.*.qty'        => 'nullable|integer|min:1',
             'sections.*.keterangan' => 'nullable|string',
         ]);
+
+        // Validasi tanggal FWO harus dalam range tanggal WO
+        $wo = DB::table('work_orders')->where('id_wo', $source->id_wo)->first();
+        if ($wo) {
+            $woMulai   = $wo->tanggal_mulai   ? substr($wo->tanggal_mulai, 0, 10)   : null;
+            $woSelesai = $wo->tanggal_selesai ? substr($wo->tanggal_selesai, 0, 10) : null;
+            $fwoMulai   = !empty($validated['tanggal_mulai'])   ? substr($validated['tanggal_mulai'], 0, 10)   : null;
+            $fwoSelesai = !empty($validated['tanggal_selesai']) ? substr($validated['tanggal_selesai'], 0, 10) : null;
+
+            if ($fwoMulai && $woMulai && $fwoMulai < $woMulai) {
+                return response()->json(['message' => 'Tanggal mulai FWO tidak boleh sebelum tanggal mulai WO (' . $woMulai . ')'], 422);
+            }
+            if ($fwoMulai && $woSelesai && $fwoMulai > $woSelesai) {
+                return response()->json(['message' => 'Tanggal mulai FWO tidak boleh setelah tanggal selesai WO (' . $woSelesai . ')'], 422);
+            }
+            if ($fwoSelesai && $woMulai && $fwoSelesai < $woMulai) {
+                return response()->json(['message' => 'Tanggal selesai FWO tidak boleh sebelum tanggal mulai WO (' . $woMulai . ')'], 422);
+            }
+            if ($fwoSelesai && $woSelesai && $fwoSelesai > $woSelesai) {
+                return response()->json(['message' => 'Tanggal selesai FWO tidak boleh setelah tanggal selesai WO (' . $woSelesai . ')'], 422);
+            }
+        }
 
         // Validasi qty semua sections SEBELUM insert apapun
         foreach ($validated['sections'] ?? [] as $sec) {

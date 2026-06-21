@@ -466,6 +466,7 @@ Route::prefix('work-orders')->name('work-orders.')->group(function () {
     Route::get('/{id}/history', [WorkOrderController::class, 'history'])->name('history')->whereNumber('id');
     Route::get('/{id}/boq-progress', [WorkOrderController::class, 'boqProgress'])->name('boq-progress')->whereNumber('id');
     Route::post('/{id}/duplicate', [WorkOrderController::class, 'duplicate'])->name('duplicate')->whereNumber('id');
+    Route::post('/{id}/complete', [WorkOrderController::class, 'complete'])->name('complete')->whereNumber('id');
     Route::get('/{id}/outputs', [OutputPekerjaanController::class, 'byWo'])->name('outputs')->whereNumber('id');
 });
 

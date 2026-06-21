@@ -316,6 +316,17 @@
 
     syncPersonelEmpty();
 
+    // ── Validasi tanggal ─────────────────────────────────────────────────────
+    $('#fieldworkForm').on('submit', function (e) {
+        const mulai    = $('input[name="tanggal_mulai"]').val();
+        const selesai  = $('input[name="tanggal_selesai"]').val();
+        if (mulai && selesai && selesai < mulai) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            Swal.fire({ icon: 'warning', title: 'Periksa Tanggal', text: 'Tanggal selesai tidak boleh kurang dari tanggal mulai' });
+        }
+    });
+
     // ── Submit ───────────────────────────────────────────────────────────────
     submitCreateForm({
         formId: '#fieldworkForm',
@@ -326,6 +337,15 @@
             setTimeout(function () { window.close(); }, 800);
         } : null,
         redirect: preselectWoId ? null : "{{ route('fieldworks.index') }}",
+        onError: function (xhr) {
+            const json = xhr.responseJSON;
+            if (json) {
+                const msg = json.message
+                    || (json.errors ? Object.values(json.errors).map(e => e[0]).join('<br>') : null)
+                    || 'Terjadi kesalahan';
+                Swal.fire({ icon: 'error', title: 'Gagal', html: msg });
+            }
+        },
     });
 </script>
 @endsection

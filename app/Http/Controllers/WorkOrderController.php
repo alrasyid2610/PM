@@ -49,26 +49,6 @@ class WorkOrderController extends Controller
         // ==========================
         // INSERT
         // ==========================
-        // Validasi overlap tanggal dengan WO lain di lokasi yang sama
-        $id_site_check = $request->id_site_pelanggan ?: null;
-        if ($id_site_check && $request->filled('tanggal_mulai')) {
-            $tglMulaiCheck = substr($request->tanggal_mulai, 0, 10);
-            $maxSelesai = DB::table('work_orders')
-                ->where('id_site_pelanggan_pekerjaan', $id_site_check)
-                ->whereNull('deleted_at')
-                ->whereNotNull('tanggal_selesai')
-                ->where('tanggal_selesai', '>', '1000-01-01')
-                ->max(DB::raw('DATE(tanggal_selesai)'));
-
-            if ($maxSelesai && $tglMulaiCheck <= $maxSelesai) {
-                $bulanId = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
-                $tgl = \Carbon\Carbon::parse($maxSelesai);
-                $tglFormatted = $tgl->day . '-' . $bulanId[$tgl->month - 1] . '-' . $tgl->format('y');
-                return response()->json([
-                    'message' => 'Tanggal mulai harus setelah ' . $tglFormatted . ' (tanggal selesai WO terakhir di lokasi ini)',
-                ], 422);
-            }
-        }
 
         $no_wo    = $this->generateNoWo();
         $interval = $request->interval_bulan ?: null;
@@ -297,6 +277,40 @@ class WorkOrderController extends Controller
     }
 
 
+    public function complete(int $id)
+    {
+        $wo = DB::table('work_orders')->where('id_wo', $id)->first();
+        if (!$wo) {
+            return response()->json(['message' => 'Work Order tidak ditemukan'], 404);
+        }
+        if ($wo->status === 'selesai') {
+            return response()->json(['message' => 'Work Order sudah berstatus selesai'], 422);
+        }
+
+        $totalOutput = DB::table('output_pekerjaan')->where('id_wo', $id)->count();
+        if ($totalOutput === 0) {
+            return response()->json(['message' => 'Belum ada output pekerjaan. Tambahkan output terlebih dahulu sebelum menyelesaikan WO.'], 422);
+        }
+
+        $belumSiap = DB::table('output_pekerjaan')
+            ->where('id_wo', $id)
+            ->where('status', '!=', 'siap')
+            ->count();
+
+        if ($belumSiap > 0) {
+            return response()->json([
+                'message' => "Masih ada {$belumSiap} output yang belum berstatus siap. Semua output harus siap sebelum WO dapat diselesaikan.",
+            ], 422);
+        }
+
+        DB::table('work_orders')->where('id_wo', $id)->update([
+            'status'     => 'selesai',
+            'updated_at' => now(),
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Work Order berhasil diselesaikan']);
+    }
+
     public function destroy($id)
     {
         $before = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
@@ -334,30 +348,7 @@ class WorkOrderController extends Controller
         $tanggalMulai   = $request->tanggal_mulai   ?: $source->tanggal_mulai;
         $tanggalSelesai = $request->tanggal_selesai ?: $source->tanggal_selesai;
 
-        if ($tanggalMulai && $tanggalSelesai && $tanggalSelesai < $tanggalMulai) {
-            return response()->json([
-                'message' => 'Tanggal selesai tidak boleh lebih kecil dari tanggal mulai',
-            ], 422);
-        }
-
-        if ($source->id_site_pelanggan_pekerjaan) {
-            $tglMulai = substr($tanggalMulai ?? '', 0, 10);
-            $maxSelesai = DB::table('work_orders')
-                ->where('id_site_pelanggan_pekerjaan', $source->id_site_pelanggan_pekerjaan)
-                ->whereNull('deleted_at')
-                ->whereNotNull('tanggal_selesai')
-                ->where('tanggal_selesai', '>', '1000-01-01')
-                ->max(DB::raw('DATE(tanggal_selesai)'));
-
-            if ($tglMulai && $maxSelesai && $tglMulai <= $maxSelesai) {
-                $bulanId = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
-                $tgl = \Carbon\Carbon::parse($maxSelesai);
-                $tglFormatted = $tgl->day . '-' . $bulanId[$tgl->month - 1] . '-' . $tgl->format('y');
-                return response()->json([
-                    'message' => 'Tanggal mulai harus setelah ' . $tglFormatted . ' (tanggal selesai WO terakhir di lokasi ini)',
-                ], 422);
-            }
-        }
+        // Validasi tanggal sengaja dilepas — tanggal mulai/selesai boleh sama atau lebih kecil
 
         $no_wo = $this->generateNoWo();
 
@@ -492,7 +483,9 @@ class WorkOrderController extends Controller
                 'brs.nama_lokasi as Site Pelanggan',
                 's.judul_order',
                 'wo.keterangan',
-                's.created_at',
+                'wo.status',
+                'wo.created_at',
+                'wo.updated_at',
             ])
             ->where('wo.id_wo', $id)
             ->whereNull('wo.deleted_at')
@@ -695,6 +688,7 @@ class WorkOrderController extends Controller
                 'wo.no_urut_period',
                 'wo.tanggal_mulai',
                 'wo.tanggal_selesai',
+                'wo.status',
                 'wo.created_at',
                 'wo.updated_at',
             ])
