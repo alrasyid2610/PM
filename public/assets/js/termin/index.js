@@ -22,6 +22,27 @@ $(document).ready(function () {
                 dropdownParent: $("#detailContent"),
             });
         },
+        afterLoad: function (res) {
+            initFpDate('#detailContent');
+            // Kondisi DP: jika termin ini adalah DP, disable field status
+            if (res.is_dp) {
+                $('#detail_status').prop('disabled', true);
+            }
+            // Cek apakah SO sudah punya DP termin lain → disable checkbox DP
+            if (res.id_so) {
+                $.get('/termin/check-dp/' + res.id_so + '?exclude_id=' + res.id_termin, function (data) {
+                    if (data.has_dp) {
+                        $('#detail_is_dp').prop('disabled', true);
+                        if (!$('#dp-info').length) {
+                            $('#detail_is_dp').closest('.form-check').after(
+                                '<small id="dp-info" class="text-danger d-block mt-1">' +
+                                '<i class="fa-solid fa-circle-info me-1"></i>Sudah ada termin DP pada SO ini</small>'
+                            );
+                        }
+                    }
+                });
+            }
+        },
         onSave: function (id) {
             var el = document.getElementById('detail_nilai');
             if (el && el._cleave) el.value = el._cleave.getRawValue();
@@ -29,6 +50,38 @@ $(document).ready(function () {
         },
         useAttachment: true,
     });
+
+    // DP checkbox: set status selesai & disable field status
+    $(document).on('change', '#detail_is_dp', function () {
+        if (this.checked) {
+            $('#detail_status').val('selesai').trigger('change').prop('disabled', true);
+        } else {
+            $('#detail_status').prop('disabled', false).val('pending').trigger('change');
+        }
+    });
+
+    // Filter output picker by tanggal termin
+    function filterOutputPickerByTanggal() {
+        var tglTermin = $('input[name="tanggal"]').val();
+        $('.output-pick-check').each(function () {
+            var tglOutput = $(this).data('tgl-selesai');
+            var shouldDisable = tglTermin && tglOutput && tglOutput > tglTermin;
+            if (shouldDisable) {
+                $(this).prop('checked', false).prop('disabled', true)
+                    .closest('tr').css('opacity', '0.45');
+            } else {
+                $(this).prop('disabled', false)
+                    .closest('tr').css('opacity', '');
+            }
+        });
+        var total = $('.output-pick-check:not(:disabled)').length;
+        var selected = $('.output-pick-check:checked').length;
+        $('#outputPickCount').text(selected ? selected + ' dipilih' : '');
+        $('#outputPickCheckAll').prop('checked', total > 0 && selected === total)
+            .prop('indeterminate', selected > 0 && selected < total);
+    }
+
+    $(document).on('change', 'input[name="tanggal"]', filterOutputPickerByTanggal);
 
     // Hapus output dari termin — langsung save via API
     $(document).on('click', '.btn-remove-output-termin', function () {
@@ -86,14 +139,20 @@ $(document).ready(function () {
             var accordionItems = '';
             woGroups.forEach(function (list, noWo) {
                 var rows = list.map(function (item) {
+                    var tglSelesai = item.tanggal_selesai ? item.tanggal_selesai.substring(0, 10) : '';
                     return '<tr>' +
                         '<td ' + TD + ' style="text-align:center;">' +
                             '<input type="checkbox" class="form-check-input output-pick-check"' +
                             ' data-id="' + item.id_output + '"' +
-                            ' data-wo="' + escHtml(item.no_wo) + '"' +
-                            ' data-judul="' + escHtml(item.judul_output) + '">' +
+                            ' data-wo="' + escHtml(item.no_wo || '') + '"' +
+                            ' data-wo-id="' + (item.id_wo || '') + '"' +
+                            ' data-judul="' + escHtml(item.judul_output) + '"' +
+                            ' data-status="' + escHtml(item.status || '') + '"' +
+                            ' data-tgl-selesai="' + tglSelesai + '">' +
                         '</td>' +
                         '<td ' + TD + '>' + escHtml(item.judul_output) + '</td>' +
+                        '<td ' + TD + '>' + outputStatusBadge(item.status) + '</td>' +
+                        '<td ' + TD + ' style="white-space:nowrap;color:#64748b;font-size:12px;">' + (tglSelesai || '—') + '</td>' +
                     '</tr>';
                 }).join('');
 
@@ -108,10 +167,12 @@ $(document).ready(function () {
                         '<div class="output-pick-accordion-body">' +
                             '<div class="table-responsive">' +
                             '<table class="table table-sm table-hover mb-0" style="font-size:13px;table-layout:fixed;width:100%;">' +
-                            '<colgroup><col style="width:44px;"><col style="width:100%;"></colgroup>' +
+                            '<colgroup><col style="width:44px;"><col><col style="width:110px;"><col style="width:120px;"></colgroup>' +
                             '<thead style="background:#f8fafc;border-bottom:1px solid #e2e8f0;"><tr>' +
                             '<th ' + TH + '></th>' +
                             '<th ' + TH + '>Judul Output</th>' +
+                            '<th ' + TH + '>Status</th>' +
+                            '<th ' + TH + '>Tgl Selesai</th>' +
                             '</tr></thead>' +
                             '<tbody>' + rows + '</tbody>' +
                             '</table></div>' +
@@ -121,6 +182,10 @@ $(document).ready(function () {
 
             $wrap.html(
                 '<div class="mt-3 p-3" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">' +
+                '<p class="text-muted mb-2" style="font-size:11px;">' +
+                    '<i class="fa-solid fa-circle-info me-1"></i>' +
+                    'Apabila output tidak bisa dipilih, harap periksa kembali tanggal selesai output atau sesuaikan tanggal termin.' +
+                '</p>' +
                 '<div class="d-flex align-items-center gap-2 flex-wrap mb-2">' +
                     '<div class="fw-semibold" style="font-size:12px;color:#374151;"><i class="fa-solid fa-plus me-1" style="color:#0f766e;"></i>Pilih Output Tambahan</div>' +
                     '<input type="checkbox" class="form-check-input ms-2" id="outputPickCheckAll">' +
@@ -144,6 +209,7 @@ $(document).ready(function () {
                 '<button type="button" id="btnCancelAddOutput" class="btn btn-sm btn-outline-secondary ms-2" data-no-disable>Batal</button>' +
                 '</div>'
             );
+            filterOutputPickerByTanggal();
         }).fail(function () {
             $wrap.html('<div class="text-center text-danger py-3 mt-2" style="font-size:12px;">Gagal memuat output</div>');
         });
@@ -270,13 +336,13 @@ $(document).ready(function () {
     // Pilih Semua output pick (hanya visible)
     $(document).on('change', '#outputPickCheckAll', function () {
         var checked = this.checked;
-        $('.output-pick-accordion-item:visible tbody tr:visible .output-pick-check')
+        $('.output-pick-accordion-item:visible tbody tr:visible .output-pick-check:not(:disabled)')
             .prop('checked', checked).trigger('change');
     });
 
     // Update counter output pick
     $(document).on('change', '.output-pick-check', function () {
-        var $visible = $('.output-pick-accordion-item:visible tbody tr:visible .output-pick-check');
+        var $visible = $('.output-pick-accordion-item:visible tbody tr:visible .output-pick-check:not(:disabled)');
         var totalVis = $visible.length;
         var selVis   = $visible.filter(':checked').length;
         var selAll   = $('.output-pick-check:checked').length;
@@ -306,19 +372,22 @@ $(document).ready(function () {
             success: function () {
                 var $tbody = $('#assignedOutputsTbody');
                 $checked.each(function () {
-                    var id    = $(this).data('id');
-                    var wo    = $(this).data('wo');
-                    var judul = $(this).data('judul');
+                    var id     = $(this).data('id');
+                    var wo     = $(this).data('wo');
+                    var judul  = $(this).data('judul');
+                    var status = $(this).data('status') || '';
                     if ($('input[name="selected_outputs[]"][value="' + id + '"]').length) return;
                     $tbody.append(
                         '<tr class="assigned-output-row" data-id="' + id + '">' +
                         '<input type="hidden" name="selected_outputs[]" value="' + id + '">' +
-                        '<td ' + TD_STYLE + ' style="font-size:12px;color:#64748b;">' + escHtml(wo) + '</td>' +
-                        '<td ' + TD_STYLE + '>' + escHtml(judul) + '</td>' +
-                        '<td ' + TD_STYLE + '>' +
-                            '<input type="text" name="judul_tagihan[' + id + ']" class="form-control form-control-sm disabled" ' +
-                            'placeholder="Sama seperti judul output" maxlength="255">' +
+                        '<td ' + TD_STYLE + ' style="white-space:nowrap;">' +
+                            ($(this).data('wo-id')
+                                ? '<a href="/work-orders?open=' + $(this).data('wo-id') + '" class="fw-semibold text-decoration-none" style="color:#1a56db;font-size:12px;">' + escHtml(wo) + '</a>'
+                                : '<span style="font-size:12px;color:#64748b;">' + escHtml(wo) + '</span>'
+                            ) +
                         '</td>' +
+                        '<td ' + TD_STYLE + '>' + escHtml(judul) + '</td>' +
+                        '<td ' + TD_STYLE + '>' + outputStatusBadge(status) + '</td>' +
                         '<td ' + TD_STYLE + ' style="text-align:right;">' +
                             '<button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-remove-output-termin" ' +
                             'data-id="' + id + '" data-no-disable style="font-size:11px;">' +

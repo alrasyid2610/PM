@@ -365,6 +365,7 @@ $(document).ready(function () {
             $('#fwoPersonelContent').html(renderPersonelView(currentPersonelData));
             $('#fwoAttachmentContent').html(renderFwoAttachmentView(fwoAttachmentData));
             loadFwoBoqList(res.id_fwo);
+            initFpDate('#detailContent');
         },
     });
 

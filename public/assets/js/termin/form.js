@@ -1,17 +1,17 @@
+function outputStatusBadge(status) {
+    const map = {
+        'belum_siap': ['#fee2e2','#dc2626','Belum Siap'],
+        'siap':       ['#dcfce7','#16a34a','Siap'],
+        'terkirim':   ['#dbeafe','#1d4ed8','Terkirim'],
+    };
+    const s = (status || 'belum_siap').toString();
+    const [bg, color, label] = map[s] || map['belum_siap'];
+    return `<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:${bg};color:${color};">${label}</span>`;
+}
+
 function renderAssignedOutputsInner(outputs) {
     const TH = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:8px 12px;color:#64748b;font-weight:600;"';
     const TD = 'style="padding:8px 12px;vertical-align:middle;"';
-
-    function outputStatusBadge(status) {
-        const map = {
-            'belum_siap': ['#fee2e2','#dc2626','Belum Siap'],
-            'siap':       ['#dcfce7','#16a34a','Siap'],
-            'terkirim':   ['#dbeafe','#1d4ed8','Terkirim'],
-        };
-        const s = (status || 'belum_siap').toString();
-        const [bg, color, label] = map[s] || map['belum_siap'];
-        return `<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:${bg};color:${color};">${label}</span>`;
-    }
 
     if (outputs && outputs.length) {
         const rows = outputs.map(function (item) {
@@ -25,12 +25,6 @@ function renderAssignedOutputsInner(outputs) {
                 </td>
                 <td ${TD}>${escHtml(item.judul_output)}</td>
                 <td ${TD}>${outputStatusBadge(item.status)}</td>
-                <td ${TD}>
-                    <input type="text" name="judul_tagihan[${item.id_output}]"
-                        class="form-control form-control-sm disabled"
-                        value="${escHtml(item.judul_tagihan || '')}"
-                        placeholder="Sama seperti judul output" maxlength="255">
-                </td>
                 <td ${TD} style="text-align:right;white-space:nowrap;">
                     <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-remove-output-termin"
                         data-id="${item.id_output}" data-no-disable style="font-size:11px;">
@@ -41,12 +35,11 @@ function renderAssignedOutputsInner(outputs) {
         }).join('');
         return `<div class="table-responsive" id="assignedOutputsTableWrap">
             <table class="table table-sm table-hover mb-0" style="font-size:13px;table-layout:fixed;width:100%;">
-                <colgroup><col style="width:120px;"><col style="width:35%;"><col style="width:100px;"><col style="width:30%;"><col style="width:64px;"></colgroup>
+                <colgroup><col style="width:120px;"><col><col style="width:100px;"><col style="width:52px;"></colgroup>
                 <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;"><tr>
                     <th ${TH}>No WO</th>
                     <th ${TH}>Judul Output</th>
                     <th ${TH}>Status</th>
-                    <th ${TH}>Judul Tagihan <span style="font-size:10px;color:#94a3b8;">(opsional)</span></th>
                     <th ${TH}></th>
                 </tr></thead>
                 <tbody id="assignedOutputsTbody">${rows}</tbody>

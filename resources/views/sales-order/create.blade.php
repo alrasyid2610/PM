@@ -21,7 +21,7 @@
                 <div class="row g-3">
                     <div class="col-md-3 col-12">
                         <label class="form-label required">Tanggal SO</label>
-                        <input type="date" name="tanggal_so" class="form-control" required>
+                        <input type="text" name="tanggal_so" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off" required>
                     </div>
                     <div class="col-md-9 col-12">
                         <label class="form-label required">Judul Order</label>
@@ -29,11 +29,11 @@
                     </div>
                     <div class="col-md-4 col-12">
                         <label class="form-label">Tanggal Mulai</label>
-                        <input type="date" name="tanggal_mulai" class="form-control">
+                        <input type="text" name="tanggal_mulai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
                     <div class="col-md-4 col-12">
                         <label class="form-label">Tanggal Selesai</label>
-                        <input type="date" name="tanggal_selesai" class="form-control">
+                        <input type="text" name="tanggal_selesai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
                     <div class="col-md-4 col-12">
                         <label class="form-label">Office</label>
@@ -70,7 +70,7 @@
                     </div>
                     <div class="col-md-3 col-12">
                         <label class="form-label">Tanggal PO</label>
-                        <input type="date" name="tanggal_po" class="form-control">
+                        <input type="text" name="tanggal_po" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
                     <div class="col-md-9 col-12">
                         <label class="form-label">No PO</label>
@@ -254,6 +254,7 @@
     var dataPelanggan = '';
 
     $(document).ready(function () {
+        initFpDate(document);
         $('select[name="id_office"]').select2({ placeholder: 'Pilih Office', allowClear: true, width: '100%' });
 
         $('#id_sc').select2({

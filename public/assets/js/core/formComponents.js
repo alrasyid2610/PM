@@ -27,11 +27,13 @@ const formGroup = {
                 <label class="form-label ${required ? "required" : ""}">
                     ${label}
                 </label>
-                <input 
-                    type="date"
+                <input
+                    type="text"
                     name="${name}"
-                    class="form-control disabled"
+                    class="form-control disabled fp-date"
                     value="${value ?? ""}"
+                    placeholder="Pilih tanggal"
+                    autocomplete="off"
                     ${required ? "required" : ""}
                 >
             </div>

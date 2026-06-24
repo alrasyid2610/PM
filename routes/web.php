@@ -508,6 +508,7 @@ Route::prefix('termin')->name('termin.')->group(function () {
     Route::get('/by-so/{id_so}',      [TerminController::class, 'bySo'])->name('by-so')->whereNumber('id_so');
     Route::post('/delete-attachment',     [TerminController::class, 'deleteAttachment'])->name('delete-attachment');
     Route::get('/outputs-by-so/{id_so}', [TerminController::class, 'outputsBySo'])->name('outputs-by-so')->whereNumber('id_so');
+    Route::get('/check-dp/{id_so}',      [TerminController::class, 'checkDpBySo'])->name('check-dp')->whereNumber('id_so');
     Route::get('/{id}',                  [TerminController::class, 'show'])->name('show')->whereNumber('id');
     Route::get('/{id}/detail',        [TerminController::class, 'detail'])->name('detail')->whereNumber('id');
     Route::get('/{id}/history',       [TerminController::class, 'history'])->name('history')->whereNumber('id');

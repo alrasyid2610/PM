@@ -137,9 +137,10 @@ function renderFwoForm(res) {
                                 ${formGroup.date('tanggal_selesai', 'Tanggal Selesai', res.tanggal_selesai ?? '', false, { className: 'col-md-4' })}
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label">Waktu Kedatangan</label>
-                                    <input type="datetime-local" name="waktu_kedatangan"
-                                        class="form-control disabled"
-                                        value="${fwoDatetimeLocal(res.waktu_kedatangan)}">
+                                    <input type="text" name="waktu_kedatangan"
+                                        class="form-control disabled fp-datetime"
+                                        value="${res.waktu_kedatangan ? String(res.waktu_kedatangan).substring(0,16).replace('T',' ') : ''}"
+                                        placeholder="Pilih tanggal & jam" autocomplete="off">
                                 </div>
                                 ${formGroup.textarea('keterangan', 'Keterangan', res.keterangan ?? '', { className: 'col-md-12' })}
                             </div>`

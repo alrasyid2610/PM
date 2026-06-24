@@ -2,52 +2,75 @@ let page;
 let currentWosData = null;
 let currentSoId = null;
 
-const MONTH_SHORT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
+const MONTH_SHORT = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "Mei",
+    "Jun",
+    "Jul",
+    "Agt",
+    "Sep",
+    "Okt",
+    "Nov",
+    "Des",
+];
 function fmtDate(str) {
-    if (!str) return '—';
+    if (!str) return "—";
     var d = new Date(str);
     if (isNaN(d)) return str;
-    return d.getDate() + '-' + MONTH_SHORT[d.getMonth()] + '-' + d.getFullYear();
+    return (
+        d.getDate() + "-" + MONTH_SHORT[d.getMonth()] + "-" + d.getFullYear()
+    );
 }
 
-window.addEventListener('storage', function (e) {
-    if (e.key === 'wo_created' && e.newValue) {
+window.addEventListener("storage", function (e) {
+    if (e.key === "wo_created" && e.newValue) {
         try {
             var data = JSON.parse(e.newValue);
             var target = data.id_so || currentSoId;
             if (target) loadWoProgress(target);
-            var modal = bootstrap.Modal.getInstance(document.getElementById('modalCreateWo'));
+            var modal = bootstrap.Modal.getInstance(
+                document.getElementById("modalCreateWo"),
+            );
             if (modal) {
                 modal.hide();
-                document.getElementById('iframeCreateWo').src = '';
+                document.getElementById("iframeCreateWo").src = "";
             }
         } catch (_) {}
     }
-    if (e.key === 'termin_created' && e.newValue) {
+    if (e.key === "termin_created" && e.newValue) {
         try {
             var data = JSON.parse(e.newValue);
             var target = data.id_so || currentSoId;
             if (target) loadTerminList(target);
-            var modal = bootstrap.Modal.getInstance(document.getElementById('modalCreateTermin'));
+            var modal = bootstrap.Modal.getInstance(
+                document.getElementById("modalCreateTermin"),
+            );
             if (modal) {
                 modal.hide();
-                document.getElementById('iframeCreateTermin').src = '';
+                document.getElementById("iframeCreateTermin").src = "";
             }
         } catch (_) {}
     }
 });
 
-$(document).on('click', '.btn-add-wo-modal', function () {
-    var soId = $(this).data('so-id');
-    document.getElementById('iframeCreateWo').src = '/work-orders/create?id_so=' + soId + '&embed=1';
-    var modal = new bootstrap.Modal(document.getElementById('modalCreateWo'));
+$(document).on("click", ".btn-add-wo-modal", function () {
+    var soId = $(this).data("so-id");
+    document.getElementById("iframeCreateWo").src =
+        "/work-orders/create?id_so=" + soId + "&embed=1";
+    var modal = new bootstrap.Modal(document.getElementById("modalCreateWo"));
     modal.show();
 });
 
-$(document).on('click', '.btn-add-termin-modal', function () {
-    var soId = $(this).data('so-id');
-    document.getElementById('iframeCreateTermin').src = '/termin/create?id_so=' + soId + '&embed=1';
-    var modal = new bootstrap.Modal(document.getElementById('modalCreateTermin'));
+$(document).on("click", ".btn-add-termin-modal", function () {
+    var soId = $(this).data("so-id");
+    document.getElementById("iframeCreateTermin").src =
+        "/termin/create?id_so=" + soId + "&embed=1";
+    var modal = new bootstrap.Modal(
+        document.getElementById("modalCreateTermin"),
+    );
     modal.show();
 });
 
@@ -85,23 +108,33 @@ function filterWos(wos, term) {
 }
 
 function renderSoSummary(wos) {
-    const totalWo    = wos.length;
-    const totalFwo   = wos.reduce(function (s, w) { return s + (w.fwo_count || 0); }, 0);
-    const totalBoqQty = wos.reduce(function (s, w) { return s + (w.total_boq_qty || 0); }, 0);
-    const totalFwoQty = wos.reduce(function (s, w) { return s + (w.total_fwo_qty || 0); }, 0);
-    const totalHarga  = wos.reduce(function (s, w) { return s + (w.total_boq_amount || 0); }, 0);
+    const totalWo = wos.length;
+    const totalFwo = wos.reduce(function (s, w) {
+        return s + (w.fwo_count || 0);
+    }, 0);
+    const totalBoqQty = wos.reduce(function (s, w) {
+        return s + (w.total_boq_qty || 0);
+    }, 0);
+    const totalFwoQty = wos.reduce(function (s, w) {
+        return s + (w.total_fwo_qty || 0);
+    }, 0);
+    const totalHarga = wos.reduce(function (s, w) {
+        return s + (w.total_boq_amount || 0);
+    }, 0);
 
-    const pct = totalBoqQty > 0 ? Math.round((totalFwoQty / totalBoqQty) * 100) : 0;
-    const barColor  = pct >= 100 ? "#16a34a" : pct > 0 ? "#d97706" : "#94a3b8";
-    const pctColor  = pct >= 100 ? "#16a34a" : pct > 0 ? "#d97706" : "#94a3b8";
+    const pct =
+        totalBoqQty > 0 ? Math.round((totalFwoQty / totalBoqQty) * 100) : 0;
+    const barColor = pct >= 100 ? "#16a34a" : pct > 0 ? "#d97706" : "#94a3b8";
+    const pctColor = pct >= 100 ? "#16a34a" : pct > 0 ? "#d97706" : "#94a3b8";
 
-    const harga = totalHarga >= 1e9
-        ? "Rp " + (totalHarga / 1e9).toFixed(1) + " M"
-        : totalHarga >= 1e6
-          ? "Rp " + (totalHarga / 1e6).toFixed(1) + " jt"
-          : totalHarga > 0
-            ? "Rp " + Number(totalHarga).toLocaleString("en-US")
-            : "—";
+    const harga =
+        totalHarga >= 1e9
+            ? "Rp " + (totalHarga / 1e9).toFixed(1) + " M"
+            : totalHarga >= 1e6
+              ? "Rp " + (totalHarga / 1e6).toFixed(1) + " jt"
+              : totalHarga > 0
+                ? "Rp " + Number(totalHarga).toLocaleString("en-US")
+                : "—";
 
     const kpiCard = function (icon, iconBg, label, value) {
         return `<div class="pm-kpi-card">
@@ -127,11 +160,26 @@ function renderSoSummary(wos) {
     </div>`;
 
     $("#soSummaryCard").html(
-        kpiCard("fa-briefcase",  "var(--primary-500,#1a5fbe)", "Total WO",    totalWo + " WO") +
-        kpiCard("fa-hard-hat",   "var(--primary-700,#18386b)", "Total FWO",   totalFwo + " FWO") +
-        kpiCard("fa-layer-group","#0891b2",                    "Total QTY",   totalBoqQty + " qty") +
-        kpiCard("fa-tag",        "#0f766e",                    "Total Nilai",  harga) +
-        progressCard
+        kpiCard(
+            "fa-briefcase",
+            "var(--primary-500,#1a5fbe)",
+            "Total WO",
+            totalWo + " WO",
+        ) +
+            kpiCard(
+                "fa-hard-hat",
+                "var(--primary-700,#18386b)",
+                "Total FWO",
+                totalFwo + " FWO",
+            ) +
+            kpiCard(
+                "fa-layer-group",
+                "#0891b2",
+                "Total QTY",
+                totalBoqQty + " qty",
+            ) +
+            kpiCard("fa-tag", "#0f766e", "Total Nilai", harga) +
+            progressCard,
     );
 }
 
@@ -160,7 +208,14 @@ function renderWoProgressView(wos) {
     }
 }
 
-const SO_INTERVAL_LABELS = {1:'Bulanan',2:'Bimulanan',3:'Triwulan',4:'Caturwulan',6:'Semester',12:'Annual'};
+const SO_INTERVAL_LABELS = {
+    1: "Bulanan",
+    2: "Bimulanan",
+    3: "Triwulan",
+    4: "Caturwulan",
+    6: "Semester",
+    12: "Annual",
+};
 
 function renderWoProgressTable(wos) {
     // Level 1: kelompokkan per Site Pelanggan
@@ -171,7 +226,8 @@ function renderWoProgressTable(wos) {
         siteGroups.get(key).push(wo);
     });
 
-    const TH = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';
+    const TH =
+        'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';
     const TD = 'style="padding:8px 12px;vertical-align:middle;"';
 
     function buildRow(wo, idx) {
@@ -206,13 +262,17 @@ function renderWoProgressTable(wos) {
 
     function buildPeriodSection(list, interval) {
         const label = interval
-            ? (SO_INTERVAL_LABELS[interval] || interval + ' bln')
-            : 'Tidak Ada Periode';
-        const badgeColor  = interval ? '#0d9488' : '#64748b';
-        const badgeBg     = interval ? '#ccfbf1'  : '#f1f5f9';
-        const badgeBorder = interval ? '#5eead4' : '#e2e8f0';
+            ? SO_INTERVAL_LABELS[interval] || interval + " bln"
+            : "Tidak Ada Periode";
+        const badgeColor = interval ? "#0d9488" : "#64748b";
+        const badgeBg = interval ? "#ccfbf1" : "#f1f5f9";
+        const badgeBorder = interval ? "#5eead4" : "#e2e8f0";
 
-        const rows = list.map(function(wo, i) { return buildRow(wo, i + 1); }).join('');
+        const rows = list
+            .map(function (wo, i) {
+                return buildRow(wo, i + 1);
+            })
+            .join("");
 
         return `<div style="border-top:1px solid #e2e8f0;">
             <div class="wo-period-header" style="display:flex;align-items:center;gap:8px;padding:8px 14px 8px 32px;background:#fafbfc;cursor:pointer;user-select:none;">
@@ -255,15 +315,19 @@ function renderWoProgressTable(wos) {
         });
 
         // Urutkan: interval_bulan bernilai dulu (kecil ke besar), null terakhir
-        const sortedPeriods = Array.from(periodGroups.entries()).sort(function (a, b) {
-            if (a[0] === null) return 1;
-            if (b[0] === null) return -1;
-            return Number(a[0]) - Number(b[0]);
-        });
+        const sortedPeriods = Array.from(periodGroups.entries()).sort(
+            function (a, b) {
+                if (a[0] === null) return 1;
+                if (b[0] === null) return -1;
+                return Number(a[0]) - Number(b[0]);
+            },
+        );
 
-        const periodSections = sortedPeriods.map(function (entry) {
-            return buildPeriodSection(entry[1], entry[0]);
-        }).join('');
+        const periodSections = sortedPeriods
+            .map(function (entry) {
+                return buildPeriodSection(entry[1], entry[0]);
+            })
+            .join("");
 
         items += `<div class="pm-accordion-item">
             <div class="pm-accordion-header" aria-expanded="false">
@@ -288,14 +352,18 @@ function renderWoProgressTable(wos) {
 }
 
 // Accordion toggle (grup Site Pelanggan pada tab Work Orders)
-$(document).on("click", "#woProgressContent .pm-accordion-header", function (e) {
-    if ($(e.target).closest("a, button").length) return;
-    const $header = $(this);
-    const $body = $header.next(".pm-accordion-collapse");
-    const isOpen = $header.attr("aria-expanded") === "true";
-    $header.attr("aria-expanded", !isOpen);
-    $body.slideToggle(150);
-});
+$(document).on(
+    "click",
+    "#woProgressContent .pm-accordion-header",
+    function (e) {
+        if ($(e.target).closest("a, button").length) return;
+        const $header = $(this);
+        const $body = $header.next(".pm-accordion-collapse");
+        const isOpen = $header.attr("aria-expanded") === "true";
+        $header.attr("aria-expanded", !isOpen);
+        $body.slideToggle(150);
+    },
+);
 
 // Toggle period (sub-grup Period dalam site accordion)
 $(document).on("click", "#woProgressContent .wo-period-header", function (e) {
@@ -309,25 +377,33 @@ $(document).on("click", "#woProgressContent .wo-period-header", function (e) {
 });
 
 // ── Tab switch — show/hide action buttons ─────────────────────────────────────
-$(document).on('shown.bs.tab', '#soDetailTabs button[data-bs-toggle="tab"]', function (e) {
-    const target = $(e.target).data('bs-target');
-    $('#soTabActionsInfo, #soTabActionsWo, #soTabActionsTermin').addClass('d-none');
-    if (target === '#tabInfoSo') $('#soTabActionsInfo').removeClass('d-none');
-    if (target === '#tabWo')     $('#soTabActionsWo').removeClass('d-none');
-    if (target === '#tabTermin') $('#soTabActionsTermin').removeClass('d-none');
-});
+$(document).on(
+    "shown.bs.tab",
+    '#soDetailTabs button[data-bs-toggle="tab"]',
+    function (e) {
+        const target = $(e.target).data("bs-target");
+        $("#soTabActionsInfo, #soTabActionsWo, #soTabActionsTermin").addClass(
+            "d-none",
+        );
+        if (target === "#tabInfoSo")
+            $("#soTabActionsInfo").removeClass("d-none");
+        if (target === "#tabWo") $("#soTabActionsWo").removeClass("d-none");
+        if (target === "#tabTermin")
+            $("#soTabActionsTermin").removeClass("d-none");
+    },
+);
 
 // ── Load Termin ────────────────────────────────────────────────────────────────
 function loadTerminList(id_so, onDone) {
-    $('#terminContent').html(
-        '<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>'
+    $("#terminContent").html(
+        '<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>',
     );
     $.get(window.route.terminBySo + id_so, function (data) {
-        $('#terminContent').html(renderTerminTable(data));
+        $("#terminContent").html(renderTerminTable(data));
         if (onDone) onDone();
     }).fail(function () {
-        $('#terminContent').html(
-            '<div class="text-center text-danger py-3"><i class="fa-solid fa-circle-exclamation me-1"></i> Gagal memuat data</div>'
+        $("#terminContent").html(
+            '<div class="text-center text-danger py-3"><i class="fa-solid fa-circle-exclamation me-1"></i> Gagal memuat data</div>',
         );
         if (onDone) onDone();
     });
@@ -335,26 +411,41 @@ function loadTerminList(id_so, onDone) {
 
 function renderTerminTable(rows) {
     if (!rows || !rows.length) {
-        return '<div class="text-center text-muted py-4">'
-            + '<i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>'
-            + 'Belum ada Termin untuk Sales Order ini</div>';
+        return (
+            '<div class="text-center text-muted py-4">' +
+            '<i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>' +
+            "Belum ada Termin untuk Sales Order ini</div>"
+        );
     }
 
-    const statusClass = { pending: 'pm-badge--pending', proses: 'pm-badge--proses', selesai: 'pm-badge--selesai', siap_kirim: 'pm-badge--selesai' };
-    const statusLabel = { pending: 'Pending', proses: 'Proses', selesai: 'Selesai', siap_kirim: 'Siap Kirim' };
+    const statusClass = {
+        pending: "pm-badge--pending",
+        proses: "pm-badge--proses",
+        selesai: "pm-badge--selesai",
+        siap_kirim: "pm-badge--selesai",
+    };
+    const statusLabel = {
+        pending: "Pending",
+        proses: "Proses",
+        selesai: "Selesai",
+        siap_kirim: "Siap Kirim",
+    };
 
-    const rows_html = rows.map(function (t, idx) {
-        const cls   = statusClass[t.status] || 'pm-badge--pending';
-        const lbl   = statusLabel[t.status] || t.status;
-        const badge = `<span class="pm-badge ${cls}">${lbl}</span>`;
-        const nilai = t.nilai ? 'Rp ' + Number(t.nilai).toLocaleString('id-ID') : '—';
-        const pct   = t.persentase ? t.persentase + '%' : '—';
-        const tgl   = t.tanggal ? t.tanggal.substring(0, 10) : '—';
+    const rows_html = rows
+        .map(function (t, idx) {
+            const cls = statusClass[t.status] || "pm-badge--pending";
+            const lbl = statusLabel[t.status] || t.status;
+            const badge = `<span class="pm-badge ${cls}">${lbl}</span>`;
+            const nilai = t.nilai
+                ? "Rp " + Number(t.nilai).toLocaleString("id-ID")
+                : "—";
+            const pct = t.persentase ? t.persentase + "%" : "—";
+            const tgl = t.tanggal ? t.tanggal.substring(0, 10) : "—";
 
-        return `<tr>
+            return `<tr>
             <td style="color:#94a3b8;text-align:center;">${idx + 1}</td>
-            <td><a href="/termin?open=${t.id_termin}" class="pm-link-record">${escHtml(t.no_termin ?? '—')}</a></td>
-            <td>${escHtml(t.nama ?? '—')}</td>
+            <td><a href="/termin?open=${t.id_termin}" class="pm-link-record">${escHtml(t.no_termin ?? "—")}</a></td>
+            <td>${escHtml(t.nama ?? "—")}</td>
             <td class="text-center">${pct}</td>
             <td style="color:#1d4ed8;font-weight:600;">${nilai}</td>
             <td>${tgl}</td>
@@ -366,7 +457,8 @@ function renderTerminTable(rows) {
                 </a>
             </td>
         </tr>`;
-    }).join('');
+        })
+        .join("");
 
     return `<div class="table-responsive">
         <table class="pm-table">
@@ -377,7 +469,7 @@ function renderTerminTable(rows) {
                     <th style="min-width:200px;">Nama</th>
                     <th style="min-width:90px;text-align:center;">%</th>
                     <th style="min-width:130px;">Nilai</th>
-                    <th style="min-width:110px;">Tanggal</th>
+                    <th style="min-width:110px;">Tanggal Selesai</th>
                     <th style="min-width:100px;">Status</th>
                     <th style="min-width:70px;">Aksi</th>
                 </tr>
@@ -443,9 +535,9 @@ $(document).ready(function () {
     });
 
     $(document).on("click", ".btn-edit-copy-wo-boq", function () {
-        const $row   = $(this).closest(".copy-wo-boq-row");
+        const $row = $(this).closest(".copy-wo-boq-row");
         const $panel = $row.find(".copy-wo-boq-edit-panel");
-        const $btn   = $(this);
+        const $btn = $(this);
 
         if ($panel.is(":visible")) {
             $panel.slideUp(150);
@@ -455,13 +547,17 @@ $(document).ready(function () {
 
         if (!$row.attr("data-edit-loaded")) {
             $row.attr("data-edit-loaded", "1");
-            const satuan     = $row.attr("data-satuan") || "";
-            const harga      = $row.attr("data-harga")  || "";
-            const ket        = $row.attr("data-keterangan") || "";
+            const satuan = $row.attr("data-satuan") || "";
+            const harga = $row.attr("data-harga") || "";
+            const ket = $row.attr("data-keterangan") || "";
             const itemProduk = $row.attr("data-item-produk-alternate") || "";
-            const tpId       = $row.attr("data-id-testing-point");
-            const opts = ["PCS","Titik","Set"].map(v =>
-                `<option value="${v}" ${satuan===v?"selected":""}>${v}</option>`).join("");
+            const tpId = $row.attr("data-id-testing-point");
+            const opts = ["PCS", "Titik", "Set"]
+                .map(
+                    (v) =>
+                        `<option value="${v}" ${satuan === v ? "selected" : ""}>${v}</option>`,
+                )
+                .join("");
 
             $panel.html(`
                 <div class="row g-2 mb-3">
@@ -495,8 +591,14 @@ $(document).ready(function () {
 
             let preCheckedIds;
             try {
-                preCheckedIds = new Set(JSON.parse($row.attr("data-testing-item-ids") || "[]").map(String));
-            } catch(e) { preCheckedIds = new Set(); }
+                preCheckedIds = new Set(
+                    JSON.parse($row.attr("data-testing-item-ids") || "[]").map(
+                        String,
+                    ),
+                );
+            } catch (e) {
+                preCheckedIds = new Set();
+            }
             loadCopyWoBoqItems($row, tpId, preCheckedIds);
         }
 
@@ -507,52 +609,73 @@ $(document).ready(function () {
 
     $(document).on("click", "#btnConfirmCopyWo", function () {
         const judul = $("#copyWoJudul").val().trim();
-        if (!judul) { Notify.warning("Judul pekerjaan wajib diisi"); return; }
+        if (!judul) {
+            Notify.warning("Judul pekerjaan wajib diisi");
+            return;
+        }
 
-        const tglMulai   = $("#copyWoTglMulai").val();
+        const tglMulai = $("#copyWoTglMulai").val();
         const tglSelesai = $("#copyWoTglSelesai").val();
         $("#copyWoTglSelesaiError").remove();
         if (tglMulai && tglSelesai && tglSelesai < tglMulai) {
-            $("#copyWoTglSelesai").after('<div id="copyWoTglSelesaiError" class="text-danger mt-1" style="font-size:12px;"><i class="fa-solid fa-circle-exclamation me-1"></i>Tanggal selesai tidak boleh lebih kecil dari tanggal mulai</div>');
+            $("#copyWoTglSelesai").after(
+                '<div id="copyWoTglSelesaiError" class="text-danger mt-1" style="font-size:12px;"><i class="fa-solid fa-circle-exclamation me-1"></i>Tanggal selesai tidak boleh lebih kecil dari tanggal mulai</div>',
+            );
             return;
         }
 
         // Collect BOQ rows
         const boq = [];
-        $(".copy-wo-boq-row").each(function() {
-            const $row      = $(this);
-            const isNew     = $row.attr('data-is-new') === '1';
-            const isEdited  = $row.attr('data-edit-loaded') === '1';
+        $(".copy-wo-boq-row").each(function () {
+            const $row = $(this);
+            const isNew = $row.attr("data-is-new") === "1";
+            const isEdited = $row.attr("data-edit-loaded") === "1";
             const useInputs = isNew || isEdited;
 
-            const tpSelect = $row.find('.copy-wo-boq-tp-select');
-            const idTp = tpSelect.length ? tpSelect.val() : $row.attr('data-id-testing-point');
+            const tpSelect = $row.find(".copy-wo-boq-tp-select");
+            const idTp = tpSelect.length
+                ? tpSelect.val()
+                : $row.attr("data-id-testing-point");
             if (!idTp) return;
 
-            const qty = $row.find('.copy-wo-boq-qty').val();
+            const qty = $row.find(".copy-wo-boq-qty").val();
 
             let testingItemIds = [];
             if (useInputs) {
-                $row.find('.copy-wo-item-check:checked').each(function() {
-                    testingItemIds.push(parseInt($(this).data('item-id')));
+                $row.find(".copy-wo-item-check:checked").each(function () {
+                    testingItemIds.push(parseInt($(this).data("item-id")));
                 });
             } else {
-                try { testingItemIds = JSON.parse($row.attr('data-testing-item-ids') || '[]'); } catch(e) {}
+                try {
+                    testingItemIds = JSON.parse(
+                        $row.attr("data-testing-item-ids") || "[]",
+                    );
+                } catch (e) {}
             }
 
             boq.push({
-                id_testing_point:      parseInt(idTp),
-                qty:                   qty ? parseInt(qty) : null,
-                satuan:                useInputs ? ($row.find('.copy-wo-boq-satuan').val() || '') : ($row.attr('data-satuan') || ''),
-                harga:                 useInputs ? (rawNumVal($row.find('.copy-wo-boq-harga')[0]) ?? null) : ($row.attr('data-harga') || null),
-                keterangan:            useInputs ? ($row.find('.copy-wo-boq-ket').val() || null) : ($row.attr('data-keterangan') || null),
-                item_produk_alternate: useInputs ? ($row.find('.copy-wo-boq-item-produk').val() || null) : ($row.attr('data-item-produk-alternate') || null),
-                testing_item_ids:      testingItemIds,
+                id_testing_point: parseInt(idTp),
+                qty: qty ? parseInt(qty) : null,
+                satuan: useInputs
+                    ? $row.find(".copy-wo-boq-satuan").val() || ""
+                    : $row.attr("data-satuan") || "",
+                harga: useInputs
+                    ? (rawNumVal($row.find(".copy-wo-boq-harga")[0]) ?? null)
+                    : $row.attr("data-harga") || null,
+                keterangan: useInputs
+                    ? $row.find(".copy-wo-boq-ket").val() || null
+                    : $row.attr("data-keterangan") || null,
+                item_produk_alternate: useInputs
+                    ? $row.find(".copy-wo-boq-item-produk").val() || null
+                    : $row.attr("data-item-produk-alternate") || null,
+                testing_item_ids: testingItemIds,
             });
         });
 
         const $btn = $(this);
-        $btn.prop("disabled", true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...');
+        $btn.prop("disabled", true).html(
+            '<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...',
+        );
 
         $.ajax({
             url: window.route.woDuplicate + sourceWoId + "/duplicate",
@@ -560,13 +683,13 @@ $(document).ready(function () {
             contentType: "application/json",
             headers: { "X-CSRF-TOKEN": window.route.csrf },
             data: JSON.stringify({
-                judul_pekerjaan:             judul,
-                tanggal_mulai:               tglMulai || null,
-                tanggal_selesai:             tglSelesai || null,
-                keterangan:                  $("#copyWoKeterangan").val() || null,
-                id_pic_pelanggan_pekerjaan:  $("#copyWoPic").val() || null,
-                no_urut_period:              $("#copyWoUrutan").val() || null,
-                boq:                         boq,
+                judul_pekerjaan: judul,
+                tanggal_mulai: tglMulai || null,
+                tanggal_selesai: tglSelesai || null,
+                keterangan: $("#copyWoKeterangan").val() || null,
+                id_pic_pelanggan_pekerjaan: $("#copyWoPic").val() || null,
+                no_urut_period: $("#copyWoUrutan").val() || null,
+                boq: boq,
             }),
             success: function (res) {
                 Notify.success("WO berhasil disalin: " + res.no_wo);
@@ -575,7 +698,9 @@ $(document).ready(function () {
             },
             error: function (xhr) {
                 Notify.error(xhr.responseJSON?.message || "Gagal menyalin WO");
-                $btn.prop("disabled", false).html('<i class="fa-solid fa-copy me-1"></i> Buat Salinan');
+                $btn.prop("disabled", false).html(
+                    '<i class="fa-solid fa-copy me-1"></i> Buat Salinan',
+                );
             },
         });
     });
@@ -586,15 +711,19 @@ $(document).ready(function () {
 
     $("#modalCopyWo").on("hidden.bs.modal", function () {
         sourceWoId = null;
-        $("#btnConfirmCopyWo").prop("disabled", false).html('<i class="fa-solid fa-copy me-1"></i> Buat Salinan');
+        $("#btnConfirmCopyWo")
+            .prop("disabled", false)
+            .html('<i class="fa-solid fa-copy me-1"></i> Buat Salinan');
     });
 
     // Refresh Termin
-    $(document).on('click', '#btnRefreshTermin', function () {
-        const soId = $(this).data('so-id');
-        const $icon = $(this).find('i');
-        $icon.addClass('fa-spin');
-        loadTerminList(soId, function () { $icon.removeClass('fa-spin'); });
+    $(document).on("click", "#btnRefreshTermin", function () {
+        const soId = $(this).data("so-id");
+        const $icon = $(this).find("i");
+        $icon.addClass("fa-spin");
+        loadTerminList(soId, function () {
+            $icon.removeClass("fa-spin");
+        });
     });
 
     page = new CrudPageController({
@@ -603,6 +732,7 @@ $(document).ready(function () {
         afterLoad: function (res) {
             loadWoProgress(res.id_so);
             loadTerminList(res.id_so);
+            initFpDate('#detailContent');
         },
     });
 
@@ -632,44 +762,71 @@ $(document).ready(function () {
 });
 
 function fillCopyWoModal(wo) {
-    const dateMulai   = (wo.tanggal_mulai   || "").substring(0, 10);
+    const dateMulai = (wo.tanggal_mulai || "").substring(0, 10);
     const dateSelesai = (wo.tanggal_selesai || "").substring(0, 10);
-    const INTERVAL_LABELS = {1:'Bulanan',2:'Bimulanan',3:'Triwulan',4:'Caturwulan',6:'Semester',12:'Annual'};
-    const intervalLabel = wo.interval_bulan ? (INTERVAL_LABELS[wo.interval_bulan] || wo.interval_bulan + ' bln') : '— Tidak ada —';
+    const INTERVAL_LABELS = {
+        1: "Bulanan",
+        2: "Bimulanan",
+        3: "Triwulan",
+        4: "Caturwulan",
+        6: "Semester",
+        12: "Annual",
+    };
+    const intervalLabel = wo.interval_bulan
+        ? INTERVAL_LABELS[wo.interval_bulan] || wo.interval_bulan + " bln"
+        : "— Tidak ada —";
 
-    const siteName = wo['Site Pelanggan'] ?? '';
+    const siteName = wo["Site Pelanggan"] ?? "";
     const siteHtml = siteName
         ? `<div style="display:flex;align-items:center;gap:6px;min-width:0;">
                <i class="fa-solid fa-location-dot" style="color:#0891b2;font-size:11px;flex-shrink:0;"></i>
                <span style="color:#0e7490;font-weight:600;white-space:nowrap;">${escHtml(siteName)}</span>
            </div>
            <div style="width:1px;height:16px;background:#e2e8f0;flex-shrink:0;"></div>`
-        : '';
+        : "";
 
     // Hitung next urutan dari site_wos
     const siteWos = wo.site_wos || [];
-    const maxUrut = siteWos.reduce(function(m, w) { return Math.max(m, w.no_urut_period || 0); }, 0);
+    const maxUrut = siteWos.reduce(function (m, w) {
+        return Math.max(m, w.no_urut_period || 0);
+    }, 0);
     const nextUrut = maxUrut + 1;
 
     // Build WO list section
-    let woListHtml = '';
+    let woListHtml = "";
     if (siteWos.length > 0) {
-        const IL2 = {1:'Bulanan',2:'Bimulanan',3:'Triwulan',4:'Caturwulan',6:'Semester',12:'Annual'};
-        const rows = siteWos.map(function(w) {
-            const tglM = w.tanggal_mulai ? w.tanggal_mulai.substring(0,10) : '—';
-            const tglS = w.tanggal_selesai ? w.tanggal_selesai.substring(0,10) : '—';
-            const isSelf = w.id_wo == wo.id_wo;
-            const periodeLabel = w.interval_bulan && w.no_urut_period
-                ? (IL2[w.interval_bulan] || w.interval_bulan + ' bln') + ' ke-' + w.no_urut_period
-                : '—';
-            return `<tr style="font-size:12px;${isSelf ? 'background:#eff6ff;' : ''}">
-                <td style="padding:5px 10px;font-weight:600;color:#1a56db;">${escHtml(w.no_wo)}${isSelf ? ' <span style="font-size:10px;padding:1px 5px;border-radius:8px;background:#dbeafe;color:#1e40af;">sumber</span>' : ''}</td>
-                <td style="padding:5px 10px;color:#374151;">${escHtml(w.judul_pekerjaan || '—')}</td>
+        const IL2 = {
+            1: "Bulanan",
+            2: "Bimulanan",
+            3: "Triwulan",
+            4: "Caturwulan",
+            6: "Semester",
+            12: "Annual",
+        };
+        const rows = siteWos
+            .map(function (w) {
+                const tglM = w.tanggal_mulai
+                    ? w.tanggal_mulai.substring(0, 10)
+                    : "—";
+                const tglS = w.tanggal_selesai
+                    ? w.tanggal_selesai.substring(0, 10)
+                    : "—";
+                const isSelf = w.id_wo == wo.id_wo;
+                const periodeLabel =
+                    w.interval_bulan && w.no_urut_period
+                        ? (IL2[w.interval_bulan] || w.interval_bulan + " bln") +
+                          " ke-" +
+                          w.no_urut_period
+                        : "—";
+                return `<tr style="font-size:12px;${isSelf ? "background:#eff6ff;" : ""}">
+                <td style="padding:5px 10px;font-weight:600;color:#1a56db;">${escHtml(w.no_wo)}${isSelf ? ' <span style="font-size:10px;padding:1px 5px;border-radius:8px;background:#dbeafe;color:#1e40af;">sumber</span>' : ""}</td>
+                <td style="padding:5px 10px;color:#374151;">${escHtml(w.judul_pekerjaan || "—")}</td>
                 <td style="padding:5px 10px;color:#64748b;white-space:nowrap;">${tglM}</td>
                 <td style="padding:5px 10px;color:#64748b;white-space:nowrap;">${tglS}</td>
-                <td style="padding:5px 10px;white-space:nowrap;">${periodeLabel !== '—' ? `<span style="font-size:11px;padding:2px 8px;border-radius:20px;background:#eff6ff;color:#1a56db;border:1px solid #bfdbfe;"><i class="fa-solid fa-calendar-days me-1" style="font-size:10px;"></i>${escHtml(periodeLabel)}</span>` : '<span style="color:#94a3b8;">—</span>'}</td>
+                <td style="padding:5px 10px;white-space:nowrap;">${periodeLabel !== "—" ? `<span style="font-size:11px;padding:2px 8px;border-radius:20px;background:#eff6ff;color:#1a56db;border:1px solid #bfdbfe;"><i class="fa-solid fa-calendar-days me-1" style="font-size:10px;"></i>${escHtml(periodeLabel)}</span>` : '<span style="color:#94a3b8;">—</span>'}</td>
             </tr>`;
-        }).join('');
+            })
+            .join("");
         woListHtml = `<div class="col-12">
             <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
                 <div style="background:#f8fafc;padding:7px 12px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;cursor:pointer;"
@@ -698,13 +855,15 @@ function fillCopyWoModal(wo) {
         </div>`;
     }
 
-    const urutanRow = wo.interval_bulan ? `
+    const urutanRow = wo.interval_bulan
+        ? `
         <div class="col-md-2">
             <label class="form-label">Urutan ke-</label>
             <input type="number" id="copyWoUrutan" class="form-control form-control-sm" value="${nextUrut}" min="1" style="width:80px;">
-        </div>` : '';
+        </div>`
+        : "";
 
-    const picColClass = wo.interval_bulan ? 'col-md-4' : 'col-md-5';
+    const picColClass = wo.interval_bulan ? "col-md-4" : "col-md-5";
 
     $("#modalCopyWoBody").html(`
         <div style="position:sticky;top:0;z-index:10;background:#fff;border-bottom:2px solid #e2e8f0;padding:10px 16px;margin:-16px -16px 16px;box-shadow:0 2px 10px rgba(0,0,0,.08);">
@@ -712,12 +871,12 @@ function fillCopyWoModal(wo) {
                 ${siteHtml}
                 <div style="display:flex;align-items:center;gap:6px;min-width:0;">
                     <i class="fa-solid fa-file-contract" style="color:#1a56db;font-size:11px;flex-shrink:0;"></i>
-                    <span style="font-weight:700;color:#1a56db;white-space:nowrap;">${escHtml(wo.no_so ?? '—')}</span>
+                    <span style="font-weight:700;color:#1a56db;white-space:nowrap;">${escHtml(wo.no_so ?? "—")}</span>
                 </div>
                 <div style="width:1px;height:16px;background:#e2e8f0;flex-shrink:0;"></div>
                 <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
                     <i class="fa-solid fa-file-lines" style="color:#374151;font-size:11px;flex-shrink:0;"></i>
-                    <span style="color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(wo.judul_pekerjaan ?? '—')}</span>
+                    <span style="color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(wo.judul_pekerjaan ?? "—")}</span>
                 </div>
             </div>
         </div>
@@ -725,20 +884,20 @@ function fillCopyWoModal(wo) {
         <div class="row g-3">
             <div class="col-12">
                 <label class="form-label">Sales Order</label>
-                <input type="text" class="form-control form-control-sm" value="${escHtml(wo.no_so ?? '—')}" disabled>
+                <input type="text" class="form-control form-control-sm" value="${escHtml(wo.no_so ?? "—")}" disabled>
             </div>
             <div class="col-12">
                 <label class="form-label">Judul Order <span class="text-danger">*</span></label>
                 <input type="text" id="copyWoJudul" class="form-control form-control-sm"
-                    value="${escHtml(wo.judul_pekerjaan ?? '')}" placeholder="Judul pekerjaan">
+                    value="${escHtml(wo.judul_pekerjaan ?? "")}" placeholder="Judul pekerjaan">
             </div>
             <div class="col-md-5">
                 <label class="form-label">Pelanggan</label>
-                <input type="text" class="form-control form-control-sm" value="${escHtml(wo.Pelanggan ?? '—')}" disabled>
+                <input type="text" class="form-control form-control-sm" value="${escHtml(wo.Pelanggan ?? "—")}" disabled>
             </div>
             <div class="col-md-5">
                 <label class="form-label">Pelanggan Site</label>
-                <input type="text" class="form-control form-control-sm" value="${escHtml(wo['Site Pelanggan'] ?? '—')}" disabled>
+                <input type="text" class="form-control form-control-sm" value="${escHtml(wo["Site Pelanggan"] ?? "—")}" disabled>
             </div>
             <div class="col-md-2">
                 <label class="form-label">Frekuensi</label>
@@ -760,19 +919,19 @@ function fillCopyWoModal(wo) {
             ${woListHtml}
             <div class="col-12">
                 <label class="form-label">Keterangan</label>
-                <textarea id="copyWoKeterangan" class="form-control form-control-sm" rows="2">${escHtml(wo.keterangan ?? '')}</textarea>
+                <textarea id="copyWoKeterangan" class="form-control form-control-sm" rows="2">${escHtml(wo.keterangan ?? "")}</textarea>
             </div>
         </div>
     `);
 
     $("#copyWoPic").select2({
-        width: '100%',
-        placeholder: 'Pilih PIC',
+        width: "100%",
+        placeholder: "Pilih PIC",
         allowClear: true,
         dropdownParent: $("#modalCopyWo"),
         ajax: {
-            url: '/business-relation-contacts/select2',
-            dataType: 'json',
+            url: "/business-relation-contacts/select2",
+            dataType: "json",
             delay: 250,
             data: (params) => ({ q: params.term }),
             processResults: (data) => ({ results: data }),
@@ -782,7 +941,12 @@ function fillCopyWoModal(wo) {
     });
 
     if (wo.id_pic_pelanggan_pekerjaan) {
-        const opt = new Option(wo.nama_pic_pelanggan_pekerjaan || wo.id_pic_pelanggan_pekerjaan, wo.id_pic_pelanggan_pekerjaan, true, true);
+        const opt = new Option(
+            wo.nama_pic_pelanggan_pekerjaan || wo.id_pic_pelanggan_pekerjaan,
+            wo.id_pic_pelanggan_pekerjaan,
+            true,
+            true,
+        );
         $("#copyWoPic").append(opt).trigger("change");
     }
 
@@ -793,25 +957,26 @@ let copyWoBoqIdx = 0;
 
 function renderCopyWoBoq(sourceItems) {
     const hasSource = sourceItems.length > 0;
-    let sourceHtml = '';
+    let sourceHtml = "";
     if (hasSource) {
-        sourceHtml = sourceItems.map(function(item) {
-            const satuan = item.satuan ? escHtml(item.satuan) : '';
-            return `<div class="copy-wo-boq-row" data-is-new="0"
+        sourceHtml = sourceItems
+            .map(function (item) {
+                const satuan = item.satuan ? escHtml(item.satuan) : "";
+                return `<div class="copy-wo-boq-row" data-is-new="0"
                 data-id-testing-point="${item.id_testing_point}"
                 data-testing-item-ids="${escHtml(JSON.stringify(item.testing_item_ids || []))}"
-                data-satuan="${escHtml(item.satuan || '')}"
-                data-harga="${item.harga || ''}"
-                data-keterangan="${escHtml(item.keterangan || '')}"
-                data-item-produk-alternate="${escHtml(item.item_produk_alternate || '')}"
+                data-satuan="${escHtml(item.satuan || "")}"
+                data-harga="${item.harga || ""}"
+                data-keterangan="${escHtml(item.keterangan || "")}"
+                data-item-produk-alternate="${escHtml(item.item_produk_alternate || "")}"
                 style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
                 <div class="copy-wo-boq-compact d-flex align-items-center gap-2 p-2" style="background:#f8fafc;">
                     <div style="flex:1;min-width:0;">
                         <div class="fw-semibold" style="font-size:12px;color:#1a56db;">${escHtml(item.point_name)}</div>
-                        ${satuan ? `<div style="font-size:11px;color:#64748b;">Satuan: ${satuan}</div>` : ''}
+                        ${satuan ? `<div style="font-size:11px;color:#64748b;">Satuan: ${satuan}</div>` : ""}
                     </div>
                     <input type="number" class="form-control form-control-sm text-end copy-wo-boq-qty"
-                        value="${item.qty || ''}" min="1" placeholder="qty"
+                        value="${item.qty || ""}" min="1" placeholder="qty"
                         style="font-size:12px;width:90px;flex-shrink:0;">
                     <button type="button" class="btn btn-outline-primary btn-sm btn-edit-copy-wo-boq py-0 px-2 flex-shrink-0"
                         style="font-size:11px;white-space:nowrap;" tabindex="-1">
@@ -824,13 +989,14 @@ function renderCopyWoBoq(sourceItems) {
                 <div class="copy-wo-boq-edit-panel"
                     style="display:none;padding:14px;border-top:1px solid #e2e8f0;background:#fff;"></div>
             </div>`;
-        }).join('');
+            })
+            .join("");
     }
 
     const boqSectionHtml = `<div class="col-12" id="copyWoBoqSection">
         <label class="form-label fw-semibold">
             <i class="fa-solid fa-layer-group me-1 text-success"></i>BOQ
-            ${hasSource ? `<span style="font-size:11px;font-weight:400;color:#64748b;margin-left:4px;">(dari WO sumber — edit qty sesuai kebutuhan)</span>` : ''}
+            ${hasSource ? `<span style="font-size:11px;font-weight:400;color:#64748b;margin-left:4px;">(dari WO sumber — edit qty sesuai kebutuhan)</span>` : ""}
         </label>
         <div id="copyWoBoqContainer" class="d-flex flex-column gap-2">
             ${sourceHtml || '<div style="font-size:12px;color:#94a3b8;padding:4px 0;"><i class="fa-solid fa-circle-minus me-1"></i>Belum ada BOQ di WO ini</div>'}
@@ -850,7 +1016,8 @@ function renderCopyWoBoq(sourceItems) {
 function addCopyWoBoqRow() {
     copyWoBoqIdx++;
     const idx = copyWoBoqIdx;
-    const row = $(`<div class="copy-wo-boq-row card mb-3" data-id-testing-point="" data-is-new="1">
+    const row =
+        $(`<div class="copy-wo-boq-row card mb-3" data-id-testing-point="" data-is-new="1">
         <div class="card-header d-flex align-items-center justify-content-between py-2 px-3" style="background:#f0fdf4;border-bottom:1px solid #bbf7d0;">
             <div style="flex:1;min-width:0;margin-right:8px;">
                 <select class="form-select form-select-sm copy-wo-boq-tp-select" style="font-size:12px;"></select>
@@ -898,66 +1065,78 @@ function addCopyWoBoqRow() {
     $("#copyWoBoqContainer").append(row);
     initNumericMask(row[0]);
 
-    const $sel = row.find('.copy-wo-boq-tp-select');
+    const $sel = row.find(".copy-wo-boq-tp-select");
     $sel.select2({
-        width: '100%',
-        placeholder: 'Pilih testing point...',
+        width: "100%",
+        placeholder: "Pilih testing point...",
         allowClear: true,
         minimumInputLength: 0,
         dropdownParent: $("#modalCopyWo"),
         ajax: {
             url: window.route.tpSelect2,
-            dataType: 'json',
+            dataType: "json",
             delay: 250,
             data: (p) => ({ q: p.term }),
-            processResults: function(d) {
+            processResults: function (d) {
                 const usedIds = new Set(
                     $("#copyWoBoqContainer .copy-wo-boq-row")
-                        .map(function() { return $(this).attr('data-id-testing-point'); })
+                        .map(function () {
+                            return $(this).attr("data-id-testing-point");
+                        })
                         .get()
-                        .filter(Boolean)
+                        .filter(Boolean),
                 );
-                return { results: d.filter(function(item) { return !usedIds.has(String(item.id)); }) };
+                return {
+                    results: d.filter(function (item) {
+                        return !usedIds.has(String(item.id));
+                    }),
+                };
             },
             cache: false,
         },
         escapeMarkup: (m) => m,
     });
 
-    $sel.on('select2:select', function(e) {
-        const selectedId = String(e.params.data.id || '');
+    $sel.on("select2:select", function (e) {
+        const selectedId = String(e.params.data.id || "");
         const usedIds = $("#copyWoBoqContainer .copy-wo-boq-row")
             .not(row[0])
-            .map(function() { return $(this).attr('data-id-testing-point'); })
+            .map(function () {
+                return $(this).attr("data-id-testing-point");
+            })
             .get()
             .filter(Boolean);
         if (usedIds.includes(selectedId)) {
-            $sel.val(null).trigger('change');
-            row.attr('data-id-testing-point', '');
-            Notify.warning('Testing point ini sudah ada di daftar BOQ');
+            $sel.val(null).trigger("change");
+            row.attr("data-id-testing-point", "");
+            Notify.warning("Testing point ini sudah ada di daftar BOQ");
             return;
         }
-        row.attr('data-id-testing-point', selectedId);
+        row.attr("data-id-testing-point", selectedId);
         loadCopyWoBoqItems(row, selectedId);
     });
 
-    $sel.on('select2:clear', function() {
-        row.attr('data-id-testing-point', '');
-        row.find('.copy-wo-boq-items-wrap').html(
-            '<div class="text-muted small fst-italic" style="padding:4px 0;"><i class="fa-solid fa-circle-info me-1 opacity-50"></i> Pilih testing point untuk memuat daftar item</div>'
+    $sel.on("select2:clear", function () {
+        row.attr("data-id-testing-point", "");
+        row.find(".copy-wo-boq-items-wrap").html(
+            '<div class="text-muted small fst-italic" style="padding:4px 0;"><i class="fa-solid fa-circle-info me-1 opacity-50"></i> Pilih testing point untuk memuat daftar item</div>',
         );
     });
 }
 
 // preCheckedIds: null = semua dicentang (new row), Set<string> = hanya yg ada di set (source row edit)
 function loadCopyWoBoqItems(row, pointId, preCheckedIds = null) {
-    const $wrap = row.find('.copy-wo-boq-items-wrap');
-    $wrap.html('<div class="text-center text-muted py-2" style="font-size:12px;"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat item...</div>');
+    const $wrap = row.find(".copy-wo-boq-items-wrap");
+    $wrap.html(
+        '<div class="text-center text-muted py-2" style="font-size:12px;"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat item...</div>',
+    );
 
-    $.get(window.route.testingItemsByPoint + pointId, function(res) {
+    $.get(window.route.testingItemsByPoint + pointId, function (res) {
         const items = res.data ?? [];
         if (!items.length) {
-            $wrap.html('<div class="text-muted small fst-italic" style="padding:4px 0;"><i class="fa-solid fa-inbox me-1 opacity-50"></i> Tidak ada item pada testing point ini</div>');
+            $wrap.html(
+                '<div class="text-muted small fst-italic" style="padding:4px 0;"><i class="fa-solid fa-inbox me-1 opacity-50"></i> Tidak ada item pada testing point ini</div>',
+            );
             return;
         }
 
@@ -969,37 +1148,42 @@ function loadCopyWoBoqItems(row, pointId, preCheckedIds = null) {
             </div>
         </div><div class="copy-wo-boq-items-list">`;
 
-        items.forEach(function(item) {
-            const unit    = item.kode_unit || '—';
-            const nilai   = item.nilai ?? '—';
-            const checked = preCheckedIds === null ? true : preCheckedIds.has(String(item.id_testing_item));
+        items.forEach(function (item) {
+            const unit = item.kode_unit || "—";
+            const nilai = item.nilai ?? "—";
+            const checked =
+                preCheckedIds === null
+                    ? true
+                    : preCheckedIds.has(String(item.id_testing_item));
             html += `<div class="modal-item-row d-flex align-items-center gap-3">
                 <input type="checkbox" class="form-check-input copy-wo-item-check flex-shrink-0 mt-0"
-                    id="cwitem_${pointId}_${item.id_testing_item}" ${checked ? 'checked' : ''}
+                    id="cwitem_${pointId}_${item.id_testing_item}" ${checked ? "checked" : ""}
                     data-item-id="${item.id_testing_item}">
                 <label class="d-flex justify-content-between align-items-center w-100 gap-2"
                     for="cwitem_${pointId}_${item.id_testing_item}" style="cursor:pointer;margin:0;">
                     <div>
-                        <span class="fw-semibold" style="font-size:13px;">${escHtml(item.judul_indonesia ?? '—')}</span>
-                        <span class="text-muted ms-1 small">/ ${escHtml(item.judul_inggris ?? '—')}</span>
+                        <span class="fw-semibold" style="font-size:13px;">${escHtml(item.judul_indonesia ?? "—")}</span>
+                        <span class="text-muted ms-1 small">/ ${escHtml(item.judul_inggris ?? "—")}</span>
                     </div>
                     <span class="item-meta-badge flex-shrink-0">${escHtml(unit)} · ${escHtml(String(nilai))}</span>
                 </label>
             </div>`;
         });
 
-        html += '</div>';
+        html += "</div>";
         $wrap.html(html);
 
-        $wrap.on('click', '.copy-wo-boq-check-all', function(e) {
+        $wrap.on("click", ".copy-wo-boq-check-all", function (e) {
             e.preventDefault();
-            $wrap.find('.copy-wo-item-check').prop('checked', true);
+            $wrap.find(".copy-wo-item-check").prop("checked", true);
         });
-        $wrap.on('click', '.copy-wo-boq-uncheck-all', function(e) {
+        $wrap.on("click", ".copy-wo-boq-uncheck-all", function (e) {
             e.preventDefault();
-            $wrap.find('.copy-wo-item-check').prop('checked', false);
+            $wrap.find(".copy-wo-item-check").prop("checked", false);
         });
-    }).fail(function() {
-        $wrap.html('<div class="text-danger small" style="padding:4px 0;"><i class="fa-solid fa-circle-exclamation me-1"></i> Gagal memuat item</div>');
+    }).fail(function () {
+        $wrap.html(
+            '<div class="text-danger small" style="padding:4px 0;"><i class="fa-solid fa-circle-exclamation me-1"></i> Gagal memuat item</div>',
+        );
     });
 }

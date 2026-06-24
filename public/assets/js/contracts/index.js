@@ -5,6 +5,9 @@ $(document).ready(function () {
         primaryKey: "id_contract",
         renderForm: renderForm,
         useAttachment: true,
+        afterLoad: function () {
+            initFpDate('#detailContent');
+        },
     });
 
     $(document).on('click', '.btn-delete-record', function () {

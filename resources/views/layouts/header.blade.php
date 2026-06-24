@@ -24,6 +24,7 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
     
     <link href="https://unpkg.com/filepond/dist/filepond.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
     
     {{-- App --}}
@@ -152,6 +153,11 @@
             justify-content:center;
             flex-direction:column;
 
+        }
+
+        input.flatpickr-input[readonly] {
+            background-color: #fff !important;
+            cursor: pointer;
         }
 
     </style>

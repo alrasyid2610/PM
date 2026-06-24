@@ -119,11 +119,11 @@
 
                     <div class="col-md-3 col-12">
                         <label class="form-label required">Tanggal Mulai</label>
-                        <input type="date" name="tanggal_mulai" class="form-control">
+                        <input type="text" name="tanggal_mulai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
                     <div class="col-md-3 col-12">
                         <label class="form-label required">Tanggal Selesai</label>
-                        <input type="date" name="tanggal_selesai" class="form-control">
+                        <input type="text" name="tanggal_selesai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
                     <div class="col-md-6 col-12">
                         <label class="form-label">Keterangan</label>
@@ -148,6 +148,8 @@
     var currentSiteWos = [];
 
     $(document).ready(function() {
+
+        initFpDate(document);
 
         loadPelangganDetails();
         initBrSelect2();
@@ -181,8 +183,10 @@
                 if(dataSO) {
                     $("input[name='tanggal_so']").val(dataSO.tanggal_so);
                     $("input[name='judul_order']").val(dataSO.judul_order);
-                    $("input[name='tanggal_mulai']").val(dataSO.tanggal_mulai);
-                    $("input[name='tanggal_selesai']").val(dataSO.tanggal_selesai);
+                    const _fpMulai   = $('input[name="tanggal_mulai"]')[0]?._fp;
+                    const _fpSelesai = $('input[name="tanggal_selesai"]')[0]?._fp;
+                    if (dataSO.tanggal_mulai && _fpMulai)   { _fpMulai.setDate(dataSO.tanggal_mulai); if (_fpSelesai) _fpSelesai.set('minDate', dataSO.tanggal_mulai); }
+                    if (dataSO.tanggal_selesai && _fpSelesai) _fpSelesai.setDate(dataSO.tanggal_selesai);
                     $("select[name='tidak_ada_po']").val(dataSO.tidak_ada_po);
                     $("input[name='tanggal_po']").val(dataSO.tanggal_po);
                     $("input[name='no_po']").val(dataSO.no_po);

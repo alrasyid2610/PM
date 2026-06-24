@@ -34,7 +34,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Tanggal Kontrak</label>
-                        <input type="date" class="form-control" name="tanggal_kontrak">
+                        <input type="text" class="form-control fp-date" name="tanggal_kontrak" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Status</label>
@@ -47,11 +47,11 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Tanggal Mulai</label>
-                        <input type="date" class="form-control" name="tanggal_mulai">
+                        <input type="text" class="form-control fp-date" name="tanggal_mulai" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Tanggal Selesai</label>
-                        <input type="date" class="form-control" name="tanggal_selesai">
+                        <input type="text" class="form-control fp-date" name="tanggal_selesai" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Durasi (Bulan)</label>
@@ -142,6 +142,7 @@
 
     $(document).ready(function () {
         initNumericMask(document.body);
+        initFpDate(document);
 
         createFileUploader(".filepond");
         $('#status').select2({ placeholder: '-- Pilih Status --', allowClear: true, width: '100%' });

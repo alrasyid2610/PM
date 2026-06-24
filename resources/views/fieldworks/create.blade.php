@@ -76,17 +76,17 @@
 
                     <div class="col-md-4">
                         <label class="form-label">Tanggal Mulai</label>
-                        <input type="date" name="tanggal_mulai" class="form-control">
+                        <input type="text" name="tanggal_mulai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
 
                     <div class="col-md-4">
                         <label class="form-label">Tanggal Selesai</label>
-                        <input type="date" name="tanggal_selesai" class="form-control">
+                        <input type="text" name="tanggal_selesai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
 
                     <div class="col-md-4">
                         <label class="form-label">Waktu Kedatangan</label>
-                        <input type="datetime-local" name="waktu_kedatangan" class="form-control">
+                        <input type="text" name="waktu_kedatangan" class="form-control fp-datetime" placeholder="Pilih tanggal & jam" autocomplete="off">
                     </div>
 
                     <div class="col-md-12">
@@ -136,6 +136,8 @@
     }
 
     $(document).ready(function () {
+        initFpDate(document);
+
         // WO Select2 (hanya jika tidak preselect)
         if (!preselectWoId) {
             $('#create_id_wo').select2({

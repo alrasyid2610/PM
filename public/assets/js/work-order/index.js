@@ -1342,6 +1342,7 @@ $(document).ready(function () {
             currentWoData = res;
             loadBoqProgress(res.id_wo);
             loadOutputProgress(res.id_wo);
+            initFpDate('#detailContent');
         },
         onSave: function (id) {
             var mulai   = $("input[name='tanggal_mulai']").val();

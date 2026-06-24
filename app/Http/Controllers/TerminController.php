@@ -208,6 +208,16 @@ class TerminController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function checkDpBySo($id_so, Request $request)
+    {
+        $query = DB::table('termin')->where('id_so', $id_so)->where('is_dp', 1);
+        if ($request->filled('exclude_id')) {
+            $query->where('id_termin', '!=', $request->exclude_id);
+        }
+        $exists = $query->exists();
+        return response()->json(['has_dp' => $exists]);
+    }
+
     public function outputsBySo($id_so)
     {
         $outputs = DB::table('output_pekerjaan as op')
@@ -223,7 +233,7 @@ class TerminController extends Controller
                           ->whereColumn('termin.id_termin', 'op.id_termin');
                   });
             })
-            ->select('op.id_output', 'op.judul_output', 'op.judul_dokumen', 'op.status', 'wo.no_wo', 'wo.id_wo')
+            ->select('op.id_output', 'op.judul_output', 'op.judul_dokumen', 'op.status', 'op.tanggal_selesai', 'wo.no_wo', 'wo.id_wo')
             ->orderBy('wo.no_wo')
             ->orderBy('op.id_output')
             ->get();

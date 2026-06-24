@@ -19,7 +19,6 @@
 @section('content')
 <x-crud-index
     title="List Fieldwork"
-    create-route="fieldworks.create"
     :with-history="true"
 />
 

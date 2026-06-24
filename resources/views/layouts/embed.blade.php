@@ -52,6 +52,8 @@
 @endauth
 <script src="{{ asset('assets/js/scientific-input.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/cleave.js@1.6.0/dist/cleave.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/id.js"></script>
 <script>
     function initNumericMask(container) {
         $(container).find('.input-num-mask').each(function () {
@@ -71,6 +73,44 @@
         const raw = el._cleave ? el._cleave.getRawValue() : String($(el).val()).replace(/,/g, '');
         const n = parseFloat(raw);
         return isNaN(n) ? null : n;
+    }
+    function initFpDate(container) {
+        $(container).find('.fp-date').each(function () {
+            if (this._fp) return;
+            const name = this.name;
+            const isSelesai = name && name.toLowerCase().includes('selesai');
+            const fp = flatpickr(this, {
+                locale: 'id',
+                dateFormat: 'Y-m-d',
+                allowInput: false,
+                defaultDate: $(this).val() || null,
+                onChange: !isSelesai ? function(selectedDates, dateStr) {
+                    const $form = $(container).find('.fp-date[name*="selesai"]');
+                    if ($form.length && $form[0]._fp) {
+                        $form[0]._fp.set('minDate', dateStr || null);
+                        if ($form[0]._fp.selectedDates[0] && $form[0]._fp.selectedDates[0] < selectedDates[0]) {
+                            $form[0]._fp.clear();
+                        }
+                    }
+                } : undefined,
+            });
+            if (isSelesai) {
+                const mulaiVal = $(container).find('.fp-date[name*="mulai"]').val();
+                if (mulaiVal) fp.set('minDate', mulaiVal);
+            }
+            this._fp = fp;
+        });
+        $(container).find('.fp-datetime').each(function () {
+            if (this._fp) return;
+            this._fp = flatpickr(this, {
+                locale: 'id',
+                dateFormat: 'Y-m-d H:i',
+                enableTime: true,
+                time_24hr: true,
+                allowInput: false,
+                defaultDate: $(this).val() || null,
+            });
+        });
     }
 </script>
 @yield('custom-script')

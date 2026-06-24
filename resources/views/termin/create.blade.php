@@ -56,8 +56,8 @@
                         <input type="text" inputmode="numeric" class="form-control input-num-mask" id="nilai" name="nilai" required>
                     </div>
                     <div class="col-md-4 col-12">
-                        <label for="tanggal" class="form-label required">Tanggal</label>
-                        <input type="date" class="form-control" id="tanggal" name="tanggal" required>
+                        <label for="tanggal" class="form-label required">Tanggal Selesai</label>
+                        <input type="text" class="form-control fp-date" id="tanggal" name="tanggal" placeholder="Pilih tanggal" autocomplete="off" required>
                     </div>
                     <div class="col-md-4 col-12">
                         <label for="keterangan" class="form-label">Keterangan</label>
@@ -101,6 +101,7 @@
 
     $(document).ready(function () {
         initNumericMask(document);
+        initFpDate(document);
         createFileUploader(".filepond");
         $('#status').select2({ placeholder: 'Pilih Status', width: '100%' });
 
@@ -125,11 +126,49 @@
                 $('#id_so').append(opt).trigger('change');
                 $('#id_so').prop('disabled', true);
                 $('<input>').attr({ type: 'hidden', name: 'id_so', value: so.id_so }).appendTo('#terminForm');
+                checkDpStatus(so.id_so);
             });
         }
 
+        function checkDpStatus(soId) {
+            if (!soId) {
+                $('#is_dp').prop('disabled', false);
+                $('#dp-info').remove();
+                return;
+            }
+            $.get('/termin/check-dp/' + soId, function (res) {
+                if (res.has_dp) {
+                    $('#is_dp').prop('checked', false).prop('disabled', true);
+                    $('#status').prop('disabled', false).val('pending').trigger('change');
+                    $('#status_hidden').remove();
+                    if (!$('#dp-info').length) {
+                        $('#is_dp').closest('.form-check').after(
+                            '<small id="dp-info" class="text-danger d-block mt-1">' +
+                            '<i class="fa-solid fa-circle-info me-1"></i>Sudah ada termin DP pada SO ini</small>'
+                        );
+                    }
+                } else {
+                    $('#is_dp').prop('disabled', false);
+                    $('#dp-info').remove();
+                }
+            });
+        }
+
+        $('#is_dp').on('change', function () {
+            if (this.checked) {
+                $('#status').val('selesai').trigger('change').prop('disabled', true);
+                if (!$('#status_hidden').length) {
+                    $('<input>').attr({ type: 'hidden', id: 'status_hidden', name: 'status', value: 'selesai' }).appendTo('#terminForm');
+                }
+            } else {
+                $('#status').prop('disabled', false).val('pending').trigger('change');
+                $('#status_hidden').remove();
+            }
+        });
+
         $('#id_so').on('change', function () {
             var soId = $(this).val();
+            checkDpStatus(soId);
             if (!soId) {
                 $('#outputSelectionWrap').hide();
                 $('#outputSelectionContent').html('');
@@ -139,6 +178,7 @@
             $('#outputSelectionContent').html('<div class="text-center py-3"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>');
             $.get('/termin/outputs-by-so/' + soId, function (data) {
                 $('#outputSelectionContent').html(renderOutputSelection(data));
+                filterOutputByTanggal();
             }).fail(function () {
                 $('#outputSelectionContent').html('<div class="text-center text-danger py-3">Gagal memuat output pekerjaan</div>');
             });
@@ -177,16 +217,12 @@
                 return '<tr>' +
                     '<td ' + TD + ' style="text-align:center;">' +
                         '<input type="checkbox" class="form-check-input output-check" ' +
-                        'name="selected_outputs[]" value="' + item.id_output + '">' +
+                        'name="selected_outputs[]" value="' + item.id_output + '" ' +
+                        'data-tgl-selesai="' + (item.tanggal_selesai ? item.tanggal_selesai.substring(0, 10) : '') + '">' +
                     '</td>' +
                     '<td ' + TD + '>' + escHtml(item.judul_output) + '</td>' +
                     '<td ' + TD + '>' + statusBadge + '</td>' +
-                    '<td ' + TD + '>' +
-                        '<input type="text" name="judul_tagihan[' + item.id_output + ']" ' +
-                        'class="form-control form-control-sm judul-tagihan-input" ' +
-                        'placeholder="Sama seperti judul output" maxlength="255" readonly ' +
-                        'style="background:#f8fafc;color:#94a3b8;">' +
-                    '</td>' +
+                    '<td ' + TD + ' style="white-space:nowrap;color:#64748b;font-size:12px;">' + (item.tanggal_selesai ? item.tanggal_selesai.substring(0, 10) : '—') + '</td>' +
                 '</tr>';
             }).join('');
 
@@ -201,12 +237,12 @@
                     '<div class="termin-output-accordion-body">' +
                         '<div class="table-responsive">' +
                         '<table class="table table-sm table-hover mb-0" style="font-size:13px;table-layout:fixed;width:100%;">' +
-                        '<colgroup><col style="width:44px;"><col><col style="width:110px;"><col style="width:40%;"></colgroup>' +
+                        '<colgroup><col style="width:44px;"><col><col style="width:110px;"><col style="width:120px;"></colgroup>' +
                         '<thead style="background:#f8fafc;border-bottom:1px solid #e2e8f0;"><tr>' +
                         '<th ' + TH + '></th>' +
                         '<th ' + TH + '>Judul Output</th>' +
                         '<th ' + TH + '>Status</th>' +
-                        '<th ' + TH + '>Judul Tagihan <span style="font-size:10px;color:#94a3b8;">(opsional)</span></th>' +
+                        '<th ' + TH + '>Tgl Selesai</th>' +
                         '</tr></thead>' +
                         '<tbody>' + rows + '</tbody>' +
                         '</table></div>' +
@@ -214,7 +250,11 @@
                 '</div>';
         });
 
-        return '<div class="mb-2 d-flex align-items-center gap-2 flex-wrap">' +
+        return '<p class="text-muted mb-2" style="font-size:11px;">' +
+                '<i class="fa-solid fa-circle-info me-1"></i>' +
+                'Apabila output tidak bisa dipilih, harap periksa kembali tanggal selesai output atau sesuaikan tanggal termin.' +
+            '</p>' +
+            '<div class="mb-2 d-flex align-items-center gap-2 flex-wrap">' +
                 '<input type="checkbox" class="form-check-input" id="checkAllOutputs">' +
                 '<label for="checkAllOutputs" class="form-label mb-0" style="font-size:12px;cursor:pointer;">Pilih Semua</label>' +
                 '<span class="text-muted ms-2" id="outputCheckCount" style="font-size:11px;"></span>' +
@@ -275,20 +315,43 @@
         } else {
             $input.val('').attr('readonly', true).css({ background: '#f8fafc', color: '#94a3b8' });
         }
-        var $visible = $('.termin-output-accordion-item:visible tbody tr:visible .output-check');
+        var $visible = $('.termin-output-accordion-item:visible tbody tr:visible .output-check:not(:disabled)');
         var total    = $visible.length;
         var selected = $visible.filter(':checked').length;
         var totalAll = $('.output-check:checked').length;
-        $('#outputCheckCount').text(totalAll + ' dari ' + $('.output-check').length + ' dipilih');
+        $('#outputCheckCount').text(totalAll + ' dari ' + $('.output-check:not(:disabled)').length + ' dipilih');
         $('#checkAllOutputs').prop('indeterminate', selected > 0 && selected < total);
         $('#checkAllOutputs').prop('checked', total > 0 && selected === total);
     });
 
     $(document).on('change', '#checkAllOutputs', function () {
         var checked = this.checked;
-        $('.termin-output-accordion-item:visible tbody tr:visible .output-check')
+        $('.termin-output-accordion-item:visible tbody tr:visible .output-check:not(:disabled)')
             .prop('checked', checked).trigger('change');
     });
+
+    function filterOutputByTanggal() {
+        var tglTermin = $('#tanggal').val();
+        $('.output-check').each(function () {
+            var tglOutput = $(this).data('tgl-selesai');
+            var shouldDisable = tglTermin && tglOutput && tglOutput > tglTermin;
+            if (shouldDisable) {
+                $(this).prop('checked', false).prop('disabled', true)
+                    .closest('tr').css('opacity', '0.45');
+            } else {
+                $(this).prop('disabled', false)
+                    .closest('tr').css('opacity', '');
+            }
+        });
+        // sinkronkan counter & checkAll
+        $('.output-check:checked').trigger('change');
+        if (!$('.output-check:checked').length) {
+            $('#outputCheckCount').text('');
+            $('#checkAllOutputs').prop('checked', false).prop('indeterminate', false);
+        }
+    }
+
+    $(document).on('change', '#tanggal', filterOutputByTanggal);
 
     $('#terminForm').on('submit', function () {
         var el = document.getElementById('nilai');
