@@ -113,6 +113,7 @@
         select2BR:      "{{ route('business-relations.select2') }}",
         select2Contact: "{{ route('business-relation-contacts.select2') }}",
         select2User:    "{{ route('users.select2') }}",
+        getDataBR:      "{{ route('api.get-data-br') }}",
         csrf:           "{{ csrf_token() }}",
     }
 
@@ -120,22 +121,68 @@
         createFileUploader(".filepond");
         $('#status').select2({ placeholder: '-- Pilih Status --', width: '100%' });
 
-        $('#id_business_relation').select2({
-            width: '100%', placeholder: '-- Pilih Pelanggan --', allowClear: true, minimumInputLength: 2,
-            ajax: { url: window.route.select2BR, delay: 300, dataType: 'json',
-                    data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }) },
+        $.ajax({
+            url: window.route.getDataBR,
+            method: 'GET',
+            success: function (response) {
+                $.each(response, function (index, item) {
+                    $('#id_business_relation').append(new Option(item.text, item.id));
+                });
+                $('#id_business_relation').select2({
+                    width: '100%',
+                    placeholder: '-- Pilih Pelanggan --',
+                    allowClear: true,
+                    language: {
+                        noResults: function () {
+                            return '<span>Tidak ditemukan. <a href="{{ route('business-relations.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>';
+                        },
+                    },
+                    escapeMarkup: function (m) { return m; },
+                });
+            },
+            error: function () {
+                Notify.error('Gagal memuat data pelanggan');
+            },
         });
 
-        $('#id_pic_pelanggan').select2({
-            width: '100%', placeholder: '-- Pilih PIC Pelanggan --', allowClear: true, minimumInputLength: 2,
-            ajax: { url: window.route.select2Contact, delay: 300, dataType: 'json',
-                    data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }) },
+        $.ajax({
+            url: window.route.select2Contact,
+            method: 'GET',
+            data: { q: '' },
+            success: function (response) {
+                $('#id_pic_pelanggan').append(new Option('', ''));
+                $.each(response, function (index, item) {
+                    $('#id_pic_pelanggan').append(new Option(item.text, item.id));
+                });
+                $('#id_pic_pelanggan').select2({
+                    width: '100%',
+                    placeholder: '-- Pilih PIC Pelanggan --',
+                    allowClear: true,
+                });
+            },
+            error: function () {
+                Notify.error('Gagal memuat data PIC pelanggan');
+            },
         });
 
-        $('#id_pic_pramatek').select2({
-            width: '100%', placeholder: '-- Pilih PIC Pramatek --', allowClear: true, minimumInputLength: 2,
-            ajax: { url: window.route.select2User, delay: 300, dataType: 'json',
-                    data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }) },
+        $.ajax({
+            url: window.route.select2User,
+            method: 'GET',
+            data: { q: '' },
+            success: function (response) {
+                $('#id_pic_pramatek').append(new Option('', ''));
+                $.each(response, function (index, item) {
+                    $('#id_pic_pramatek').append(new Option(item.text, item.id));
+                });
+                $('#id_pic_pramatek').select2({
+                    width: '100%',
+                    placeholder: '-- Pilih PIC Pramatek --',
+                    allowClear: true,
+                });
+            },
+            error: function () {
+                Notify.error('Gagal memuat data PIC Pramatek');
+            },
         });
     });
 

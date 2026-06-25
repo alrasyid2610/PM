@@ -21,32 +21,44 @@ $(document).ready(function () {
     });
 
     // ─── Select2: PIC Pelanggan ──────────────────────────────
-    $('#id_pic_pelanggan').select2({
-        width: '100%',
-        placeholder: '-- Pilih PIC Pelanggan --',
-        allowClear: true,
-        minimumInputLength: 2,
-        ajax: {
-            url: window.route.select2Contact,
-            delay: 300,
-            dataType: 'json',
-            data: (params) => ({ q: params.term }),
-            processResults: (data) => ({ results: data }),
+    $.ajax({
+        url: window.route.select2Contact,
+        method: 'GET',
+        data: { q: '' },
+        success: function (response) {
+            $('#id_pic_pelanggan').append(new Option('', ''));
+            $.each(response, function (index, item) {
+                $('#id_pic_pelanggan').append(new Option(item.text, item.id));
+            });
+            $('#id_pic_pelanggan').select2({
+                width: '100%',
+                placeholder: '-- Pilih PIC Pelanggan --',
+                allowClear: true,
+            });
+        },
+        error: function () {
+            Notify.error('Gagal memuat data PIC pelanggan');
         },
     });
 
     // ─── Select2: PIC Pramatek ───────────────────────────────
-    $('#id_pic_pramatek').select2({
-        width: '100%',
-        placeholder: '-- Pilih PIC Pramatek --',
-        allowClear: true,
-        minimumInputLength: 2,
-        ajax: {
-            url: window.route.select2User,
-            delay: 300,
-            dataType: 'json',
-            data: (params) => ({ q: params.term }),
-            processResults: (data) => ({ results: data }),
+    $.ajax({
+        url: window.route.select2User,
+        method: 'GET',
+        data: { q: '' },
+        success: function (response) {
+            $('#id_pic_pramatek').append(new Option('', ''));
+            $.each(response, function (index, item) {
+                $('#id_pic_pramatek').append(new Option(item.text, item.id));
+            });
+            $('#id_pic_pramatek').select2({
+                width: '100%',
+                placeholder: '-- Pilih PIC Pramatek --',
+                allowClear: true,
+            });
+        },
+        error: function () {
+            Notify.error('Gagal memuat data PIC Pramatek');
         },
     });
 

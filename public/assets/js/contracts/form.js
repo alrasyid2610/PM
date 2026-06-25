@@ -34,16 +34,16 @@ function renderForm(res) {
                 mode: 'ajax',
                 url: window.route.select2BR,
                 label: res.nama_pelanggan,
-                placeholder: '-- Pilih Pelanggan --',
-                minimumInputLength: 2,
+                placeholder: 'Pilih Data',
+                createUrl: '/business-relations/create',
             })}
             ${formGroup.select('id_pic_pelanggan', 'PIC Pelanggan', res.id_pic_pelanggan, [], {
                 className: 'col-md-6',
                 mode: 'ajax',
                 url: window.route.select2Contact,
                 label: res.nama_pic_pelanggan,
-                placeholder: '-- Pilih PIC --',
-                minimumInputLength: 2,
+                placeholder: 'Pilih Data',
+                createUrl: '/business-relation-contacts/create',
             })}
         </div>`
     )}
@@ -56,8 +56,8 @@ function renderForm(res) {
                 mode: 'ajax',
                 url: window.route.select2User,
                 label: res.nama_pic_pramatek,
-                placeholder: '-- Pilih User --',
-                minimumInputLength: 2,
+                placeholder: 'Pilih Data',
+                createUrl: '/users/create',
             })}
         </div>`
     )}

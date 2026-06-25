@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="id">
 <head>
-    <title>Pramatek — Sign In</title>
+    <title>Pramatek — Lupa Password</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/png" href="{{ asset('assets/images/favicon.png') }}" />
@@ -21,7 +21,6 @@
             align-items: stretch;
         }
 
-        /* ===== LEFT PANEL ===== */
         .login-left {
             width: 420px;
             flex-shrink: 0;
@@ -94,7 +93,6 @@
             letter-spacing: 0.5px;
         }
 
-        /* ===== RIGHT PANEL ===== */
         .login-right {
             flex: 1;
             display: flex;
@@ -169,44 +167,19 @@
             box-shadow: 0 0 0 3px rgba(26, 95, 190, 0.1);
         }
 
-        .input-wrap input::placeholder {
-            color: #d1d5db;
+        .input-wrap input::placeholder { color: #d1d5db; }
+
+        .input-wrap.is-error input {
+            border-color: #fca5a5;
+            background: #fff9f9;
         }
 
-        .form-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 28px;
+        .input-wrap.is-error input:focus {
+            border-color: #dc2626;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
         }
 
-        .remember-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            color: #6b7280;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .remember-label input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            accent-color: #1a5fbe;
-            cursor: pointer;
-        }
-
-        .forgot-link {
-            font-size: 13px;
-            color: #1a5fbe;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .forgot-link:hover {
-            text-decoration: underline;
-        }
+        .input-wrap.is-error .input-icon { color: #fca5a5; }
 
         .btn-login {
             width: 100%;
@@ -220,15 +193,11 @@
             cursor: pointer;
             transition: opacity 0.2s, transform 0.1s;
             letter-spacing: 0.3px;
+            margin-bottom: 16px;
         }
 
-        .btn-login:hover {
-            opacity: 0.92;
-        }
-
-        .btn-login:active {
-            transform: scale(0.99);
-        }
+        .btn-login:hover { opacity: 0.92; }
+        .btn-login:active { transform: scale(0.99); }
 
         .alert-error {
             background: #fef2f2;
@@ -246,26 +215,37 @@
             animation: shake 0.4s ease;
         }
 
-        .alert-error i {
-            margin-top: 1px;
-            flex-shrink: 0;
-            font-size: 15px;
-            color: #dc2626;
+        .alert-error i { margin-top: 1px; flex-shrink: 0; font-size: 15px; color: #dc2626; }
+
+        .alert-success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-left: 4px solid #16a34a;
+            border-radius: 8px;
+            padding: 13px 16px;
+            margin-bottom: 24px;
+            color: #15803d;
+            font-size: 13.5px;
+            font-weight: 500;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
         }
 
-        .input-wrap.is-error input {
-            border-color: #fca5a5;
-            background: #fff9f9;
+        .alert-success i { margin-top: 1px; flex-shrink: 0; font-size: 15px; color: #16a34a; }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #1a5fbe;
+            text-decoration: none;
+            font-weight: 500;
         }
 
-        .input-wrap.is-error input:focus {
-            border-color: #dc2626;
-            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
-        }
-
-        .input-wrap.is-error .input-icon {
-            color: #fca5a5;
-        }
+        .back-link:hover { text-decoration: underline; }
 
         @keyframes shake {
             0%   { transform: translateX(0); }
@@ -276,7 +256,6 @@
             100% { transform: translateX(0); }
         }
 
-        /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
             .login-left { display: none; }
             .login-right { background: #fff; padding: 24px 20px; align-items: flex-start; padding-top: 60px; }
@@ -287,7 +266,6 @@
 <body>
     <div class="login-wrapper">
 
-        <!-- LEFT -->
         <div class="login-left">
             <div class="left-content">
                 <img class="left-logo" src="{{ asset('assets/images/logo.png') }}" alt="Pramatek Logo">
@@ -302,18 +280,17 @@
             </div>
         </div>
 
-        <!-- RIGHT -->
         <div class="login-right">
             <div class="login-card">
 
                 <div class="login-heading">
-                    <h1>Selamat datang</h1>
-                    <p>Masuk ke akun Pramatek Anda</p>
+                    <h1>Lupa Password</h1>
+                    <p>Masukkan email Anda untuk menerima link reset password</p>
                 </div>
 
                 @if (session('success'))
-                    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-left:4px solid #16a34a;border-radius:8px;padding:13px 16px;margin-bottom:24px;color:#15803d;font-size:13.5px;font-weight:500;display:flex;align-items:flex-start;gap:10px;">
-                        <i class="fa-solid fa-circle-check" style="margin-top:1px;flex-shrink:0;font-size:15px;color:#16a34a;"></i>
+                    <div class="alert-success">
+                        <i class="fa-solid fa-circle-check"></i>
                         <span>{{ session('success') }}</span>
                     </div>
                 @endif
@@ -325,7 +302,8 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('login.submit') }}">
+                @if (!session('success'))
+                <form method="POST" action="{{ route('password.email') }}">
                     @csrf
 
                     <div class="form-group">
@@ -344,33 +322,17 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="password">Password</label>
-                        <div class="input-wrap {{ $errors->has('email') ? 'is-error' : '' }}">
-                            <i class="fa-solid fa-lock input-icon"></i>
-                            <input
-                                type="password"
-                                id="password"
-                                name="password"
-                                placeholder="••••••••"
-                                required
-                            >
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <label class="remember-label">
-                            <input type="checkbox" name="remember" id="remember">
-                            Ingat saya
-                        </label>
-                        <a href="{{ route('password.request') }}" class="forgot-link">Lupa password?</a>
-                    </div>
-
                     <button type="submit" class="btn-login">
-                        Masuk
+                        <i class="fa-solid fa-paper-plane me-1"></i> Kirim Link Reset
                     </button>
 
                 </form>
+                @endif
+
+                <a href="{{ route('login') }}" class="back-link">
+                    <i class="fa-solid fa-arrow-left"></i> Kembali ke Login
+                </a>
+
             </div>
         </div>
 
