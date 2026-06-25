@@ -35,6 +35,11 @@
         history: "{{ url('business-relations') }}/",
         csrf: "{{ csrf_token() }}",
     }
+
+    window.datatableHeaderLabels = {
+        is_aktif:      'Status',
+        is_kantor_pusat: 'Tipe Lokasi',
+    };
 </script>
 <script src="{{ asset('assets/js/business-relations/index.js') }}"></script>
 <script src="{{ asset('assets/js/business-relations/form.js') }}"></script>

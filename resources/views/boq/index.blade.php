@@ -26,11 +26,11 @@
 
 {{-- Modal: Tambah / Edit Section (digunakan saat edit inline) --}}
 <div class="modal fade" id="modalAddSection" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalSectionTitle">
-                    <i class="fa-solid fa-layer-group me-2 text-primary"></i> Tambah Section
+                    <i class="fa-solid fa-layer-group me-2 text-primary"></i> Tambah Item
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -38,7 +38,7 @@
 
                 <div class="mb-4">
                     <label class="form-label fw-semibold">
-                        Testing Point <span class="text-danger">*</span>
+                        Item <span class="text-danger">*</span>
                     </label>
                     <select id="selectTestingPoint" style="width:100%"></select>
                 </div>
@@ -76,7 +76,7 @@
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
                 <button type="button" id="btnConfirmSection" class="btn btn-primary btn-sm" disabled>
                     <i class="fa-solid fa-check me-1"></i>
-                    <span id="btnConfirmText">Tambah Section</span>
+                    <span id="btnConfirmText">Tambah Item</span>
                 </button>
             </div>
         </div>
@@ -134,4 +134,63 @@
 
 <script src="{{ asset('assets/js/boq/form.js') }}"></script>
 <script src="{{ asset('assets/js/boq/index.js') }}"></script>
+<script>
+function loadModalItems(pointId, preCheckedIds = null) {
+    resetModalItems();
+    $("#modalLoading").removeClass("d-none");
+
+    $.get(window.route.testingItemsByPoint + pointId, function (res) {
+        $("#modalLoading").addClass("d-none");
+        const items = res.data ?? [];
+
+        if (!items.length) {
+            $("#modalEmpty").removeClass("d-none");
+            return;
+        }
+
+        let html = "";
+        items.forEach(function (item) {
+            const unit     = item.kode_unit || "—";
+            const nilai    = item.nilai ?? "—";
+            const checked  = preCheckedIds ? preCheckedIds.has(String(item.id_testing_item)) : true;
+            const safeItem = JSON.stringify(item).replace(/'/g, "&#39;");
+            html += `
+                <div class="modal-item-row d-flex align-items-center gap-3">
+                    <input type="checkbox" class="form-check-input item-check flex-shrink-0 mt-0"
+                        id="mitem_${item.id_testing_item}" ${checked ? "checked" : ""}
+                        data-item='${safeItem}'>
+                    <label class="d-flex justify-content-between align-items-center w-100 gap-2"
+                        for="mitem_${item.id_testing_item}" style="cursor:pointer; margin:0;">
+                        <div>
+                            <span class="fw-semibold">${escHtml(item.judul_indonesia ?? "—")}</span>
+                            <span class="text-muted ms-1 small">/ ${escHtml(item.judul_inggris ?? "—")}</span>
+                        </div>
+                        <span class="item-meta-badge flex-shrink-0">${escHtml(unit)} · ${escHtml(String(nilai))}</span>
+                    </label>
+                </div>`;
+        });
+
+        $("#modalItemsList").html(html);
+        $("#modalItemsWrap").removeClass("d-none");
+        $("#modalItemsList").on("change", ".item-check", updateConfirmBtn);
+        updateConfirmBtn();
+    }).fail(function () {
+        $("#modalLoading").addClass("d-none");
+        $("#modalEmpty").removeClass("d-none");
+    });
+}
+
+function resetModalItems() {
+    $("#modalLoading, #modalEmpty, #modalItemsWrap, #modalSearchEmpty").addClass("d-none");
+    $("#modalItemsList").empty();
+    $("#modalItemSearch").val("");
+    $("#btnConfirmSection").prop("disabled", true);
+}
+
+function updateConfirmBtn() {
+    $("#btnConfirmSection").prop("disabled",
+        $("#modalItemsList .item-check:checked").length === 0
+    );
+}
+</script>
 @endsection

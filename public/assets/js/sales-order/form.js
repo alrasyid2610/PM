@@ -1,37 +1,97 @@
 function renderForm(res) {
+    const statusKey = (res.status ?? "draft")
+        .toString()
+        .toLowerCase()
+        .replace(/\s+/g, "-");
+    const pelangganTag = res.nama_pelanggan
+        ? `<a href="/business-relations${res.id_site_pelanggan ? '?open=' + res.id_site_pelanggan : ''}" class="pm-badge" style="background:#f1f5f9;color:#475569;text-decoration:none;">
+               <i class="fa-solid fa-building" style="font-size:10px;"></i>
+               ${escHtml(res.nama_pelanggan)}
+           </a>`
+        : "";
+
     return `
-<form class="row g-3" id="detailForm">
+<form id="detailForm">
     <input type="hidden" name="_token" value="${window.route.csrf}">
     <input type="hidden" name="_method" value="PUT">
     <input type="hidden" name="id_contact" value="${res.id_contact}">
 
-    <!-- ACTION BAR -->
-    <div class="col-md-12">
-        <div class="detail-action-bar">
-            <div>
-                <div class="detail-number">${res.no_so ?? "—"}</div>
-                <div class="detail-date">
-                    Dibuat ${res.created_at ?? "—"} &nbsp;·&nbsp; Diupdate ${res.updated_at ?? "—"}
+    ${formGroup.actionBar({
+        number: escHtml(res.no_so ?? "—"),
+        createdAt: escHtml(res.created_at ?? "—"),
+        updatedAt: escHtml(res.updated_at ?? "—"),
+        deleteId: res.id_so,
+        editText: "Edit SO",
+        statusBadge: `<span class="detail-status-inline detail-status-${statusKey}">${escHtml(res.status ?? "Draft")}</span>`,
+        tags: pelangganTag,
+        noWrap: true,
+    })}
+
+    <!-- KPI ROW -->
+    <div class="detail-kpi-section">
+        <div class="pm-kpi-row" id="soSummaryCard"></div>
+    </div>
+
+    <!-- TABS: Informasi | Work Orders | Termin -->
+    <div class="pm-tab-card">
+            <div class="pm-tab-header">
+                <ul class="pm-tab-nav" id="soDetailTabs" role="tablist">
+                    <li role="presentation">
+                        <button class="pm-tab-btn active" id="tab-info-so-btn" type="button" role="tab"
+                            data-bs-toggle="tab" data-bs-target="#tabInfoSo">
+                            <i class="fa-solid fa-circle-info me-1" style="color:#6366f1;font-size:11px;"></i>
+                            Informasi
+                        </button>
+                    </li>
+                    <li role="presentation">
+                        <button class="pm-tab-btn" type="button" role="tab"
+                            data-bs-toggle="tab" data-bs-target="#tabWo">
+                            <i class="fa-solid fa-briefcase me-1" style="color:#1a56db;font-size:11px;"></i>
+                            Work Orders
+                        </button>
+                    </li>
+                    <li role="presentation">
+                        <button class="pm-tab-btn" type="button" role="tab"
+                            data-bs-toggle="tab" data-bs-target="#tabTermin">
+                            <i class="fa-solid fa-file-invoice-dollar me-1" style="color:#7c3aed;font-size:11px;"></i>
+                            Termin
+                        </button>
+                    </li>
+                </ul>
+                <div class="pm-tab-actions">
+                    <div id="soTabActionsInfo" class="d-flex align-items-center gap-2">
+                        <!-- Edit/Hapus ada di action bar atas -->
+                    </div>
+                    <div id="soTabActionsWo" class="d-flex align-items-center gap-2 d-none">
+                        <button type="button" id="btnRefreshWoProgress" data-so-id="${res.id_so}"
+                            class="pm-btn-icon" title="Refresh" data-no-disable>
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+                        <button type="button" class="pm-btn-pill pm-btn-pill--blue btn-add-wo-modal"
+                            data-so-id="${res.id_so}" data-no-disable>
+                            <i class="fa-solid fa-plus" style="font-size:10px;"></i>
+                            <i class="fa-solid fa-briefcase" style="font-size:11px;"></i> WO
+                        </button>
+                    </div>
+                    <div id="soTabActionsTermin" class="d-flex align-items-center gap-2 d-none">
+                        <button type="button" id="btnRefreshTermin" data-so-id="${res.id_so}"
+                            class="pm-btn-icon" title="Refresh" data-no-disable>
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+                        <button type="button" class="pm-btn-pill pm-btn-pill--purple btn-add-termin-modal"
+                            data-so-id="${res.id_so}" data-no-disable>
+                            <i class="fa-solid fa-plus" style="font-size:10px;"></i>
+                            <i class="fa-solid fa-file-invoice-dollar" style="font-size:11px;"></i> Termin
+                        </button>
+                    </div>
                 </div>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <span class="detail-status-badge detail-status-${(res.status ?? "draft").toString().toLowerCase().replace(/\s+/g, "-")}">
-                    <span class="detail-status-dot"></span>
-                    ${res.status ?? "Draft"}
-                </span>
-                <span id="woBadge"
-                    title="Lihat daftar Work Order"
-                    style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:#e8f0fe;color:#1a56db;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #c7d7f8;transition:background 0.15s;"
-                    onmouseover="this.style.background='#c7d7f8'"
-                    onmouseout="this.style.background='#e8f0fe'"
-                    onclick="document.getElementById('wo-section')?.scrollIntoView({behavior:'smooth',block:'start'})">
-                    <i class="fa-solid fa-briefcase" style="font-size:11px; transform: translateY(3px);"></i>
-                    <span id="woBadgeCount">...</span> WO
-                </span>
-                ${formGroup.editButton("Edit SO")}
-            </div>
-        </div>
-    </div>
+            <div class="pm-tab-body">
+                <div class="tab-content">
+
+                    <!-- TAB: INFORMASI SO -->
+                    <div class="tab-pane fade show active" id="tabInfoSo" role="tabpanel">
+                        <div class="row g-3">
 
     <!-- SECTION 1: INFORMASI ORDER -->
     ${formGroup.sectionCard(
@@ -88,6 +148,27 @@ function renderForm(res) {
                         ],
                         { className: "col-md-4" },
                     )}
+                    ${formGroup.select(
+                        "id_sc",
+                        "Sales Contract",
+                        res.id_sc,
+                        [],
+                        {
+                            mode: "ajax",
+                            url: "/contracts/select2",
+                            placeholder:
+                                "Cari no. kontrak atau nama pelanggan...",
+                            label: res.id_sc
+                                ? (res.contract_no || "SC #" + res.id_sc) +
+                                  (res.contract_no_client
+                                      ? " / " + res.contract_no_client
+                                      : "")
+                                : null,
+                            className: "col-md-6",
+                            allowClear: true,
+                            createUrl: "/contracts/create",
+                        },
+                    )}
                 </div>`,
     )}
 
@@ -136,13 +217,13 @@ function renderForm(res) {
                 <!-- Desktop: party header -->
                 <div class="detail-party-header d-none d-md-grid">
                     <div class="detail-party-label">
-                        <i class="fa-solid fa-file-invoice me-1"></i> Billing (Pemesan)
+                        <i class="fa-solid fa-file-invoice me-1"></i> Data Pemesan
                     </div>
                     <div class="detail-party-label">
-                        <i class="fa-solid fa-truck me-1"></i> Delivery (Pengiriman)
+                        <i class="fa-solid fa-truck me-1"></i> Data Pengiriman
                     </div>
                     <div class="detail-party-label">
-                        <i class="fa-solid fa-money-bill me-1"></i> Payment (Pembayaran)
+                        <i class="fa-solid fa-money-bill me-1"></i> Data Pembayaran
                     </div>
                 </div>
 
@@ -150,7 +231,7 @@ function renderForm(res) {
                 <div class="row g-3 form-1">
                     <div class="col-12 d-md-none">
                         <div class="detail-mobile-section-label">
-                            <i class="fa-solid fa-file-invoice me-1"></i> Billing (Pemesan)
+                            <i class="fa-solid fa-file-invoice me-1"></i> Data Pemesan
                         </div>
                     </div>
                     ${formGroup.select(
@@ -169,7 +250,7 @@ function renderForm(res) {
                     )}
                     <div class="col-12 d-md-none">
                         <div class="detail-mobile-section-label">
-                            <i class="fa-solid fa-truck me-1"></i> Delivery (Pengiriman)
+                            <i class="fa-solid fa-truck me-1"></i> Data Pengiriman
                         </div>
                     </div>
                     ${formGroup.select(
@@ -188,7 +269,7 @@ function renderForm(res) {
                     )}
                     <div class="col-12 d-md-none">
                         <div class="detail-mobile-section-label">
-                            <i class="fa-solid fa-money-bill me-1"></i> Payment (Pembayaran)
+                            <i class="fa-solid fa-money-bill me-1"></i> Data Pembayaran
                         </div>
                     </div>
                     ${formGroup.select(
@@ -319,7 +400,7 @@ function renderForm(res) {
                             mode: "ajax",
                             url: "business-relation-contacts/select2",
                             placeholder: "Pilih Data",
-                            label: res.pic_input,
+                            label: res.pic_input_name,
                             className: "col-md-3",
                             createUrl: "/business-relation-contacts/create",
                         },
@@ -400,6 +481,14 @@ function renderForm(res) {
                         },
                     )}
                     ${formGroup.textarea(
+                        "cara_pembayaran",
+                        "Cara Pembayaran",
+                        res.cara_pembayaran,
+                        {
+                            className: "col-md-12",
+                        },
+                    )}
+                    ${formGroup.textarea(
                         "keterangan",
                         "Keterangan",
                         res.keterangan,
@@ -410,72 +499,44 @@ function renderForm(res) {
                 </div>`,
     )}
 
+                        </div>
+                    </div><!-- /tabInfoSo -->
 
-    <!-- SECTION 6: PERIOD JADWAL -->
-    ${formGroup.sectionCard(
-        {
-            icon: 'fa-calendar-days',
-            color: 'icon-navy',
-            title: 'Period Jadwal',
-            subtitle: 'Jadwal kunjungan per lokasi dalam SO ini',
-            id: 'so-period-section',
-            actions: `<button type="button" id="btnTambahPeriodSo" class="btn btn-sm btn-outline-primary py-0 px-2"
-                style="font-size:12px;" data-no-disable>
-                <i class="fa-solid fa-plus me-1"></i> Tambah Period
-            </button>`,
-        },
-        `<div id="soPeriodContent">
-            <div class="text-center text-muted py-3">
-                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
-            </div>
-        </div>`
-    )}
+                    <!-- TAB: WORK ORDERS -->
+                    <div class="tab-pane fade" id="tabWo" role="tabpanel">
+                        <div class="card card-body">
+                            <div class="mb-3">
+                                <div class="pm-search">
+                                    <span class="pm-search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                    <input type="text" id="woProgressSearch"
+                                        placeholder="Cari No WO atau judul..." data-no-disable>
+                                    <button type="button" id="btnClearWoSearch" class="pm-search-clear d-none" title="Hapus">
+                                        <i class="fa-solid fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="woProgressContent">
+                                <div class="text-center text-muted py-4">
+                                    <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-    <!-- SECTION 7: WO Progress -->
-    ${formGroup.sectionCard(
-        {
-            icon: "fa-briefcase",
-            color: "icon-navy",
-            title: "Work Order Progress",
-            subtitle: "Status eksekusi BOQ per Work Order",
-            id: "wo-section",
-            actions: `<div class="d-flex align-items-center gap-2">
-                <button type="button" id="btnRefreshWoProgress" data-so-id="${res.id_so}"
-                    class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:12px;" title="Refresh">
-                    <i class="fa-solid fa-rotate-right"></i>
-                </button>
-                <button type="button" id="btnToggleWoView"
-                    class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:12px;" title="Tampilan Tabel">
-                    <i class="fa-solid fa-table-list"></i>
-                </button>
-                <a href="/work-orders/create?id_so=${res.id_so}" target="_blank"
-                    style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:#e8f0fe;color:#1a56db;font-size:12px;font-weight:600;text-decoration:none;border:1px solid #c7d7f8;transition:background 0.15s;"
-                    onmouseover="this.style.background='#c7d7f8'" onmouseout="this.style.background='#e8f0fe'">
-                    <i class="fa-solid fa-plus" style="font-size:11px;"></i> Tambah WO
-                </a>
-            </div>`,
-        },
-        `<div class="mb-3">
-            <div class="input-group input-group-sm" style="max-width:320px;">
-                <span class="input-group-text" style="background:#f8fafc;border-color:#e2e8f0;">
-                    <i class="fa-solid fa-magnifying-glass text-muted" style="font-size:11px;"></i>
-                </span>
-                <input type="text" id="woProgressSearch" class="form-control"
-                    placeholder="Cari No WO atau No FWO..."
-                    style="border-color:#e2e8f0;font-size:12px;"
-                    data-no-disable>
-                <button type="button" id="btnClearWoSearch" class="btn btn-outline-secondary d-none"
-                    style="border-color:#e2e8f0;font-size:11px;" title="Hapus pencarian">
-                    <i class="fa-solid fa-times"></i>
-                </button>
+                    <!-- TAB: TERMIN -->
+                    <div class="tab-pane fade" id="tabTermin" role="tabpanel">
+                        <div class="card card-body">
+                            <div id="terminContent">
+                                <div class="text-center text-muted py-4">
+                                    <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
-        <div id="woProgressContent">
-            <div class="text-center text-muted py-4">
-                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
-            </div>
-        </div>`,
-    )}
 
 </form>
 `;

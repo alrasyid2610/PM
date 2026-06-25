@@ -33,6 +33,7 @@ class TestingPointController extends Controller
             ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
             ->leftJoin('testing_kelompok_matriks_samples as tkms', 'tkms.id_testing_kelompok_matriks_sample', '=', 'tms.id_testing_kelompok_matriks_sample')
+            ->whereNull('tp.deleted_at')
             ->select([
                 'tp.id_testing_point',
                 DB::raw(
@@ -70,14 +71,29 @@ class TestingPointController extends Controller
 
         $data = DB::table('testing_points as tp')
             ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
-            ->where('tp.nama', 'like', "%{$search}%")
-            ->select('tp.id_testing_point', 'tp.nama', 'tp.nomor_halaman', 'tms.kode as tms_kode')
+            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
+            ->whereNull('tp.deleted_at')
+            ->where(function ($q) use ($search) {
+                $q->where('tp.nama', 'like', "%{$search}%")
+                  ->orWhere('tms.judul_indonesia', 'like', "%{$search}%")
+                  ->orWhere('ts.nomor', 'like', "%{$search}%");
+            })
+            ->select([
+                'tp.id_testing_point',
+                'tp.nama',
+                'tms.judul_indonesia as tms_judul',
+                'ts.nomor as ts_nomor',
+            ])
             ->limit(20)
             ->get();
 
         return response()->json(
             $data->map(function ($item) {
-                $text = trim(($item->tms_kode ? $item->tms_kode . ' - ' : '') . $item->nama);
+                $text = trim(implode(' ', array_filter([
+                    $item->tms_judul,
+                    $item->ts_nomor,
+                    $item->nama,
+                ])));
                 return [
                     'id'   => $item->id_testing_point,
                     'text' => $text,
@@ -111,6 +127,32 @@ class TestingPointController extends Controller
             'updated_at' => now(),
         ]);
 
+        // Insert testing items
+        $judulIndonesia = $request->judul_indonesia ?? [];
+        $judulInggris   = $request->judul_inggris   ?? [];
+        $parameter      = $request->parameter       ?? [];
+        $unit           = $request->unit            ?? [];
+        $nilai          = $request->nilai           ?? [];
+        $itemKeterangan = $request->item_keterangan ?? [];
+        $status         = $request->status          ?? [];
+        $nomor          = $request->nomor           ?? [];
+
+        foreach ($judulIndonesia as $i => $val) {
+            DB::table('testing_items')->insert([
+                'id_testing_point'     => $id,
+                'nomor'                => $nomor[$i] ?? ($i + 1),
+                'judul_indonesia'      => $val,
+                'judul_inggris'        => $judulInggris[$i]   ?? null,
+                'id_testing_parameter' => $parameter[$i]      ?? null,
+                'id_testing_unit'      => $unit[$i]           ?? null,
+                'nilai'                => $nilai[$i]          ?? null,
+                'keterangan'           => $itemKeterangan[$i] ?? null,
+                'is_aktif'             => isset($status[$i]) ? $status[$i] : 0,
+                'created_at'           => now(),
+                'updated_at'           => now(),
+            ]);
+        }
+
         $after = DB::table('testing_points')->where('id_testing_point', $id)->get()->toJson();
         saveAudit('testing_points', $id, 'Create', '', $after);
 
@@ -126,6 +168,7 @@ class TestingPointController extends Controller
             ->leftJoin('testing_standards as b', 'a.id_testing_standard', '=', 'b.id_testing_standard')
             ->leftJoin('testing_matriks_samples as c', 'c.id_testing_matriks_sample', '=', 'a.id_testing_matriks_sample')
             ->where('a.id_testing_point', $id)
+            ->whereNull('a.deleted_at')
             ->select(
                 'a.*',
                 'b.nomor as standard_nomor',
@@ -178,7 +221,7 @@ class TestingPointController extends Controller
             $parameter      = $request->parameter ?? [];
             $unit           = $request->unit ?? [];
             $nilai          = $request->nilai ?? [];
-            $keterangan     = $request->keterangan ?? [];
+            $keterangan     = $request->item_keterangan ?? [];
             $status         = $request->status ?? [];
             $nomor          = $request->nomor ?? [];
 
@@ -255,11 +298,12 @@ class TestingPointController extends Controller
 
     public function destroy($id)
     {
-        DB::table('testing_points')
-            ->where('id_testing_point', $id)
-            ->delete();
+        $before = DB::table('testing_points')->where('id_testing_point', $id)->get()->toJson();
+        DB::table('testing_points')->where('id_testing_point', $id)->update(['deleted_at' => now()]);
+        $after = DB::table('testing_points')->where('id_testing_point', $id)->get()->toJson();
+        saveAudit('testing_points', $id, 'delete', $before, $after);
 
-        return response()->json(['success' => true]);
+        return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
     }
 
 

@@ -480,6 +480,14 @@
     $('#createBusinessRelationForm').on('submit', function (e) {
         e.preventDefault();
 
+        // Pastikan nama_br_hidden terisi dari nilai Select2 saat ini
+        if (!$('#nama_br_hidden').val()) {
+            const selected = $('#nama_br').select2('data');
+            if (selected && selected.length && selected[0].text) {
+                $('#nama_br_hidden').val(selected[0].text);
+            }
+        }
+
         const form = $(this);
         const btn = $('#btnSubmit');
 
@@ -492,7 +500,7 @@
                 data: form.serialize(),
                 success: function (res) {
                     Notify.success('Data berhasil disimpan!');
-                    console.log(res);
+                    window.location.href = "{{ route('business-relations.index') }}?open=" + res.id;
                 },
                 error: function (xhr) {
                     btn.prop('disabled', false).text('Simpan Data');

@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use SebastianBergmann\Environment\Console;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistory;
 
@@ -56,7 +55,8 @@ class SalesOrderController extends Controller
         // INSERT
         // ==========================
         $id = DB::table('sales_orders')->insertGetId([
-            'no_so' => $soNumber,
+            'no_so'      => $soNumber,
+            'id_sc'      => $request->filled('id_sc') ? (int)$request->id_sc : null,
             'tanggal_so' => $request->tanggal_so,
             'judul_order' => $request->judul_order,
             'tidak_ada_po' => $request->tidak_ada_po ?? 0,
@@ -92,7 +92,8 @@ class SalesOrderController extends Controller
             // STATUS
             'status' => $request->status,
             'keterangan_status' => $request->keterangan_status,
-            'keterangan' => $request->keterangan,
+            'cara_pembayaran'   => $request->cara_pembayaran,
+            'keterangan'        => $request->keterangan,
 
             'created_at' => now(),
             'updated_at' => now(),
@@ -149,11 +150,14 @@ class SalesOrderController extends Controller
             ->leftJoin('business_relation_sites as site_pay', 'so.id_site_pelanggan_payment', '=', 'site_pay.id_site')
             ->leftJoin('business_relation_contacts as brc_pay', 'brc_pay.id_contact', '=', 'so.id_pic_pelanggan_payment')
             ->leftJoin('business_relation_contacts as pic_i', 'pic_i.id_contact', '=', 'so.pic_input')
-            ->leftJoin('business_relation_contacts as pic_o', 'pic_o.id_contact', '=', 'so.pic_input')
+            ->leftJoin('business_relation_contacts as pic_o', 'pic_o.id_contact', '=', 'so.pic_order')
             ->leftJoin('business_relation_contacts as marketing_internal', 'marketing_internal.id_contact', '=', 'so.pic_marketing_internal')
             ->leftJoin('business_relation_contacts as marketing_eksternal', 'marketing_eksternal.id_contact', '=', 'so.pic_marketing_eksternal')
+            ->leftJoin('contracts as ct', 'ct.id_contract', '=', 'so.id_sc')
             ->select(
                 'so.*',
+                'ct.no_contract as contract_no',
+                'ct.no_contract_client as contract_no_client',
                 'pelanggan.nama as nama_pelanggan',
                 'site_pelanggan.nama_lokasi as nama_site_pelanggan',
                 'o.id_office',
@@ -166,7 +170,7 @@ class SalesOrderController extends Controller
                 'site_pay.nama_lokasi as pelanggan_site_pay',
                 'brc_pay.id_contact as id_pic_pelanggan_payment',
                 'brc_pay.nama_pic as pic_pelanggan_pay',
-                'pic_i.nama_pic as pic_input',
+                'pic_i.nama_pic as pic_input_name',
                 'pic_o.nama_pic as pic_ordername',
                 'marketing_internal.nama_pic as marketing_internal_name',
                 'marketing_internal.id_contact as marketing_internal_id',
@@ -174,6 +178,7 @@ class SalesOrderController extends Controller
                 'marketing_eksternal.id_contact as marketing_eksternal_id',
             )
             ->where('so.id_so', $id)
+            ->whereNull('so.deleted_at')
             ->first();
 
 
@@ -192,8 +197,16 @@ class SalesOrderController extends Controller
         $so = DB::table('sales_orders as so')
             ->leftJoin('business_relations as pelanggan', 'so.id_pelanggan', '=', 'pelanggan.id_br')
             ->leftJoin('business_relation_sites as site_pelanggan', 'so.id_site_pelanggan', '=', 'site_pelanggan.id_site')
-            ->select('so.*', 'pelanggan.nama as nama_pelanggan', 'site_pelanggan.nama_lokasi as nama_site_pelanggan')
+            ->leftJoin('contracts as ct', 'ct.id_contract', '=', 'so.id_sc')
+            ->select(
+                'so.*',
+                'pelanggan.nama as nama_pelanggan',
+                'site_pelanggan.nama_lokasi as nama_site_pelanggan',
+                'ct.no_contract as contract_no',
+                'ct.no_contract_client as contract_no_client',
+            )
             ->where('so.id_so', $id)
+            ->whereNull('so.deleted_at')
             ->first();
 
 
@@ -240,9 +253,11 @@ class SalesOrderController extends Controller
             'pic_marketing_internal' => 'nullable|string|max:100',
             'pic_marketing_eksternal' => 'nullable|string|max:100',
 
+            'id_sc' => 'nullable|integer',
             'status' => 'required|string|max:50',
             'keterangan_status' => 'nullable|string',
-            'keterangan' => 'nullable|string',
+            'cara_pembayaran'   => 'nullable|string',
+            'keterangan'        => 'nullable|string',
         ]);
 
         try {
@@ -255,6 +270,7 @@ class SalesOrderController extends Controller
             DB::table('sales_orders')
                 ->where('id_so', $id)
                 ->update([
+                    'id_sc'      => !empty($validated['id_sc']) ? (int)$validated['id_sc'] : null,
                     'tanggal_so' => $validated['tanggal_so'],
                     'judul_order' => $validated['judul_order'],
                     'tidak_ada_po' => $validated['tidak_ada_po'],
@@ -283,7 +299,8 @@ class SalesOrderController extends Controller
 
                     'status' => $validated['status'],
                     'keterangan_status' => $validated['keterangan_status'],
-                    'keterangan' => $validated['keterangan'],
+                    'cara_pembayaran'   => $validated['cara_pembayaran'],
+                    'keterangan'        => $validated['keterangan'],
 
                     'updated_at' => now(),
                 ]);
@@ -308,8 +325,12 @@ class SalesOrderController extends Controller
     public function woProgress(int $id_so)
     {
         $wos = DB::table('work_orders as wo')
+            ->leftJoin('business_relations as br', 'br.id_br', '=', 'wo.id_pelanggan_pekerjaan')
+            ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
             ->where('wo.id_so', $id_so)
-            ->select(['wo.id_wo', 'wo.no_wo', 'wo.judul_pekerjaan'])
+            ->whereNull('wo.deleted_at')
+            ->select(['wo.id_wo', 'wo.no_wo', 'wo.judul_pekerjaan', 'wo.keterangan', 'wo.interval_bulan', 'wo.no_urut_period', 'wo.tanggal_mulai', 'wo.tanggal_selesai', 'br.nama as nama_pelanggan', 'brs.nama_lokasi as nama_site_pelanggan'])
+            ->orderByRaw('ISNULL(wo.tanggal_mulai), wo.tanggal_mulai ASC')
             ->orderBy('wo.id_wo')
             ->get();
 
@@ -335,6 +356,7 @@ class SalesOrderController extends Controller
 
         $fwoCountByWo = DB::table('fieldworks')
             ->whereIn('id_wo', $woIds)
+            ->whereNull('deleted_at')
             ->selectRaw('id_wo, COUNT(*) as fwo_count')
             ->groupBy('id_wo')
             ->pluck('fwo_count', 'id_wo');
@@ -345,6 +367,7 @@ class SalesOrderController extends Controller
         $fwoRows = DB::table('fieldworks as fw')
             ->leftJoin('fieldwork_boq as fb', 'fw.id_fwo', '=', 'fb.id_fwo')
             ->whereIn('fw.id_wo', $woIds)
+            ->whereNull('fw.deleted_at')
             ->select([
                 'fw.id_fwo', 'fw.id_wo', 'fw.no_fwo',
                 'fw.tanggal_mulai', 'fw.tanggal_selesai',
@@ -373,10 +396,17 @@ class SalesOrderController extends Controller
             ])->values()->toArray();
 
             return [
-                'id_wo'           => $wo->id_wo,
-                'no_wo'           => $wo->no_wo,
-                'judul_pekerjaan' => $wo->judul_pekerjaan,
-                'fwo_count'       => (int)($fwoCountByWo[$wo->id_wo] ?? 0),
+                'id_wo'               => $wo->id_wo,
+                'no_wo'               => $wo->no_wo,
+                'judul_pekerjaan'     => $wo->judul_pekerjaan,
+                'keterangan'          => $wo->keterangan,
+                'interval_bulan'      => $wo->interval_bulan,
+                'no_urut_period'      => $wo->no_urut_period,
+                'nama_pelanggan'      => $wo->nama_pelanggan,
+                'nama_site_pelanggan' => $wo->nama_site_pelanggan,
+                'tanggal_mulai'       => $wo->tanggal_mulai,
+                'tanggal_selesai'     => $wo->tanggal_selesai,
+                'fwo_count'           => (int)($fwoCountByWo[$wo->id_wo] ?? 0),
                 'total_boq_qty'   => $totalBoqQty,
                 'total_fwo_qty'   => $totalFwoQty,
                 'progress_pct'    => $pct,
@@ -398,11 +428,21 @@ class SalesOrderController extends Controller
         })->values());
     }
 
+    public function destroy($id)
+    {
+        $before = DB::table('sales_orders')->where('id_so', $id)->get()->toJson();
+        DB::table('sales_orders')->where('id_so', $id)->update(['deleted_at' => now()]);
+        $after = DB::table('sales_orders')->where('id_so', $id)->get()->toJson();
+        saveAudit('sales_orders', $id, 'delete', $before, $after);
+        return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
+    }
+
     public function select2(Request $request)
     {
         $search = $request->q;
 
         $data = DB::table('sales_orders')
+            ->whereNull('deleted_at')
             ->where('no_so', 'like', "%{$search}%")
             ->limit(10)
             ->get();
@@ -428,6 +468,7 @@ class SalesOrderController extends Controller
         $query = DB::table('sales_orders as s')
             ->leftJoin('business_relations as br', 's.id_pelanggan', '=', 'br.id_br')
             ->leftJoin('business_relation_sites as brs', 's.id_site_pelanggan', '=', 'brs.id_site')
+            ->whereNull('s.deleted_at')
             ->select([
                 's.id_so',
                 's.no_so',

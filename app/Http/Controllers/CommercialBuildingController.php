@@ -42,7 +42,7 @@ class CommercialBuildingController extends Controller
     public function data()
     {
 
-        $data = DB::table('commercial_buildings')->get();
+        $data = DB::table('commercial_buildings')->whereNull('deleted_at')->get();
 
         $header = [];
         foreach ($data as $k => $v) {
@@ -66,6 +66,7 @@ class CommercialBuildingController extends Controller
     {
         $building = DB::table('commercial_buildings')
             ->where('id_building', $id)
+            ->whereNull('deleted_at')
             ->first();
 
         if (!$building) {
@@ -123,6 +124,7 @@ class CommercialBuildingController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Commercial Building berhasil disimpan',
+            'id'      => $id,
         ]);
     }
 
@@ -168,6 +170,15 @@ class CommercialBuildingController extends Controller
         return view('commercial-building.edit', [
             'building' => $building
         ]);
+    }
+
+    public function destroy($id)
+    {
+        $before = DB::table('commercial_buildings')->where('id_building', $id)->get()->toJson();
+        DB::table('commercial_buildings')->where('id_building', $id)->update(['deleted_at' => now()]);
+        $after = DB::table('commercial_buildings')->where('id_building', $id)->get()->toJson();
+        saveAudit('commercial_buildings', $id, 'delete', $before, $after);
+        return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
     }
 
     public function update(Request $request, $id)

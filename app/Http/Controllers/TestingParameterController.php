@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
-use Illuminate\Support\Facades\Auth;
 use App\Traits\HasAuditHistory;
 use App\Traits\HasAttachment;
 
@@ -31,19 +30,21 @@ class TestingParameterController extends Controller
 
     public function data()
     {
-        $query = DB::table('testing_parameters')->select([
-            'id_testing_parameter',
-            'kelompok',
-            'kode',
-            'judul_indonesia',
-            'judul_inggris',
-            'rumus_empiris',
-            'judul_iupac',
-            'referensi',
-            'keterangan',
-            'attachment',
-            'created_at'
-        ]);
+        $query = DB::table('testing_parameters')
+            ->whereNull('deleted_at')
+            ->select([
+                'id_testing_parameter',
+                'kelompok',
+                'kode',
+                'judul_indonesia',
+                'judul_inggris',
+                'rumus_empiris',
+                'judul_iupac',
+                'referensi',
+                'keterangan',
+                'attachment',
+                'created_at'
+            ]);
 
         return DataTables::of($query)
             ->addIndexColumn()
@@ -102,7 +103,10 @@ class TestingParameterController extends Controller
 
     public function show($id)
     {
-        $item = DB::table('testing_parameters')->where('id_testing_parameter', $id)->first();
+        $item = DB::table('testing_parameters')
+            ->where('id_testing_parameter', $id)
+            ->whereNull('deleted_at')
+            ->first();
         if (!$item) {
             return response()->json(['message' => 'Testing parameter tidak ditemukan'], 404);
         }
@@ -203,11 +207,12 @@ class TestingParameterController extends Controller
 
     public function destroy($id)
     {
-        DB::table('testing_parameters')->where('id_testing_parameter', $id)->delete();
-        return response()->json([
-            'success' => true,
-            'message' => 'Data berhasil dihapus'
-        ]);
+        $before = DB::table('testing_parameters')->where('id_testing_parameter', $id)->get()->toJson();
+        DB::table('testing_parameters')->where('id_testing_parameter', $id)->update(['deleted_at' => now()]);
+        $after = DB::table('testing_parameters')->where('id_testing_parameter', $id)->get()->toJson();
+        saveAudit('testing_parameters', $id, 'delete', $before, $after);
+
+        return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
     }
 
     public function select2(Request $request)
@@ -215,8 +220,11 @@ class TestingParameterController extends Controller
         $search = $request->q;
 
         $data = DB::table('testing_parameters')
-            ->where('kode', 'like', "%{$search}%")
-            ->orWhere('judul_indonesia', 'like', "%{$search}%")
+            ->whereNull('deleted_at')
+            ->where(function ($q) use ($search) {
+                $q->where('kode', 'like', "%{$search}%")
+                  ->orWhere('judul_indonesia', 'like', "%{$search}%");
+            })
             ->limit(10)
             ->get();
 
@@ -232,11 +240,10 @@ class TestingParameterController extends Controller
 
     public function select2byid(Request $request)
     {
-        // dd('kocak', $request->all());
-
         $search = $request->q;
 
         $data = DB::table('testing_parameters')
+            ->whereNull('deleted_at')
             ->where('id_testing_parameter', $search)
             ->limit(10)
             ->get();

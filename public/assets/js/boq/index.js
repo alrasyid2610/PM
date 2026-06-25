@@ -5,6 +5,64 @@ let itemsSnapshot   = null;
 let addedPointIds   = new Set();
 let selectedPoint   = null;
 let editingSectionId = null;
+let isViewModeEdit  = false;
+
+// ── Per-item edit helpers ──────────────────────────────────────────────────────
+function renderBoqEditBody(sec) {
+    return `
+        <div class="row g-2 mb-3">
+            <div class="col-md-6">
+                <label class="form-label form-label-sm text-muted mb-1">Item Produk Alternatif</label>
+                <input type="text" class="form-control form-control-sm boq-edit-item-produk"
+                    value="${escHtml(sec.item_produk_alternate ?? '')}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label form-label-sm text-muted mb-1">Qty</label>
+                <input type="text" inputmode="numeric" class="form-control form-control-sm boq-edit-qty input-num-mask input-num-int"
+                    value="${sec.qty ?? ''}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label form-label-sm text-muted mb-1">Satuan</label>
+                <select class="form-select form-select-sm boq-edit-satuan">
+                    <option value="">— Pilih —</option>
+                    <option value="PCS" ${sec.satuan === 'PCS' ? 'selected' : ''}>PCS</option>
+                    <option value="Titik" ${sec.satuan === 'Titik' ? 'selected' : ''}>Titik</option>
+                    <option value="Set" ${sec.satuan === 'Set' ? 'selected' : ''}>Set</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
+                <input type="text" inputmode="numeric" class="form-control form-control-sm boq-edit-harga input-num-mask"
+                    value="${sec.harga ?? ''}">
+            </div>
+            <div class="col-md-12">
+                <div class="boq-edit-total-line text-end" style="font-size:12px;color:#64748b;min-height:18px;margin-bottom:2px;"></div>
+            </div>
+            <div class="col-md-12">
+                <label class="form-label form-label-sm text-muted mb-1">Keterangan</label>
+                <input type="text" class="form-control form-control-sm boq-edit-ket"
+                    value="${escHtml(sec.keterangan ?? '')}">
+            </div>
+        </div>
+        <div class="text-muted small fw-semibold mb-2">
+            <i class="fa-solid fa-list-check me-1"></i> Items (${(sec.items ?? []).length})
+        </div>
+        <div>${renderBoqSubItems(sec.items ?? [])}</div>`;
+}
+
+function updateBoqItemTotal($container) {
+    const qty   = rawNumVal($container.find('.boq-edit-qty')[0]) || 0;
+    const harga = rawNumVal($container.find('.boq-edit-harga')[0]) || 0;
+    const $line = $container.find('.boq-edit-total-line');
+    if (qty && harga) {
+        $line.html(
+            Number(qty).toLocaleString('en-US') + ' qty &times; Rp ' + Number(harga).toLocaleString('en-US') +
+            ' = <strong style="color:#1d4ed8;">Rp ' + Number(qty * harga).toLocaleString('en-US') + '</strong>'
+        );
+    } else {
+        $line.html('');
+    }
+}
 
 // ── CrudPageController init ────────────────────────────────────────────────────
 $(document).ready(function () {
@@ -12,7 +70,7 @@ $(document).ready(function () {
     // Select2 untuk Testing Point di dalam modal (init sekali)
     $('#selectTestingPoint').select2({
         dropdownParent: $('#modalAddSection'),
-        placeholder: 'Ketik nama Testing Point...',
+        placeholder: 'Ketik nama item...',
         allowClear: true,
         minimumInputLength: 0,
         ajax: {
@@ -28,7 +86,7 @@ $(document).ready(function () {
     $('#selectTestingPoint').on('select2:select', function (e) {
         const id = String(e.params.data.id);
         if (!editingSectionId && addedPointIds.has(id)) {
-            Notify.warning('Testing Point ini sudah ditambahkan. Gunakan tombol Edit pada section tersebut.');
+            Notify.warning('Testing Point ini sudah ditambahkan. Gunakan tombol Edit pada item tersebut.');
             $(this).val(null).trigger('change');
             selectedPoint = null;
             resetModalItems();
@@ -48,11 +106,12 @@ $(document).ready(function () {
     // Reset modal saat ditutup
     $('#modalAddSection').on('hidden.bs.modal', function () {
         editingSectionId = null;
+        isViewModeEdit   = false;
         selectedPoint    = null;
         $('#selectTestingPoint').val(null).trigger('change').prop('disabled', false);
         resetModalItems();
-        $('#modalSectionTitle').html('<i class="fa-solid fa-layer-group me-2 text-primary"></i> Tambah Section');
-        $('#btnConfirmText').text('Tambah Section');
+        $('#modalSectionTitle').html('<i class="fa-solid fa-layer-group me-2 text-primary"></i> Tambah Item');
+        $('#btnConfirmText').text('Tambah Item');
     });
 
     // Pilih / Hapus semua — hanya item yang terlihat
@@ -89,12 +148,50 @@ $(document).ready(function () {
         });
         if (!checkedItems.length) return;
 
-        if (editingSectionId) {
+        if (isViewModeEdit && editingSectionId) {
+            // Save langsung ke server — update items section ini saja
+            const $btn = $(this);
+            $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
+
+            const newItemIds = checkedItems.map(it => it.id_testing_item);
+            const sections = (currentBoqData.sections ?? []).map(function (s) {
+                const itemIds = String(s.id_testing_point) === String(editingSectionId)
+                    ? newItemIds
+                    : (s.items ?? []).map(it => it.id_testing_item);
+                return {
+                    id_testing_point:      s.id_testing_point,
+                    item_produk_alternate: s.item_produk_alternate ?? null,
+                    qty:                   s.qty ?? null,
+                    satuan:                s.satuan ?? null,
+                    harga:                 s.harga ?? null,
+                    keterangan:            s.keterangan ?? null,
+                    items:                 itemIds,
+                };
+            });
+
+            $.ajax({
+                url: window.route.update + currentBoqData.id_wo,
+                method: 'PUT',
+                contentType: 'application/json',
+                headers: { 'X-CSRF-TOKEN': window.route.csrf },
+                data: JSON.stringify({ sections: sections }),
+                success: function () {
+                    Notify.success('BOQ berhasil diperbarui');
+                    bootstrap.Modal.getInstance('#modalAddSection').hide();
+                    page.loadDetail(currentBoqData.id_wo);
+                },
+                error: function (xhr) {
+                    Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan BOQ');
+                    $btn.prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i> <span id="btnConfirmText">Simpan Perubahan</span>');
+                },
+            });
+        } else if (editingSectionId) {
             updateSection(editingSectionId, checkedItems);
+            bootstrap.Modal.getInstance('#modalAddSection').hide();
         } else {
             addSection(selectedPoint.id, selectedPoint.text, checkedItems);
+            bootstrap.Modal.getInstance('#modalAddSection').hide();
         }
-        bootstrap.Modal.getInstance('#modalAddSection').hide();
     });
 
     // Tombol edit section (delegasi — section hanya ada saat edit mode)
@@ -110,7 +207,7 @@ $(document).ready(function () {
         $('#selectTestingPoint').empty().append(opt).trigger('change');
         $('#selectTestingPoint').prop('disabled', true);
 
-        $('#modalSectionTitle').html('<i class="fa-solid fa-pen me-2 text-warning"></i> Edit Section');
+        $('#modalSectionTitle').html('<i class="fa-solid fa-pen me-2 text-warning"></i> Edit Item');
         $('#btnConfirmText').text('Simpan Perubahan');
 
         resetModalItems();
@@ -126,14 +223,136 @@ $(document).ready(function () {
         checkEmpty();
     });
 
+    // Accordion toggle — skip jika klik pada tombol aksi
+    $(document).on('click', '.pm-accordion-header', function (e) {
+        if ($(e.target).closest('.boq-item-view-actions, .boq-item-edit-actions').length) return;
+        const $header = $(this);
+        const $body   = $header.next('.pm-accordion-collapse');
+        const isOpen  = $header.attr('aria-expanded') === 'true';
+        $header.attr('aria-expanded', !isOpen);
+        $body.slideToggle(150);
+    });
+
+    // Per-item Edit — buka modal dengan items terload
+    $(document).on('click', '.btn-boq-item-edit', function (e) {
+        e.stopPropagation();
+        const idx = $(this).data('section-idx');
+        const sec = currentBoqData && currentBoqData.sections[idx];
+        if (!sec) return;
+
+        const ptId  = String(sec.id_testing_point);
+        const ptTxt = sec.point_name ?? ptId;
+
+        editingSectionId = ptId;
+        isViewModeEdit   = true;
+
+        const opt = new Option(ptTxt, ptId, true, true);
+        $('#selectTestingPoint').empty().append(opt).trigger('change');
+        $('#selectTestingPoint').prop('disabled', true);
+
+        $('#modalSectionTitle').html('<i class="fa-solid fa-pen me-2 text-warning"></i> Edit Item');
+        $('#btnConfirmText').text('Simpan Perubahan');
+
+        resetModalItems();
+        loadModalItems(ptId, new Set(sec.items.map(it => String(it.id_testing_item))));
+        new bootstrap.Modal('#modalAddSection').show();
+    });
+
+    // Per-item Cancel
+    $(document).on('click', '.btn-boq-item-cancel', function (e) {
+        e.stopPropagation();
+        const idx   = $(this).data('section-idx');
+        const sec   = currentBoqData && currentBoqData.sections[idx];
+        if (!sec) return;
+
+        const $item = $(this).closest('.pm-accordion-item');
+        $item.find('.boq-item-edit-actions').removeClass('active');
+        $item.find('.boq-item-view-actions').show();
+        $item.find('.pm-accordion-body').html(renderBoqViewBody(sec));
+    });
+
+    // Per-item Save
+    $(document).on('click', '.btn-boq-item-save', function (e) {
+        e.stopPropagation();
+        const idx   = $(this).data('section-idx');
+        const $item = $(this).closest('.pm-accordion-item');
+        const $body = $item.find('.pm-accordion-collapse');
+        const $btn  = $(this);
+
+        $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
+
+        const qtyEl   = $body.find('.boq-edit-qty')[0];
+        const hargaEl = $body.find('.boq-edit-harga')[0];
+
+        // Update section di currentBoqData
+        const sec = currentBoqData.sections[idx];
+        sec.item_produk_alternate = $body.find('.boq-edit-item-produk').val() || null;
+        sec.qty     = rawNumVal(qtyEl) || null;
+        sec.satuan  = $body.find('.boq-edit-satuan').val() || null;
+        sec.harga   = rawNumVal(hargaEl) || null;
+        sec.keterangan = $body.find('.boq-edit-ket').val() || null;
+
+        const sections = currentBoqData.sections.map(function (s) {
+            return {
+                id_testing_point:      s.id_testing_point,
+                item_produk_alternate: s.item_produk_alternate,
+                qty:                   s.qty,
+                satuan:                s.satuan,
+                harga:                 s.harga,
+                keterangan:            s.keterangan,
+                items:                 (s.items ?? []).map(it => it.id_testing_item),
+            };
+        });
+
+        $.ajax({
+            url: window.route.update + currentBoqData.id_wo,
+            method: 'PUT',
+            contentType: 'application/json',
+            headers: { 'X-CSRF-TOKEN': window.route.csrf },
+            data: JSON.stringify({ sections }),
+            success: function () {
+                Notify.success('Item berhasil diperbarui');
+                page.loadDetail(currentBoqData.id_wo);
+            },
+            error: function (xhr) {
+                Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan');
+                $btn.prop('disabled', false).html('<i class="fa-solid fa-check" style="font-size:9px;"></i> Simpan');
+            },
+        });
+    });
+
+    // Live total pada edit mode
+    $(document).on('input', '.boq-edit-qty, .boq-edit-harga', function () {
+        updateBoqItemTotal($(this).closest('.pm-accordion-collapse'));
+    });
+
+    // Search accordion BOQ items
+    $(document).on('input', '#boqAccordionSearch', function () {
+        const term = $(this).val().toLowerCase().trim();
+        let visible = 0;
+        $('.pm-accordion-item').each(function () {
+            const match = !term || ($(this).data('search-text') || '').includes(term);
+            $(this).toggle(match);
+            if (match) visible++;
+        });
+        $('#btnClearBoqSearch').toggleClass('d-none', !term);
+        $('#boqAccordionEmpty').toggleClass('d-none', visible > 0);
+        $('#boqAccordion').toggle(visible > 0);
+    });
+
+    $(document).on('click', '#btnClearBoqSearch', function () {
+        $('#boqAccordionSearch').val('').trigger('input');
+    });
+
     // Tombol edit BOQ (muncul di view mode)
-    $(document).on('click', '.btn-boq-edit', function () {
+    $(document).on('click', '.btn-edit-context', function () {
         if (currentBoqData) enterBoqEditMode(currentBoqData);
     });
 
     page = new CrudPageController({
         primaryKey: 'id_wo',
         renderForm: renderBoqForm,
+        noEditBind: true,
         afterLoad: function (res) {
             currentBoqData = res;
         },
@@ -149,13 +368,31 @@ $(document).ready(function () {
 
 // ── Enter edit mode ────────────────────────────────────────────────────────────
 function enterBoqEditMode(res) {
-    viewSnapshot = $('#detailContent').html();
-
     addedPointIds.clear();
     selectedPoint    = null;
     editingSectionId = null;
 
-    $('#detailContent').html(renderBoqEditMode(res));
+    // Simpan snapshot konten tab BOQ saja
+    const $tabBoq = $('#tabBoqItems');
+    viewSnapshot = $tabBoq.html();
+
+    // Ganti konten tab BOQ dengan editor
+    $tabBoq.html(renderBoqEditContent());
+
+    // Aktifkan tab BOQ
+    const boqTabBtn = document.querySelector('[data-bs-target="#tabBoqItems"]');
+    if (boqTabBtn) new bootstrap.Tab(boqTabBtn).show();
+
+    // Ganti tombol Edit → Batal + Simpan di action bar
+    const $editBtn = $('#detailContent').find('.btn-edit-context');
+    $editBtn.replaceWith(`
+        <button type="button" id="btnCancelEdit" class="btn-action-edit editing ms-0">
+            <i class="fa-solid fa-times"></i> Batal
+        </button>
+        <button type="button" id="btnSaveBoq" class="btn-action-save">
+            <i class="fa-solid fa-check"></i> Simpan
+        </button>
+    `);
 
     // Pre-load sections yang sudah ada
     const sections = res.sections ?? [];
@@ -180,13 +417,15 @@ function enterBoqEditMode(res) {
 
     itemsSnapshot = JSON.stringify(collectSections());
 
-    // Bind tombol yang ada di edit mode HTML
-    $('#btnCancelEdit').on('click', function () {
-        $('#detailContent').html(viewSnapshot);
+    // Batal: restore dari snapshot tanpa AJAX
+    $('#btnCancelEdit').one('click', function () {
+        $tabBoq.html(viewSnapshot);
         viewSnapshot = null;
+        const $actionBtns = $('#detailContent').find('.detail-action-bar').children().last();
+        $actionBtns.html(formGroup.editButton('Edit BOQ'));
     });
 
-    $('#btnSaveBoq').on('click', function () {
+    $('#btnSaveBoq').one('click', function () {
         saveBoq(res.id_wo);
     });
 

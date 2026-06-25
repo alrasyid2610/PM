@@ -36,6 +36,18 @@
         csrf: "{{ csrf_token() }}",
         history: "{{ url('business-relation-contacts') }}/",
     }
+
+    window.datatableHeaderLabels = {
+        is_aktif: 'Status',
+    };
+
+    window.datatableColumnRenderers = {
+        is_aktif: function (data) {
+            return data == 1
+                ? '<span class="badge rounded-pill" style="background:#dcfce7;color:#166534;font-size:11px;font-weight:600;">Aktif</span>'
+                : '<span class="badge rounded-pill" style="background:#fee2e2;color:#991b1b;font-size:11px;font-weight:600;">Tidak Aktif</span>';
+        }
+    };
 </script>
 <script src="{{ asset('assets/js/business-relation-contact/index.js') }}"></script>
 <script src="{{ asset('assets/js/business-relation-contact/form.js') }}"></script>

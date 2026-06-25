@@ -19,7 +19,11 @@ class BoqController extends Controller
     {
         $data = DB::table('boq as b')
             ->leftJoin('work_orders as wo', 'b.id_wo', '=', 'wo.id_wo')
-            ->leftJoin('boq_items as bi', 'b.id_boq', '=', 'bi.id_boq')
+            ->leftJoin('boq_items as bi', function ($join) {
+                $join->on('b.id_boq', '=', 'bi.id_boq')->whereNull('bi.deleted_at');
+            })
+            ->whereNull('b.deleted_at')
+            ->whereNull('wo.deleted_at')
             ->select([
                 'b.id_wo',
                 'wo.no_wo',
@@ -45,7 +49,10 @@ class BoqController extends Controller
 
         $boqRows = DB::table('boq as b')
             ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->where('b.id_wo', $id)
+            ->whereNull('b.deleted_at')
             ->select([
                 'b.id_boq',
                 'b.id_testing_point',
@@ -54,7 +61,7 @@ class BoqController extends Controller
                 'b.satuan',
                 'b.harga',
                 'b.keterangan',
-                'tp.nama as point_name',
+                DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
             ])
             ->get();
 
@@ -64,6 +71,7 @@ class BoqController extends Controller
             ->leftJoin('testing_items as ti', 'bi.id_testing_item', '=', 'ti.id_testing_item')
             ->leftJoin('testing_units as tu', 'ti.id_testing_unit', '=', 'tu.id_testing_unit')
             ->whereIn('bi.id_boq', $boqIds)
+            ->whereNull('bi.deleted_at')
             ->select([
                 'bi.id_boq',
                 'bi.id_boq_items',
@@ -115,8 +123,11 @@ class BoqController extends Controller
             ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
             ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
             ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
-            ->leftJoin('boq_items as bi', 'b.id_boq', '=', 'bi.id_boq')
+            ->leftJoin('boq_items as bi', function ($join) {
+                $join->on('b.id_boq', '=', 'bi.id_boq')->whereNull('bi.deleted_at');
+            })
             ->where('b.id_wo', $id_wo)
+            ->whereNull('b.deleted_at')
             ->select([
                 'b.id_wo',
                 'b.id_testing_point',
@@ -332,9 +343,21 @@ class BoqController extends Controller
 
         $data = DB::table('boq as b')
             ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->where('b.id_wo', $id_wo)
-            ->when($search, fn($q) => $q->where('tp.nama', 'like', "%$search%"))
-            ->select(['b.id_boq', 'b.id_testing_point', 'b.qty', 'b.satuan', 'tp.nama as point_name'])
+            ->when($search, fn($q) => $q
+                ->where('tp.nama', 'like', "%$search%")
+                ->orWhere('tms.judul_indonesia', 'like', "%$search%")
+                ->orWhere('ts.nomor', 'like', "%$search%")
+            )
+            ->select([
+                'b.id_boq',
+                'b.id_testing_point',
+                'b.qty',
+                'b.satuan',
+                DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
+            ])
             ->get();
 
         $boqIds = $data->pluck('id_boq');
@@ -363,8 +386,16 @@ class BoqController extends Controller
 
         $boq = DB::table('boq as b')
             ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->where('b.id_boq', $id_boq)
-            ->select(['b.id_boq', 'b.id_testing_point', 'b.qty', 'b.satuan', 'tp.nama as point_name'])
+            ->select([
+                'b.id_boq',
+                'b.id_testing_point',
+                'b.qty',
+                'b.satuan',
+                DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
+            ])
             ->first();
 
         if (!$boq) {

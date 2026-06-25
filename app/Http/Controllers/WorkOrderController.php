@@ -49,18 +49,39 @@ class WorkOrderController extends Controller
         // ==========================
         // INSERT
         // ==========================
-        $no_wo = $this->generateNoWo();
+
+        $no_wo    = $this->generateNoWo();
+        $interval = $request->interval_bulan ?: null;
+        $id_site  = $request->id_site_pelanggan ?: null;
+        $no_urut  = null;
+        if ($id_site && $interval) {
+            if ($request->filled('no_urut_period')) {
+                $no_urut = (int) $request->no_urut_period;
+            } else {
+                $existing = DB::table('work_orders')
+                    ->where('id_so', $request->id_sales_order)
+                    ->where('id_site_pelanggan_pekerjaan', $id_site)
+                    ->where('interval_bulan', $interval)
+                    ->whereNull('deleted_at')
+                    ->count();
+                $no_urut = $existing + 1;
+            }
+        }
 
         $id = DB::table('work_orders')->insertGetId([
-            'no_wo' => $no_wo,
-            'id_so' => $request->id_sales_order,
-            'id_pelanggan_pekerjaan' => $request->id_pelanggan,
-            'id_site_pelanggan_pekerjaan' => $request->id_site_pelanggan,
-            'id_pic_pelanggan_pekerjaan' => $request->pic_pekerjaan,
-            'judul_pekerjaan' => $request->judul_order,
-            'keterangan' => $request->keterangan,
-            'created_at' => now(),
-            'updated_at' => now(),
+            'no_wo'                       => $no_wo,
+            'id_so'                       => $request->id_sales_order,
+            'id_pelanggan_pekerjaan'      => $request->id_pelanggan,
+            'id_site_pelanggan_pekerjaan' => $id_site,
+            'id_pic_pelanggan_pekerjaan'  => $request->pic_pekerjaan,
+            'judul_pekerjaan'             => $request->judul_order,
+            'keterangan'                  => $request->keterangan,
+            'interval_bulan'              => $interval,
+            'no_urut_period'              => $no_urut,
+            'tanggal_mulai'               => $request->tanggal_mulai ?: null,
+            'tanggal_selesai'             => $request->tanggal_selesai ?: null,
+            'created_at'                  => now(),
+            'updated_at'                  => now(),
         ]);
 
         $after = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
@@ -73,8 +94,12 @@ class WorkOrderController extends Controller
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
+        if (!$request->filled('id_so')) {
+            return redirect()->route('work-orders.index');
+        }
+
         return view('work-order.create', [
             'title' => 'Create Work Order',
         ]);
@@ -96,7 +121,26 @@ class WorkOrderController extends Controller
         // ==========================
         // UPDATE
         // ==========================
+        $wo     = DB::table('work_orders')->where('id_wo', $id)->first();
         $before = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
+
+        $interval = $request->interval_bulan ?: null;
+        $id_site  = $request->id_site_pelanggan ?: $wo->id_site_pelanggan_pekerjaan;
+        $no_urut  = null;
+        if ($id_site && $interval) {
+            if ($request->filled('no_urut_period')) {
+                $no_urut = (int) $request->no_urut_period;
+            } else {
+                $existing = DB::table('work_orders')
+                    ->where('id_so', $wo->id_so)
+                    ->where('id_site_pelanggan_pekerjaan', $id_site)
+                    ->where('interval_bulan', $interval)
+                    ->where('id_wo', '!=', $id)
+                    ->whereNull('deleted_at')
+                    ->count();
+                $no_urut = $existing + 1;
+            }
+        }
 
         try {
             DB::beginTransaction();
@@ -105,10 +149,14 @@ class WorkOrderController extends Controller
                 ->where('id_wo', $id)
                 ->update([
                     'id_pelanggan_pekerjaan'      => $request->id_pelanggan,
-                    'id_site_pelanggan_pekerjaan' => $request->id_site_pelanggan,
+                    'id_site_pelanggan_pekerjaan' => $id_site,
                     'id_pic_pelanggan_pekerjaan'  => $request->pic_pekerjaan,
                     'judul_pekerjaan'             => $request->judul_order,
                     'keterangan'                  => $request->keterangan,
+                    'interval_bulan'              => $interval,
+                    'no_urut_period'              => $no_urut,
+                    'tanggal_mulai'               => $request->tanggal_mulai ?: null,
+                    'tanggal_selesai'             => $request->tanggal_selesai ?: null,
                     'updated_at'                  => now(),
                 ]);
 
@@ -135,15 +183,22 @@ class WorkOrderController extends Controller
             ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
             ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'wo.id_pic_pelanggan_pekerjaan')
             ->where('wo.id_so', $id_so)
+            ->whereNull('wo.deleted_at')
             ->select([
                 'wo.id_wo',
                 'wo.no_wo',
                 'wo.judul_pekerjaan',
+                'wo.id_site_pelanggan_pekerjaan',
+                'wo.interval_bulan',
+                'wo.no_urut_period',
                 'br.nama as nama_pelanggan',
                 'brs.nama_lokasi as nama_site',
                 'brc.nama_pic as nama_pic_pekerjaan',
                 'wo.keterangan',
+                'wo.tanggal_mulai',
+                'wo.tanggal_selesai',
             ])
+            ->orderBy('wo.id_wo')
             ->get();
 
         return response()->json($data);
@@ -154,6 +209,7 @@ class WorkOrderController extends Controller
         $search = $request->q;
 
         $data = DB::table('work_orders')
+            ->whereNull('deleted_at')
             ->where('no_wo', 'like', "%{$search}%")
             ->get();
 
@@ -182,19 +238,20 @@ class WorkOrderController extends Controller
             ->leftJoin('sales_orders as s', 'wo.id_so', '=', 's.id_so')
             ->leftJoin('business_relations as br', 'wo.id_pelanggan_pekerjaan', '=', 'br.id_br')
             ->leftJoin('business_relation_sites as brs', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
+            ->whereNull('wo.deleted_at')
             ->select([
                 'wo.id_wo',
                 's.id_so',
-                's.no_so',
                 'wo.no_wo',
+                's.no_so',
                 's.judul_order',
                 'wo.id_pelanggan_pekerjaan',
                 'wo.id_site_pelanggan_pekerjaan',
                 'br.nama as Pelanggan',
                 'brs.nama_lokasi as Site Pelanggan',
                 's.tanggal_so',
-                's.tanggal_mulai',
-                's.tanggal_selesai',
+                'wo.tanggal_mulai',
+                'wo.tanggal_selesai',
                 'wo.keterangan',
                 's.created_at',
             ]);
@@ -219,6 +276,163 @@ class WorkOrderController extends Controller
         ]);
     }
 
+
+    public function complete(int $id)
+    {
+        $wo = DB::table('work_orders')->where('id_wo', $id)->first();
+        if (!$wo) {
+            return response()->json(['message' => 'Work Order tidak ditemukan'], 404);
+        }
+        if ($wo->status === 'selesai') {
+            return response()->json(['message' => 'Work Order sudah berstatus selesai'], 422);
+        }
+
+        $totalOutput = DB::table('output_pekerjaan')->where('id_wo', $id)->count();
+        if ($totalOutput === 0) {
+            return response()->json(['message' => 'Belum ada output pekerjaan. Tambahkan output terlebih dahulu sebelum menyelesaikan WO.'], 422);
+        }
+
+        $belumSiap = DB::table('output_pekerjaan')
+            ->where('id_wo', $id)
+            ->where('status', '!=', 'siap')
+            ->count();
+
+        if ($belumSiap > 0) {
+            return response()->json([
+                'message' => "Masih ada {$belumSiap} output yang belum berstatus siap. Semua output harus siap sebelum WO dapat diselesaikan.",
+            ], 422);
+        }
+
+        DB::table('work_orders')->where('id_wo', $id)->update([
+            'status'     => 'selesai',
+            'updated_at' => now(),
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Work Order berhasil diselesaikan']);
+    }
+
+    public function destroy($id)
+    {
+        $before = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
+
+        $now = now();
+
+        // Soft delete boq_items milik BOQ WO ini
+        $boqIds = DB::table('boq')->where('id_wo', $id)->pluck('id_boq');
+        if ($boqIds->isNotEmpty()) {
+            DB::table('boq_items')->whereIn('id_boq', $boqIds)->whereNull('deleted_at')
+                ->update(['deleted_at' => $now]);
+        }
+
+        // Soft delete BOQ WO ini
+        DB::table('boq')->where('id_wo', $id)->whereNull('deleted_at')
+            ->update(['deleted_at' => $now]);
+
+        // Soft delete WO
+        DB::table('work_orders')->where('id_wo', $id)->update(['deleted_at' => $now]);
+
+        $after = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
+        saveAudit('work_orders', $id, 'delete', $before, $after);
+        return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
+    }
+
+    public function duplicate(Request $request, int $id)
+    {
+        $source = DB::table('work_orders')->where('id_wo', $id)->first();
+
+        if (!$source) {
+            return response()->json(['message' => 'Work Order tidak ditemukan'], 404);
+        }
+
+        // Validasi tanggal
+        $tanggalMulai   = $request->tanggal_mulai   ?: $source->tanggal_mulai;
+        $tanggalSelesai = $request->tanggal_selesai ?: $source->tanggal_selesai;
+
+        // Validasi tanggal sengaja dilepas — tanggal mulai/selesai boleh sama atau lebih kecil
+
+        $no_wo = $this->generateNoWo();
+
+        $dupInterval = $source->interval_bulan;
+        $dupNoUrut   = $request->filled('no_urut_period') ? (int) $request->no_urut_period : null;
+        if (!$dupNoUrut && $source->id_site_pelanggan_pekerjaan && $dupInterval) {
+            $existing = DB::table('work_orders')
+                ->where('id_so', $source->id_so)
+                ->where('id_site_pelanggan_pekerjaan', $source->id_site_pelanggan_pekerjaan)
+                ->where('interval_bulan', $dupInterval)
+                ->whereNull('deleted_at')
+                ->count();
+            $dupNoUrut = $existing + 1;
+        }
+
+        return DB::transaction(function () use ($request, $source, $no_wo, $dupInterval, $dupNoUrut, $tanggalMulai, $tanggalSelesai) {
+            $newId = DB::table('work_orders')->insertGetId([
+                'no_wo'                       => $no_wo,
+                'id_so'                       => $source->id_so,
+                'id_pelanggan_pekerjaan'      => $source->id_pelanggan_pekerjaan,
+                'id_site_pelanggan_pekerjaan' => $source->id_site_pelanggan_pekerjaan,
+                'id_pic_pelanggan_pekerjaan'  => $request->id_pic_pelanggan_pekerjaan ?: $source->id_pic_pelanggan_pekerjaan,
+                'judul_pekerjaan'             => $request->judul_pekerjaan             ?: $source->judul_pekerjaan,
+                'keterangan'                  => $request->filled('keterangan')        ? $request->keterangan : $source->keterangan,
+                'tanggal_mulai'               => $tanggalMulai,
+                'tanggal_selesai'             => $tanggalSelesai,
+                'interval_bulan'              => $dupInterval,
+                'no_urut_period'              => $dupNoUrut,
+                'created_at'                  => now(),
+                'updated_at'                  => now(),
+            ]);
+
+            $after = DB::table('work_orders')->where('id_wo', $newId)->get()->toJson();
+            saveAudit('work_orders', $newId, 'create', null, $after);
+
+            // Clone BOQ items
+            $boqInput = $request->input('boq', []);
+            foreach ($boqInput as $index => $item) {
+                if (empty($item['id_testing_point'])) continue;
+
+                $no = $index + 1;
+                if (!isset($item['qty']) || $item['qty'] === '' || $item['qty'] === null) {
+                    abort(response()->json(['success' => false, 'message' => "Qty wajib diisi pada item BOQ ke-{$no}"], 422));
+                }
+                if (!isset($item['satuan']) || $item['satuan'] === '' || $item['satuan'] === null) {
+                    abort(response()->json(['success' => false, 'message' => "Satuan wajib diisi pada item BOQ ke-{$no}"], 422));
+                }
+                if (!isset($item['harga']) || $item['harga'] === '' || $item['harga'] === null) {
+                    abort(response()->json(['success' => false, 'message' => "Harga wajib diisi pada item BOQ ke-{$no}"], 422));
+                }
+
+                $qty = (int) $item['qty'];
+
+                $newBoqId = DB::table('boq')->insertGetId([
+                    'id_wo'                 => $newId,
+                    'id_testing_point'      => $item['id_testing_point'],
+                    'item_produk_alternate' => $item['item_produk_alternate'] ?? null,
+                    'qty'                   => $qty,
+                    'satuan'                => $item['satuan'] !== '' ? $item['satuan'] : null,
+                    'harga'                 => $item['harga'],
+                    'keterangan'            => $item['keterangan'] ?? null,
+                    'created_at'            => now(),
+                    'updated_at'            => now(),
+                ]);
+
+                $testingItemIds = $item['testing_item_ids'] ?? [];
+                if (!empty($testingItemIds)) {
+                    DB::table('boq_items')->insert(array_map(fn($tiId) => [
+                        'id_boq'          => $newBoqId,
+                        'id_testing_item' => $tiId,
+                        'created_at'      => now(),
+                        'updated_at'      => now(),
+                    ], $testingItemIds));
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Work Order berhasil disalin',
+                'no_wo'   => $no_wo,
+                'id_wo'   => $newId,
+            ]);
+        });
+    }
 
     private function generateNoWo()
     {
@@ -246,27 +460,35 @@ class WorkOrderController extends Controller
             ->leftJoin('sales_orders as s', 'wo.id_so', '=', 's.id_so')
             ->leftJoin('business_relations as br', 'wo.id_pelanggan_pekerjaan', '=', 'br.id_br')
             ->leftJoin('business_relation_sites as brs', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
+            ->leftJoin('business_relation_contacts as pic', 'wo.id_pic_pelanggan_pekerjaan', '=', 'pic.id_contact')
             ->select([
                 'wo.id_wo',
                 's.id_so',
                 's.tanggal_so',
-                's.tanggal_mulai',
-                's.tanggal_selesai',
+                'wo.tanggal_mulai',
+                'wo.tanggal_selesai',
                 'wo.id_pelanggan_pekerjaan',
                 'wo.id_site_pelanggan_pekerjaan',
+                'wo.id_pic_pelanggan_pekerjaan',
+                'pic.nama_pic as nama_pic_pelanggan_pekerjaan',
                 's.no_po',
                 's.tanggal_po',
                 'wo.no_wo',
                 'wo.judul_pekerjaan',
                 's.tidak_ada_po',
                 's.no_so',
+                'wo.interval_bulan',
+                'wo.no_urut_period',
                 'br.nama as Pelanggan',
                 'brs.nama_lokasi as Site Pelanggan',
                 's.judul_order',
                 'wo.keterangan',
-                's.created_at',
+                'wo.status',
+                'wo.created_at',
+                'wo.updated_at',
             ])
             ->where('wo.id_wo', $id)
+            ->whereNull('wo.deleted_at')
             ->first();
 
         if (!$wo) {
@@ -276,59 +498,148 @@ class WorkOrderController extends Controller
             ], 404);
         }
 
-        return response()->json($wo);
-    }
+        $siteWos = $wo->id_site_pelanggan_pekerjaan
+            ? DB::table('work_orders as w2')
+                ->leftJoin('business_relation_contacts as p2', 'w2.id_pic_pelanggan_pekerjaan', '=', 'p2.id_contact')
+                ->where('w2.id_so', $wo->id_so)
+                ->where('w2.id_site_pelanggan_pekerjaan', $wo->id_site_pelanggan_pekerjaan)
+                ->whereNull('w2.deleted_at')
+                ->select([
+                    'w2.id_wo',
+                    'w2.no_wo',
+                    'w2.judul_pekerjaan',
+                    'w2.no_urut_period',
+                    'w2.interval_bulan',
+                    'w2.tanggal_mulai',
+                    'w2.tanggal_selesai',
+                    'p2.nama_pic as nama_pic',
+                ])
+                ->orderBy('w2.no_urut_period')
+                ->orderBy('w2.id_wo')
+                ->get()
+            : collect();
 
-    public function assignPeriod(Request $request, $id)
-    {
-        DB::table('work_orders')->where('id_wo', $id)->update([
-            'id_period'  => $request->id_period ?: null,
-            'updated_at' => now(),
-        ]);
+        $boqSections = DB::table('boq as b')
+            ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
+            ->where('b.id_wo', $id)
+            ->select([
+                'b.id_boq',
+                'b.id_testing_point',
+                'b.qty',
+                'b.satuan',
+                'b.harga',
+                'b.keterangan',
+                'b.item_produk_alternate',
+                DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
+            ])
+            ->get();
 
-        return response()->json(['status' => 'success', 'message' => 'Period WO berhasil diperbarui']);
+        $boqIds = $boqSections->pluck('id_boq');
+        $boqItemsByBoq = $boqIds->isNotEmpty()
+            ? DB::table('boq_items')->whereIn('id_boq', $boqIds)
+                ->select(['id_boq', 'id_testing_item'])->get()->groupBy('id_boq')
+            : collect();
+
+        $boqData = $boqSections->map(function ($b) use ($boqItemsByBoq) {
+            return [
+                'id_boq'                => $b->id_boq,
+                'id_testing_point'      => $b->id_testing_point,
+                'point_name'            => $b->point_name ?? '—',
+                'qty'                   => $b->qty,
+                'satuan'                => $b->satuan,
+                'harga'                 => $b->harga,
+                'keterangan'            => $b->keterangan,
+                'item_produk_alternate' => $b->item_produk_alternate,
+                'testing_item_ids'      => ($boqItemsByBoq->get($b->id_boq) ?? collect())->pluck('id_testing_item')->toArray(),
+            ];
+        })->values();
+
+        return response()->json(array_merge((array) $wo, [
+            'site_wos'  => $siteWos,
+            'boq_items' => $boqData,
+        ]));
     }
 
     public function boqProgress(int $id)
     {
         $boqSections = DB::table('boq as b')
             ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->where('b.id_wo', $id)
-            ->select(['b.id_boq', 'tp.nama as point_name', 'b.qty as boq_qty', 'b.satuan', 'b.harga'])
+            ->select([
+                'b.id_boq',
+                'b.id_testing_point',
+                DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
+                'b.qty as boq_qty',
+                'b.satuan',
+                'b.harga',
+            ])
             ->get();
 
-        $boqIds = $boqSections->pluck('id_boq');
+        $tpIds = $boqSections->pluck('id_testing_point');
 
-        $fwoQtyByBoq = $boqIds->isNotEmpty()
-            ? DB::table('fieldwork_boq')
-                ->whereIn('id_boq', $boqIds)
-                ->selectRaw('id_boq, SUM(COALESCE(qty, 0)) as fwo_qty')
-                ->groupBy('id_boq')
-                ->pluck('fwo_qty', 'id_boq')
+        // Join via id_testing_point + fw.id_wo agar tetap akurat
+        // setelah BOQ di-save ulang (id_boq berubah tapi id_testing_point stabil).
+        $fwoQtyByTp = $tpIds->isNotEmpty()
+            ? DB::table('fieldwork_boq as fb')
+            ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
+            ->whereIn('fb.id_testing_point', $tpIds)
+            ->where('fw.id_wo', $id)
+            ->whereNull('fw.deleted_at')
+            ->selectRaw('fb.id_testing_point, SUM(COALESCE(fb.qty, 0)) as fwo_qty')
+            ->groupBy('fb.id_testing_point')
+            ->pluck('fwo_qty', 'id_testing_point')
             : collect();
 
         $totalBoqQty    = (int) $boqSections->sum('boq_qty');
-        $totalFwoQty    = (int) $boqSections->sum(fn($s) => (int)($fwoQtyByBoq[$s->id_boq] ?? 0));
+        $totalFwoQty    = (int) $boqSections->sum(fn($s) => (int)($fwoQtyByTp[$s->id_testing_point] ?? 0));
         $pct            = $totalBoqQty > 0 ? round($totalFwoQty / $totalBoqQty * 100) : 0;
         $totalBoqAmount = (int) $boqSections->sum(fn($s) => (int)($s->boq_qty ?? 0) * (int)($s->harga ?? 0));
 
-        $fwos = DB::table('fieldworks as fw')
-            ->leftJoin('fieldwork_boq as fb', 'fw.id_fwo', '=', 'fb.id_fwo')
-            ->where('fw.id_wo', $id)
-            ->select([
-                'fw.id_fwo', 'fw.no_fwo', 'fw.tanggal_mulai', 'fw.tanggal_selesai',
-                DB::raw('COUNT(fb.id_fwo_boq) as boq_section_count'),
-                DB::raw('SUM(COALESCE(fb.qty, 0)) as total_qty'),
-            ])
-            ->groupBy('fw.id_fwo', 'fw.no_fwo', 'fw.tanggal_mulai', 'fw.tanggal_selesai')
-            ->orderBy('fw.id_fwo')
+        $fwoDetailsByBoq = collect();
+
+        // All FWOs linked to this WO
+        $allFwos = DB::table('fieldworks')
+            ->where('id_wo', $id)
+            ->whereNull('deleted_at')
+            ->select(['id_fwo', 'no_fwo', 'judul_pekerjaan', 'keterangan', 'tanggal_mulai', 'tanggal_selesai', 'status'])
+            ->orderBy('id_fwo')
             ->get();
 
+        $totalFwoCount     = $allFwos->count();
+        $totalFwoCompleted = $allFwos->where('status', 'completed')->count();
+
+        $outputStats = DB::table('output_pekerjaan')
+            ->where('id_wo', $id)
+            ->selectRaw("
+                SUM(CASE WHEN status = 'belum_siap' THEN 1 ELSE 0 END) as belum_siap,
+                SUM(CASE WHEN status = 'siap'       THEN 1 ELSE 0 END) as siap,
+                SUM(CASE WHEN status = 'terkirim'   THEN 1 ELSE 0 END) as terkirim
+            ")
+            ->first();
+
         return response()->json([
-            'total_boq_qty'    => $totalBoqQty,
-            'total_fwo_qty'    => $totalFwoQty,
-            'progress_pct'     => $pct,
-            'total_boq_amount' => $totalBoqAmount,
+            'total_boq_qty'      => $totalBoqQty,
+            'total_fwo_qty'      => $totalFwoQty,
+            'progress_pct'       => $pct,
+            'total_boq_amount'   => $totalBoqAmount,
+            'total_fwo'          => $totalFwoCount,
+            'fwo_completed'      => $totalFwoCompleted,
+            'output_belum_siap'  => (int) ($outputStats->belum_siap ?? 0),
+            'output_siap'        => (int) ($outputStats->siap ?? 0),
+            'output_terkirim'    => (int) ($outputStats->terkirim ?? 0),
+            'fwos'              => $allFwos->map(fn($f) => [
+                'id_fwo'          => $f->id_fwo,
+                'no_fwo'          => $f->no_fwo,
+                'judul_pekerjaan' => $f->judul_pekerjaan,
+                'keterangan'      => $f->keterangan,
+                'tanggal_mulai'   => $f->tanggal_mulai,
+                'tanggal_selesai' => $f->tanggal_selesai,
+                'status'          => $f->status,
+            ])->values(),
             'sections'         => $boqSections->map(fn($s) => [
                 'id_boq'       => $s->id_boq,
                 'point_name'   => $s->point_name ?? '—',
@@ -336,18 +647,16 @@ class WorkOrderController extends Controller
                 'satuan'       => $s->satuan,
                 'harga'        => (int)($s->harga ?? 0),
                 'total_amount' => (int)($s->boq_qty ?? 0) * (int)($s->harga ?? 0),
-                'fwo_qty'      => (int)($fwoQtyByBoq[$s->id_boq] ?? 0),
+                'fwo_qty'      => (int)($fwoQtyByTp[$s->id_testing_point] ?? 0),
                 'progress_pct' => ($s->boq_qty ?? 0) > 0
-                    ? round((int)($fwoQtyByBoq[$s->id_boq] ?? 0) / $s->boq_qty * 100)
+                    ? round((int)($fwoQtyByTp[$s->id_testing_point] ?? 0) / $s->boq_qty * 100)
                     : 0,
-            ])->values(),
-            'fwos' => $fwos->map(fn($f) => [
-                'id_fwo'            => $f->id_fwo,
-                'no_fwo'            => $f->no_fwo,
-                'tanggal_mulai'     => $f->tanggal_mulai,
-                'tanggal_selesai'   => $f->tanggal_selesai,
-                'boq_section_count' => (int)$f->boq_section_count,
-                'total_qty'         => (int)$f->total_qty,
+                // 'fwos' => ($fwoDetailsByBoq[$s->id_boq] ?? collect())->map(fn($f) => [
+                //     'id_fwo'        => $f->id_fwo,
+                //     'no_fwo'        => $f->no_fwo,
+                //     'tanggal_mulai' => $f->tanggal_mulai,
+                //     'qty'           => (int)$f->qty,
+                // ])->values(),
             ])->values(),
         ]);
     }
@@ -360,9 +669,8 @@ class WorkOrderController extends Controller
             ->leftJoin('business_relations as br', 'br.id_br', '=', 'wo.id_pelanggan_pekerjaan')
             ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
             ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'wo.id_pic_pelanggan_pekerjaan')
-            ->leftJoin('wo_periods as wp', 'wp.id_period', '=', 'wo.id_period')
-            ->leftJoin('business_relation_sites as brs_period', 'brs_period.id_site', '=', 'wp.id_site')
             ->where('wo.id_wo', $id)
+            ->whereNull('wo.deleted_at')
             ->select([
                 'wo.id_wo',
                 'wo.no_wo',
@@ -376,13 +684,11 @@ class WorkOrderController extends Controller
                 'brs.nama_lokasi as nama_site_pelanggan_pekerjaan',
                 'wo.id_pic_pelanggan_pekerjaan',
                 'brc.nama_pic as nama_pic_pelanggan_pekerjaan',
-                'wo.id_period',
-                'wp.id_site as period_id_site',
-                'brs_period.nama_lokasi as period_nama_site',
-                'wp.tanggal_mulai as period_tanggal_mulai',
-                'wp.tanggal_selesai as period_tanggal_selesai',
-                'wp.interval_bulan as period_interval_bulan',
-                'wp.keterangan as period_keterangan',
+                'wo.interval_bulan',
+                'wo.no_urut_period',
+                'wo.tanggal_mulai',
+                'wo.tanggal_selesai',
+                'wo.status',
                 'wo.created_at',
                 'wo.updated_at',
             ])

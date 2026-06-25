@@ -14,6 +14,7 @@ use App\Http\Controllers\SalesOrderController;
 use App\Http\Controllers\TestingItemController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkOrderController;
+use App\Http\Controllers\OutputPekerjaanController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\TestingUnitController;
 use App\Http\Controllers\TestingParameterController;
@@ -23,7 +24,6 @@ use App\Http\Controllers\TestingMatriksSampleController;
 use App\Http\Controllers\TestingPointController;
 use App\Http\Controllers\WilayahController;
 use App\Http\Controllers\TerminController;
-use App\Http\Controllers\WoPeriodController;
 use Spatie\LaravelPdf\Facades\Pdf;
 
 Route::get('/test-so-pdf', function () {
@@ -337,6 +337,7 @@ Route::prefix('/commercial-buildings')
             ->name('set-edit-context');
         Route::get('/edit', [CommercialBuildingController::class, 'edit'])->name('edit');
         Route::put('/{id}', [CommercialBuildingController::class, 'update'])->name('update');
+        Route::delete('/{id}', [CommercialBuildingController::class, 'destroy'])->name('destroy')->whereNumber('id');
         Route::get('/{id}/history', [CommercialBuildingController::class, 'history'])->name('history')->whereNumber('id');
     });
 
@@ -372,6 +373,7 @@ Route::prefix('/business-estates')
         // 👉 EDIT
         Route::get('/edit', [BusinessEstateController::class, 'edit'])->name('edit');
         Route::put('/{id}', [BusinessEstateController::class, 'update'])->name('update');
+        Route::delete('/{id}', [BusinessEstateController::class, 'destroy'])->name('destroy')->whereNumber('id');
         Route::get('/{id}/history', [BusinessEstateController::class, 'history'])
             ->name('history')
             ->whereNumber('id');
@@ -411,6 +413,7 @@ Route::prefix('/business-relation-contacts')
         // 👉 EDIT
         Route::get('/edit', [BusinessRelationContactController::class, 'edit'])->name('edit');
         Route::put('/{id}', [BusinessRelationContactController::class, 'update'])->name('update');
+        Route::delete('/{id}', [BusinessRelationContactController::class, 'destroy'])->name('destroy')->whereNumber('id');
         Route::get('/{id}/history', [BusinessRelationContactController::class, 'history'])->name('history')->whereNumber('id');
     });
 
@@ -464,23 +467,26 @@ Route::prefix('work-orders')->name('work-orders.')->group(function () {
     Route::get('/{id}', [WorkOrderController::class, 'show'])->name('show');
     Route::get('/{id}/edit', [WorkOrderController::class, 'edit'])->name('edit');
     Route::put('/{id}', [WorkOrderController::class, 'update'])->name('update');
-    Route::put('/{id}/period', [WorkOrderController::class, 'assignPeriod'])->name('assign-period')->whereNumber('id');
     Route::delete('/{id}', [WorkOrderController::class, 'destroy'])->name('destroy');
     Route::get('/{id}/history', [WorkOrderController::class, 'history'])->name('history')->whereNumber('id');
     Route::get('/{id}/boq-progress', [WorkOrderController::class, 'boqProgress'])->name('boq-progress')->whereNumber('id');
+    Route::post('/{id}/duplicate', [WorkOrderController::class, 'duplicate'])->name('duplicate')->whereNumber('id');
+    Route::post('/{id}/complete', [WorkOrderController::class, 'complete'])->name('complete')->whereNumber('id');
+    Route::get('/{id}/outputs', [OutputPekerjaanController::class, 'byWo'])->name('outputs')->whereNumber('id');
 });
 
-Route::prefix('wo-periods')->name('wo-periods.')->group(function () {
-    Route::get('/by-so/{id_so}', [WoPeriodController::class, 'bySo'])->name('by-so');
-    Route::get('/select2', [WoPeriodController::class, 'select2'])->name('select2');
-    Route::post('/', [WoPeriodController::class, 'store'])->name('store');
-    Route::put('/{id}', [WoPeriodController::class, 'update'])->name('update')->whereNumber('id');
-    Route::delete('/{id}', [WoPeriodController::class, 'destroy'])->name('destroy')->whereNumber('id');
+Route::prefix('output-pekerjaan')->name('output-pekerjaan.')->group(function () {
+    Route::post('/',              [OutputPekerjaanController::class, 'store'])->name('store');
+    Route::post('/{id}',         [OutputPekerjaanController::class, 'update'])->name('update');
+    Route::post('/{id}/status',  [OutputPekerjaanController::class, 'updateStatus'])->name('updateStatus');
+    Route::delete('/{id}',       [OutputPekerjaanController::class, 'destroy'])->name('destroy');
 });
+
 
 Route::prefix('fieldwork-boq')->name('fieldwork-boq.')->group(function () {
-    Route::get('/by-fwo/{id_fwo}', [FieldworkBoqController::class, 'byFwo'])->name('by-fwo');
-    Route::put('/{id_fwo}',        [FieldworkBoqController::class, 'update'])->name('update')->whereNumber('id_fwo');
+    Route::get('/by-fwo/{id_fwo}',    [FieldworkBoqController::class, 'byFwo'])->name('by-fwo');
+    Route::get('/for-copy/{id_fwo}',  [FieldworkBoqController::class, 'forCopy'])->name('for-copy');
+    Route::put('/{id_fwo}',           [FieldworkBoqController::class, 'update'])->name('update')->whereNumber('id_fwo');
 });
 
 Route::prefix('fieldworks')->name('fieldworks.')->group(function () {
@@ -491,7 +497,11 @@ Route::prefix('fieldworks')->name('fieldworks.')->group(function () {
     Route::get('/{id}',         [FieldworkController::class, 'detail'])->name('detail')->whereNumber('id');
     Route::put('/{id}',         [FieldworkController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}',      [FieldworkController::class, 'destroy'])->name('destroy')->whereNumber('id');
-    Route::get('/{id}/history', [FieldworkController::class, 'history'])->name('history')->whereNumber('id');
+    Route::get('/{id}/history',   [FieldworkController::class, 'history'])->name('history')->whereNumber('id');
+    Route::put('/{id}/personels',  [FieldworkController::class, 'updatePersonels'])->name('updatePersonels')->whereNumber('id');
+    Route::post('/{id}/duplicate', [FieldworkController::class, 'duplicate'])->name('duplicate')->whereNumber('id');
+    Route::post('/{id}/complete',    [FieldworkController::class, 'complete'])->name('complete')->whereNumber('id');
+    Route::post('/{id}/attachments', [FieldworkController::class, 'updateAttachments'])->name('updateAttachments')->whereNumber('id');
 });
 
 Route::prefix('termin')->name('termin.')->group(function () {
@@ -500,10 +510,17 @@ Route::prefix('termin')->name('termin.')->group(function () {
     Route::get('/create',             [TerminController::class, 'create'])->name('create');
     Route::post('/',                  [TerminController::class, 'store'])->name('store');
     Route::get('/select2',            [TerminController::class, 'select2'])->name('select2');
-    Route::post('/delete-attachment', [TerminController::class, 'deleteAttachment'])->name('delete-attachment');
-    Route::get('/{id}',               [TerminController::class, 'show'])->name('show')->whereNumber('id');
+    Route::get('/by-so/{id_so}',      [TerminController::class, 'bySo'])->name('by-so')->whereNumber('id_so');
+    Route::post('/delete-attachment',     [TerminController::class, 'deleteAttachment'])->name('delete-attachment');
+    Route::get('/outputs-by-so/{id_so}', [TerminController::class, 'outputsBySo'])->name('outputs-by-so')->whereNumber('id_so');
+    Route::get('/check-dp/{id_so}',      [TerminController::class, 'checkDpBySo'])->name('check-dp')->whereNumber('id_so');
+    Route::get('/{id}',                  [TerminController::class, 'show'])->name('show')->whereNumber('id');
     Route::get('/{id}/detail',        [TerminController::class, 'detail'])->name('detail')->whereNumber('id');
     Route::get('/{id}/history',       [TerminController::class, 'history'])->name('history')->whereNumber('id');
+    Route::post('/{id}/add-output',    [TerminController::class, 'addOutput'])->name('add-output')->whereNumber('id');
+    Route::post('/{id}/remove-output', [TerminController::class, 'removeOutput'])->name('remove-output')->whereNumber('id');
+    Route::post('/{id}/siap-kirim',    [TerminController::class, 'siapKirim'])->name('siap-kirim')->whereNumber('id');
+    Route::post('/{id}/selesai',       [TerminController::class, 'selesai'])->name('selesai')->whereNumber('id');
     Route::put('/{id}',               [TerminController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}',            [TerminController::class, 'destroy'])->name('destroy')->whereNumber('id');
 });

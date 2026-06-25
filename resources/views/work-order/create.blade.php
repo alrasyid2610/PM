@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(request('embed') ? 'layouts.embed' : 'layouts.app')
 
 @section('page-title', 'Work Orders')
 @section('page-descrip', 'Kelola data Work Orders')
@@ -21,6 +21,27 @@
 @endsection
 
 @section('content')
+
+{{-- STICKY SO INFO BANNER --}}
+<div id="soInfoBanner" style="display:none;position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #e2e8f0;padding:10px 16px;margin:-8px -12px 16px;box-shadow:0 2px 10px rgba(0,0,0,.08);">
+    <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size:13px;">
+        <div id="soBannerSiteWrap" style="display:none;align-items:center;gap:6px;min-width:0;">
+            <i class="fa-solid fa-location-dot" style="color:#0891b2;font-size:11px;flex-shrink:0;"></i>
+            <span id="soBannerSite" style="color:#0e7490;font-weight:600;white-space:nowrap;"></span>
+        </div>
+        <div id="soBannerSiteSep" style="display:none;width:1px;height:16px;background:#e2e8f0;flex-shrink:0;"></div>
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+            <i class="fa-solid fa-file-contract" style="color:#1a56db;font-size:11px;flex-shrink:0;"></i>
+            <span id="soBannerNoSo" style="font-weight:700;color:#1a56db;white-space:nowrap;"></span>
+        </div>
+        <div style="width:1px;height:16px;background:#e2e8f0;flex-shrink:0;"></div>
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
+            <i class="fa-solid fa-file-lines" style="color:#374151;font-size:11px;flex-shrink:0;"></i>
+            <span id="soBannerJudul" style="color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        </div>
+    </div>
+</div>
+
 <section class="section">
     <form id="workOrderForm" class="row g-3">
         @csrf
@@ -63,25 +84,56 @@
                         </select>
                     </div>
     
-                     <div class="col-md-2 col-12">
-                        <label class="form-label">PIC Pekerjaan</label>
+                    <div class="col-md-2 col-12">
+                        <label class="form-label required">Frekuensi</label>
+                        <select name="interval_bulan" id="interval_bulan" class="form-select">
+                            <option value="">— Tidak ada —</option>
+                            <option value="1">Bulanan</option>
+                            <option value="2">Bimulanan</option>
+                            <option value="3">Triwulan</option>
+                            <option value="4">Caturwulan</option>
+                            <option value="6">Semester</option>
+                            <option value="12">Annual</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-1 col-12" id="noUrutWrap" style="display:none;">
+                        <label class="form-label required">Urutan ke-</label>
+                        <input type="number" name="no_urut_period" id="no_urut_period"
+                            class="form-control" min="1" placeholder="Auto">
+                    </div>
+
+                    <div class="col-md-2 col-12">
+                        <label class="form-label required">PIC Pekerjaan</label>
                         <select name="pic_pekerjaan"
                             id="pic_pekerjaan"
                             class="form-select">
                             <option value="">Pilih PIC</option>
                         </select>
                     </div>
-    
-    
-                    <div class="col-md-12">
+
+                    <!-- Preview WO di lokasi yang sama -->
+                    <div class="col-md-12" id="woSitePreviewWrap" style="display:none;">
+                        <div id="woSitePreviewContent"></div>
+                    </div>
+
+                    <div class="col-md-3 col-12">
+                        <label class="form-label required">Tanggal Mulai</label>
+                        <input type="text" name="tanggal_mulai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
+                    </div>
+                    <div class="col-md-3 col-12">
+                        <label class="form-label required">Tanggal Selesai</label>
+                        <input type="text" name="tanggal_selesai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
+                    </div>
+                    <div class="col-md-6 col-12">
                         <label class="form-label">Keterangan</label>
-                        <textarea name="keterangan" id="keterangan" class="form-control" rows="4"></textarea>
+                        <textarea name="keterangan" id="keterangan" class="form-control" rows="1"></textarea>
                     </div>
                 </div>
             </x-section-card>
         </div>
 
-        <x-form-actions back-route="{{ url('work-orders') }}" submit-label="Simpan Work Order" />
+        <x-form-actions :back-route="request('embed') ? null : url('work-orders')" submit-label="Simpan Work Order" />
 
     </form>
 </section>
@@ -92,21 +144,33 @@
 
     var dataPelanggan = '';
     var dataSO = '';
+    var preselectSoId = new URLSearchParams(window.location.search).get('id_so');
+    var currentSiteWos = [];
 
     $(document).ready(function() {
+
+        initFpDate(document);
 
         loadPelangganDetails();
         initBrSelect2();
 
-        const preselectSoId = new URLSearchParams(window.location.search).get('id_so');
         if (preselectSoId) {
             $.get("{{ url('sales-orders') }}/" + preselectSoId, function (so) {
                 if (!so || !so.id_so) return;
                 const opt = new Option(so.no_so + ' — ' + so.judul_order, so.id_so, true, true);
                 $('#id_sales_order').append(opt).trigger('change');
                 $("input[name='judul_order']").val(so.judul_order);
-                $("select[name='id_pelanggan']").val(so.id_pelanggan).trigger('change');
-                $("select[name='id_site_pelanggan']").val(so.id_site_pelanggan).trigger('change');
+                $('#id_sales_order').prop('disabled', true);
+                $('<input>').attr({ type: 'hidden', name: 'id_sales_order', value: so.id_so }).appendTo('#workOrderForm');
+
+                if (so.nama_pelanggan) {
+                    $('#soBannerSite').text(so.nama_pelanggan);
+                    $('#soBannerSiteWrap').css('display', 'flex');
+                    $('#soBannerSiteSep').css('display', 'block');
+                }
+                $('#soBannerNoSo').text(so.no_so ?? '—');
+                $('#soBannerJudul').text(so.judul_order ?? '—');
+                $('#soInfoBanner').show();
             });
         }
 
@@ -116,20 +180,19 @@
             getSO(data).then(function(response) {
                 dataSO = response;
 
-                console.log('Data sales order berhasil dimuat:', dataSO);
-
                 if(dataSO) {
                     $("input[name='tanggal_so']").val(dataSO.tanggal_so);
                     $("input[name='judul_order']").val(dataSO.judul_order);
-                    $("input[name='tanggal_mulai']").val(dataSO.tanggal_mulai);
-                    $("input[name='tanggal_selesai']").val(dataSO.tanggal_selesai);
+                    const _fpMulai   = $('input[name="tanggal_mulai"]')[0]?._fp;
+                    const _fpSelesai = $('input[name="tanggal_selesai"]')[0]?._fp;
+                    if (dataSO.tanggal_mulai && _fpMulai)   { _fpMulai.setDate(dataSO.tanggal_mulai); if (_fpSelesai) _fpSelesai.set('minDate', dataSO.tanggal_mulai); }
+                    if (dataSO.tanggal_selesai && _fpSelesai) _fpSelesai.setDate(dataSO.tanggal_selesai);
                     $("select[name='tidak_ada_po']").val(dataSO.tidak_ada_po);
                     $("input[name='tanggal_po']").val(dataSO.tanggal_po);
                     $("input[name='no_po']").val(dataSO.no_po);
                     $("select[name='id_pelanggan']").val(dataSO.id_pelanggan).trigger('change');
                     $("select[name='id_site_pelanggan']").val(dataSO.id_site_pelanggan).trigger('change');
                 }
-
             });
         });
 
@@ -177,6 +240,11 @@
 
         $("select[name='id_pelanggan']").val(null).trigger('change');
         $("select[name='id_site_pelanggan']").val(null).trigger('change');
+
+        $('#woSitePreviewWrap').hide();
+        $('#woSitePreviewContent').html('');
+        $('#noUrutWrap').hide();
+        $('#no_urut_period').val('');
     }
 
 
@@ -222,8 +290,6 @@
 
 
     function loadPelangganDetails() {
-        console.log('Memuat data pelanggan...');
-
         $.ajax({
             url: "{{ route('api.get-data-br') }}",
             method: "GET",
@@ -237,34 +303,256 @@
                     allowClear: true
                 });
             },
-            error: function(xhr) {
+            error: function() {
                 Notify.error('Gagal memuat detail pelanggan');
             }
         });
 
-        $.ajax({
-            url: "{{ route('api.get-data-site') }}",
-            method: "GET",
-            success: function(response) {
-                dataPelanggan = response;
-                $.each(dataPelanggan, function(index, item) {
-                    $("select[name='id_site_pelanggan']").append(new Option(item.nama_lokasi, item.id_site));
-                });
-                $("select[name='id_site_pelanggan']").select2({
-                    placeholder: "Pilih Site Pelanggan",
-                    allowClear: true
-                });
-            },
-            error: function(xhr) {
-                Notify.error('Gagal memuat detail pelanggan');
+        initSiteSelect2(null);
+    }
+
+    function initSiteSelect2(idBr) {
+        var $site = $("select[name='id_site_pelanggan']");
+        if ($site.hasClass('select2-hidden-accessible')) {
+            $site.val(null).trigger('change');
+            $site.select2('destroy');
+        }
+        $site.empty();
+
+        var url = idBr
+            ? "{{ url('business-relations') }}/" + idBr + "/sites"
+            : "{{ url('business-relations/sites/select2') }}";
+
+        $site.select2({
+            placeholder: 'Pilih Site Pelanggan',
+            allowClear: true,
+            ajax: {
+                url: url,
+                dataType: 'json',
+                delay: 250,
+                data: function(params) { return { q: params.term }; },
+                processResults: function(data) { return { results: data }; },
+                cache: false,
             }
         });
     }
 
+    $(document).on('change', "select[name='id_pelanggan']", function() {
+        var idBr = $(this).val();
+        initSiteSelect2(idBr || null);
+    });
+
+    function autoFillUrutan() {
+        var interval = $('#interval_bulan').val();
+        if (!interval) {
+            $('#no_urut_period').val('');
+            return;
+        }
+        var count = currentSiteWos.filter(function(wo) {
+            return String(wo.interval_bulan) === String(interval);
+        }).length;
+        $('#no_urut_period').val(count + 1);
+    }
+
+    $(document).on('change', '#interval_bulan', function() {
+        var hasInterval = !!$(this).val();
+        $('#noUrutWrap').toggle(hasInterval);
+        if (!hasInterval) {
+            $('#no_urut_period').val('');
+        } else {
+            autoFillUrutan();
+        }
+    });
+
+    $(document).on('click', '#woSitePreviewToggle', function() {
+        var $list = $('#woSitePreviewList');
+        var $icon = $(this).find('i');
+        $list.toggle();
+        $icon.toggleClass('fa-chevron-down fa-chevron-up');
+    });
+
+    $(document).on('change', "select[name='id_site_pelanggan']", function() {
+        var idSite = $(this).val();
+        var idSo = preselectSoId || $('#id_sales_order').val();
+        loadWoSitePreview(idSo, idSite);
+    });
+
+    const WO_INTERVAL_LABELS = {1:'Bulanan',2:'Bimulanan',3:'Triwulan',4:'Caturwulan',6:'Semester',12:'Annual'};
+
+    function loadWoSitePreview(id_so, id_site) {
+        if (!id_so || !id_site) {
+            $('#woSitePreviewWrap').hide();
+            return;
+        }
+
+        $('#woSitePreviewWrap').show();
+        $('#woSitePreviewContent').html(
+            '<div class="text-muted small py-2"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat WO di lokasi ini...</div>'
+        );
+
+        $.get("{{ url('work-orders/by-so') }}/" + id_so, function(wos) {
+            var filtered = (wos || []).filter(function(wo) {
+                return String(wo.id_site_pelanggan_pekerjaan) === String(id_site);
+            });
+            // Urutkan berdasarkan tanggal_mulai
+            filtered.sort(function(a, b) {
+                if (!a.tanggal_mulai && !b.tanggal_mulai) return 0;
+                if (!a.tanggal_mulai) return 1;
+                if (!b.tanggal_mulai) return -1;
+                return a.tanggal_mulai > b.tanggal_mulai ? 1 : -1;
+            });
+            currentSiteWos = filtered;
+
+            if (!filtered.length) {
+                $('#woSitePreviewWrap').hide();
+                autoFillUrutan();
+                return;
+            }
+
+            autoFillUrutan();
+
+            var TH = 'style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:4px 10px;color:#64748b;font-weight:600;white-space:nowrap;border-bottom:1px solid #dbeafe;"';
+            var rows = filtered.map(function(wo) {
+                var badge = '';
+                if (wo.interval_bulan && wo.no_urut_period) {
+                    var lbl = WO_INTERVAL_LABELS[wo.interval_bulan] || (wo.interval_bulan + ' bln');
+                    badge = '<span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;'
+                          + 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;white-space:nowrap;'
+                          + 'display:inline-flex;align-items:center;gap:4px;">'
+                          + '<i class="fa-solid fa-calendar-days" style="font-size:9px;"></i>'
+                          + lbl + ' ke-' + wo.no_urut_period + '</span>';
+                }
+                var fmtWoDate = function(d) {
+                    if (!d) return '<span style="color:#94a3b8;">—</span>';
+                    var p = d.substring(0,10).split('-');
+                    var months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
+                    return parseInt(p[2]) + '-' + months[parseInt(p[1])-1] + '-' + p[0];
+                };
+                return '<tr>'
+                    + '<td style="padding:4px 10px;white-space:nowrap;font-size:12px;font-weight:600;color:#1d4ed8;">' + (wo.no_wo || '—') + '</td>'
+                    + '<td style="padding:4px 10px;font-size:12px;color:#374151;">' + (wo.judul_pekerjaan || '—') + '</td>'
+                    + '<td style="padding:4px 10px;white-space:nowrap;font-size:12px;color:#374151;">' + fmtWoDate(wo.tanggal_mulai) + '</td>'
+                    + '<td style="padding:4px 10px;white-space:nowrap;font-size:12px;color:#374151;">' + fmtWoDate(wo.tanggal_selesai) + '</td>'
+                    + '<td style="padding:4px 10px;">' + badge + '</td>'
+                    + '</tr>';
+            }).join('');
+
+            var tableHtml = '<div id="woSitePreviewList" style="display:none;margin-top:8px;">'
+                + '<div class="table-responsive">'
+                + '<table style="width:100%;border-collapse:collapse;">'
+                + '<thead><tr>'
+                + '<th ' + TH + '>No WO</th>'
+                + '<th ' + TH + '>Judul Pekerjaan</th>'
+                + '<th ' + TH + '>Tgl Mulai</th>'
+                + '<th ' + TH + '>Tgl Selesai</th>'
+                + '<th ' + TH + '>Periode</th>'
+                + '</tr></thead>'
+                + '<tbody>' + rows + '</tbody>'
+                + '</table></div></div>';
+
+            $('#woSitePreviewContent').html(
+                '<div style="background:#f0f7ff;border:1px solid #bcd0f8;border-radius:8px;padding:8px 14px;">'
+                + '<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" id="woSitePreviewToggle">'
+                + '<span style="font-size:11px;font-weight:700;color:#1a5fbe;text-transform:uppercase;letter-spacing:.5px;">'
+                + '<i class="fa-solid fa-briefcase me-1"></i>'
+                + 'WO yang sudah ada di lokasi ini (' + filtered.length + ')</span>'
+                + '<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;" title="Tampilkan / Sembunyikan">'
+                + '<i class="fa-solid fa-chevron-down"></i></button>'
+                + '</div>'
+                + tableHtml
+                + '</div>'
+            );
+        }).fail(function() {
+            $('#woSitePreviewWrap').hide();
+        });
+    }
+
+    function getMaxTanggalSelesai() {
+        if (!currentSiteWos.length) return null;
+        var max = null;
+        currentSiteWos.forEach(function (wo) {
+            if (wo.tanggal_selesai) {
+                if (!max || wo.tanggal_selesai > max) max = wo.tanggal_selesai;
+            }
+        });
+        return max;
+    }
+
+    function validateTanggalMulai() {
+        var val = $("input[name='tanggal_mulai']").val();
+        $('#tanggalMulaiError').remove();
+        if (!val || !currentSiteWos.length) return true;
+        var max = getMaxTanggalSelesai();
+        if (!max) return true;
+        if (val <= max) {
+            var maxFmt = max.substring(0,10).split('-').reverse().join('-');
+            $("input[name='tanggal_mulai']").after(
+                '<div id="tanggalMulaiError" class="text-danger mt-1" style="font-size:12px;">' +
+                '<i class="fa-solid fa-circle-exclamation me-1"></i>' +
+                'Tanggal mulai harus setelah ' + maxFmt + ' (tanggal selesai WO terakhir di lokasi ini)</div>'
+            );
+            return false;
+        }
+        return true;
+    }
+
+    $(document).on('change', "input[name='tanggal_mulai']", function () {
+        // validateTanggalMulai dan validateTanggalSelesai sengaja tidak dijalankan
+        // karena tanggal mulai/selesai boleh sama atau lebih kecil
+    });
+
+    function validateTanggalSelesai() {
+        var mulai   = $("input[name='tanggal_mulai']").val();
+        var selesai = $("input[name='tanggal_selesai']").val();
+        $('#tanggalSelesaiError').remove();
+        if (!mulai || !selesai) return true;
+        if (selesai < mulai) {
+            $("input[name='tanggal_selesai']").after(
+                '<div id="tanggalSelesaiError" class="text-danger mt-1" style="font-size:12px;">' +
+                '<i class="fa-solid fa-circle-exclamation me-1"></i>' +
+                'Tanggal selesai tidak boleh lebih kecil dari tanggal mulai</div>'
+            );
+            return false;
+        }
+        return true;
+    }
+
+    $(document).on('change', "input[name='tanggal_selesai']", function () {
+        // validateTanggalSelesai sengaja tidak dijalankan
+    });
+
+    $('#workOrderForm').on('submit', function (e) {
+        var errors = [];
+
+        if (!$("select[name='interval_bulan']").val()) errors.push('Frekuensi wajib dipilih');
+        if ($("select[name='interval_bulan']").val() && !$("input[name='no_urut_period']").val()) errors.push('Urutan ke- wajib diisi');
+        if (!$("input[name='tanggal_mulai']").val())  errors.push('Tanggal Mulai wajib diisi');
+        if (!$("input[name='tanggal_selesai']").val()) errors.push('Tanggal Selesai wajib diisi');
+        if (!$("select[name='pic_pekerjaan']").val()) errors.push('PIC Pekerjaan wajib dipilih');
+
+        if (errors.length) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            Swal.fire({
+                icon: 'warning',
+                title: 'Periksa kembali isian',
+                html: errors.map(function(m) { return '• ' + m; }).join('<br>'),
+            });
+        }
+    });
+
     submitCreateForm({
         formId: "#workOrderForm",
         url: "{{ url('work-orders') }}",
-        redirect: "{{ url('work-orders') }}",
+        redirect: preselectSoId ? null : "{{ url('work-orders') }}",
+        onSuccess: preselectSoId ? function () {
+            localStorage.setItem('wo_created', JSON.stringify({ id_so: preselectSoId, ts: Date.now() }));
+            var inIframe = window.self !== window.top;
+            if (!inIframe) {
+                if (window.opener && !window.opener.closed) window.opener.focus();
+                setTimeout(function () { window.close(); }, 800);
+            }
+        } : null,
     });
 
 </script>

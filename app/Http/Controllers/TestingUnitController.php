@@ -25,20 +25,16 @@ class TestingUnitController extends Controller
 
     public function data()
     {
-// dd(
-//     DB::table('business_relation_sites')
-// ->where('is_aktif',"=","0")
-//     ->count());
-// dd(DB::table('testing_units')->select('kode', 'judul_indonesia')->get(), DB::table('testing_units')->count());
-
-        $query = DB::table('testing_units')->select([
-            'id_testing_unit',
-            'kode',
-            'judul_indonesia',
-            'judul_inggris',
-            'keterangan',
-            'created_at'
-        ]);
+        $query = DB::table('testing_units')
+            ->whereNull('deleted_at')
+            ->select([
+                'id_testing_unit',
+                'kode',
+                'judul_indonesia',
+                'judul_inggris',
+                'keterangan',
+                'created_at'
+            ]);
 
         return DataTables::of($query)
             ->addIndexColumn()
@@ -93,7 +89,10 @@ class TestingUnitController extends Controller
 
     public function show($id)
     {
-        $testingUnit = DB::table('testing_units')->where('id_testing_unit', $id)->first();
+        $testingUnit = DB::table('testing_units')
+            ->where('id_testing_unit', $id)
+            ->whereNull('deleted_at')
+            ->first();
         if (!$testingUnit) {
             return response()->json(['message' => 'Testing unit tidak ditemukan'], 404);
         }
@@ -157,7 +156,15 @@ class TestingUnitController extends Controller
 
     public function destroy($id)
     {
-        DB::table('testing_units')->where('id_testing_unit', $id)->delete();
+        $before = DB::table('testing_units')->where('id_testing_unit', $id)->get()->toJson();
+
+        DB::table('testing_units')->where('id_testing_unit', $id)->update([
+            'deleted_at' => now(),
+        ]);
+
+        $after = DB::table('testing_units')->where('id_testing_unit', $id)->get()->toJson();
+        saveAudit('testing_units', $id, 'delete', $before, $after);
+
         return response()->json([
             'success' => true,
             'message' => 'Data berhasil dihapus'
@@ -169,8 +176,11 @@ class TestingUnitController extends Controller
         $search = $request->q;
 
         $data = DB::table('testing_units')
-            ->where('kode', 'like', "%{$search}%")
-            ->orWhere('judul_indonesia', 'like', "%{$search}%")
+            ->whereNull('deleted_at')
+            ->where(function ($q) use ($search) {
+                $q->where('kode', 'like', "%{$search}%")
+                  ->orWhere('judul_indonesia', 'like', "%{$search}%");
+            })
             ->limit(10)
             ->get();
 
@@ -189,6 +199,7 @@ class TestingUnitController extends Controller
         $search = $request->q;
 
         $data = DB::table('testing_units')
+            ->whereNull('deleted_at')
             ->where('id_testing_unit', $search)
             ->limit(10)
             ->get();
@@ -207,6 +218,7 @@ class TestingUnitController extends Controller
     {
         $data = DB::table('testing_units')
             ->where('id_testing_unit', $id)
+            ->whereNull('deleted_at')
             ->first();
 
         if (!$data) {

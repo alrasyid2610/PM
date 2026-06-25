@@ -87,7 +87,9 @@
     submitCreateForm({
         formId: "#testingMatriksSampleForm",
         url: "{{ route('testing-matriks-samples.store') }}",
-        redirect: "{{ route('testing-matriks-samples.index') }}",
+        onSuccess: function (res) {
+            window.location.href = "{{ route('testing-matriks-samples.index') }}?open=" + res.id;
+        },
     });
 </script>
 @endsection

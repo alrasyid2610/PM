@@ -17,8 +17,7 @@ const WilayahEngine = {
         return this.fetch("/wilayah/children?kode=" + encodeURIComponent(kode));
     },
 
-    populate(selector, data, selectedValue = "") {
-        let $el = $(selector);
+    populate($el, data, selectedValue = "") {
         $el.empty();
         $el.append(`<option value="">-- Pilih --</option>`);
         data.forEach((item) => {
@@ -40,39 +39,57 @@ const WilayahEngine = {
         return found ? found.id : null;
     },
 
+    // Tandai select sudah di-populate agar tidak fetch ulang
+    _markLoaded($el) {
+        $el.attr("data-wilayah-loaded", "1");
+    },
+    _isLoaded($el) {
+        return $el.attr("data-wilayah-loaded") === "1";
+    },
+
     async init(container = "#detailContent") {
         const self = this;
         const s2 = { width: "100%", dropdownParent: $(container) };
 
-        $(`${container} .wilayah-provinsi`).select2(s2);
-        $(`${container} .wilayah-kota`).select2(s2);
-        $(`${container} .wilayah-kecamatan`).select2(s2);
-        $(`${container} .wilayah-kelurahan`).select2(s2);
+        const $provinsi  = $(`${container} .wilayah-provinsi`);
+        const $kota      = $(`${container} .wilayah-kota`);
+        const $kecamatan = $(`${container} .wilayah-kecamatan`);
+        const $kelurahan = $(`${container} .wilayah-kelurahan`);
 
-        let provinsiData = await self.fetchProvinces();
-        let selProvinsi = $(`${container} .wilayah-provinsi`).data("value");
-        self.populate(`${container} .wilayah-provinsi`, provinsiData, selProvinsi);
+        if (!$provinsi.hasClass("select2-hidden-accessible"))  $provinsi.select2(s2);
+        if (!$kota.hasClass("select2-hidden-accessible"))      $kota.select2(s2);
+        if (!$kecamatan.hasClass("select2-hidden-accessible")) $kecamatan.select2(s2);
+        if (!$kelurahan.hasClass("select2-hidden-accessible")) $kelurahan.select2(s2);
 
+        // Jika ada pre-selected value, load chain secara sequential (untuk edit mode)
+        const selProvinsi = $provinsi.data("value");
         if (selProvinsi) {
-            let provCode = self.getCodeByName(provinsiData, selProvinsi);
+            const provinsiData = await self.fetchProvinces();
+            self.populate($provinsi, provinsiData, selProvinsi);
+            self._markLoaded($provinsi);
+
+            const provCode = self.getCodeByName(provinsiData, selProvinsi);
             if (provCode) {
-                let kotaData = await self.fetchChildren(provCode);
-                let selKota = $(`${container} .wilayah-kota`).data("value");
-                self.populate(`${container} .wilayah-kota`, kotaData, selKota);
+                const kotaData = await self.fetchChildren(provCode);
+                const selKota  = $kota.data("value");
+                self.populate($kota, kotaData, selKota);
+                self._markLoaded($kota);
 
                 if (selKota) {
-                    let kotaCode = self.getCodeByName(kotaData, selKota);
+                    const kotaCode = self.getCodeByName(kotaData, selKota);
                     if (kotaCode) {
-                        let kecData = await self.fetchChildren(kotaCode);
-                        let selKec = $(`${container} .wilayah-kecamatan`).data("value");
-                        self.populate(`${container} .wilayah-kecamatan`, kecData, selKec);
+                        const kecData = await self.fetchChildren(kotaCode);
+                        const selKec  = $kecamatan.data("value");
+                        self.populate($kecamatan, kecData, selKec);
+                        self._markLoaded($kecamatan);
 
                         if (selKec) {
-                            let kecCode = self.getCodeByName(kecData, selKec);
+                            const kecCode = self.getCodeByName(kecData, selKec);
                             if (kecCode) {
-                                let kelData = await self.fetchChildren(kecCode);
-                                let selKel = $(`${container} .wilayah-kelurahan`).data("value");
-                                self.populate(`${container} .wilayah-kelurahan`, kelData, selKel);
+                                const kelData = await self.fetchChildren(kecCode);
+                                const selKel  = $kelurahan.data("value");
+                                self.populate($kelurahan, kelData, selKel);
+                                self._markLoaded($kelurahan);
                             }
                         }
                     }
@@ -80,40 +97,63 @@ const WilayahEngine = {
             }
         }
 
-        self.bindEvents(container);
+        self.bindEvents($provinsi, $kota, $kecamatan, $kelurahan);
     },
 
-    bindEvents(container = "#detailContent") {
+    bindEvents($provinsi, $kota, $kecamatan, $kelurahan) {
         const self = this;
 
-        $(document)
-            .off("change", `${container} .wilayah-provinsi`)
-            .on("change", `${container} .wilayah-provinsi`, async function () {
-                let code = $(this).find(":selected").data("code");
-                self.reset(`${container} .wilayah-kota`, `${container} .wilayah-kecamatan`, `${container} .wilayah-kelurahan`);
-                if (!code) return;
-                let data = await self.fetchChildren(code);
-                self.populate(`${container} .wilayah-kota`, data);
+        function lazyBind($el, fetchFn) {
+            $el.off("select2:opening.wilayah").on("select2:opening.wilayah", function (e) {
+                if (self._isLoaded($el)) return;
+                e.preventDefault();
+                $("#global-loader").fadeIn(150);
+                fetchFn().then(function (data) {
+                    const sel = $el.data("value") || $el.val();
+                    self.populate($el, data, sel);
+                    self._markLoaded($el);
+                    $("#global-loader").fadeOut(200);
+                    $el.select2("open");
+                }).catch(function () {
+                    $("#global-loader").fadeOut(200);
+                });
             });
+        }
 
-        $(document)
-            .off("change", `${container} .wilayah-kota`)
-            .on("change", `${container} .wilayah-kota`, async function () {
-                let code = $(this).find(":selected").data("code");
-                self.reset(`${container} .wilayah-kecamatan`, `${container} .wilayah-kelurahan`);
-                if (!code) return;
-                let data = await self.fetchChildren(code);
-                self.populate(`${container} .wilayah-kecamatan`, data);
-            });
+        lazyBind($provinsi, () => self.fetchProvinces());
+        lazyBind($kota, () => {
+            const code = $provinsi.find(":selected").attr("data-code");
+            return code ? self.fetchChildren(code) : Promise.resolve([]);
+        });
+        lazyBind($kecamatan, () => {
+            const code = $kota.find(":selected").attr("data-code");
+            return code ? self.fetchChildren(code) : Promise.resolve([]);
+        });
+        lazyBind($kelurahan, () => {
+            const code = $kecamatan.find(":selected").attr("data-code");
+            return code ? self.fetchChildren(code) : Promise.resolve([]);
+        });
 
-        $(document)
-            .off("change", `${container} .wilayah-kecamatan`)
-            .on("change", `${container} .wilayah-kecamatan`, async function () {
-                let code = $(this).find(":selected").data("code");
-                self.reset(`${container} .wilayah-kelurahan`);
-                if (!code) return;
-                let data = await self.fetchChildren(code);
-                self.populate(`${container} .wilayah-kelurahan`, data);
-            });
+        // Reset downstream saat pilihan berubah
+        $provinsi.off("change.wilayah").on("change.wilayah", function () {
+            $kota.empty().append('<option value="">-- Pilih --</option>').trigger("change");
+            $kecamatan.empty().append('<option value="">-- Pilih --</option>').trigger("change");
+            $kelurahan.empty().append('<option value="">-- Pilih --</option>').trigger("change");
+            $kota.removeAttr("data-wilayah-loaded");
+            $kecamatan.removeAttr("data-wilayah-loaded");
+            $kelurahan.removeAttr("data-wilayah-loaded");
+        });
+
+        $kota.off("change.wilayah").on("change.wilayah", function () {
+            $kecamatan.empty().append('<option value="">-- Pilih --</option>').trigger("change");
+            $kelurahan.empty().append('<option value="">-- Pilih --</option>').trigger("change");
+            $kecamatan.removeAttr("data-wilayah-loaded");
+            $kelurahan.removeAttr("data-wilayah-loaded");
+        });
+
+        $kecamatan.off("change.wilayah").on("change.wilayah", function () {
+            $kelurahan.empty().append('<option value="">-- Pilih --</option>').trigger("change");
+            $kelurahan.removeAttr("data-wilayah-loaded");
+        });
     },
 };

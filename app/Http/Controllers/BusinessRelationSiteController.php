@@ -54,6 +54,7 @@ class BusinessRelationSiteController extends Controller
             $sites->map(function ($site) {
                 return [
                     'id'                   => $site->id_site,
+                    'id_br'                => $site->id_br,
                     'text'                 => $site->nama_lokasi,
                     'nama_lokasi'          => $site->nama_lokasi,
                     'alamat_lengkap'       => $site->alamat_lengkap,

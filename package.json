@@ -4,13 +4,25 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "test:e2e": "node --test \"tests/e2e/**/*.test.js\"",
+        "test:e2e:headless": "set HEADLESS=1&& node --test \"tests/e2e/**/*.test.js\"",
+        "report:units": "set HEADLESS=1&& node tests/e2e/report/run-report.js testing-units",
+        "report:params": "set HEADLESS=1&& node tests/e2e/report/run-report.js testing-parameters",
+        "report:kelompok": "set HEADLESS=1&& node tests/e2e/report/run-report.js testing-kelompok-matriks-samples",
+        "report:matriks": "set HEADLESS=1&& node tests/e2e/report/run-report.js testing-matriks-samples",
+        "report:contacts": "set HEADLESS=1&& node tests/e2e/report/run-report.js business-relation-contacts",
+        "report:estates": "set HEADLESS=1&& node tests/e2e/report/run-report.js business-estates",
+        "report:buildings": "set HEADLESS=1&& node tests/e2e/report/run-report.js commercial-buildings",
+        "report:so": "set HEADLESS=1&& node tests/e2e/report/run-report.js sales-orders",
+        "report:wo": "set HEADLESS=1&& node tests/e2e/report/run-report.js work-orders"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
         "axios": "^1.11.0",
         "concurrently": "^9.0.1",
         "laravel-vite-plugin": "^2.0.0",
+        "selenium-webdriver": "^4.44.0",
         "tailwindcss": "^4.0.0",
         "vite": "^7.0.7"
     },

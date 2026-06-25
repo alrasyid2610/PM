@@ -1,522 +1,96 @@
-// let selectedRow = {
-//     no_so: null,
-//     id_so: null,
-// };
-
-// $(document).ready(function () {
-//     initDataTable(tableId);
-
-//     $(tableId)
-//         .find("tbody")
-//         .on("click", "tr", function () {
-//             if ($(event.target).closest("button").length) return;
-
-//             console.log("row clicked, show detail tab");
-//             const data = table.row(this).data();
-//             if (!data) return;
-
-//             console.log("Selected Row Data:", data);
-//             selectedRow.no_so = data.no_so;
-//             selectedRow.id_so = data.id_so;
-//             // console.log("Selected SO Number:", selectedRow.no_so);
-
-//             loadDetail(data.id_so);
-
-//             $(tableId + " tr").removeClass("table-active");
-//             $(this).addClass("table-active");
-
-//             // pindah ke tab Detail
-//             const detailTab = new bootstrap.Tab(
-//                 document.querySelector("#detail-tab"),
-//             );
-//             detailTab.show();
-//         });
-// });
-
-// function loadDetail(id_so) {
-//     $("#detailContent").html("Loading...");
-
-//     $.get(window.route.detail + id_so + "/detail", function (res) {
-//         console.log(res);
-
-//         $("#detailContent").html(`
-//                 <form class="row g-3" id="detailForm">
-
-//                     <div class="col-md-12">
-//                         <div class="d-flex justify-content-between align-items-center mb-2">
-//                             <h3>Sales Order</h3>
-//                             <div class="btn-group">
-//                                 <button
-//                                     class="btn btn-warning btn-sm btn-edit-context"
-//                                     data-br="${res.id_br}"
-//                                     data-site="${res.id_site}"
-//                                     title="Edit Business Relation">
-//                                     <i class="fa-solid fa-pen"></i>
-//                                 </button>
-//                             </div>
-
-//                         </div>
-
-//                         <div class="row mb-4">
-//                             <input type="hidden" name="_token" value="${window.route.csrf}">
-
-//                             <div class="col-md-12 col-lg-3 mb-3">
-//                                 <label class="form-label required">Tanggal SO</label>
-//                                 <input type="date" name="tanggal_so" class="form-control disabled" value="${res.tanggal_so}" required>
-//                             </div>
-
-//                             <div class="col-md-12 col-lg-3 mb-3">
-//                                 <label class="form-label required">No SO</label>
-//                                 <p class="text-muted form-control">${res.no_so}</p>
-//                             </div>
-
-//                             <div class="col-md-12 col-lg-6 mb-3">
-//                                 <label class="form-label required">Judul Order</label>
-//                                 <input type="text" name="judul_order" class="form-control disabled" value="${res.judul_order}" required>
-//                             </div>
-
-//                             <h6 class="fw-bold mb-1">PO</h6>
-//                             <div class="col-md-12 col-lg-3 mb-3">
-//                                 <label class="form-label">Tidak Ada PO</label>
-//                                 <select name="tidak_ada_po" class="form-select disabled">
-//                                     <option value="1">Ada PO</option>
-//                                     <option value="0">Tidak Ada PO</option>
-//                                 </select>
-//                             </div>
-
-//                             <div class="col-md-12 col-lg-3 mb-3">
-//                                 <label class="form-label">Tanggal PO</label>
-//                                 <input type="date" name="tanggal_po" class="form-control disabled" value="${res.tanggal_po}">
-//                             </div>
-
-//                             <div class="col-md-12 col-lg-6 mb-3">
-//                                 <label class="form-label">No PO</label>
-//                                 <input type="text" name="no_po" class="form-control disabled" value="${res.no_po}">
-//                             </div>
-
-//                             <h6 class="fw-bold mb-1">Delivery</h6>
-
-//                             <div class="col-md-12 col-lg-3 mb-3">
-//                                 <label class="form-label">Tanggal Mulai</label>
-//                                 <input type="date" name="tanggal_mulai" class="form-control disabled" value="${res.tanggal_mulai}">
-//                             </div>
-
-//                             <div class="col-md-12 col-lg-3 mb-3">
-//                                 <label class="form-label">Tanggal Selesai</label>
-//                                 <input type="date" name="tanggal_selesai" class="form-control disabled" value="${res.tanggal_selesai}">
-//                             </div>
-
-//                             <div class="col-md-12 col-lg-6 mb-3">
-//                                 <label class="form-label">Office</label>
-//                                 <select name="id_office" class="form-select disabled">
-//                                     <option value="">Pilih Office</option>
-//                                     <option value="1">Pramatek Jakarta</option>
-//                                     <option value="2">Pramatek Bandung</option>
-//                                 </select>
-//                             </div>
-
-//                             <h6 class="fw-bold mb-1">Pelanggan</h6>
-
-//                             <div class="col-md-12 col-lg-4 mb-3">
-//                                 <label class="form-label required">Pelanggan</label>
-//                                 <select name="id_pelanggan" id="id_pelanggan" class="form-select disabled" required>
-//                                     <option value="">Pilih Pelanggan</option>
-//                                 </select>
-//                             </div>
-
-//                             <div class="col-md-12 col-lg-4 mb-3">
-//                                 <label class="form-label">Site</label>
-//                                 <select name="id_site_pelanggan" id="id_site_pelanggan" class="form-select disabled">
-//                                     <option value="">Pilih Site</option>
-//                                 </select>
-//                             </div>
-
-//                             <div class="col-md-12 col-lg-4 mb-3">
-//                                 <label class="form-label">PIC</label>
-//                                 <select name="id_pic_pelanggan" id="id_pic_pelanggan" class="form-select disabled">
-//                                     <option value="">Pilih PIC</option>
-//                                 </select>
-//                             </div>
-
-//                             <!-- ================= Delivery ================= -->
-//                             <h6 class="fw-bold mb-1">Delivery</h6>
-
-//                             <div class="col-md-12 col-lg-4 mb-3">
-//                                 <label class="form-label">Pelanggan</label>
-//                                 <select name="id_pelanggan_delivery" id="id_pelanggan_delivery" class="form-select disabled" required>
-//                                     <option value="">Pilih Pelanggan</option>
-//                                 </select>
-//                             </div>
-
-//                             <div class="col-md-12 col-lg-4 mb-3">
-//                                 <label class="form-label">Site</label>
-//                                 <select name="id_site_pelanggan_delivery" id="id_site_pelanggan_delivery" class="form-select disabled">
-//                                     <option value="">Pilih Site</option>
-//                                 </select>
-//                             </div>
-
-//                             <div class="col-md-12 col-lg-4 mb-3">
-//                                 <label class="form-label">PIC</label>
-//                                 <select name="id_pic_pelanggan_delivery" id="id_pic_pelanggan_delivery" class="form-select disabled">
-//                                     <option value="">Pilih PIC</option>
-//                                 </select>
-//                             </div>
-
-//                             <!-- ================= PAYMENT ================= -->
-//                             <h6 class="fw-bold mb-1">Payment</h6>
-
-//                             <div class="col-md-12 col-lg-4 mb-3">
-//                                 <label class="form-label">Pelanggan</label>
-//                                 <select name="id_pelanggan_payment" id="id_pelanggan_payment" class="form-select disabled" required>
-//                                     <option value="">Pilih Pelanggan</option>
-//                                 </select>
-//                             </div>
-
-//                             <div class="col-md-12 col-lg-4 mb-3">
-//                                 <label class="form-label">Site</label>
-//                                 <select name="id_site_pelanggan_payment" id="id_site_pelanggan_payment" class="form-select disabled">
-//                                     <option value="">Pilih Site</option>
-//                                 </select>
-//                             </div>
-
-//                             <div class="col-md-12 col-lg-4 mb-3">
-//                                 <label class="form-label">PIC</label>
-//                                 <select name="id_pic_pelanggan_payment" id="id_pic_pelanggan_payment" class="form-select disabled">
-//                                     <option value="">Pilih PIC</option>
-//                                 </select>
-//                             </div>
-
-//                             <!-- ================= PIC INTERNAL ================= -->
-//                             <h6 class="fw-bold mb-1">PIC</h6>
-
-//                             <div class="col-md-12 col-lg-3 mb-3">
-//                                 <label class="form-label">PIC Input</label>
-//                                 <input type="text" name="pic_input" class="form-control disabled" value="${res.pic_input}">
-//                             </div>
-
-//                             <div class="col-md-12 col-lg-3 mb-3">
-//                                 <label class="form-label">PIC Order</label>
-//                                 <input type="text" name="pic_order" class="form-control disabled" value="${res.pic_order}">
-//                             </div>
-
-//                             <div class="col-md-12 col-lg-3 mb-3">
-//                                 <label class="form-label">Marketing Internal</label>
-//                                 <input type="text" name="pic_marketing_internal" class="form-control disabled" value="${res.pic_marketing_internal}">
-//                             </div>
-
-//                             <div class="col-md-12 col-lg-3 mb-3">
-//                                 <label class="form-label">Marketing Eksternal</label>
-//                                 <input type="text" name="pic_marketing_eksternal" class="form-control disabled" value="${res.pic_marketing_eksternal}">
-//                             </div>
-
-//                             <!-- ================= STATUS ================= -->
-//                             <h6 class="fw-bold mb-1">Status</h6>
-
-//                             <div class="col-md-12 col-lg-3 mb-3">
-//                                 <label class="form-label">Status</label>
-//                                 <input type="text" name="status" class="form-control disabled" value="${res.status}">
-//                             </div>
-
-//                             <div class="col-md-12 col-lg-9 mb-3">
-//                                 <label class="form-label">Keterangan Status</label>
-//                                 <textarea name="keterangan_status" class="form-control disabled" rows="2">${res.keterangan_status ?? ""}</textarea>
-//                             </div>
-
-//                             <div class="col-md-12 col-lg-12 mb-3">
-//                                 <label class="form-label">Keterangan</label>
-//                                 <textarea name="keterangan" class="form-control disabled" rows="3">${res.keterangan ?? ""}</textarea>
-//                             </div>
-
-//                         </div>
-
-//                     </div>
-
-//                 </form>
-//             `);
-
-//         $("#detailContent")
-//             .find("input, select, textarea")
-//             .prop("disabled", true);
-
-//         loadPelangganDetails(res);
-
-//         $("#id_pelanggan").on("select2:select", function (e) {
-//             var data = e.params.data;
-//             console.log("Data pelanggan yang dipilih:", data);
-//             console.log(data.id);
-
-//             $("select[name='id_pelanggan_delivery']")
-//                 .val(data.id)
-//                 .trigger("change");
-
-//             $("select[name='id_pelanggan_payment']")
-//                 .val(data.id)
-//                 .trigger("change");
-
-//             console.log(
-//                 $("select[name='id_pelanggan_delivery']").find(
-//                     "option[value='" + data.id + "']",
-//                 ).length,
-//             );
-
-//             $.ajax({
-//                 url: "/api/get-contact-site/" + data.id, // Kirim ID site yang dipilih
-//                 method: "GET",
-//                 success: function (response) {
-//                     console.log(
-//                         "Data kontak pelanggan berhasil dimuat:",
-//                         response,
-//                     );
-//                     $("#id_pic_pelanggan")
-//                         .empty()
-//                         .append('<option value="">Pilih PIC</option>'); // Reset options PIC pelanggan
-//                     $.each(response, function (index, contact) {
-//                         $("#id_pic_pelanggan").append(
-//                             new Option(contact.nama_pic, contact.id_contact),
-//                         );
-//                     });
-
-//                     $("#id_pic_pelanggan").select2({
-//                         placeholder: "Pilih PIC",
-//                         allowClear: true,
-//                     });
-
-//                     // Lakukan sesuatu dengan data kontak, misalnya tampilkan di form
-//                 },
-//                 error: function (xhr) {
-//                     Notify.error("Gagal memuat kontak pelanggan");
-//                 },
-//             });
-//         });
-
-//         $(".btn-edit-context").on("click", function (e) {
-//             e.preventDefault();
-//             const $btn = $(this);
-//             const isEditing = $btn.hasClass("editing");
-
-//             if (!isEditing) {
-//                 // Switch to edit mode
-//                 $("#detailContent")
-//                     .find("input, select, textarea")
-//                     .prop("disabled", false);
-
-//                 $("#detailContent")
-//                     .find("input, select, textarea")
-//                     .removeClass("disabled");
-
-//                 $btn.addClass("editing")
-//                     .removeClass("btn-warning")
-//                     .addClass("btn-secondary")
-//                     .html('<i class="fa-solid fa-times"></i>');
-
-//                 // Add save button
-//                 $btn.after(`
-//                 <button class="btn btn-success btn-sm btn-save-context ms-2" title="Simpan">
-//                 <i class="fa-solid fa-check"></i>
-//                 </button>
-//             `);
-
-//                 // SUBMIT FORM
-
-//                 $(".btn-save-context").on("click", function (e) {
-//                     e.preventDefault();
-//                     // Save logic here
-//                     console.log("Save clicked");
-//                     submitForm();
-//                 });
-//             } else {
-//                 // Cancel edit mode
-//                 $("#detailContent")
-//                     .find("input, select, textarea")
-//                     .prop("disabled", true);
-
-//                 $("#detailContent")
-//                     .find("input, select, textarea")
-//                     .addClass("disabled");
-
-//                 $btn.removeClass("editing")
-//                     .addClass("btn-warning")
-//                     .removeClass("btn-secondary")
-//                     .html('<i class="fa-solid fa-pen"></i>');
-
-//                 $(".btn-save-context").remove();
-//             }
-//         });
-//     });
-// }
-
-// function loadPelangganDetails(data) {
-//     // Console log untuk memastikan fungsi dipanggil
-//     console.log("Memuat data pelanggan...");
-
-//     $.ajax({
-//         url: "/api/get-data-br",
-//         method: "GET",
-//         success: function (response) {
-//             dataPelanggan = response;
-//             console.log(
-//                 "Data pelanggan busines relation berhasil dimuat dan select2 diisi.",
-//             );
-//             console.log("init select2");
-//             // Populate select2 for pelanggan
-//             $.each(dataPelanggan, function (index, item) {
-//                 $("select[name='id_pelanggan']").append(
-//                     new Option(item.text, item.id),
-//                 );
-//             });
-
-//             $.each(dataPelanggan, function (index, item) {
-//                 $("select[name='id_pelanggan_delivery']").append(
-//                     new Option(item.text, item.id),
-//                 );
-//             });
-
-//             $.each(dataPelanggan, function (index, item) {
-//                 $("select[name='id_pelanggan_payment']").append(
-//                     new Option(item.text, item.id),
-//                 );
-//             });
-
-//             // Initialize select2 for delivery and payment
-//             // Baru init select2 TANPA data:
-//             $("select[name='id_pelanggan']").select2({
-//                 placeholder: "Pilih Pelanggan",
-//                 allowClear: true,
-//             });
-
-//             $("select[name='id_pelanggan_delivery']").select2({
-//                 placeholder: "Pilih Pelanggan",
-//                 allowClear: true,
-//             });
-
-//             $("select[name='id_pelanggan_payment']").select2({
-//                 placeholder: "Pilih Pelanggan",
-//                 allowClear: true,
-//             });
-
-//             $("#id_pelanggan").val(data.id_pelanggan).trigger("change");
-//             $("#id_pelanggan_delivery")
-//                 .val(data.id_pelanggan_delivery)
-//                 .trigger("change");
-//             $("#id_pelanggan_payment")
-//                 .val(data.id_pelanggan_payment)
-//                 .trigger("change");
-
-//             console.log(
-//                 "Select2 berhasil diinisialisasi dengan data pelanggan.",
-//             );
-//         },
-//         error: function (xhr) {
-//             Notify.error("Gagal memuat detail pelanggan");
-//         },
-//     });
-
-//     $.ajax({
-//         url: "/api/get-data-site",
-//         method: "GET",
-//         success: function (response) {
-//             dataPelanggan = response;
-//             console.log("Data pelanggan berhasil dimuat dan select2 diisi.");
-
-//             console.log("init select2", response);
-
-//             // Populate select2 for pelanggan
-//             // Populate select2 for pelanggan
-//             $.each(dataPelanggan, function (index, item) {
-//                 $("select[name='id_site_pelanggan']").append(
-//                     new Option(item.nama_lokasi, item.id_site),
-//                 );
-//             });
-
-//             $.each(dataPelanggan, function (index, item) {
-//                 $("select[name='id_site_pelanggan_delivery']").append(
-//                     new Option(item.nama_lokasi, item.id_site),
-//                 );
-//             });
-
-//             $.each(dataPelanggan, function (index, item) {
-//                 $("select[name='id_site_pelanggan_payment']").append(
-//                     new Option(item.nama_lokasi, item.id_site),
-//                 );
-//             });
-
-//             // Initialize select2 for delivery and payment
-//             // Baru init select2 TANPA data:
-//             $("select[name='id_site_pelanggan']").select2({
-//                 placeholder: "Pilih Pelanggan",
-//                 allowClear: true,
-//             });
-
-//             $("select[name='id_site_pelanggan_delivery']").select2({
-//                 placeholder: "Pilih Pelanggan",
-//                 allowClear: true,
-//             });
-
-//             $("select[name='id_site_pelanggan_payment']").select2({
-//                 placeholder: "Pilih Pelanggan",
-//                 allowClear: true,
-//             });
-
-//             $("#id_site_pelanggan")
-//                 .val(data.id_site_pelanggan)
-//                 .trigger("change");
-//             $("#id_site_pelanggan_delivery")
-//                 .val(data.id_site_pelanggan_delivery)
-//                 .trigger("change");
-//             $("#id_site_pelanggan_payment")
-//                 .val(data.id_site_pelanggan_payment)
-//                 .trigger("change");
-
-//             console.log(
-//                 "Select2 berhasil diinisialisasi dengan data pelanggan.",
-//             );
-//         },
-//         error: function (xhr) {
-//             Notify.error("Gagal memuat detail pelanggan");
-//         },
-//     });
-// }
-
-// function submitForm(e) {
-//     const formData = $("#detailForm").serialize();
-//     console.log("Form data to submit:", formData);
-//     Notify.confirm("Simpan Data?", function () {
-//         $.ajax({
-//             url: window.route.update + selectedRow.id_so,
-//             method: "PUT",
-//             data: formData,
-//             success: function (response) {
-//                 Notify.success("Data berhasil diperbarui");
-//                 loadDetail(selectedRow.id_so);
-//                 // $("#modalEdit").modal("hide");
-//                 // reloadTable();
-//             },
-//             error: function (xhr) {
-//                 Notify.error("Gagal memperbarui data");
-//             },
-//         });
-//     });
-// }
-
 let page;
 let currentWosData = null;
-let woViewMode     = localStorage.getItem('wo_progress_view') || 'card';
+let currentSoId = null;
+
+const MONTH_SHORT = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "Mei",
+    "Jun",
+    "Jul",
+    "Agt",
+    "Sep",
+    "Okt",
+    "Nov",
+    "Des",
+];
+function fmtDate(str) {
+    if (!str) return "—";
+    var d = new Date(str);
+    if (isNaN(d)) return str;
+    return (
+        d.getDate() + "-" + MONTH_SHORT[d.getMonth()] + "-" + d.getFullYear()
+    );
+}
+
+window.addEventListener("storage", function (e) {
+    if (e.key === "wo_created" && e.newValue) {
+        try {
+            var data = JSON.parse(e.newValue);
+            var target = data.id_so || currentSoId;
+            if (target) loadWoProgress(target);
+            var modal = bootstrap.Modal.getInstance(
+                document.getElementById("modalCreateWo"),
+            );
+            if (modal) {
+                modal.hide();
+                document.getElementById("iframeCreateWo").src = "";
+            }
+        } catch (_) {}
+    }
+    if (e.key === "termin_created" && e.newValue) {
+        try {
+            var data = JSON.parse(e.newValue);
+            var target = data.id_so || currentSoId;
+            if (target) loadTerminList(target);
+            var modal = bootstrap.Modal.getInstance(
+                document.getElementById("modalCreateTermin"),
+            );
+            if (modal) {
+                modal.hide();
+                document.getElementById("iframeCreateTermin").src = "";
+            }
+        } catch (_) {}
+    }
+});
+
+$(document).on("click", ".btn-add-wo-modal", function () {
+    var soId = $(this).data("so-id");
+    document.getElementById("iframeCreateWo").src =
+        "/work-orders/create?id_so=" + soId + "&embed=1";
+    var modal = new bootstrap.Modal(document.getElementById("modalCreateWo"));
+    modal.show();
+});
+
+$(document).on("click", ".btn-add-termin-modal", function () {
+    var soId = $(this).data("so-id");
+    document.getElementById("iframeCreateTermin").src =
+        "/termin/create?id_so=" + soId + "&embed=1";
+    var modal = new bootstrap.Modal(
+        document.getElementById("modalCreateTermin"),
+    );
+    modal.show();
+});
 
 function loadWoProgress(id_so, onDone) {
-    $('#woProgressContent').html(
-        '<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>'
+    currentSoId = id_so;
+    $("#woProgressContent").html(
+        '<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>',
     );
 
-    $.get(window.route.woProgress + id_so + '/wo-progress', function (wos) {
+    $.get(window.route.woProgress + id_so + "/wo-progress", function (wos) {
         currentWosData = wos;
-        $('#woBadgeCount').text(wos ? wos.length : 0);
+        $("#woBadgeCount").text(wos ? wos.length : 0);
+        renderSoSummary(wos);
         renderWoProgressView(wos);
         if (onDone) onDone();
     }).fail(function () {
         currentWosData = null;
-        $('#woBadgeCount').text('!');
-        $('#woProgressContent').html(
-            '<div class="text-center text-danger py-3"><i class="fa-solid fa-circle-exclamation me-1"></i> Gagal memuat data</div>'
+        $("#woBadgeCount").text("!");
+        $("#woProgressContent").html(
+            '<div class="text-center text-danger py-3"><i class="fa-solid fa-circle-exclamation me-1"></i> Gagal memuat data</div>',
         );
         if (onDone) onDone();
     });
@@ -526,574 +100,630 @@ function filterWos(wos, term) {
     if (!term) return wos;
     const lower = term.toLowerCase();
     return (wos || []).filter(function (wo) {
-        if ((wo.no_wo ?? '').toLowerCase().includes(lower)) return true;
-        if (wo.fwos && wo.fwos.some(f => (f.no_fwo ?? '').toLowerCase().includes(lower))) return true;
+        if ((wo.no_wo ?? "").toLowerCase().includes(lower)) return true;
+        if ((wo.judul_pekerjaan ?? "").toLowerCase().includes(lower))
+            return true;
         return false;
     });
 }
 
+function renderSoSummary(wos) {
+    const totalWo = wos.length;
+    const totalFwo = wos.reduce(function (s, w) {
+        return s + (w.fwo_count || 0);
+    }, 0);
+    const totalBoqQty = wos.reduce(function (s, w) {
+        return s + (w.total_boq_qty || 0);
+    }, 0);
+    const totalFwoQty = wos.reduce(function (s, w) {
+        return s + (w.total_fwo_qty || 0);
+    }, 0);
+    const totalHarga = wos.reduce(function (s, w) {
+        return s + (w.total_boq_amount || 0);
+    }, 0);
+
+    const pct =
+        totalBoqQty > 0 ? Math.round((totalFwoQty / totalBoqQty) * 100) : 0;
+    const barColor = pct >= 100 ? "#16a34a" : pct > 0 ? "#d97706" : "#94a3b8";
+    const pctColor = pct >= 100 ? "#16a34a" : pct > 0 ? "#d97706" : "#94a3b8";
+
+    const harga =
+        totalHarga >= 1e9
+            ? "Rp " + (totalHarga / 1e9).toFixed(1) + " M"
+            : totalHarga >= 1e6
+              ? "Rp " + (totalHarga / 1e6).toFixed(1) + " jt"
+              : totalHarga > 0
+                ? "Rp " + Number(totalHarga).toLocaleString("en-US")
+                : "—";
+
+    const kpiCard = function (icon, iconBg, label, value) {
+        return `<div class="pm-kpi-card">
+            <div class="pm-kpi-icon" style="background:${iconBg};">
+                <i class="fa-solid ${icon}"></i>
+            </div>
+            <div>
+                <div class="pm-kpi-label">${label}</div>
+                <div class="pm-kpi-value">${value}</div>
+            </div>
+        </div>`;
+    };
+
+    const progressCard = `<div class="pm-kpi-card pm-kpi-card--progress">
+        <div class="pm-kpi-progress-header">
+            <span class="pm-kpi-label"><i class="fa-solid fa-chart-line me-1"></i>Progress Keseluruhan</span>
+            <span class="pm-kpi-pct" style="color:${pctColor};">${pct}%</span>
+        </div>
+        <div class="pm-kpi-bar-wrap">
+            <div class="pm-kpi-bar-fill" style="width:${pct}%;background:${barColor};"></div>
+        </div>
+        <div class="pm-kpi-progress-sub">${totalFwoQty} / ${totalBoqQty} qty terpenuhi</div>
+    </div>`;
+
+    $("#soSummaryCard").html(
+        kpiCard(
+            "fa-briefcase",
+            "var(--primary-500,#1a5fbe)",
+            "Total WO",
+            totalWo + " WO",
+        ) +
+            kpiCard(
+                "fa-hard-hat",
+                "var(--primary-700,#18386b)",
+                "Total FWO",
+                totalFwo + " FWO",
+            ) +
+            kpiCard(
+                "fa-layer-group",
+                "#0891b2",
+                "Total QTY",
+                totalBoqQty + " qty",
+            ) +
+            kpiCard("fa-tag", "#0f766e", "Total Nilai", harga) +
+            progressCard,
+    );
+}
+
 function renderWoProgressView(wos) {
-    const term     = (($('#woProgressSearch').val()) || '').trim();
+    const term = ($("#woProgressSearch").val() || "").trim();
     const filtered = filterWos(wos, term);
 
-    // Tampilkan/sembunyikan tombol clear
-    $('#btnClearWoSearch').toggleClass('d-none', !term);
+    $("#btnClearWoSearch").toggleClass("d-none", !term);
 
     if (!wos || !wos.length) {
-        $('#woProgressContent').html(
+        $("#woProgressContent").html(
             '<div class="text-center text-muted py-4">' +
-            '<i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>' +
-            'Belum ada Work Order untuk Sales Order ini</div>'
+                '<i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>' +
+                "Belum ada Work Order untuk Sales Order ini</div>",
         );
     } else if (!filtered.length) {
-        $('#woProgressContent').html(
+        $("#woProgressContent").html(
             '<div class="text-center text-muted py-4">' +
-            '<i class="fa-solid fa-magnifying-glass fa-2x d-block mb-2 opacity-25"></i>' +
-            'Tidak ditemukan hasil untuk <strong>&ldquo;' + escSo(term) + '&rdquo;</strong></div>'
+                '<i class="fa-solid fa-magnifying-glass fa-2x d-block mb-2 opacity-25"></i>' +
+                "Tidak ditemukan hasil untuk <strong>&ldquo;" +
+                escHtml(term) +
+                "&rdquo;</strong></div>",
         );
-    } else if (woViewMode === 'table') {
-        $('#woProgressContent').html(renderWoProgressTable(filtered));
     } else {
-        $('#woProgressContent').html(filtered.map(renderWoProgressCard).join(''));
+        $("#woProgressContent").html(renderWoProgressTable(filtered));
     }
-    syncToggleBtn();
 }
 
-function syncToggleBtn() {
-    const $btn = $('#btnToggleWoView');
-    if (woViewMode === 'table') {
-        $btn.html('<i class="fa-solid fa-grip"></i>').attr('title', 'Tampilan Kartu');
-    } else {
-        $btn.html('<i class="fa-solid fa-table-list"></i>').attr('title', 'Tampilan Tabel');
-    }
-}
+const SO_INTERVAL_LABELS = {
+    1: "Bulanan",
+    2: "Bimulanan",
+    3: "Triwulan",
+    4: "Caturwulan",
+    6: "Semester",
+    12: "Annual",
+};
 
 function renderWoProgressTable(wos) {
-    const rows = wos.map(function (wo) {
-        const pctStyle    = wo.progress_pct >= 100 ? 'background:#198754;' : wo.progress_pct > 0 ? 'background:#1d4ed8;' : 'background:#6c757d;';
-        const pctTxtColor = wo.progress_pct >= 100 ? '#198754' : wo.progress_pct > 0 ? '#1d4ed8' : '#6c757d';
-        const amount      = wo.total_boq_amount > 0 ? 'Rp ' + Number(wo.total_boq_amount).toLocaleString('en-US') : '—';
-        const subrowId    = 'fwo-sub-' + wo.id_wo;
-        const hasFwo      = wo.fwos && wo.fwos.length > 0;
+    // Level 1: kelompokkan per Site Pelanggan
+    const siteGroups = new Map();
+    wos.forEach(function (wo) {
+        const key = wo.nama_site_pelanggan || "—";
+        if (!siteGroups.has(key)) siteGroups.set(key, []);
+        siteGroups.get(key).push(wo);
+    });
 
-        // ── FWO sub-row content ──────────────────────────────────
-        const fwoSubRows = hasFwo ? wo.fwos.map(function (fwo) {
-            const tgl = fwo.tanggal_mulai ? fwo.tanggal_mulai.substring(0, 10) : '—';
-            return `<tr style="background:#f8fafc;">
-                <td style="padding:6px 10px;border-color:#e9ecef;">
-                    <a href="/fieldworks?open=${fwo.id_fwo}" target="_blank"
-                        class="fw-semibold text-decoration-none" style="color:#7c3aed;font-size:12px;">
-                        <i class="fa-solid fa-hard-hat me-1" style="font-size:11px;"></i>${escSo(fwo.no_fwo ?? '—')}
-                    </a>
-                </td>
-                <td style="padding:6px 10px;border-color:#e9ecef;font-size:12px;color:#64748b;">${tgl}</td>
-                <td style="padding:6px 10px;border-color:#e9ecef;">
-                    <span style="font-size:11px;background:#e9ecef;color:#495057;padding:2px 8px;border-radius:20px;white-space:nowrap;">
-                        ${fwo.boq_section_count} item &middot; ${fwo.total_qty} qty
-                    </span>
-                </td>
-                <td style="padding:6px 10px;border-color:#e9ecef;">
-                    <a href="/fieldworks?open=${fwo.id_fwo}" target="_blank"
-                        class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;" title="Buka detail FWO">
-                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                    </a>
-                </td>
-            </tr>`;
-        }).join('') : `<tr style="background:#f8fafc;">
-            <td colspan="4" class="text-muted text-center" style="padding:8px;font-size:12px;border-color:#e9ecef;">Belum ada FWO</td>
+    const TH =
+        'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';
+    const TD = 'style="padding:8px 12px;vertical-align:middle;"';
+
+    function buildRow(wo, idx) {
+        const periodeKe = wo.no_urut_period
+            ? wo.no_urut_period
+            : '<span style="color:#94a3b8;">—</span>';
+        return `<tr>
+            <td ${TD} style="text-align:center;color:#94a3b8;font-size:12px;">${idx}</td>
+            <td ${TD}>
+                <a href="/work-orders?open=${wo.id_wo}" class="pm-link-record" style="white-space:nowrap;">
+                    ${escHtml(wo.no_wo ?? "—")}
+                </a>
+            </td>
+            <td ${TD} style="color:#374151;">${escHtml(wo.judul_pekerjaan ?? "—")}</td>
+            <td ${TD} style="color:#64748b;">${wo.keterangan ? escHtml(wo.keterangan) : '<span style="color:#94a3b8;">—</span>'}</td>
+            <td ${TD} style="text-align:center;">${periodeKe}</td>
+            <td ${TD} style="text-align:center;color:#7c3aed;font-weight:600;">${wo.fwo_count}</td>
+            <td ${TD} style="text-align:center;white-space:nowrap;color:#374151;">${wo.tanggal_mulai ? fmtDate(wo.tanggal_mulai) : '<span style="color:#94a3b8;">—</span>'}</td>
+            <td ${TD} style="text-align:center;white-space:nowrap;color:#374151;">${wo.tanggal_selesai ? fmtDate(wo.tanggal_selesai) : '<span style="color:#94a3b8;">—</span>'}</td>
+            <td ${TD} style="text-align:center;white-space:nowrap;">
+                <a href="/work-orders?open=${wo.id_wo}"
+                    class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;" title="Buka detail WO">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 ms-1 btn-copy-wo"
+                    style="font-size:11px;" title="Salin WO ini" data-wo-id="${wo.id_wo}">
+                    <i class="fa-solid fa-copy"></i>
+                </button>
+            </td>
         </tr>`;
+    }
 
-        const fwoSubHtml = `<tr id="${subrowId}" style="display:none;">
-            <td colspan="6" style="padding:0;border-top:none;">
-                <div style="border-top:1px dashed #e2e8f0;margin:0 0 0 28px;">
-                    <table class="table table-sm mb-0" style="font-size:12px;">
-                        <thead style="background:#f1f5f9;">
+    function buildPeriodSection(list, interval) {
+        const label = interval
+            ? SO_INTERVAL_LABELS[interval] || interval + " bln"
+            : "Tidak Ada Periode";
+        const badgeColor = interval ? "#0d9488" : "#64748b";
+        const badgeBg = interval ? "#ccfbf1" : "#f1f5f9";
+        const badgeBorder = interval ? "#5eead4" : "#e2e8f0";
+
+        const rows = list
+            .map(function (wo, i) {
+                return buildRow(wo, i + 1);
+            })
+            .join("");
+
+        return `<div style="border-top:1px solid #e2e8f0;">
+            <div class="wo-period-header" style="display:flex;align-items:center;gap:8px;padding:8px 14px 8px 32px;background:#fafbfc;cursor:pointer;user-select:none;">
+                <i class="fa-solid fa-chevron-down" style="color:${badgeColor};font-size:10px;transition:transform .2s;transform:rotate(-90deg);"></i>
+                <i class="fa-solid fa-calendar-days" style="color:${badgeColor};font-size:11px;"></i>
+                <span style="font-size:12px;font-weight:700;color:${badgeColor};text-transform:uppercase;letter-spacing:.5px;">${escHtml(label)}</span>
+                <span style="font-size:11px;font-weight:700;padding:1px 8px;border-radius:20px;background:${badgeBg};color:${badgeColor};border:1px solid ${badgeBorder};">${list.length} WO</span>
+            </div>
+            <div class="wo-period-body" style="display:none;">
+                <div class="table-responsive" style="padding-left:32px;">
+                    <table class="table table-sm table-hover table-striped mb-0" style="font-size:13px;min-width:1000px;">
+                        <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
                             <tr>
-                                <th style="font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#94a3b8;padding:5px 10px;border-color:#e9ecef;">No FWO</th>
-                                <th style="font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#94a3b8;padding:5px 10px;border-color:#e9ecef;">Tanggal</th>
-                                <th style="font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#94a3b8;padding:5px 10px;border-color:#e9ecef;">Items</th>
-                                <th style="font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#94a3b8;padding:5px 10px;border-color:#e9ecef;"></th>
+                                <th ${TH} style="width:44px;text-align:center;white-space:nowrap;">No</th>
+                                <th ${TH} style="width:130px;white-space:nowrap;">No WO</th>
+                                <th ${TH} style="white-space:nowrap;">Judul Pekerjaan</th>
+                                <th ${TH} style="width:160px;white-space:nowrap;">Keterangan</th>
+                                <th ${TH} style="width:90px;text-align:center;white-space:nowrap;">Urutan ke-</th>
+                                <th ${TH} style="width:90px;text-align:center;white-space:nowrap;">Total FWO</th>
+                                <th ${TH} style="width:115px;text-align:center;white-space:nowrap;">Tgl Mulai</th>
+                                <th ${TH} style="width:115px;text-align:center;white-space:nowrap;">Tgl Selesai</th>
+                                <th ${TH} style="width:80px;text-align:center;white-space:nowrap;">Action</th>
                             </tr>
                         </thead>
-                        <tbody>${fwoSubRows}</tbody>
+                        <tbody>${rows}</tbody>
                     </table>
                 </div>
+            </div>
+        </div>`;
+    }
+
+    let items = "";
+    siteGroups.forEach(function (list, site) {
+        // Level 2: kelompokkan per Period (interval_bulan)
+        const periodGroups = new Map();
+        list.forEach(function (wo) {
+            const key = wo.interval_bulan || null;
+            if (!periodGroups.has(key)) periodGroups.set(key, []);
+            periodGroups.get(key).push(wo);
+        });
+
+        // Urutkan: interval_bulan bernilai dulu (kecil ke besar), null terakhir
+        const sortedPeriods = Array.from(periodGroups.entries()).sort(
+            function (a, b) {
+                if (a[0] === null) return 1;
+                if (b[0] === null) return -1;
+                return Number(a[0]) - Number(b[0]);
+            },
+        );
+
+        const periodSections = sortedPeriods
+            .map(function (entry) {
+                return buildPeriodSection(entry[1], entry[0]);
+            })
+            .join("");
+
+        items += `<div class="pm-accordion-item">
+            <div class="pm-accordion-header" aria-expanded="false">
+                <div class="pm-accordion-toggle">
+                    <i class="fa-solid fa-chevron-right pm-accordion-chevron"></i>
+                    <i class="fa-solid fa-location-dot" style="color:#1a56db;font-size:12px;flex-shrink:0;"></i>
+                    <span style="font-size:13px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(site)}</span>
+                </div>
+                <div class="pm-accordion-meta">
+                    <span class="pm-badge pm-badge--blue">${list.length} WO</span>
+                </div>
+            </div>
+            <div class="pm-accordion-collapse" style="display:none;">
+                <div class="pm-accordion-body" style="padding:0;">
+                    ${periodSections}
+                </div>
+            </div>
+        </div>`;
+    });
+
+    return `<div class="pm-accordion" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">${items}</div>`;
+}
+
+// Accordion toggle (grup Site Pelanggan pada tab Work Orders)
+$(document).on(
+    "click",
+    "#woProgressContent .pm-accordion-header",
+    function (e) {
+        if ($(e.target).closest("a, button").length) return;
+        const $header = $(this);
+        const $body = $header.next(".pm-accordion-collapse");
+        const isOpen = $header.attr("aria-expanded") === "true";
+        $header.attr("aria-expanded", !isOpen);
+        $body.slideToggle(150);
+    },
+);
+
+// Toggle period (sub-grup Period dalam site accordion)
+$(document).on("click", "#woProgressContent .wo-period-header", function (e) {
+    if ($(e.target).closest("a, button").length) return;
+    const $header = $(this);
+    const $body = $header.next(".wo-period-body");
+    const $chevron = $header.find(".fa-chevron-down");
+    const isOpen = $body.is(":visible");
+    $body.slideToggle(150);
+    $chevron.css("transform", isOpen ? "rotate(-90deg)" : "rotate(0deg)");
+});
+
+// ── Tab switch — show/hide action buttons ─────────────────────────────────────
+$(document).on(
+    "shown.bs.tab",
+    '#soDetailTabs button[data-bs-toggle="tab"]',
+    function (e) {
+        const target = $(e.target).data("bs-target");
+        $("#soTabActionsInfo, #soTabActionsWo, #soTabActionsTermin").addClass(
+            "d-none",
+        );
+        if (target === "#tabInfoSo")
+            $("#soTabActionsInfo").removeClass("d-none");
+        if (target === "#tabWo") $("#soTabActionsWo").removeClass("d-none");
+        if (target === "#tabTermin")
+            $("#soTabActionsTermin").removeClass("d-none");
+    },
+);
+
+// ── Load Termin ────────────────────────────────────────────────────────────────
+function loadTerminList(id_so, onDone) {
+    $("#terminContent").html(
+        '<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>',
+    );
+    $.get(window.route.terminBySo + id_so, function (data) {
+        $("#terminContent").html(renderTerminTable(data));
+        if (onDone) onDone();
+    }).fail(function () {
+        $("#terminContent").html(
+            '<div class="text-center text-danger py-3"><i class="fa-solid fa-circle-exclamation me-1"></i> Gagal memuat data</div>',
+        );
+        if (onDone) onDone();
+    });
+}
+
+function renderTerminTable(rows) {
+    if (!rows || !rows.length) {
+        return (
+            '<div class="text-center text-muted py-4">' +
+            '<i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>' +
+            "Belum ada Termin untuk Sales Order ini</div>"
+        );
+    }
+
+    const statusClass = {
+        pending: "pm-badge--pending",
+        proses: "pm-badge--proses",
+        selesai: "pm-badge--selesai",
+        siap_kirim: "pm-badge--selesai",
+    };
+    const statusLabel = {
+        pending: "Pending",
+        proses: "Proses",
+        selesai: "Selesai",
+        siap_kirim: "Siap Kirim",
+    };
+
+    const rows_html = rows
+        .map(function (t, idx) {
+            const cls = statusClass[t.status] || "pm-badge--pending";
+            const lbl = statusLabel[t.status] || t.status;
+            const badge = `<span class="pm-badge ${cls}">${lbl}</span>`;
+            const nilai = t.nilai
+                ? "Rp " + Number(t.nilai).toLocaleString("id-ID")
+                : "—";
+            const pct = t.persentase ? t.persentase + "%" : "—";
+            const tgl = t.tanggal ? t.tanggal.substring(0, 10) : "—";
+
+            return `<tr>
+            <td style="color:#94a3b8;text-align:center;">${idx + 1}</td>
+            <td><a href="/termin?open=${t.id_termin}" class="pm-link-record">${escHtml(t.no_termin ?? "—")}</a></td>
+            <td>${escHtml(t.nama ?? "—")}</td>
+            <td class="text-center">${pct}</td>
+            <td style="color:#1d4ed8;font-weight:600;">${nilai}</td>
+            <td>${tgl}</td>
+            <td>${badge}</td>
+            <td class="text-center">
+                <a href="/termin?open=${t.id_termin}"
+                    class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;" title="Buka detail Termin">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                </a>
             </td>
         </tr>`;
-
-        const woRow = `<tr class="wo-table-row" data-subrow="${subrowId}" style="cursor:pointer;">
-            <td class="align-middle">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="fa-solid fa-chevron-right wo-table-chevron text-muted" style="font-size:10px;transition:transform .2s;"></i>
-                    <a href="/work-orders?open=${wo.id_wo}" target="_blank"
-                        class="fw-semibold text-decoration-none" style="color:#1d4ed8;"
-                        onclick="event.stopPropagation();">
-                        ${escSo(wo.no_wo ?? '—')}
-                    </a>
-                </div>
-            </td>
-            <td class="align-middle">${escSo(wo.judul_pekerjaan ?? '—')}</td>
-            <td class="align-middle">
-                <span style="font-size:11px;background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:20px;white-space:nowrap;">
-                    <i class="fa-solid fa-hard-hat me-1"></i>${wo.fwo_count}
-                </span>
-            </td>
-            <td class="align-middle fw-semibold" style="color:#1d4ed8;white-space:nowrap;">${amount}</td>
-            <td class="align-middle" style="min-width:160px;">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="progress flex-grow-1" style="height:6px;">
-                        <div class="progress-bar" style="width:${wo.progress_pct}%;${pctStyle}transition:width .4s;"></div>
-                    </div>
-                    <span style="font-size:11px;font-weight:600;color:${pctTxtColor};white-space:nowrap;">${wo.progress_pct}%</span>
-                </div>
-                <div class="text-muted" style="font-size:11px;margin-top:2px;">${wo.total_fwo_qty} / ${wo.total_boq_qty} qty</div>
-            </td>
-            <td class="align-middle" onclick="event.stopPropagation();">
-                <div class="d-flex gap-1">
-                    <a href="/boq/create?id_wo=${wo.id_wo}" target="_blank"
-                        class="btn btn-sm btn-outline-success py-0 px-2" style="font-size:11px;" title="Tambah BOQ">
-                        <i class="fa-solid fa-plus" style="font-size:9px;"></i><i class="fa-solid fa-layer-group ms-1"></i>
-                    </a>
-                    <a href="/fieldworks/create?id_wo=${wo.id_wo}" target="_blank"
-                        class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:11px;" title="Tambah FWO">
-                        <i class="fa-solid fa-plus" style="font-size:9px;"></i><i class="fa-solid fa-hard-hat ms-1"></i>
-                    </a>
-                </div>
-            </td>
-        </tr>${fwoSubHtml}`;
-
-        return woRow;
-    }).join('');
+        })
+        .join("");
 
     return `<div class="table-responsive">
-        <table class="table table-sm table-hover mb-0" style="font-size:13px;">
-            <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+        <table class="pm-table">
+            <thead>
                 <tr>
-                    <th class="text-muted fw-semibold py-2" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;">No WO</th>
-                    <th class="text-muted fw-semibold py-2" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Judul Pekerjaan</th>
-                    <th class="text-muted fw-semibold py-2" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;">FWO</th>
-                    <th class="text-muted fw-semibold py-2" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Total BOQ</th>
-                    <th class="text-muted fw-semibold py-2" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Progress</th>
-                    <th class="text-muted fw-semibold py-2" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Aksi</th>
+                    <th style="width:40px;text-align:center;">No</th>
+                    <th style="min-width:120px;">No Termin</th>
+                    <th style="min-width:200px;">Nama</th>
+                    <th style="min-width:90px;text-align:center;">%</th>
+                    <th style="min-width:130px;">Nilai</th>
+                    <th style="min-width:110px;">Tanggal Selesai</th>
+                    <th style="min-width:100px;">Status</th>
+                    <th style="min-width:70px;">Aksi</th>
                 </tr>
             </thead>
-            <tbody>${rows}</tbody>
+            <tbody>${rows_html}</tbody>
         </table>
     </div>`;
 }
 
-function renderWoProgressCard(wo) {
-    const pctColor      = wo.progress_pct >= 100 ? 'bg-success' : wo.progress_pct > 0 ? 'bg-primary' : 'bg-secondary';
-    const hasBoq        = wo.sections && wo.sections.length > 0;
-    const hasFwo        = wo.fwos && wo.fwos.length > 0;
-    const collapseId    = 'wo-collapse-' + wo.id_wo;
-
-    const pctBadgeStyle = wo.progress_pct >= 100
-        ? 'background:#198754;color:#fff;'
-        : wo.progress_pct > 0
-            ? 'background:#dbeafe;color:#1d4ed8;'
-            : 'background:#e9ecef;color:#495057;';
-
-    // ── BOQ Section rows ────────────────────────────────────────────
-    const sectionsHtml = hasBoq ? wo.sections.map(function (sec) {
-        const secColor   = sec.progress_pct >= 100 ? 'bg-success' : sec.progress_pct > 0 ? 'bg-primary' : 'bg-secondary';
-        const satuan     = sec.satuan ? escSo(sec.satuan) : '';
-        const done       = sec.progress_pct >= 100
-            ? '<i class="fa-solid fa-circle-check text-success flex-shrink-0 ms-2" style="font-size:13px;"></i>' : '';
-        const priceHtml  = sec.harga > 0
-            ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">
-                <span>Rp ${Number(sec.harga).toLocaleString('en-US')}${satuan ? ' / ' + satuan : ''}</span>
-                <span style="margin:0 4px;">×</span>
-                <span>${sec.boq_qty}${satuan ? ' ' + satuan : ''}</span>
-                <span style="margin:0 4px;">=</span>
-                <strong style="color:#1d4ed8;">Rp ${Number(sec.total_amount).toLocaleString('en-US')}</strong>
-               </div>`
-            : '';
-        return `<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px solid #f1f5f9;">
-            <div class="flex-grow-1" style="min-width:0;">
-                <div class="d-flex justify-content-between align-items-start mb-1">
-                    <div>
-                        <div class="small fw-semibold">${escSo(sec.point_name)}</div>
-                        ${priceHtml}
-                    </div>
-                    <span class="small text-muted flex-shrink-0 ms-2" style="padding-top:1px;">${sec.fwo_qty} / ${sec.boq_qty}${satuan ? ' ' + satuan : ''}</span>
-                </div>
-                <div class="progress" style="height:5px;">
-                    <div class="progress-bar ${secColor}" style="width:${sec.progress_pct}%;transition:width .4s;"></div>
-                </div>
-            </div>${done}
-        </div>`;
-    }).join('') : '<div class="text-muted small py-2 text-center">Belum ada item BOQ</div>';
-
-    // ── FWO list rows ───────────────────────────────────────────────
-    const fwoListHtml = hasFwo ? wo.fwos.map(function (fwo) {
-        const tgl = fwo.tanggal_mulai
-            ? fwo.tanggal_mulai.substring(0, 10)
-            : '—';
-        return `<div class="d-flex align-items-center justify-content-between py-2" style="border-bottom:1px solid #f1f5f9;">
-            <div class="d-flex align-items-center gap-2">
-                <i class="fa-solid fa-hard-hat" style="color:#7c3aed;font-size:12px;"></i>
-                <a href="/fieldworks?open=${fwo.id_fwo}" target="_blank"
-                    class="fw-semibold small text-decoration-none">${escSo(fwo.no_fwo ?? '—')}</a>
-                <span class="text-muted small">${tgl}</span>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <span style="font-size:11px;background:#e9ecef;color:#495057;padding:3px 8px;border-radius:20px;white-space:nowrap;">
-                    ${fwo.boq_section_count} item · ${fwo.total_qty} qty
-                </span>
-            </div>
-        </div>`;
-    }).join('') : '<div class="text-muted small py-2 text-center">Belum ada FWO</div>';
-
-    return `<div class="card mb-3">
-        <div class="card-header py-2 px-3" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
-            <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <i class="fa-solid fa-briefcase" style="color:#2563eb;"></i>
-                    <span class="fw-semibold">${escSo(wo.no_wo ?? '—')}</span>
-                    <span class="text-muted small">${escSo(wo.judul_pekerjaan ?? '—')}</span>
-                </div>
-                <div class="d-flex align-items-center gap-2 flex-shrink-0 flex-wrap">
-                    <span style="font-size:11px;background:#ede9fe;color:#7c3aed;padding:3px 8px;border-radius:20px;white-space:nowrap;">
-                        <i class="fa-solid fa-hard-hat me-1"></i>${wo.fwo_count} FWO
-                    </span>
-                    ${wo.total_boq_amount > 0 ? `<span style="font-size:11px;background:#eff6ff;color:#1d4ed8;padding:3px 8px;border-radius:20px;font-weight:600;white-space:nowrap;" title="Total nilai BOQ">
-                        <i class="fa-solid fa-tag me-1" style="font-size:10px;"></i>Rp ${Number(wo.total_boq_amount).toLocaleString('en-US')}
-                    </span>` : ''}
-                    <span style="font-size:11px;padding:3px 8px;border-radius:20px;font-weight:600;white-space:nowrap;${pctBadgeStyle}">${wo.progress_pct}%</span>
-                    <a href="/boq/create?id_wo=${wo.id_wo}" target="_blank"
-                        class="btn btn-sm btn-outline-success py-0 px-2" style="font-size:11px;" title="Tambah BOQ Item">
-                        <i class="fa-solid fa-plus" style="font-size:9px;"></i><i class="fa-solid fa-layer-group ms-1 me-1"></i> BOQ
-                    </a>
-                    <a href="/fieldworks/create?id_wo=${wo.id_wo}" target="_blank"
-                        class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:11px;" title="Tambah FWO">
-                        <i class="fa-solid fa-plus" style="font-size:9px;"></i><i class="fa-solid fa-hard-hat ms-1 me-1"></i> FWO
-                    </a>
-                    <a href="/work-orders?open=${wo.id_wo}" target="_blank"
-                        class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;" title="Buka detail WO">
-                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                    </a>
-                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-wo-toggle"
-                        data-target="${collapseId}" style="font-size:11px;" title="Lihat detail">
-                        <i class="fa-solid fa-chevron-down"></i>
-                    </button>
-                </div>
-            </div>
-            ${hasBoq ? `<div class="mt-2">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="small text-muted">BOQ Progress</span>
-                    <span class="small text-muted">${wo.total_fwo_qty} / ${wo.total_boq_qty} qty</span>
-                </div>
-                <div class="progress" style="height:7px;">
-                    <div class="progress-bar ${pctColor}" style="width:${wo.progress_pct}%;transition:width .4s;"></div>
-                </div>
-            </div>` : ''}
-        </div>
-
-        <div id="${collapseId}" style="display:none;">
-            <div class="card-body px-3 py-3" style="background:#fafbfc;">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="fw-semibold small text-muted mb-2">
-                            <i class="fa-solid fa-layer-group me-1"></i> BOQ Items (${wo.sections.length})
-                        </div>
-                        ${sectionsHtml}
-                    </div>
-                    <div class="col-md-6" style="border-left:1px solid #e9ecef;">
-                        <div class="fw-semibold small text-muted mb-2">
-                            <i class="fa-solid fa-hard-hat me-1"></i> Fieldwork Orders (${wo.fwos.length})
-                        </div>
-                        ${fwoListHtml}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>`;
-}
-
-function escSo(str) {
-    return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-// ── SO Period Section ─────────────────────────────────────────────────────────
-
-function loadSoPeriods(id_so) {
-    var $wrap = $('#soPeriodContent');
-    $wrap.html('<div class="text-center text-muted py-3"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>');
-
-    $.get('/wo-periods/by-so/' + id_so, function (periods) {
-        window._soPeriods = periods;
-        $wrap.html(renderSoPeriodList(periods, id_so));
-    }).fail(function () {
-        $wrap.html('<div class="text-muted small text-danger text-center py-2">Gagal memuat data period</div>');
-    });
-}
-
-function renderSoPeriodList(periods, id_so) {
-    if (!periods || !periods.length) {
-        return '<div class="text-center text-muted py-3">' +
-            '<i class="fa-solid fa-calendar-xmark fa-lg d-block mb-2 opacity-25"></i>' +
-            '<span class="small">Belum ada period jadwal untuk SO ini</span></div>';
-    }
-
-    return periods.map(function (p) { return renderSoPeriodCard(p, id_so); }).join('');
-}
-
-function renderSoPeriodCard(p, id_so) {
-    var tglMulai   = p.tanggal_mulai   ? p.tanggal_mulai.substring(0, 7)   : '—';
-    var tglSelesai = p.tanggal_selesai ? p.tanggal_selesai.substring(0, 7) : '—';
-    var interval   = p.interval_bulan  ? 'tiap ' + p.interval_bulan + ' bulan' : '—';
-
-    var expectedWo = (p.tanggal_mulai && p.tanggal_selesai && p.interval_bulan)
-        ? Math.floor(
-            (new Date(p.tanggal_selesai) - new Date(p.tanggal_mulai)) / (1000 * 60 * 60 * 24 * 30) / p.interval_bulan
-          )
-        : null;
-
-    var woListHtml = '';
-    if (p.wos && p.wos.length) {
-        woListHtml = p.wos.map(function (wo) {
-            return '<a href="/work-orders?open=' + wo.id_wo + '" target="_blank" ' +
-                'class="d-inline-flex align-items-center gap-1 me-2 mb-1 text-decoration-none" ' +
-                'style="font-size:11px;background:var(--primary-100);color:var(--primary-700);' +
-                'padding:2px 8px;border-radius:20px;font-weight:600;">' +
-                '<i class="fa-solid fa-briefcase" style="font-size:9px;"></i>' +
-                escSo(wo.no_wo) + '</a>';
-        }).join('');
-    } else {
-        woListHtml = '<span class="small text-muted">Belum ada WO ter-assign</span>';
-    }
-
-    var assignedCount = p.wos ? p.wos.length : 0;
-    var countBadge = expectedWo !== null
-        ? '<span class="badge ' + (assignedCount >= expectedWo ? 'bg-success' : 'bg-warning text-dark') + ' bg-opacity-10" style="font-size:11px;">' +
-            assignedCount + ' / ' + expectedWo + ' WO</span>'
-        : '<span class="badge bg-secondary bg-opacity-10 text-secondary" style="font-size:11px;">' + assignedCount + ' WO</span>';
-
-    return '<div class="card mb-2 so-period-card" data-period-id="' + p.id_period + '" style="border:0.5px solid #e2e8f0;">' +
-        '<div class="card-header py-2 px-3 d-flex justify-content-between align-items-center" style="background:#f8fafc;">' +
-            '<div class="d-flex align-items-center gap-2 flex-wrap">' +
-                '<i class="fa-solid fa-location-dot" style="color:var(--primary-500);font-size:13px;"></i>' +
-                '<span class="fw-semibold small">' + escSo(p.nama_site ?? '—') + '</span>' +
-                countBadge +
-            '</div>' +
-            '<div class="d-flex gap-1">' +
-                '<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-edit-period" ' +
-                    'data-period-id="' + p.id_period + '" data-no-disable style="font-size:11px;" title="Edit period">' +
-                    '<i class="fa-solid fa-pen"></i>' +
-                '</button>' +
-                '<button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-delete-period" ' +
-                    'data-period-id="' + p.id_period + '" data-no-disable style="font-size:11px;" title="Hapus period">' +
-                    '<i class="fa-solid fa-trash"></i>' +
-                '</button>' +
-            '</div>' +
-        '</div>' +
-        '<div class="card-body px-3 py-2">' +
-            '<div class="d-flex flex-wrap gap-3 mb-2">' +
-                '<div>' +
-                    '<div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:.4px;">Jadwal</div>' +
-                    '<div class="small fw-semibold">' + tglMulai + ' s/d ' + tglSelesai + '</div>' +
-                '</div>' +
-                '<div>' +
-                    '<div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:.4px;">Frekuensi</div>' +
-                    '<div class="small fw-semibold">' + escSo(interval) + '</div>' +
-                '</div>' +
-                (p.keterangan ? '<div>' +
-                    '<div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:.4px;">Keterangan</div>' +
-                    '<div class="small">' + escSo(p.keterangan) + '</div>' +
-                '</div>' : '') +
-            '</div>' +
-            '<div class="d-flex flex-wrap align-items-center gap-1" style="min-height:22px;">' +
-                woListHtml +
-            '</div>' +
-        '</div>' +
-    '</div>';
-}
-
-function renderSoPeriodForm(id_so, p) {
-    var isEdit   = !!p;
-    var action   = isEdit ? 'Edit' : 'Tambah';
-    var siteId   = p ? p.id_site : '';
-    var siteName = p ? (p.nama_site ?? '') : '';
-
-    return '<div id="soPeriodFormWrap" class="p-3 mb-3" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">' +
-        '<div class="small fw-semibold text-muted mb-3">' +
-            '<i class="fa-solid fa-calendar-plus me-1"></i>' + action + ' Period' +
-        '</div>' +
-        '<div class="row g-2">' +
-            '<div class="col-md-12">' +
-                '<label class="form-label form-label-sm text-muted mb-1">Lokasi (Site) <span class="text-danger">*</span></label>' +
-                '<select id="soPeriodSite" style="width:100%"></select>' +
-            '</div>' +
-            '<div class="col-md-5">' +
-                '<label class="form-label form-label-sm text-muted mb-1">Tanggal Mulai</label>' +
-                '<input type="date" id="soPeriodMulai" class="form-control form-control-sm" value="' + (p ? (p.tanggal_mulai ?? '') : '') + '">' +
-            '</div>' +
-            '<div class="col-md-5">' +
-                '<label class="form-label form-label-sm text-muted mb-1">Tanggal Selesai</label>' +
-                '<input type="date" id="soPeriodSelesai" class="form-control form-control-sm" value="' + (p ? (p.tanggal_selesai ?? '') : '') + '">' +
-            '</div>' +
-            '<div class="col-md-2">' +
-                '<label class="form-label form-label-sm text-muted mb-1">Interval (bln)</label>' +
-                '<input type="number" id="soPeriodInterval" class="form-control form-control-sm" min="1" placeholder="2" value="' + (p ? (p.interval_bulan ?? '') : '') + '">' +
-            '</div>' +
-            '<div class="col-md-12">' +
-                '<label class="form-label form-label-sm text-muted mb-1">Keterangan</label>' +
-                '<input type="text" id="soPeriodKet" class="form-control form-control-sm" placeholder="opsional" value="' + (p ? escSo(p.keterangan ?? '') : '') + '">' +
-            '</div>' +
-        '</div>' +
-        '<div class="d-flex justify-content-end gap-2 mt-3">' +
-            '<button type="button" id="btnCancelSoPeriodForm" class="btn btn-outline-secondary btn-sm">Batal</button>' +
-            '<button type="button" id="btnSaveSoPeriod" class="btn btn-primary btn-sm" ' +
-                'data-period-id="' + (p ? p.id_period : '') + '" data-id-so="' + id_so + '">' +
-                '<i class="fa-solid fa-check me-1"></i> Simpan' +
-            '</button>' +
-        '</div>' +
-    '</div>';
-}
-
-function initSoPeriodSiteSelect2(siteId, siteName) {
-    var $el = $('#soPeriodSite');
-    $el.select2({
-        dropdownParent: $('#soPeriodFormWrap'),
-        placeholder: 'Pilih lokasi...',
-        ajax: {
-            url: '/business-relations/sites/select2',
-            dataType: 'json',
-            delay: 200,
-            data: function (params) { return { q: params.term }; },
-        },
-    });
-    if (siteId) {
-        var opt = new Option(siteName || siteId, siteId, true, true);
-        $el.append(opt).trigger('change');
-    }
-}
-
-function initSoPeriodSection(id_so) {
-    // Tambah Period
-    $(document).on('click', '#btnTambahPeriodSo', function () {
-        if ($('#soPeriodFormWrap').length) return;
-        $('#soPeriodContent').prepend(renderSoPeriodForm(id_so, null));
-        initSoPeriodSiteSelect2('', '');
-    });
-
-    // Edit Period
-    $(document).on('click', '.btn-edit-period', function () {
-        if ($('#soPeriodFormWrap').length) return;
-        var periodId = $(this).data('period-id');
-        var $card    = $(this).closest('.so-period-card');
-        var periods  = window._soPeriods || [];
-        var p        = periods.find(function (x) { return x.id_period == periodId; });
-        if (!p) return;
-        $card.before(renderSoPeriodForm(id_so, p));
-        $card.hide();
-        initSoPeriodSiteSelect2(p.id_site, p.nama_site);
-        $('#btnCancelSoPeriodForm').data('restore-card', periodId);
-    });
-
-    // Batal form
-    $(document).on('click', '#btnCancelSoPeriodForm', function () {
-        var restoreId = $(this).data('restore-card');
-        if (restoreId) { $('.so-period-card[data-period-id="' + restoreId + '"]').show(); }
-        $('#soPeriodFormWrap').remove();
-    });
-
-    // Simpan (create or update)
-    $(document).on('click', '#btnSaveSoPeriod', function () {
-        var $btn     = $(this);
-        var periodId = $btn.data('period-id');
-        var idSo     = $btn.data('id-so');
-        var siteId   = $('#soPeriodSite').val();
-        if (!siteId) { alert('Lokasi wajib dipilih'); return; }
-
-        var payload = {
-            _token:          window.route.csrf,
-            id_so:           idSo,
-            id_site:         siteId,
-            tanggal_mulai:   $('#soPeriodMulai').val()    || null,
-            tanggal_selesai: $('#soPeriodSelesai').val()  || null,
-            interval_bulan:  $('#soPeriodInterval').val() || null,
-            keterangan:      $('#soPeriodKet').val()      || null,
-        };
-
-        var url    = periodId ? '/wo-periods/' + periodId : '/wo-periods';
-        var method = periodId ? 'PUT' : 'POST';
-        if (method === 'PUT') payload._method = 'PUT';
-
-        $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i>');
-        $.ajax({
-            url: url, method: 'POST', data: payload,
-            success: function () {
-                $('#soPeriodFormWrap').remove();
-                $('.so-period-card').show();
-                loadSoPeriods(id_so);
-            },
-            error: function () { alert('Gagal menyimpan period'); },
-            complete: function () { $btn.prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i> Simpan'); },
-        });
-    });
-
-    // Hapus Period
-    $(document).on('click', '.btn-delete-period', function () {
-        var periodId = $(this).data('period-id');
-        if (!confirm('Hapus period ini? WO yang ter-assign akan dilepas dari period.')) return;
-        $.ajax({
-            url: '/wo-periods/' + periodId,
-            method: 'POST',
-            data: { _token: window.route.csrf, _method: 'DELETE' },
-            success: function () { loadSoPeriods(id_so); },
-            error:   function () { alert('Gagal menghapus period'); },
-        });
-    });
-}
-
 $(document).ready(function () {
     // Search WO / FWO
-    $(document).on('input', '#woProgressSearch', function () {
+    $(document).on("input", "#woProgressSearch", function () {
         renderWoProgressView(currentWosData);
     });
 
     // Clear search
-    $(document).on('click', '#btnClearWoSearch', function () {
-        $('#woProgressSearch').val('');
+    $(document).on("click", "#btnClearWoSearch", function () {
+        $("#woProgressSearch").val("");
         renderWoProgressView(currentWosData);
     });
 
     // Refresh WO Progress
-    $(document).on('click', '#btnRefreshWoProgress', function () {
-        const soId = $(this).data('so-id');
-        const $icon = $(this).find('i');
-        $icon.addClass('fa-spin');
-        $('#woProgressSearch').val('');
-        $('#btnClearWoSearch').addClass('d-none');
-        loadWoProgress(soId, function () { $icon.removeClass('fa-spin'); });
+    $(document).on("click", "#btnRefreshWoProgress", function () {
+        const soId = $(this).data("so-id");
+        const $icon = $(this).find("i");
+        $icon.addClass("fa-spin");
+        $("#woProgressSearch").val("");
+        $("#btnClearWoSearch").addClass("d-none");
+        loadWoProgress(soId, function () {
+            $icon.removeClass("fa-spin");
+        });
     });
 
-    // Toggle card ↔ table view
-    $(document).on('click', '#btnToggleWoView', function () {
-        woViewMode = woViewMode === 'card' ? 'table' : 'card';
-        localStorage.setItem('wo_progress_view', woViewMode);
-        renderWoProgressView(currentWosData);
+    // Salin WO
+    let sourceWoId = null;
+
+    $(document).on("click", ".btn-copy-wo", function () {
+        sourceWoId = $(this).data("wo-id");
+        $("#modalCopyWoBody").html(
+            '<div class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data WO...</div>',
+        );
+        $("#btnConfirmCopyWo").prop("disabled", true);
+        new bootstrap.Modal($("#modalCopyWo")[0]).show();
+
+        $.get(window.route.woDuplicate + sourceWoId + "/detail")
+            .done(function (wo) {
+                fillCopyWoModal(wo);
+                $("#btnConfirmCopyWo").prop("disabled", false);
+            })
+            .fail(function () {
+                $("#modalCopyWoBody").html(
+                    '<div class="text-center text-danger py-4"><i class="fa-solid fa-circle-exclamation me-1"></i> Gagal memuat data WO</div>',
+                );
+            });
     });
 
-    // Expand/collapse FWO sub-row (table mode)
-    $(document).on('click', '.wo-table-row', function () {
-        const subrowId = $(this).data('subrow');
-        const $sub     = $('#' + subrowId);
-        const $chevron = $(this).find('.wo-table-chevron');
-        const wasOpen  = $sub.is(':visible');
-        $sub.slideToggle(150);
-        $chevron.css('transform', wasOpen ? 'rotate(0deg)' : 'rotate(90deg)');
+    $(document).on("click", "#btnAddCopyWoBoq", function () {
+        addCopyWoBoqRow();
     });
 
-    // Toggle expand/collapse WO detail (card mode)
-    $(document).on('click', '.btn-wo-toggle', function () {
-        const targetId = $(this).data('target');
-        const $target  = $('#' + targetId);
-        const $icon    = $(this).find('i');
-        $target.slideToggle(200);
-        $icon.toggleClass('fa-chevron-down fa-chevron-up');
+    $(document).on("click", ".btn-remove-copy-wo-boq", function () {
+        $(this).closest(".copy-wo-boq-row").remove();
+    });
+
+    $(document).on("click", ".btn-edit-copy-wo-boq", function () {
+        const $row = $(this).closest(".copy-wo-boq-row");
+        const $panel = $row.find(".copy-wo-boq-edit-panel");
+        const $btn = $(this);
+
+        if ($panel.is(":visible")) {
+            $panel.slideUp(150);
+            $btn.html('<i class="fa-solid fa-pen me-1"></i> Edit');
+            return;
+        }
+
+        if (!$row.attr("data-edit-loaded")) {
+            $row.attr("data-edit-loaded", "1");
+            const satuan = $row.attr("data-satuan") || "";
+            const harga = $row.attr("data-harga") || "";
+            const ket = $row.attr("data-keterangan") || "";
+            const itemProduk = $row.attr("data-item-produk-alternate") || "";
+            const tpId = $row.attr("data-id-testing-point");
+            const opts = ["PCS", "Titik", "Set"]
+                .map(
+                    (v) =>
+                        `<option value="${v}" ${satuan === v ? "selected" : ""}>${v}</option>`,
+                )
+                .join("");
+
+            $panel.html(`
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label form-label-sm text-muted mb-1">Item Produk Alternatif</label>
+                        <input type="text" class="form-control form-control-sm copy-wo-boq-item-produk"
+                            value="${escHtml(itemProduk)}" placeholder="opsional">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label form-label-sm text-muted mb-1">Satuan</label>
+                        <select class="form-select form-select-sm copy-wo-boq-satuan">
+                            <option value="">— Pilih —</option>${opts}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
+                        <input type="text" inputmode="numeric" class="form-control form-control-sm copy-wo-boq-harga input-num-mask input-num-int"
+                            value="${escHtml(harga)}" placeholder="0">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label form-label-sm text-muted mb-1">Keterangan</label>
+                        <input type="text" class="form-control form-control-sm copy-wo-boq-ket"
+                            value="${escHtml(ket)}" placeholder="opsional">
+                    </div>
+                </div>
+                <div class="copy-wo-boq-items-wrap">
+                    <div class="text-center text-muted py-2" style="font-size:12px;">
+                        <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat item...
+                    </div>
+                </div>`);
+
+            let preCheckedIds;
+            try {
+                preCheckedIds = new Set(
+                    JSON.parse($row.attr("data-testing-item-ids") || "[]").map(
+                        String,
+                    ),
+                );
+            } catch (e) {
+                preCheckedIds = new Set();
+            }
+            loadCopyWoBoqItems($row, tpId, preCheckedIds);
+        }
+
+        initNumericMask($panel[0]);
+        $panel.slideDown(150);
+        $btn.html('<i class="fa-solid fa-chevron-up me-1"></i> Selesai');
+    });
+
+    $(document).on("click", "#btnConfirmCopyWo", function () {
+        const judul = $("#copyWoJudul").val().trim();
+        if (!judul) {
+            Notify.warning("Judul pekerjaan wajib diisi");
+            return;
+        }
+
+        const tglMulai = $("#copyWoTglMulai").val();
+        const tglSelesai = $("#copyWoTglSelesai").val();
+        $("#copyWoTglSelesaiError").remove();
+        if (tglMulai && tglSelesai && tglSelesai < tglMulai) {
+            $("#copyWoTglSelesai").after(
+                '<div id="copyWoTglSelesaiError" class="text-danger mt-1" style="font-size:12px;"><i class="fa-solid fa-circle-exclamation me-1"></i>Tanggal selesai tidak boleh lebih kecil dari tanggal mulai</div>',
+            );
+            return;
+        }
+
+        // Collect BOQ rows
+        const boq = [];
+        $(".copy-wo-boq-row").each(function () {
+            const $row = $(this);
+            const isNew = $row.attr("data-is-new") === "1";
+            const isEdited = $row.attr("data-edit-loaded") === "1";
+            const useInputs = isNew || isEdited;
+
+            const tpSelect = $row.find(".copy-wo-boq-tp-select");
+            const idTp = tpSelect.length
+                ? tpSelect.val()
+                : $row.attr("data-id-testing-point");
+            if (!idTp) return;
+
+            const qty = $row.find(".copy-wo-boq-qty").val();
+
+            let testingItemIds = [];
+            if (useInputs) {
+                $row.find(".copy-wo-item-check:checked").each(function () {
+                    testingItemIds.push(parseInt($(this).data("item-id")));
+                });
+            } else {
+                try {
+                    testingItemIds = JSON.parse(
+                        $row.attr("data-testing-item-ids") || "[]",
+                    );
+                } catch (e) {}
+            }
+
+            boq.push({
+                id_testing_point: parseInt(idTp),
+                qty: qty ? parseInt(qty) : null,
+                satuan: useInputs
+                    ? $row.find(".copy-wo-boq-satuan").val() || ""
+                    : $row.attr("data-satuan") || "",
+                harga: useInputs
+                    ? (rawNumVal($row.find(".copy-wo-boq-harga")[0]) ?? null)
+                    : $row.attr("data-harga") || null,
+                keterangan: useInputs
+                    ? $row.find(".copy-wo-boq-ket").val() || null
+                    : $row.attr("data-keterangan") || null,
+                item_produk_alternate: useInputs
+                    ? $row.find(".copy-wo-boq-item-produk").val() || null
+                    : $row.attr("data-item-produk-alternate") || null,
+                testing_item_ids: testingItemIds,
+            });
+        });
+
+        const $btn = $(this);
+        $btn.prop("disabled", true).html(
+            '<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...',
+        );
+
+        $.ajax({
+            url: window.route.woDuplicate + sourceWoId + "/duplicate",
+            method: "POST",
+            contentType: "application/json",
+            headers: { "X-CSRF-TOKEN": window.route.csrf },
+            data: JSON.stringify({
+                judul_pekerjaan: judul,
+                tanggal_mulai: tglMulai || null,
+                tanggal_selesai: tglSelesai || null,
+                keterangan: $("#copyWoKeterangan").val() || null,
+                id_pic_pelanggan_pekerjaan: $("#copyWoPic").val() || null,
+                no_urut_period: $("#copyWoUrutan").val() || null,
+                boq: boq,
+            }),
+            success: function (res) {
+                Notify.success("WO berhasil disalin: " + res.no_wo);
+                bootstrap.Modal.getInstance($("#modalCopyWo")[0]).hide();
+                loadWoProgress(currentSoId);
+            },
+            error: function (xhr) {
+                Notify.error(xhr.responseJSON?.message || "Gagal menyalin WO");
+                $btn.prop("disabled", false).html(
+                    '<i class="fa-solid fa-copy me-1"></i> Buat Salinan',
+                );
+            },
+        });
+    });
+
+    $(document).on("change", "#copyWoTglMulai, #copyWoTglSelesai", function () {
+        $("#copyWoTglSelesaiError").remove();
+    });
+
+    $("#modalCopyWo").on("hidden.bs.modal", function () {
+        sourceWoId = null;
+        $("#btnConfirmCopyWo")
+            .prop("disabled", false)
+            .html('<i class="fa-solid fa-copy me-1"></i> Buat Salinan');
+    });
+
+    // Refresh Termin
+    $(document).on("click", "#btnRefreshTermin", function () {
+        const soId = $(this).data("so-id");
+        const $icon = $(this).find("i");
+        $icon.addClass("fa-spin");
+        loadTerminList(soId, function () {
+            $icon.removeClass("fa-spin");
+        });
     });
 
     page = new CrudPageController({
@@ -1101,14 +731,459 @@ $(document).ready(function () {
         renderForm: renderForm,
         afterLoad: function (res) {
             loadWoProgress(res.id_so);
-            // Load period section
-            $.get('/wo-periods/by-so/' + res.id_so, function (periods) {
-                window._soPeriods = periods;
-                $('#soPeriodContent').html(renderSoPeriodList(periods, res.id_so));
-            }).fail(function () {
-                $('#soPeriodContent').html('<div class="text-muted small text-danger text-center py-2">Gagal memuat data period</div>');
-            });
-            initSoPeriodSection(res.id_so);
+            loadTerminList(res.id_so);
+            initFpDate('#detailContent');
         },
     });
+
+    $(document).on("click", ".btn-delete-record", function () {
+        const id = $(this).data("id");
+        Notify.confirm("Hapus Sales Order?", function () {
+            $.ajax({
+                url: window.route.update + id,
+                method: "POST",
+                data: { _token: window.route.csrf, _method: "DELETE" },
+                success: function (res) {
+                    Notify.success(res.message || "Data berhasil dihapus");
+                    $("#detailContent").html("");
+                    page.selectedRow.id = null;
+                    if ($.fn.DataTable.isDataTable("#masterTable")) {
+                        $("#masterTable").DataTable().ajax.reload(null, false);
+                    }
+                },
+                error: function (xhr) {
+                    Notify.error(
+                        xhr.responseJSON?.message || "Terjadi kesalahan",
+                    );
+                },
+            });
+        });
+    });
 });
+
+function fillCopyWoModal(wo) {
+    const dateMulai = (wo.tanggal_mulai || "").substring(0, 10);
+    const dateSelesai = (wo.tanggal_selesai || "").substring(0, 10);
+    const INTERVAL_LABELS = {
+        1: "Bulanan",
+        2: "Bimulanan",
+        3: "Triwulan",
+        4: "Caturwulan",
+        6: "Semester",
+        12: "Annual",
+    };
+    const intervalLabel = wo.interval_bulan
+        ? INTERVAL_LABELS[wo.interval_bulan] || wo.interval_bulan + " bln"
+        : "— Tidak ada —";
+
+    const siteName = wo["Site Pelanggan"] ?? "";
+    const siteHtml = siteName
+        ? `<div style="display:flex;align-items:center;gap:6px;min-width:0;">
+               <i class="fa-solid fa-location-dot" style="color:#0891b2;font-size:11px;flex-shrink:0;"></i>
+               <span style="color:#0e7490;font-weight:600;white-space:nowrap;">${escHtml(siteName)}</span>
+           </div>
+           <div style="width:1px;height:16px;background:#e2e8f0;flex-shrink:0;"></div>`
+        : "";
+
+    // Hitung next urutan dari site_wos
+    const siteWos = wo.site_wos || [];
+    const maxUrut = siteWos.reduce(function (m, w) {
+        return Math.max(m, w.no_urut_period || 0);
+    }, 0);
+    const nextUrut = maxUrut + 1;
+
+    // Build WO list section
+    let woListHtml = "";
+    if (siteWos.length > 0) {
+        const IL2 = {
+            1: "Bulanan",
+            2: "Bimulanan",
+            3: "Triwulan",
+            4: "Caturwulan",
+            6: "Semester",
+            12: "Annual",
+        };
+        const rows = siteWos
+            .map(function (w) {
+                const tglM = w.tanggal_mulai
+                    ? w.tanggal_mulai.substring(0, 10)
+                    : "—";
+                const tglS = w.tanggal_selesai
+                    ? w.tanggal_selesai.substring(0, 10)
+                    : "—";
+                const isSelf = w.id_wo == wo.id_wo;
+                const periodeLabel =
+                    w.interval_bulan && w.no_urut_period
+                        ? (IL2[w.interval_bulan] || w.interval_bulan + " bln") +
+                          " ke-" +
+                          w.no_urut_period
+                        : "—";
+                return `<tr style="font-size:12px;${isSelf ? "background:#eff6ff;" : ""}">
+                <td style="padding:5px 10px;font-weight:600;color:#1a56db;">${escHtml(w.no_wo)}${isSelf ? ' <span style="font-size:10px;padding:1px 5px;border-radius:8px;background:#dbeafe;color:#1e40af;">sumber</span>' : ""}</td>
+                <td style="padding:5px 10px;color:#374151;">${escHtml(w.judul_pekerjaan || "—")}</td>
+                <td style="padding:5px 10px;color:#64748b;white-space:nowrap;">${tglM}</td>
+                <td style="padding:5px 10px;color:#64748b;white-space:nowrap;">${tglS}</td>
+                <td style="padding:5px 10px;white-space:nowrap;">${periodeLabel !== "—" ? `<span style="font-size:11px;padding:2px 8px;border-radius:20px;background:#eff6ff;color:#1a56db;border:1px solid #bfdbfe;"><i class="fa-solid fa-calendar-days me-1" style="font-size:10px;"></i>${escHtml(periodeLabel)}</span>` : '<span style="color:#94a3b8;">—</span>'}</td>
+            </tr>`;
+            })
+            .join("");
+        woListHtml = `<div class="col-12">
+            <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+                <div style="background:#f8fafc;padding:7px 12px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;cursor:pointer;"
+                    onclick="var b=document.getElementById('copyWoSiteList');b.style.display=b.style.display==='none'?'block':'none';">
+                    <span style="font-size:12px;font-weight:600;color:#1a56db;">
+                        <i class="fa-solid fa-briefcase me-1"></i>WO yang sudah ada di lokasi ini
+                        <span style="font-size:11px;font-weight:500;background:#dbeafe;color:#1e40af;padding:1px 7px;border-radius:20px;margin-left:4px;">${siteWos.length}</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down" style="font-size:10px;color:#94a3b8;"></i>
+                </div>
+                <div id="copyWoSiteList" style="display:none;">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead style="background:#f8fafc;">
+                            <tr style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.4px;">
+                                <th style="padding:5px 10px;">No WO</th>
+                                <th style="padding:5px 10px;">Judul</th>
+                                <th style="padding:5px 10px;">Tgl Mulai</th>
+                                <th style="padding:5px 10px;">Tgl Selesai</th>
+                                <th style="padding:5px 10px;">Periode</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    const urutanRow = wo.interval_bulan
+        ? `
+        <div class="col-md-2">
+            <label class="form-label">Urutan ke-</label>
+            <input type="number" id="copyWoUrutan" class="form-control form-control-sm" value="${nextUrut}" min="1" style="width:80px;">
+        </div>`
+        : "";
+
+    const picColClass = wo.interval_bulan ? "col-md-4" : "col-md-5";
+
+    $("#modalCopyWoBody").html(`
+        <div style="position:sticky;top:0;z-index:10;background:#fff;border-bottom:2px solid #e2e8f0;padding:10px 16px;margin:-16px -16px 16px;box-shadow:0 2px 10px rgba(0,0,0,.08);">
+            <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size:13px;">
+                ${siteHtml}
+                <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+                    <i class="fa-solid fa-file-contract" style="color:#1a56db;font-size:11px;flex-shrink:0;"></i>
+                    <span style="font-weight:700;color:#1a56db;white-space:nowrap;">${escHtml(wo.no_so ?? "—")}</span>
+                </div>
+                <div style="width:1px;height:16px;background:#e2e8f0;flex-shrink:0;"></div>
+                <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
+                    <i class="fa-solid fa-file-lines" style="color:#374151;font-size:11px;flex-shrink:0;"></i>
+                    <span style="color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(wo.judul_pekerjaan ?? "—")}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12">
+                <label class="form-label">Sales Order</label>
+                <input type="text" class="form-control form-control-sm" value="${escHtml(wo.no_so ?? "—")}" disabled>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Judul Order <span class="text-danger">*</span></label>
+                <input type="text" id="copyWoJudul" class="form-control form-control-sm"
+                    value="${escHtml(wo.judul_pekerjaan ?? "")}" placeholder="Judul pekerjaan">
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Pelanggan</label>
+                <input type="text" class="form-control form-control-sm" value="${escHtml(wo.Pelanggan ?? "—")}" disabled>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Pelanggan Site</label>
+                <input type="text" class="form-control form-control-sm" value="${escHtml(wo["Site Pelanggan"] ?? "—")}" disabled>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Frekuensi</label>
+                <input type="text" class="form-control form-control-sm" value="${escHtml(intervalLabel)}" disabled>
+            </div>
+            ${urutanRow}
+            <div class="${picColClass}">
+                <label class="form-label">PIC Pekerjaan</label>
+                <select id="copyWoPic" class="form-select form-select-sm"></select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Tanggal Mulai</label>
+                <input type="date" id="copyWoTglMulai" class="form-control form-control-sm" value="${dateMulai}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Tanggal Selesai</label>
+                <input type="date" id="copyWoTglSelesai" class="form-control form-control-sm" value="${dateSelesai}">
+            </div>
+            ${woListHtml}
+            <div class="col-12">
+                <label class="form-label">Keterangan</label>
+                <textarea id="copyWoKeterangan" class="form-control form-control-sm" rows="2">${escHtml(wo.keterangan ?? "")}</textarea>
+            </div>
+        </div>
+    `);
+
+    $("#copyWoPic").select2({
+        width: "100%",
+        placeholder: "Pilih PIC",
+        allowClear: true,
+        dropdownParent: $("#modalCopyWo"),
+        ajax: {
+            url: "/business-relation-contacts/select2",
+            dataType: "json",
+            delay: 250,
+            data: (params) => ({ q: params.term }),
+            processResults: (data) => ({ results: data }),
+            cache: true,
+        },
+        escapeMarkup: (m) => m,
+    });
+
+    if (wo.id_pic_pelanggan_pekerjaan) {
+        const opt = new Option(
+            wo.nama_pic_pelanggan_pekerjaan || wo.id_pic_pelanggan_pekerjaan,
+            wo.id_pic_pelanggan_pekerjaan,
+            true,
+            true,
+        );
+        $("#copyWoPic").append(opt).trigger("change");
+    }
+
+    renderCopyWoBoq(wo.boq_items || []);
+}
+
+let copyWoBoqIdx = 0;
+
+function renderCopyWoBoq(sourceItems) {
+    const hasSource = sourceItems.length > 0;
+    let sourceHtml = "";
+    if (hasSource) {
+        sourceHtml = sourceItems
+            .map(function (item) {
+                const satuan = item.satuan ? escHtml(item.satuan) : "";
+                return `<div class="copy-wo-boq-row" data-is-new="0"
+                data-id-testing-point="${item.id_testing_point}"
+                data-testing-item-ids="${escHtml(JSON.stringify(item.testing_item_ids || []))}"
+                data-satuan="${escHtml(item.satuan || "")}"
+                data-harga="${item.harga || ""}"
+                data-keterangan="${escHtml(item.keterangan || "")}"
+                data-item-produk-alternate="${escHtml(item.item_produk_alternate || "")}"
+                style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+                <div class="copy-wo-boq-compact d-flex align-items-center gap-2 p-2" style="background:#f8fafc;">
+                    <div style="flex:1;min-width:0;">
+                        <div class="fw-semibold" style="font-size:12px;color:#1a56db;">${escHtml(item.point_name)}</div>
+                        ${satuan ? `<div style="font-size:11px;color:#64748b;">Satuan: ${satuan}</div>` : ""}
+                    </div>
+                    <input type="number" class="form-control form-control-sm text-end copy-wo-boq-qty"
+                        value="${item.qty || ""}" min="1" placeholder="qty"
+                        style="font-size:12px;width:90px;flex-shrink:0;">
+                    <button type="button" class="btn btn-outline-primary btn-sm btn-edit-copy-wo-boq py-0 px-2 flex-shrink-0"
+                        style="font-size:11px;white-space:nowrap;" tabindex="-1">
+                        <i class="fa-solid fa-pen me-1"></i> Edit
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm btn-remove-copy-wo-boq py-0 px-2 flex-shrink-0" title="Hapus" tabindex="-1">
+                        <i class="fa-solid fa-times" style="font-size:11px;"></i>
+                    </button>
+                </div>
+                <div class="copy-wo-boq-edit-panel"
+                    style="display:none;padding:14px;border-top:1px solid #e2e8f0;background:#fff;"></div>
+            </div>`;
+            })
+            .join("");
+    }
+
+    const boqSectionHtml = `<div class="col-12" id="copyWoBoqSection">
+        <label class="form-label fw-semibold">
+            <i class="fa-solid fa-layer-group me-1 text-success"></i>BOQ
+            ${hasSource ? `<span style="font-size:11px;font-weight:400;color:#64748b;margin-left:4px;">(dari WO sumber — edit qty sesuai kebutuhan)</span>` : ""}
+        </label>
+        <div id="copyWoBoqContainer" class="d-flex flex-column gap-2">
+            ${sourceHtml || '<div style="font-size:12px;color:#94a3b8;padding:4px 0;"><i class="fa-solid fa-circle-minus me-1"></i>Belum ada BOQ di WO ini</div>'}
+        </div>
+        <div id="btnAddCopyWoBoq" style="display:flex;align-items:center;gap:10px;margin-top:10px;cursor:pointer;">
+            <div style="flex:1;height:1px;background:#e2e8f0;"></div>
+            <span style="font-size:12px;color:#64748b;white-space:nowrap;font-weight:500;">
+                <i class="fa-solid fa-plus me-1"></i> Tambah Item BOQ
+            </span>
+            <div style="flex:1;height:1px;background:#e2e8f0;"></div>
+        </div>
+    </div>`;
+
+    $("#copyWoKeterangan").closest(".col-12").before(boqSectionHtml);
+}
+
+function addCopyWoBoqRow() {
+    copyWoBoqIdx++;
+    const idx = copyWoBoqIdx;
+    const row =
+        $(`<div class="copy-wo-boq-row card mb-3" data-id-testing-point="" data-is-new="1">
+        <div class="card-header d-flex align-items-center justify-content-between py-2 px-3" style="background:#f0fdf4;border-bottom:1px solid #bbf7d0;">
+            <div style="flex:1;min-width:0;margin-right:8px;">
+                <select class="form-select form-select-sm copy-wo-boq-tp-select" style="font-size:12px;"></select>
+            </div>
+            <button type="button" class="btn btn-outline-danger btn-sm btn-remove-copy-wo-boq py-0 px-2 flex-shrink-0" title="Hapus">
+                <i class="fa-solid fa-times" style="font-size:11px;"></i>
+            </button>
+        </div>
+        <div class="card-body px-3 py-3">
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label form-label-sm text-muted mb-1">Item Produk Alternatif</label>
+                    <input type="text" class="form-control form-control-sm copy-wo-boq-item-produk" placeholder="opsional">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label form-label-sm text-muted mb-1">Qty</label>
+                    <input type="number" class="form-control form-control-sm copy-wo-boq-qty" min="1" placeholder="0">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label form-label-sm text-muted mb-1">Satuan</label>
+                    <select class="form-select form-select-sm copy-wo-boq-satuan">
+                        <option value="">— Pilih —</option>
+                        <option value="PCS">PCS</option>
+                        <option value="Titik">Titik</option>
+                        <option value="Set">Set</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
+                    <input type="text" inputmode="numeric" class="form-control form-control-sm copy-wo-boq-harga input-num-mask input-num-int" placeholder="0">
+                </div>
+                <div class="col-12">
+                    <label class="form-label form-label-sm text-muted mb-1">Keterangan</label>
+                    <input type="text" class="form-control form-control-sm copy-wo-boq-ket" placeholder="opsional">
+                </div>
+            </div>
+            <div class="copy-wo-boq-items-wrap">
+                <div class="text-muted small fst-italic" style="padding:4px 0;">
+                    <i class="fa-solid fa-circle-info me-1 opacity-50"></i> Pilih testing point untuk memuat daftar item
+                </div>
+            </div>
+        </div>
+    </div>`);
+
+    $("#copyWoBoqContainer").append(row);
+    initNumericMask(row[0]);
+
+    const $sel = row.find(".copy-wo-boq-tp-select");
+    $sel.select2({
+        width: "100%",
+        placeholder: "Pilih testing point...",
+        allowClear: true,
+        minimumInputLength: 0,
+        dropdownParent: $("#modalCopyWo"),
+        ajax: {
+            url: window.route.tpSelect2,
+            dataType: "json",
+            delay: 250,
+            data: (p) => ({ q: p.term }),
+            processResults: function (d) {
+                const usedIds = new Set(
+                    $("#copyWoBoqContainer .copy-wo-boq-row")
+                        .map(function () {
+                            return $(this).attr("data-id-testing-point");
+                        })
+                        .get()
+                        .filter(Boolean),
+                );
+                return {
+                    results: d.filter(function (item) {
+                        return !usedIds.has(String(item.id));
+                    }),
+                };
+            },
+            cache: false,
+        },
+        escapeMarkup: (m) => m,
+    });
+
+    $sel.on("select2:select", function (e) {
+        const selectedId = String(e.params.data.id || "");
+        const usedIds = $("#copyWoBoqContainer .copy-wo-boq-row")
+            .not(row[0])
+            .map(function () {
+                return $(this).attr("data-id-testing-point");
+            })
+            .get()
+            .filter(Boolean);
+        if (usedIds.includes(selectedId)) {
+            $sel.val(null).trigger("change");
+            row.attr("data-id-testing-point", "");
+            Notify.warning("Testing point ini sudah ada di daftar BOQ");
+            return;
+        }
+        row.attr("data-id-testing-point", selectedId);
+        loadCopyWoBoqItems(row, selectedId);
+    });
+
+    $sel.on("select2:clear", function () {
+        row.attr("data-id-testing-point", "");
+        row.find(".copy-wo-boq-items-wrap").html(
+            '<div class="text-muted small fst-italic" style="padding:4px 0;"><i class="fa-solid fa-circle-info me-1 opacity-50"></i> Pilih testing point untuk memuat daftar item</div>',
+        );
+    });
+}
+
+// preCheckedIds: null = semua dicentang (new row), Set<string> = hanya yg ada di set (source row edit)
+function loadCopyWoBoqItems(row, pointId, preCheckedIds = null) {
+    const $wrap = row.find(".copy-wo-boq-items-wrap");
+    $wrap.html(
+        '<div class="text-center text-muted py-2" style="font-size:12px;"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat item...</div>',
+    );
+
+    $.get(window.route.testingItemsByPoint + pointId, function (res) {
+        const items = res.data ?? [];
+        if (!items.length) {
+            $wrap.html(
+                '<div class="text-muted small fst-italic" style="padding:4px 0;"><i class="fa-solid fa-inbox me-1 opacity-50"></i> Tidak ada item pada testing point ini</div>',
+            );
+            return;
+        }
+
+        let html = `<div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="fw-semibold small text-muted"><i class="fa-solid fa-list-check me-1"></i> Pilih item:</span>
+            <div class="d-flex gap-3">
+                <a href="#" class="copy-wo-boq-check-all small text-decoration-none">Pilih Semua</a>
+                <a href="#" class="copy-wo-boq-uncheck-all small text-decoration-none text-secondary">Hapus Semua</a>
+            </div>
+        </div><div class="copy-wo-boq-items-list">`;
+
+        items.forEach(function (item) {
+            const unit = item.kode_unit || "—";
+            const nilai = item.nilai ?? "—";
+            const checked =
+                preCheckedIds === null
+                    ? true
+                    : preCheckedIds.has(String(item.id_testing_item));
+            html += `<div class="modal-item-row d-flex align-items-center gap-3">
+                <input type="checkbox" class="form-check-input copy-wo-item-check flex-shrink-0 mt-0"
+                    id="cwitem_${pointId}_${item.id_testing_item}" ${checked ? "checked" : ""}
+                    data-item-id="${item.id_testing_item}">
+                <label class="d-flex justify-content-between align-items-center w-100 gap-2"
+                    for="cwitem_${pointId}_${item.id_testing_item}" style="cursor:pointer;margin:0;">
+                    <div>
+                        <span class="fw-semibold" style="font-size:13px;">${escHtml(item.judul_indonesia ?? "—")}</span>
+                        <span class="text-muted ms-1 small">/ ${escHtml(item.judul_inggris ?? "—")}</span>
+                    </div>
+                    <span class="item-meta-badge flex-shrink-0">${escHtml(unit)} · ${escHtml(String(nilai))}</span>
+                </label>
+            </div>`;
+        });
+
+        html += "</div>";
+        $wrap.html(html);
+
+        $wrap.on("click", ".copy-wo-boq-check-all", function (e) {
+            e.preventDefault();
+            $wrap.find(".copy-wo-item-check").prop("checked", true);
+        });
+        $wrap.on("click", ".copy-wo-boq-uncheck-all", function (e) {
+            e.preventDefault();
+            $wrap.find(".copy-wo-item-check").prop("checked", false);
+        });
+    }).fail(function () {
+        $wrap.html(
+            '<div class="text-danger small" style="padding:4px 0;"><i class="fa-solid fa-circle-exclamation me-1"></i> Gagal memuat item</div>',
+        );
+    });
+}

@@ -1,10 +1,30 @@
-@extends('layouts.app')
+@extends(request('embed') ? 'layouts.embed' : 'layouts.app')
 
 @section('content')
 <section class="section">
     <div class="container-fluid">
 
         {{-- Page Header --}}
+        {{-- STICKY WO INFO BANNER --}}
+        <div id="woInfoBanner" style="display:none;position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #e2e8f0;padding:10px 16px;margin:-16px -12px 16px;box-shadow:0 2px 10px rgba(0,0,0,.08);">
+            <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size:13px;">
+                <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+                    <i class="fa-solid fa-location-dot" style="color:#0891b2;font-size:11px;flex-shrink:0;"></i>
+                    <span id="woBannerSite" style="color:#0e7490;font-weight:600;white-space:nowrap;"></span>
+                </div>
+                <div style="width:1px;height:16px;background:#e2e8f0;flex-shrink:0;"></div>
+                <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+                    <i class="fa-solid fa-briefcase" style="color:#1a56db;font-size:11px;flex-shrink:0;"></i>
+                    <span id="woBannerNoWo" style="font-weight:700;color:#1a56db;white-space:nowrap;"></span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
+                    <i class="fa-solid fa-file-lines" style="color:#374151;font-size:11px;flex-shrink:0;"></i>
+                    <span id="woBannerJudul" style="color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+                </div>
+            </div>
+        </div>
+
+        @if(!request('embed'))
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h4 class="mb-1">Tambah BOQ</h4>
@@ -14,6 +34,7 @@
                 <i class="fa-solid fa-arrow-left me-1"></i> Kembali
             </a>
         </div>
+        @endif
 
         {{-- Work Order Selector --}}
         <div class="card mb-4">
@@ -40,15 +61,15 @@
         <div id="boqEmpty" class="card mb-4">
             <div class="card-body text-center text-muted py-5">
                 <i class="fa-solid fa-layer-group fa-2x mb-3 d-block opacity-25"></i>
-                <div class="fw-semibold mb-1">Belum ada section</div>
-                <div class="small">Pilih Work Order lalu klik <strong>+ Tambah Section</strong> untuk memulai</div>
+                <div class="fw-semibold mb-1">Belum ada item</div>
+                <div class="small">Pilih Work Order lalu klik <strong>+ Tambah Item</strong> untuk memulai</div>
             </div>
         </div>
 
         {{-- Action Bar --}}
         <div class="d-flex justify-content-between align-items-center mt-2">
             <button type="button" id="btnAddSection" class="btn btn-outline-primary" disabled>
-                <i class="fa-solid fa-plus me-1"></i> Tambah Section
+                <i class="fa-solid fa-plus me-1"></i> Tambah Item
             </button>
             <button type="button" id="btnSave" class="btn btn-primary" disabled>
                 <i class="fa-solid fa-floppy-disk me-1"></i> Simpan BOQ
@@ -66,7 +87,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalSectionTitle">
-                    <i class="fa-solid fa-layer-group me-2 text-primary"></i> Tambah Section
+                    <i class="fa-solid fa-layer-group me-2 text-primary"></i> Tambah Item
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -74,7 +95,7 @@
 
                 <div class="mb-4">
                     <label class="form-label fw-semibold">
-                        Testing Point <span class="text-danger">*</span>
+                        Item <span class="text-danger">*</span>
                     </label>
                     <select id="selectTestingPoint" style="width:100%"></select>
                 </div>
@@ -112,7 +133,7 @@
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
                 <button type="button" id="btnConfirmSection" class="btn btn-primary btn-sm" disabled>
                     <i class="fa-solid fa-check me-1"></i>
-                    <span id="btnConfirmText">Tambah Section</span>
+                    <span id="btnConfirmText">Tambah Item</span>
                 </button>
             </div>
         </div>
@@ -155,11 +176,14 @@
         transition: background 0.1s;
     }
     .modal-item-row:hover { background: #f8fafc; }
+    .boq-items-toggle:hover .text-muted { color: #475569 !important; }
+    .boq-items-chevron.collapsed { transform: rotate(180deg); }
 </style>
 
 <script>
-let addedPointIds  = new Set();
-let selectedPoint  = null;
+let addedPointIds    = new Set();
+let existingDbPointIds = new Set();
+let selectedPoint    = null;
 let editingSectionId = null;
 
 $(document).ready(function () {
@@ -184,19 +208,37 @@ $(document).ready(function () {
     });
 
     $("#id_wo").on("select2:select", function (e) {
+        addedPointIds.clear();
+        existingDbPointIds.clear();
+        $("#boqSections").empty();
+        $("#boqEmpty").show();
         $("#judulOrder").text(e.params.data.judul || "—").removeClass("text-muted");
         $("#btnAddSection").prop("disabled", false);
+        loadExistingBoqPoints(e.params.data.id);
     });
 
     const preselectWoId = new URLSearchParams(window.location.search).get('id_wo');
     if (preselectWoId) {
+        $("#id_wo").prop("disabled", true);
         $.get("{{ url('work-orders') }}/" + preselectWoId, function (wo) {
             if (!wo || !wo.id_wo) return;
             const opt = new Option(wo.no_wo + ' — ' + wo.judul_pekerjaan, wo.id_wo, true, true);
             Object.assign(opt, { judul: wo.judul_pekerjaan });
             $("#id_wo").append(opt).trigger('change');
+            $("#id_wo").prop("disabled", true);
             $("#judulOrder").text(wo.judul_pekerjaan || "—").removeClass("text-muted");
             $("#btnAddSection").prop("disabled", false);
+            loadExistingBoqPoints(preselectWoId);
+
+            $('#woBannerNoWo').text(wo.no_wo ?? '—');
+            $('#woBannerJudul').text(wo.judul_pekerjaan ?? '—');
+            $('#woBannerSite').text(wo.nama_site_pelanggan_pekerjaan ?? '');
+            if (wo.nama_site_pelanggan_pekerjaan) {
+                $('#woInfoBanner').show();
+            } else {
+                $('#woInfoBanner .fa-location-dot').closest('div').hide();
+                $('#woInfoBanner').show();
+            }
         });
     }
 
@@ -206,12 +248,13 @@ $(document).ready(function () {
         $("#boqSections").empty();
         $("#boqEmpty").show();
         addedPointIds.clear();
+        existingDbPointIds.clear();
     });
 
     // ── Testing Point Select2 (di dalam modal) ────────────────────────────────
     $("#selectTestingPoint").select2({
         dropdownParent: $("#modalAddSection"),
-        placeholder: "Ketik nama Testing Point...",
+        placeholder: "Ketik nama item...",
         allowClear: true,
         minimumInputLength: 0,
         ajax: {
@@ -219,15 +262,34 @@ $(document).ready(function () {
             dataType: "json",
             delay: 250,
             data: p => ({ q: p.term }),
-            processResults: d => ({ results: d }),
-            cache: true,
+            processResults: function(d) {
+                return {
+                    results: d.map(function(item) {
+                        var alreadyAdded = addedPointIds.has(String(item.id)) && String(item.id) !== String(editingSectionId);
+                        return Object.assign({}, item, { disabled: alreadyAdded, _added: alreadyAdded });
+                    })
+                };
+            },
+            cache: false,
         },
+        templateResult: function(item) {
+            if (item.loading) return item.text;
+            if (item._added) {
+                return $('<span style="color:#16a34a;"><i class="fa-solid fa-circle-check me-1"></i>' + escHtml(item.text) + '</span>');
+            }
+            return item.text;
+        },
+        escapeMarkup: function(m) { return m; },
     });
 
     $("#selectTestingPoint").on("select2:select", function (e) {
         const id = String(e.params.data.id);
         if (!editingSectionId && addedPointIds.has(id)) {
-            Notify.warning("Testing Point ini sudah ditambahkan. Gunakan tombol Edit pada section tersebut.");
+            if (existingDbPointIds.has(id)) {
+                Notify.warning("Testing Point ini sudah ada pada BOQ Work Order ini. Buka halaman Edit BOQ untuk mengubahnya.");
+            } else {
+                Notify.warning("Testing Point ini sudah ditambahkan. Gunakan tombol Edit pada item tersebut.");
+            }
             $(this).val(null).trigger("change");
             selectedPoint = null;
             resetModalItems();
@@ -259,8 +321,8 @@ $(document).ready(function () {
         selectedPoint    = null;
         $("#selectTestingPoint").val(null).trigger("change").prop("disabled", false);
         resetModalItems();
-        $("#modalSectionTitle").html('<i class="fa-solid fa-layer-group me-2 text-primary"></i> Tambah Section');
-        $("#btnConfirmText").text("Tambah Section");
+        $("#modalSectionTitle").html('<i class="fa-solid fa-layer-group me-2 text-primary"></i> Tambah Item');
+        $("#btnConfirmText").text("Tambah Item");
     });
 
     // ── Buka modal edit section ───────────────────────────────────────────────
@@ -276,7 +338,7 @@ $(document).ready(function () {
         $("#selectTestingPoint").empty().append(opt).trigger("change");
         $("#selectTestingPoint").prop("disabled", true);
 
-        $("#modalSectionTitle").html('<i class="fa-solid fa-pen me-2 text-warning"></i> Edit Section');
+        $("#modalSectionTitle").html('<i class="fa-solid fa-pen me-2 text-warning"></i> Edit Item');
         $("#btnConfirmText").text("Simpan Perubahan");
 
         resetModalItems();
@@ -340,7 +402,21 @@ $(document).ready(function () {
         if (!id_wo) { Notify.warning("Pilih Work Order terlebih dahulu"); return; }
 
         const sections = collectSections();
-        if (!sections.length) { Notify.warning("Tambahkan minimal 1 section BOQ"); return; }
+        if (!sections.length) { Notify.warning("Tambahkan minimal 1 item BOQ"); return; }
+
+        // Validasi field wajib per item
+        for (var i = 0; i < sections.length; i++) {
+            var s = sections[i];
+            var pointName = $(".boq-section").eq(i).find(".section-point-name").text().trim();
+            if (!s.qty) {
+                Swal.fire({ icon: 'warning', title: 'Field wajib diisi', text: 'Qty pada item "' + pointName + '" harus diisi.' });
+                return;
+            }
+            if (!s.satuan) {
+                Swal.fire({ icon: 'warning', title: 'Field wajib diisi', text: 'Satuan pada item "' + pointName + '" harus diisi.' });
+                return;
+            }
+        }
 
         Notify.confirm("Simpan BOQ?", function () {
             $("#btnSave").prop("disabled", true)
@@ -354,7 +430,16 @@ $(document).ready(function () {
                 data: JSON.stringify({ id_wo: id_wo, sections: sections }),
                 success: function () {
                     Notify.success("BOQ berhasil disimpan");
+                    @if(request('embed'))
+                    localStorage.setItem('boq_created', JSON.stringify({ id_wo: id_wo, ts: Date.now() }));
+                    setTimeout(function () {
+                        var inIframe = window.self !== window.top;
+                        if (!inIframe && window.opener && !window.opener.closed) window.opener.focus();
+                        window.close();
+                    }, 800);
+                    @else
                     setTimeout(() => window.location.href = "{{ url('work-orders') }}", 1000);
+                    @endif
                 },
                 error: function (xhr) {
                     Notify.error(xhr.responseJSON?.message || "Gagal menyimpan BOQ");
@@ -474,8 +559,12 @@ function addSection(pointId, pointText, items) {
                         </div>
                         <div class="col-md-2">
                             <label class="form-label form-label-sm text-muted mb-1">Satuan</label>
-                            <input type="text" class="form-control form-control-sm input-satuan"
-                                placeholder="pcs, set...">
+                            <select class="form-select form-select-sm input-satuan">
+                                <option value="">— Pilih —</option>
+                                <option value="PCS">PCS</option>
+                                <option value="Titik">Titik</option>
+                                <option value="Set">Set</option>
+                            </select>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
@@ -492,8 +581,12 @@ function addSection(pointId, pointText, items) {
                         </div>
                     </div>
                 </div>
-                <div class="text-muted small fw-semibold mb-1">
-                    <i class="fa-solid fa-list-check me-1"></i> Items
+                <div class="d-flex align-items-center justify-content-between mb-1 boq-items-toggle"
+                    style="cursor:pointer;user-select:none;">
+                    <span class="text-muted small fw-semibold">
+                        <i class="fa-solid fa-list-check me-1"></i> Items
+                    </span>
+                    <i class="fa-solid fa-chevron-up text-muted boq-items-chevron" style="font-size:11px;transition:transform .2s;"></i>
                 </div>
                 <div class="boq-items">${itemsHtml}</div>
             </div>
@@ -504,6 +597,81 @@ function addSection(pointId, pointText, items) {
     initNumericMask($el);
     addedPointIds.add(String(pointId));
     $("#btnSave").prop("disabled", false);
+}
+
+// ── Section dari DB — hanya tampilan, tidak bisa diedit atau disimpan ulang ────
+function addExistingSection(sec) {
+    const ptId   = String(sec.id_testing_point);
+    const items  = sec.items || [];
+    const harga  = sec.harga  ? Number(sec.harga).toLocaleString('en-US') : '—';
+    const qty    = sec.qty    ?? '—';
+    const satuan = sec.satuan ?? '—';
+
+    const itemsHtml = items.map(function (item, i) {
+        const unit  = item.kode_unit || '—';
+        const nilai = item.nilai ?? '—';
+        return `<div class="d-flex align-items-center flex-wrap gap-2" style="padding:5px 0;border-bottom:1px solid #f1f5f9;">
+            <span class="text-muted small fw-semibold">${i + 1}.</span>
+            <span class="fw-semibold small">${escHtml(item.judul_indonesia ?? '—')}</span>
+            <span class="text-muted small">/ ${escHtml(item.judul_inggris ?? '—')}</span>
+            <span class="item-meta-badge">${escHtml(unit)} · ${escHtml(String(nilai))}</span>
+        </div>`;
+    }).join('');
+
+    const html = `
+        <div class="card mb-4 boq-section" data-point-id="${ptId}" data-from-db="true"
+            style="border-color:#e2e8f0;background:#fafbfc;">
+            <div class="card-header d-flex justify-content-between align-items-center py-2 px-3"
+                style="background:#f1f5f9;border-bottom:1px solid #e2e8f0;">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <i class="fa-solid fa-layer-group" style="color:#2563eb;"></i>
+                    <span class="fw-semibold section-point-name">${escHtml(sec.point_name)}</span>
+                    <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary"
+                        style="font-size:11px;">${items.length} item</span>
+                    <span class="badge" style="font-size:10px;background:#e0e7ef;color:#475569;">Sudah ada</span>
+                </div>
+            </div>
+            <div class="card-body px-3 py-3">
+                <div style="background:#f8fafc;border:1px solid #e9ecef;border-radius:6px;padding:10px 14px;margin-bottom:12px;">
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label form-label-sm text-muted mb-1">Item Produk Alternatif</label>
+                            <p class="form-control form-control-sm mb-0">${escHtml(sec.item_produk_alternate ?? '—')}</p>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label form-label-sm text-muted mb-1">Qty</label>
+                            <p class="form-control form-control-sm mb-0">${escHtml(String(qty))}</p>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label form-label-sm text-muted mb-1">Satuan</label>
+                            <p class="form-control form-control-sm mb-0">${escHtml(String(satuan))}</p>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
+                            <p class="form-control form-control-sm mb-0">${harga}</p>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label form-label-sm text-muted mb-1">Keterangan</label>
+                            <p class="form-control form-control-sm mb-0">${escHtml(sec.keterangan ?? '—')}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center justify-content-between mb-1 boq-items-toggle"
+                    style="cursor:pointer;user-select:none;">
+                    <span class="text-muted small fw-semibold">
+                        <i class="fa-solid fa-list-check me-1"></i> Items
+                    </span>
+                    <i class="fa-solid fa-chevron-up text-muted boq-items-chevron" style="font-size:11px;transition:transform .2s;"></i>
+                </div>
+                <div class="boq-items">
+                    ${itemsHtml || '<div class="text-muted small py-2">Tidak ada item</div>'}
+                </div>
+            </div>
+        </div>`;
+
+    $("#boqSections").append(html);
+    addedPointIds.add(ptId);
+    $("#boqEmpty").hide();
 }
 
 // ── Update items pada section yang sudah ada ───────────────────────────────────
@@ -531,16 +699,34 @@ function renderItem(pointId, item, num) {
         </div>`;
 }
 
+function loadExistingBoqPoints(woId) {
+    existingDbPointIds.clear();
+
+    $.get("{{ url('boq') }}/" + woId, function (data) {
+        const sections = data.sections ?? [];
+        if (!sections.length) return;
+
+        sections.forEach(function (sec) {
+            existingDbPointIds.add(String(sec.id_testing_point));
+            addExistingSection(sec);
+        });
+    }).fail(function () {
+        // 404 = belum ada BOQ, mulai dari awal
+    });
+}
+
 function checkEmpty() {
-    if ($(".boq-section").length === 0) {
-        $("#boqEmpty").show();
+    if ($(".boq-section:not([data-from-db])").length === 0) {
         $("#btnSave").prop("disabled", true);
+        if ($(".boq-section[data-from-db]").length === 0) {
+            $("#boqEmpty").show();
+        }
     }
 }
 
 function collectSections() {
     const sections = [];
-    $(".boq-section").each(function () {
+    $(".boq-section:not([data-from-db])").each(function () {
         const $sec  = $(this);
         const items = [];
         $sec.find(".boq-item").each(function () {
@@ -583,6 +769,13 @@ function updateSectionTotal($sec) {
 
 $(document).on('input', '.input-qty, .input-harga', function () {
     updateSectionTotal($(this).closest('.boq-section'));
+});
+
+$(document).on('click', '.boq-items-toggle', function () {
+    const $items = $(this).next('.boq-items');
+    const $icon  = $(this).find('.boq-items-chevron');
+    $items.slideToggle(180);
+    $icon.toggleClass('collapsed');
 });
 </script>
 @endsection

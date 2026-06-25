@@ -1,5 +1,4 @@
-@extends('layouts.app')
-
+@extends(request('embed') ? 'layouts.embed' : 'layouts.app')
 @section('page-title', 'Fieldwork')
 @section('page-descrip', 'Tambah data kegiatan pekerjaan lapangan')
 
@@ -20,6 +19,26 @@
 @endsection
 
 @section('content')
+
+{{-- STICKY WO INFO BANNER --}}
+<div id="woInfoBanner" style="display:none;position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #e2e8f0;padding:10px 16px;margin:-8px -12px 16px;box-shadow:0 2px 10px rgba(0,0,0,.08);">
+    <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size:13px;">
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+            <i class="fa-solid fa-location-dot" style="color:#0891b2;font-size:11px;flex-shrink:0;"></i>
+            <span id="woBannerSite" style="color:#0e7490;font-weight:600;white-space:nowrap;"></span>
+        </div>
+        <div style="width:1px;height:16px;background:#e2e8f0;flex-shrink:0;"></div>
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+            <i class="fa-solid fa-briefcase" style="color:#1a56db;font-size:11px;flex-shrink:0;"></i>
+            <span id="woBannerNoWo" style="font-weight:700;color:#1a56db;white-space:nowrap;"></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
+            <i class="fa-solid fa-file-lines" style="color:#374151;font-size:11px;flex-shrink:0;"></i>
+            <span id="woBannerJudul" style="color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        </div>
+    </div>
+</div>
+
 <section class="section">
     <form id="fieldworkForm" class="row g-3">
         @csrf
@@ -28,7 +47,7 @@
             <x-section-card icon="fa-hard-hat" color="icon-amber" title="Informasi Fieldwork" subtitle="Data kegiatan pekerjaan lapangan">
                 <div class="row g-3">
 
-                    <div class="col-md-12">
+                    <div class="col-md-12" id="woFieldWrapper">
                         <label class="form-label required">Work Order</label>
                         <select name="id_wo" id="create_id_wo" class="form-select" required>
                             <option value="">-- Pilih Work Order --</option>
@@ -41,7 +60,7 @@
                             placeholder="Judul kegiatan fieldwork">
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-md-6" id="siteFieldWrapper">
                         <label class="form-label required">Site Pelanggan</label>
                         <select name="id_site_pelanggan_pekerjaan" id="create_id_site" class="form-select" required>
                             <option value="">-- Pilih Site --</option>
@@ -57,17 +76,17 @@
 
                     <div class="col-md-4">
                         <label class="form-label">Tanggal Mulai</label>
-                        <input type="date" name="tanggal_mulai" class="form-control">
+                        <input type="text" name="tanggal_mulai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
 
                     <div class="col-md-4">
                         <label class="form-label">Tanggal Selesai</label>
-                        <input type="date" name="tanggal_selesai" class="form-control">
+                        <input type="text" name="tanggal_selesai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
 
                     <div class="col-md-4">
                         <label class="form-label">Waktu Kedatangan</label>
-                        <input type="datetime-local" name="waktu_kedatangan" class="form-control">
+                        <input type="text" name="waktu_kedatangan" class="form-control fp-datetime" placeholder="Pilih tanggal & jam" autocomplete="off">
                     </div>
 
                     <div class="col-md-12">
@@ -79,7 +98,23 @@
             </x-section-card>
         </div>
 
-        <x-form-actions back-route="{{ route('fieldworks.index') }}" submit-label="Simpan Fieldwork" />
+        <!-- SECTION: PERSONEL -->
+        <div class="col-12">
+            <x-section-card icon="fa-users" color="icon-purple" title="Personel" subtitle="Teknisi / personel yang bertugas pada fieldwork ini">
+                <div id="personelContainer" class="d-flex flex-column gap-2 mb-3"></div>
+
+                <div id="personelEmpty" class="text-center text-muted py-3" style="border:1px dashed #e2e8f0;border-radius:8px;">
+                    <i class="fa-solid fa-users fa-lg d-block mb-2 opacity-25"></i>
+                    <span style="font-size:13px;">Belum ada personel. Klik <strong>+ Tambah Personel</strong> di bawah.</span>
+                </div>
+
+                <button type="button" id="btnAddPersonel" class="btn btn-outline-primary btn-sm mt-2">
+                    <i class="fa-solid fa-plus me-1"></i> Tambah Personel
+                </button>
+            </x-section-card>
+        </div>
+
+        <x-form-actions :back-route="request('embed') ? null : route('fieldworks.index')" submit-label="Simpan Fieldwork" />
 
     </form>
 </section>
@@ -87,6 +122,8 @@
 
 @section('custom-script')
 <script>
+    var preselectWoId = new URLSearchParams(window.location.search).get('id_wo');
+
     function noResultsAdd(createUrl) {
         return {
             language: {
@@ -99,34 +136,73 @@
     }
 
     $(document).ready(function () {
-        $('#create_id_wo').select2({
-            width: '100%',
-            placeholder: 'Ketik No WO...',
-            allowClear: true,
-            minimumInputLength: 0,
-            ajax: {
-                url: "{{ route('work-orders.select2') }}",
-                dataType: 'json',
-                delay: 250,
-                data: p => ({ q: p.term }),
-                processResults: d => ({ results: d }),
-                cache: true,
-            },
-        });
+        initFpDate(document);
 
-        $('#create_id_wo').on('select2:select', function (e) {
-            $('input[name="judul_pekerjaan"]').val(e.params.data.judul || '');
-        });
+        // WO Select2 (hanya jika tidak preselect)
+        if (!preselectWoId) {
+            $('#create_id_wo').select2({
+                width: '100%',
+                placeholder: 'Ketik No WO...',
+                allowClear: true,
+                minimumInputLength: 0,
+                ajax: {
+                    url: "{{ route('work-orders.select2') }}",
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term }),
+                    processResults: d => ({ results: d }),
+                    cache: true,
+                },
+            });
 
-        // Auto-fill WO dari query param ?id_wo=
-        const preId = new URLSearchParams(window.location.search).get('id_wo');
-        if (preId) {
-            $.get("{{ url('work-orders') }}/" + preId + "/detail", function (res) {
-                if (!res) return;
-                const label = (res.no_wo ?? '') + (res.judul_pekerjaan ? ' - ' + res.judul_pekerjaan : '');
-                const opt   = new Option(label, res.id_wo, true, true);
-                $('#create_id_wo').append(opt).trigger('change');
-                $('input[name="judul_pekerjaan"]').val(res.judul_pekerjaan ?? '');
+            $('#create_id_wo').on('select2:select', function (e) {
+                $('input[name="judul_pekerjaan"]').val(e.params.data.judul || '');
+            });
+        }
+
+        // Auto-fill dan lock dari ?id_wo=
+        if (preselectWoId) {
+            // Langsung lock field sebelum AJAX selesai
+            $('#woFieldWrapper').html(`
+                <label class="form-label required">Work Order</label>
+                <input type="hidden" name="id_wo" value="${preselectWoId}">
+                <p class="form-control mb-0" style="background:#f8fafc;color:#374151;">
+                    <i class="fa-solid fa-spinner fa-spin me-1" style="color:#94a3b8;"></i> Memuat...
+                </p>
+            `);
+
+            $.get("{{ url('work-orders') }}/" + preselectWoId + "/detail", function (res) {
+                if (!res || !res.id_wo) return;
+
+                // Lock WO field
+                const woLabel = (res.no_wo ?? '') + (res.judul_pekerjaan ? ' — ' + res.judul_pekerjaan : '');
+                $('#woFieldWrapper').html(`
+                    <label class="form-label required">Work Order</label>
+                    <input type="hidden" name="id_wo" value="${res.id_wo}">
+                    <p class="form-control mb-0" style="background:#f8fafc;color:#374151;">${escHtml(woLabel)}</p>
+                `);
+
+                // Lock judul pekerjaan
+                $('input[name="judul_pekerjaan"]')
+                    .val(res.judul_pekerjaan ?? '')
+                    .prop('readonly', true)
+                    .css({ background: '#f8fafc', color: '#374151' });
+
+                // Lock site pelanggan dari WO
+                const siteNama = res['Site Pelanggan'] ?? '—';
+                const siteId   = res.id_site_pelanggan_pekerjaan ?? '';
+                $('#create_id_site').select2('destroy');
+                $('#siteFieldWrapper').html(`
+                    <label class="form-label required">Site Pelanggan</label>
+                    <input type="hidden" name="id_site_pelanggan_pekerjaan" value="${siteId}">
+                    <p class="form-control mb-0" style="background:#f8fafc;color:#374151;">${escHtml(siteNama)}</p>
+                `);
+
+                // Tampilkan sticky banner
+                $('#woBannerNoWo').text(res.no_wo ?? '—');
+                $('#woBannerJudul').text(res.judul_pekerjaan ?? '—');
+                $('#woBannerSite').text(siteNama);
+                $('#woInfoBanner').show();
             });
         }
 
@@ -163,10 +239,115 @@
         });
     });
 
+    // ── Personel dynamic rows ────────────────────────────────────────────────
+    let personelIdx = 0;
+
+    function syncPersonelEmpty() {
+        const hasRows = $('#personelContainer .personel-row').length > 0;
+        $('#personelEmpty').toggle(!hasRows);
+    }
+
+    function addPersonelRow(userData, roleVal) {
+        const idx = personelIdx++;
+        const row = $(`
+            <div class="personel-row d-flex align-items-start gap-2" data-idx="${idx}">
+                <div style="flex:1;min-width:0;">
+                    <label class="form-label form-label-sm text-muted mb-1">Personel</label>
+                    <select name="personels[${idx}][id_user]"
+                        class="form-select personel-user-select" required></select>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <label class="form-label form-label-sm text-muted mb-1">Role</label>
+                    <select name="personels[${idx}][role]" class="form-select personel-role-select">
+                        <option value="">-- Pilih Role --</option>
+                        <option value="Leader"  ${roleVal === 'Leader'  ? 'selected' : ''}>Leader</option>
+                        <option value="Driver"  ${roleVal === 'Driver'  ? 'selected' : ''}>Driver</option>
+                        <option value="Anggota" ${roleVal === 'Anggota' ? 'selected' : ''}>Anggota</option>
+                    </select>
+                </div>
+                <div style="padding-top:26px;flex-shrink:0;">
+                    <button type="button" class="btn btn-outline-danger btn-sm btn-remove-personel"
+                        title="Hapus personel">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `);
+
+        const $select = row.find('.personel-user-select');
+        $('#personelContainer').append(row);
+
+        $select.select2({
+            width: '100%',
+            placeholder: 'Ketik nama personel...',
+            allowClear: true,
+            minimumInputLength: 0,
+            ajax: {
+                url: "{{ route('users.select2') }}",
+                dataType: 'json',
+                delay: 200,
+                data: p => ({ q: p.term }),
+                processResults: d => ({ results: d }),
+                cache: true,
+            },
+        });
+
+        row.find('.personel-role-select').select2({
+            width: '100%',
+            placeholder: '-- Pilih Role --',
+            allowClear: false,
+            minimumResultsForSearch: Infinity,
+        });
+
+        if (userData) {
+            const opt = new Option(userData.text, userData.id, true, true);
+            $select.append(opt).trigger('change');
+        }
+
+        syncPersonelEmpty();
+    }
+
+    $('#btnAddPersonel').on('click', function () {
+        addPersonelRow(null, '');
+    });
+
+    $(document).on('click', '.btn-remove-personel', function () {
+        $(this).closest('.personel-row').remove();
+        syncPersonelEmpty();
+    });
+
+    syncPersonelEmpty();
+
+    // ── Validasi tanggal ─────────────────────────────────────────────────────
+    $('#fieldworkForm').on('submit', function (e) {
+        const mulai    = $('input[name="tanggal_mulai"]').val();
+        const selesai  = $('input[name="tanggal_selesai"]').val();
+        if (mulai && selesai && selesai < mulai) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            Swal.fire({ icon: 'warning', title: 'Periksa Tanggal', text: 'Tanggal selesai tidak boleh kurang dari tanggal mulai' });
+        }
+    });
+
+    // ── Submit ───────────────────────────────────────────────────────────────
     submitCreateForm({
         formId: '#fieldworkForm',
         url: "{{ route('fieldworks.store') }}",
-        redirect: "{{ route('fieldworks.index') }}",
+        onSuccess: preselectWoId ? function (res) {
+            localStorage.setItem('fwo_created', JSON.stringify({ id_wo: preselectWoId, ts: Date.now() }));
+            if (window.opener && !window.opener.closed) window.opener.focus();
+            setTimeout(function () { window.close(); }, 800);
+        } : null,
+        redirect: preselectWoId ? null : "{{ route('fieldworks.index') }}",
+        onError: function (xhr) {
+            const json = xhr.responseJSON;
+            if (json) {
+                const msg = json.message
+                    || (json.errors ? Object.values(json.errors).map(e => e[0]).join('<br>') : null)
+                    || 'Terjadi kesalahan';
+                Swal.fire({ icon: 'error', title: 'Gagal', html: msg });
+            }
+        },
     });
 </script>
 @endsection

@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use SebastianBergmann\Environment\Console;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistory;
 use App\Traits\HasAttachment;
@@ -34,14 +33,16 @@ class TestingStandardController extends Controller
 
     public function data()
     {
-        $query = DB::table('testing_standards')->select([
-            'id_testing_standard',
-            'nomor',
-            'judul',
-            'is_aktif',
-            'attachment',
-            'created_at'
-        ]);
+        $query = DB::table('testing_standards')
+            ->whereNull('deleted_at')
+            ->select([
+                'id_testing_standard',
+                'nomor',
+                'judul',
+                'is_aktif',
+                'attachment',
+                'created_at'
+            ]);
 
         return DataTables::of($query)
             ->addIndexColumn()
@@ -62,6 +63,7 @@ class TestingStandardController extends Controller
     {
         $data = DB::table('testing_standards')
             ->where('id_testing_standard', $id)
+            ->whereNull('deleted_at')
             ->first();
 
         if (!$data) {
@@ -79,8 +81,11 @@ class TestingStandardController extends Controller
         $search = $request->q;
 
         $data = DB::table('testing_standards')
-            ->where('nomor', 'like', "%{$search}%")
-            ->orWhere('judul', 'like', "%{$search}%")
+            ->whereNull('deleted_at')
+            ->where(function ($q) use ($search) {
+                $q->where('nomor', 'like', "%{$search}%")
+                  ->orWhere('judul', 'like', "%{$search}%");
+            })
             ->limit(10)
             ->get();
 
@@ -130,6 +135,7 @@ class TestingStandardController extends Controller
     {
         $data = DB::table('testing_standards')
             ->where('id_testing_standard', $id)
+            ->whereNull('deleted_at')
             ->first();
 
         if (!$data) {
@@ -206,14 +212,12 @@ class TestingStandardController extends Controller
 
     public function destroy($id)
     {
-        DB::table('testing_standards')
-            ->where('id_testing_standard', $id)
-            ->delete();
+        $before = DB::table('testing_standards')->where('id_testing_standard', $id)->get()->toJson();
+        DB::table('testing_standards')->where('id_testing_standard', $id)->update(['deleted_at' => now()]);
+        $after = DB::table('testing_standards')->where('id_testing_standard', $id)->get()->toJson();
+        saveAudit('testing_standards', $id, 'delete', $before, $after);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Data berhasil dihapus'
-        ]);
+        return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
     }
 
 

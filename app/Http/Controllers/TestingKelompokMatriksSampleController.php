@@ -29,14 +29,16 @@ class TestingKelompokMatriksSampleController extends Controller
 
     public function data()
     {
-        $query = DB::table('testing_kelompok_matriks_samples')->select([
-            'id_testing_kelompok_matriks_sample',
-            'kode',
-            'judul_indonesia',
-            'judul_inggris',
-            'keterangan',
-            'created_at'
-        ]);
+        $query = DB::table('testing_kelompok_matriks_samples')
+            ->whereNull('deleted_at')
+            ->select([
+                'id_testing_kelompok_matriks_sample',
+                'kode',
+                'judul_indonesia',
+                'judul_inggris',
+                'keterangan',
+                'created_at'
+            ]);
 
         return DataTables::of($query)
             ->addIndexColumn()
@@ -82,6 +84,7 @@ class TestingKelompokMatriksSampleController extends Controller
     {
         $data = DB::table('testing_kelompok_matriks_samples')
             ->where('id_testing_kelompok_matriks_sample', $id)
+            ->whereNull('deleted_at')
             ->first();
 
         if (!$data) {
@@ -148,14 +151,12 @@ class TestingKelompokMatriksSampleController extends Controller
 
     public function destroy($id)
     {
-        DB::table('testing_kelompok_matriks_samples')
-            ->where('id_testing_kelompok_matriks_sample', $id)
-            ->delete();
+        $before = DB::table('testing_kelompok_matriks_samples')->where('id_testing_kelompok_matriks_sample', $id)->get()->toJson();
+        DB::table('testing_kelompok_matriks_samples')->where('id_testing_kelompok_matriks_sample', $id)->update(['deleted_at' => now()]);
+        $after = DB::table('testing_kelompok_matriks_samples')->where('id_testing_kelompok_matriks_sample', $id)->get()->toJson();
+        saveAudit('testing_kelompok_matriks_samples', $id, 'delete', $before, $after);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Data berhasil dihapus'
-        ]);
+        return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
     }
 
     public function select2(Request $request)
@@ -163,8 +164,11 @@ class TestingKelompokMatriksSampleController extends Controller
         $search = $request->q;
 
         $data = DB::table('testing_kelompok_matriks_samples')
-            ->where('kode', 'like', "%{$search}%")
-            ->orWhere('judul_indonesia', 'like', "%{$search}%")
+            ->whereNull('deleted_at')
+            ->where(function ($q) use ($search) {
+                $q->where('kode', 'like', "%{$search}%")
+                  ->orWhere('judul_indonesia', 'like', "%{$search}%");
+            })
             ->limit(10)
             ->get();
 
@@ -182,6 +186,7 @@ class TestingKelompokMatriksSampleController extends Controller
     {
         $data = DB::table('testing_kelompok_matriks_samples')
             ->where('id_testing_kelompok_matriks_sample', $id)
+            ->whereNull('deleted_at')
             ->first();
 
         if (!$data) {

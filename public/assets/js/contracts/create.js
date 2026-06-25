@@ -10,56 +10,51 @@ $(document).ready(function () {
         width: '100%',
         placeholder: '-- Pilih Pelanggan --',
         allowClear: true,
-        minimumInputLength: 2,
+        minimumInputLength: 0,
         ajax: {
             url: window.route.select2BR,
+            delay: 250,
+            dataType: 'json',
+            data: (params) => ({ q: params.term }),
+            processResults: (data) => ({ results: data }),
+            cache: true,
+        },
+        language: { noResults: () => `<span>Tidak ditemukan. <a href="/business-relations/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>` },
+        escapeMarkup: (m) => m,
+    });
+
+    // ─── Select2: PIC Pelanggan ──────────────────────────────
+    $('#id_pic_pelanggan').select2({
+        width: '100%',
+        placeholder: '-- Pilih PIC Pelanggan --',
+        allowClear: true,
+        minimumInputLength: 2,
+        ajax: {
+            url: window.route.select2Contact,
             delay: 300,
             dataType: 'json',
             data: (params) => ({ q: params.term }),
             processResults: (data) => ({ results: data }),
         },
-    });
-
-    // ─── Select2: PIC Pelanggan ──────────────────────────────
-    $.ajax({
-        url: window.route.select2Contact,
-        method: 'GET',
-        data: { q: '' },
-        success: function (response) {
-            $('#id_pic_pelanggan').append(new Option('', ''));
-            $.each(response, function (index, item) {
-                $('#id_pic_pelanggan').append(new Option(item.text, item.id));
-            });
-            $('#id_pic_pelanggan').select2({
-                width: '100%',
-                placeholder: '-- Pilih PIC Pelanggan --',
-                allowClear: true,
-            });
-        },
-        error: function () {
-            Notify.error('Gagal memuat data PIC pelanggan');
-        },
+        language: { noResults: () => `<span>Tidak ditemukan. <a href="/business-relation-contacts/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>` },
+        escapeMarkup: (m) => m,
     });
 
     // ─── Select2: PIC Pramatek ───────────────────────────────
-    $.ajax({
-        url: window.route.select2User,
-        method: 'GET',
-        data: { q: '' },
-        success: function (response) {
-            $('#id_pic_pramatek').append(new Option('', ''));
-            $.each(response, function (index, item) {
-                $('#id_pic_pramatek').append(new Option(item.text, item.id));
-            });
-            $('#id_pic_pramatek').select2({
-                width: '100%',
-                placeholder: '-- Pilih PIC Pramatek --',
-                allowClear: true,
-            });
+    $('#id_pic_pramatek').select2({
+        width: '100%',
+        placeholder: '-- Pilih PIC Pramatek --',
+        allowClear: true,
+        minimumInputLength: 2,
+        ajax: {
+            url: window.route.select2User,
+            delay: 300,
+            dataType: 'json',
+            data: (params) => ({ q: params.term }),
+            processResults: (data) => ({ results: data }),
         },
-        error: function () {
-            Notify.error('Gagal memuat data PIC Pramatek');
-        },
+        language: { noResults: () => `<span>Tidak ditemukan. <a href="/users/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>` },
+        escapeMarkup: (m) => m,
     });
 
     // ─── Form Submit ─────────────────────────────────────────

@@ -19,7 +19,6 @@
 @section('content')
 <x-crud-index
     title="List Fieldwork"
-    create-route="fieldworks.create"
     :with-history="true"
 />
 
@@ -29,14 +28,14 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fa-solid fa-layer-group me-2 text-primary"></i> Tambah BOQ Section
+                    <i class="fa-solid fa-layer-group me-2 text-primary"></i> Tambah BOQ Item
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
 
                 <div class="mb-3">
-                    <label class="form-label fw-semibold">BOQ Section <span class="text-danger">*</span></label>
+                    <label class="form-label fw-semibold">BOQ Item <span class="text-danger">*</span></label>
                     <select id="selectFwoBoq" style="width:100%"></select>
                 </div>
 
@@ -61,17 +60,53 @@
                             <input type="text" id="fwoBoqKetInput" class="form-control form-control-sm" placeholder="opsional">
                         </div>
                     </div>
-                    <div class="text-muted small fw-semibold mb-2">
-                        <i class="fa-solid fa-list-check me-1"></i> Items (otomatis dari BOQ)
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="text-muted small fw-semibold">
+                            <i class="fa-solid fa-list-check me-1"></i> Items (otomatis dari BOQ)
+                        </span>
+                        <button type="button" id="btnToggleModalItems"
+                            class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;" title="Lihat items">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
                     </div>
-                    <div id="fwoBoqModalItemsList"></div>
+                    <div id="fwoBoqModalItemsList" style="display:none;"></div>
                 </div>
 
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
                 <button type="button" id="btnConfirmFwoBoq" class="btn btn-primary btn-sm" disabled>
-                    <i class="fa-solid fa-check me-1"></i> Tambah Section
+                    <i class="fa-solid fa-check me-1"></i> Tambah Item
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{{-- Modal: Bulk Tambah BOQ (direct mode) --}}
+<div class="modal fade" id="modalBulkAddFwoBoq" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fa-solid fa-clipboard-list me-2 text-success"></i> Tambah / Edit BOQ
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="bulkBoqLoading" class="text-center text-muted py-4">
+                    <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data BOQ...
+                </div>
+                <div id="bulkBoqEmpty" class="text-center text-muted py-4 d-none">
+                    <i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>
+                    Belum ada BOQ terdaftar di Work Order ini
+                </div>
+                <div id="bulkBoqList" class="d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <small class="text-muted me-auto">Item dengan Qty = 0 tidak akan disimpan</small>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                <button type="button" id="btnSaveBulkBoq" class="btn btn-success btn-sm" disabled>
+                    <i class="fa-solid fa-floppy-disk me-1"></i> Simpan
                 </button>
             </div>
         </div>
@@ -89,10 +124,14 @@
         woSelect2:       "{{ route('work-orders.select2') }}",
         siteSelect2:     "{{ route('business-relation-sites.select2') }}",
         picSelect2:      "{{ route('business-relation-contacts.select2') }}",
-        fwoBoqByFwo:     "{{ url('fieldwork-boq/by-fwo') }}/",
-        fwoBoqUpdate:    "{{ url('fieldwork-boq') }}/",
-        boqSelect2ByWo:  "{{ url('boq/select2-by-wo') }}/",
-        boqSectionItems: "{{ url('boq') }}/",
+        fwoBoqByFwo:      "{{ url('fieldwork-boq/by-fwo') }}/",
+        fwoBoqUpdate:     "{{ url('fieldwork-boq') }}/",
+        boqSelect2ByWo:   "{{ url('boq/select2-by-wo') }}/",
+        boqSectionItems:  "{{ url('boq') }}/",
+        personelUpdate:   "{{ url('fieldworks') }}/",
+        fwoComplete:      "{{ url('fieldworks') }}/",
+        fwoAttachments:   "{{ url('fieldworks') }}/",
+        userSelect2:      "{{ route('users.select2') }}",
     }
 </script>
 

@@ -58,7 +58,9 @@
     submitCreateForm({
         formId: "#testingKelompokMatriksSampleForm",
         url: "{{ route('testing-kelompok-matriks-samples.store') }}",
-        redirect: "{{ route('testing-kelompok-matriks-samples.index') }}",
+        onSuccess: function (res) {
+            window.location.href = "{{ route('testing-kelompok-matriks-samples.index') }}?open=" + res.id;
+        },
     });
 </script>
 @endsection

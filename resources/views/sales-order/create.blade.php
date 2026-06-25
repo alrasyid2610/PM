@@ -21,7 +21,7 @@
                 <div class="row g-3">
                     <div class="col-md-3 col-12">
                         <label class="form-label required">Tanggal SO</label>
-                        <input type="date" name="tanggal_so" class="form-control" required>
+                        <input type="text" name="tanggal_so" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off" required>
                     </div>
                     <div class="col-md-9 col-12">
                         <label class="form-label required">Judul Order</label>
@@ -29,11 +29,11 @@
                     </div>
                     <div class="col-md-4 col-12">
                         <label class="form-label">Tanggal Mulai</label>
-                        <input type="date" name="tanggal_mulai" class="form-control">
+                        <input type="text" name="tanggal_mulai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
                     <div class="col-md-4 col-12">
                         <label class="form-label">Tanggal Selesai</label>
-                        <input type="date" name="tanggal_selesai" class="form-control">
+                        <input type="text" name="tanggal_selesai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
                     <div class="col-md-4 col-12">
                         <label class="form-label">Office</label>
@@ -41,6 +41,12 @@
                             <option value="">Pilih Office</option>
                             <option value="1">Pramatek Jakarta</option>
                             <option value="2">Pramatek Bandung</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 col-12">
+                        <label class="form-label">Sales Contract</label>
+                        <select name="id_sc" id="id_sc" class="form-select">
+                            <option value=""></option>
                         </select>
                     </div>
                 </div>
@@ -64,7 +70,7 @@
                     </div>
                     <div class="col-md-3 col-12">
                         <label class="form-label">Tanggal PO</label>
-                        <input type="date" name="tanggal_po" class="form-control">
+                        <input type="text" name="tanggal_po" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
                     <div class="col-md-9 col-12">
                         <label class="form-label">No PO</label>
@@ -81,13 +87,13 @@
                 <!-- Party header desktop -->
                 <div class="detail-party-header d-none d-md-grid">
                     <div class="detail-party-label">
-                        <i class="fa-solid fa-file-invoice me-1"></i> Billing (Pemesan)
+                        <i class="fa-solid fa-file-invoice me-1"></i> Data Pemesan
                     </div>
                     <div class="detail-party-label">
-                        <i class="fa-solid fa-truck me-1"></i> Delivery (Pengiriman)
+                        <i class="fa-solid fa-truck me-1"></i> Data Pengiriman
                     </div>
                     <div class="detail-party-label">
-                        <i class="fa-solid fa-money-bill me-1"></i> Payment (Pembayaran)
+                        <i class="fa-solid fa-money-bill me-1"></i> Data Pembayaran
                     </div>
                 </div>
     
@@ -95,7 +101,7 @@
                 <div class="row g-3 mb-1">
                     <div class="col-12 d-md-none">
                         <div class="detail-mobile-section-label">
-                            <i class="fa-solid fa-file-invoice me-1"></i> Billing (Pemesan)
+                            <i class="fa-solid fa-file-invoice me-1"></i> Data Pemesan
                         </div>
                     </div>
                     <div class="col-md-4 col-12">
@@ -106,7 +112,7 @@
                     </div>
                     <div class="col-12 d-md-none">
                         <div class="detail-mobile-section-label">
-                            <i class="fa-solid fa-truck me-1"></i> Delivery (Pengiriman)
+                            <i class="fa-solid fa-truck me-1"></i> Data Pengiriman
                         </div>
                     </div>
                     <div class="col-md-4 col-12">
@@ -117,7 +123,7 @@
                     </div>
                     <div class="col-12 d-md-none">
                         <div class="detail-mobile-section-label">
-                            <i class="fa-solid fa-money-bill me-1"></i> Payment (Pembayaran)
+                            <i class="fa-solid fa-money-bill me-1"></i> Data Pembayaran
                         </div>
                     </div>
                     <div class="col-md-4 col-12">
@@ -226,6 +232,10 @@
                         <textarea name="keterangan_status" class="form-control" rows="2"></textarea>
                     </div>
                     <div class="col-md-12">
+                        <label class="form-label">Cara Pembayaran</label>
+                        <textarea name="cara_pembayaran" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="col-md-12">
                         <label class="form-label">Keterangan</label>
                         <textarea name="keterangan" class="form-control" rows="3"></textarea>
                     </div>
@@ -233,7 +243,6 @@
             </x-section-card>
         </div>
 
-        <!-- ACTION BUTTONS -->
         <x-form-actions back-route="{{ url('sales-orders') }}" submit-label="Simpan Sales Order" />
 
     </form>
@@ -245,12 +254,88 @@
     var dataPelanggan = '';
 
     $(document).ready(function () {
+        initFpDate(document);
         $('select[name="id_office"]').select2({ placeholder: 'Pilih Office', allowClear: true, width: '100%' });
 
+        $('#id_sc').select2({
+            width: '100%',
+            placeholder: 'Cari no. kontrak atau nama pelanggan...',
+            allowClear: true,
+            ajax: {
+                url: "{{ url('contracts/select2') }}",
+                dataType: 'json',
+                delay: 250,
+                data: (params) => ({ q: params.term }),
+                processResults: (data) => ({ results: data }),
+                cache: true,
+            },
+            language: {
+                noResults: function () {
+                    return `<span>Tidak ditemukan. <a href="{{ route('contracts.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`;
+                },
+            },
+            escapeMarkup: function (m) { return m; },
+        });
+
         loadPelangganDetails();
-        //  loadPICInternal();
-        loadAllContacts();
+        initPicInternal();
+
+        // Ketika perusahaan billing berubah → reload PIC billing
+        $('#id_pelanggan').on('select2:select select2:clear', function () {
+            const id_br = $(this).val() || null;
+            initPicSelect('#id_pic_pelanggan', id_br, 'Pilih PIC');
+        });
+
+        // Ketika perusahaan delivery berubah → reload PIC delivery
+        $('select[name="id_pelanggan_delivery"]').on('select2:select select2:clear', function () {
+            const id_br = $(this).val() || null;
+            initPicSelect('#id_pic_pelanggan_delivery', id_br, 'Pilih PIC');
+        });
+
+        // Ketika perusahaan payment berubah → reload PIC payment
+        $('select[name="id_pelanggan_payment"]').on('select2:select select2:clear', function () {
+            const id_br = $(this).val() || null;
+            initPicSelect('#id_pic_pelanggan_payment', id_br, 'Pilih PIC');
+        });
+
+        // Init PIC pelanggan tanpa filter (sebelum perusahaan dipilih)
+        initPicSelect('#id_pic_pelanggan', null, 'Pilih PIC');
+        initPicSelect('#id_pic_pelanggan_delivery', null, 'Pilih PIC');
+        initPicSelect('#id_pic_pelanggan_payment', null, 'Pilih PIC');
     });
+
+    function initPicSelect(selector, id_br, placeholder) {
+        const $el = $(selector);
+        if ($el.hasClass('select2-hidden-accessible')) {
+            $el.val(null).trigger('change');
+            $el.select2('destroy');
+        }
+        $el.empty();
+
+        $el.select2({
+            placeholder: placeholder,
+            allowClear: true,
+            minimumInputLength: 0,
+            ajax: {
+                url: "{{ route('business-relation-contacts.select2') }}",
+                dataType: 'json',
+                delay: 200,
+                data: function (params) {
+                    return { q: params.term || '', id_br: id_br || '' };
+                },
+                processResults: function (data) {
+                    return { results: data };
+                },
+                cache: false,
+            },
+            language: {
+                noResults: function () {
+                    return '<span>Tidak ditemukan. <a href="{{ route("business-relation-contacts.create") }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>';
+                },
+            },
+            escapeMarkup: function (m) { return m; },
+        });
+    }
 
     function loadPelangganDetails() {
         $.ajax({
@@ -300,68 +385,28 @@
         });
     }
 
-    function loadPICInternal() {
-        $.ajax({
-            url: "{{ route('business-relation-contacts.select2') }}",
-            method: "GET",
-            data: { q: "" }, // ← kirim kosong agar return semua data
-            success: function (response) {
-                const selects = [
-                    { id: "#pic_input",               placeholder: "Pilih PIC Input"            },
-                    { id: "#pic_order",               placeholder: "Pilih PIC Order"            },
-                    { id: "#pic_marketing_internal",  placeholder: "Pilih Marketing Internal"   },
-                    { id: "#pic_marketing_eksternal", placeholder: "Pilih Marketing Eksternal"  },
-                ];
+    function initPicInternal() {
+        const selects = [
+            { id: "#pic_input",               placeholder: "Pilih PIC Input"           },
+            { id: "#pic_order",               placeholder: "Pilih PIC Order"           },
+            { id: "#pic_marketing_internal",  placeholder: "Pilih Marketing Internal"  },
+            { id: "#pic_marketing_eksternal", placeholder: "Pilih Marketing Eksternal" },
+        ];
 
-                selects.forEach(function (item) {
-                    // Populate options
-                    $.each(response, function (index, opt) {
-                        $(item.id).append(new Option(opt.text, opt.id));
-                    });
-
-                    // Init select2 — filter di client, tidak ada ajax
-                    $(item.id).select2({
-                        placeholder: item.placeholder,
-                        allowClear: true,
-                    });
-                });
-            },
-            error: function () {
-                Notify.error('Gagal memuat data PIC internal');
-            }
-        });
-    }
-
-    function loadAllContacts() {
-        $.ajax({
-            url: "{{ route('business-relation-contacts.select2') }}",
-            method: "GET",
-            data: { q: "" },
-            success: function (response) {
-                const selects = [
-                    { id: "#id_pic_pelanggan",         placeholder: "Pilih PIC"                  },
-                    { id: "#id_pic_pelanggan_delivery", placeholder: "Pilih PIC"                  },
-                    { id: "#id_pic_pelanggan_payment",  placeholder: "Pilih PIC"                  },
-                    { id: "#pic_input",                 placeholder: "Pilih PIC Input"            },
-                    { id: "#pic_order",                 placeholder: "Pilih PIC Order"            },
-                    { id: "#pic_marketing_internal",    placeholder: "Pilih Marketing Internal"   },
-                    { id: "#pic_marketing_eksternal",   placeholder: "Pilih Marketing Eksternal"  },
-                ];
-
-                selects.forEach(function (item) {
-                    $(item.id).append(new Option("", ""));
-                    $.each(response, function (index, opt) {
-                        $(item.id).append(new Option(opt.text, opt.id));
-                    });
-                    $(item.id).select2({
-                        placeholder: item.placeholder,
-                        allowClear: true,
-                    });
-                });
-            },
-            error: function () {
-                Notify.error('Gagal memuat data PIC');
-            }
+        selects.forEach(function (item) {
+            $(item.id).select2({
+                placeholder: item.placeholder,
+                allowClear: true,
+                minimumInputLength: 0,
+                ajax: {
+                    url: "{{ route('business-relation-contacts.select2') }}",
+                    dataType: 'json',
+                    delay: 200,
+                    data: function (params) { return { q: params.term || '' }; },
+                    processResults: function (data) { return { results: data }; },
+                    cache: true,
+                },
+            });
         });
     }
 

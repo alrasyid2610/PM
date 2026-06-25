@@ -12,6 +12,8 @@ class FieldworkBoqController extends Controller
         $rows = DB::table('fieldwork_boq as fb')
             ->leftJoin('boq as b', 'fb.id_boq', '=', 'b.id_boq')
             ->leftJoin('testing_points as tp', 'fb.id_testing_point', '=', 'tp.id_testing_point')
+            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->where('fb.id_fwo', $id_fwo)
             ->select([
                 'fb.id_fwo_boq',
@@ -19,7 +21,7 @@ class FieldworkBoqController extends Controller
                 'fb.id_testing_point',
                 'fb.qty',
                 'fb.keterangan',
-                'tp.nama as point_name',
+                DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
                 'b.qty as boq_qty',
                 'b.satuan',
                 'b.harga',
@@ -30,13 +32,15 @@ class FieldworkBoqController extends Controller
             return response()->json([]);
         }
 
-        // Hitung qty yang sudah dipakai FWO lain untuk setiap BOQ
+        // Hitung qty yang sudah dipakai FWO lain yang belum dihapus untuk setiap BOQ
         $boqIdsList  = $rows->pluck('id_boq');
-        $usedByOthers = DB::table('fieldwork_boq')
-            ->whereIn('id_boq', $boqIdsList)
-            ->where('id_fwo', '!=', $id_fwo)
-            ->selectRaw('id_boq, SUM(COALESCE(qty, 0)) as used_qty')
-            ->groupBy('id_boq')
+        $usedByOthers = DB::table('fieldwork_boq as fb')
+            ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
+            ->whereIn('fb.id_boq', $boqIdsList)
+            ->where('fb.id_fwo', '!=', $id_fwo)
+            ->whereNull('fw.deleted_at')
+            ->selectRaw('fb.id_boq, SUM(COALESCE(fb.qty, 0)) as used_qty')
+            ->groupBy('fb.id_boq')
             ->pluck('used_qty', 'id_boq');
 
         $fboqIds = $rows->pluck('id_fwo_boq');
@@ -90,10 +94,100 @@ class FieldworkBoqController extends Controller
         return response()->json($result);
     }
 
+    public function forCopy(int $id_fwo)
+    {
+        $fwo = DB::table('fieldworks')->where('id_fwo', $id_fwo)->first();
+        if (!$fwo) {
+            return response()->json(['message' => 'FWO tidak ditemukan'], 404);
+        }
+
+        // Semua BOQ item milik WO ini
+        $boqRows = DB::table('boq as b')
+            ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
+            ->where('b.id_wo', $fwo->id_wo)
+            ->select([
+                'b.id_boq',
+                'b.id_testing_point',
+                'b.qty as boq_qty',
+                'b.satuan',
+                DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
+            ])
+            ->get();
+
+        if ($boqRows->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $boqIds = $boqRows->pluck('id_boq');
+
+        // Qty yang sudah dipakai semua FWO yang belum dihapus (termasuk source FWO)
+        $usedByAll = DB::table('fieldwork_boq as fb')
+            ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
+            ->whereIn('fb.id_boq', $boqIds)
+            ->whereNull('fw.deleted_at')
+            ->selectRaw('fb.id_boq, SUM(COALESCE(fb.qty, 0)) as used_qty')
+            ->groupBy('fb.id_boq')
+            ->pluck('used_qty', 'id_boq');
+
+        // Qty dari source FWO per BOQ (untuk pre-fill)
+        $sourceQtys = DB::table('fieldwork_boq')
+            ->where('id_fwo', $id_fwo)
+            ->whereIn('id_boq', $boqIds)
+            ->pluck('qty', 'id_boq');
+
+        // Items per BOQ (dari boq_items, bukan fieldwork_boq_items)
+        $boqItems = DB::table('boq_items as bi')
+            ->leftJoin('testing_items as ti', 'bi.id_testing_item', '=', 'ti.id_testing_item')
+            ->leftJoin('testing_units as tu', 'ti.id_testing_unit', '=', 'tu.id_testing_unit')
+            ->whereIn('bi.id_boq', $boqIds)
+            ->select([
+                'bi.id_boq',
+                'bi.id_testing_item',
+                'ti.judul_indonesia',
+                'ti.judul_inggris',
+                'ti.nilai',
+                'tu.kode as kode_unit',
+            ])
+            ->get()
+            ->groupBy('id_boq');
+
+        $result = $boqRows->map(function ($row) use ($usedByAll, $sourceQtys, $boqItems) {
+            $used        = (int)($usedByAll[$row->id_boq] ?? 0);
+            $unallocated = max(0, (int)($row->boq_qty ?? 0) - $used);
+            $sourceQty   = $sourceQtys[$row->id_boq] ?? null;
+
+            $items = ($boqItems->get($row->id_boq) ?? collect())
+                ->map(fn($item) => [
+                    'id_testing_item' => $item->id_testing_item,
+                    'judul_indonesia' => $item->judul_indonesia,
+                    'judul_inggris'   => $item->judul_inggris,
+                    'nilai'           => $item->nilai,
+                    'kode_unit'       => $item->kode_unit,
+                ])
+                ->values()
+                ->toArray();
+
+            return [
+                'id_boq'           => $row->id_boq,
+                'id_testing_point' => $row->id_testing_point,
+                'point_name'       => $row->point_name,
+                'qty'              => $sourceQty,
+                'boq_qty'          => $row->boq_qty,
+                'unallocated_qty'  => $unallocated,
+                'satuan'           => $row->satuan,
+                'items'            => $items,
+            ];
+        })->values()->toArray();
+
+        return response()->json($result);
+    }
+
     public function update(Request $request, int $id_fwo)
     {
         $validated = $request->validate([
-            'sections'                => 'required|array|min:1',
+            'sections'                => 'present|array',
             'sections.*.id_boq'       => 'required|integer',
             'sections.*.qty'          => 'nullable|integer|min:1',
             'sections.*.keterangan'   => 'nullable|string',
@@ -105,10 +199,12 @@ class FieldworkBoqController extends Controller
                 return response()->json(['message' => "BOQ #{$sec['id_boq']} tidak ditemukan"], 422);
             }
             if (!empty($sec['qty'])) {
-                $usedByOthers = (int) DB::table('fieldwork_boq')
-                    ->where('id_boq', $sec['id_boq'])
-                    ->where('id_fwo', '!=', $id_fwo)
-                    ->sum('qty');
+                $usedByOthers = (int) DB::table('fieldwork_boq as fb')
+                    ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
+                    ->where('fb.id_boq', $sec['id_boq'])
+                    ->where('fb.id_fwo', '!=', $id_fwo)
+                    ->whereNull('fw.deleted_at')
+                    ->sum('fb.qty');
                 $remaining = (int)($boq->qty ?? 0) - $usedByOthers;
                 if ($sec['qty'] > $remaining) {
                     $ptName = DB::table('testing_points')

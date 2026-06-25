@@ -29,12 +29,12 @@
             <x-section-card icon="fa-file-contract" color="icon-blue" title="Informasi Kontrak" subtitle="Detail data kontrak pelanggan">
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label required">No Kontrak</label>
-                        <input type="text" class="form-control" name="no_kontrak" required placeholder="KTR/2025/001">
+                        <label class="form-label">No Kontrak Client</label>
+                        <input type="text" class="form-control" name="no_contract_client" placeholder="Nomor kontrak dari client">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Tanggal Kontrak</label>
-                        <input type="date" class="form-control" name="tanggal_kontrak">
+                        <input type="text" class="form-control fp-date" name="tanggal_kontrak" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Status</label>
@@ -47,11 +47,11 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Tanggal Mulai</label>
-                        <input type="date" class="form-control" name="tanggal_mulai">
+                        <input type="text" class="form-control fp-date" name="tanggal_mulai" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Tanggal Selesai</label>
-                        <input type="date" class="form-control" name="tanggal_selesai">
+                        <input type="text" class="form-control fp-date" name="tanggal_selesai" placeholder="Pilih tanggal" autocomplete="off">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Durasi (Bulan)</label>
@@ -59,7 +59,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Nilai Kontrak (Rp)</label>
-                        <input type="number" class="form-control" name="nilai_kontrak" min="0" placeholder="150000000">
+                        <input type="text" inputmode="numeric" class="form-control input-num-mask input-num-int" name="nilai_kontrak" placeholder="150,000,000">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Catatan</label>
@@ -113,84 +113,64 @@
         select2BR:      "{{ route('business-relations.select2') }}",
         select2Contact: "{{ route('business-relation-contacts.select2') }}",
         select2User:    "{{ route('users.select2') }}",
-        getDataBR:      "{{ route('api.get-data-br') }}",
         csrf:           "{{ csrf_token() }}",
     }
 
+    function makeSelect2WithAdd(selector, url, placeholder, createUrl) {
+        $(selector).select2({
+            width: '100%',
+            placeholder: placeholder,
+            allowClear: true,
+            ajax: {
+                url: url,
+                dataType: 'json',
+                delay: 250,
+                data: (params) => ({ q: params.term }),
+                processResults: (data) => ({ results: data }),
+                cache: true,
+            },
+            language: {
+                noResults: function () {
+                    return `<span>Tidak ditemukan. <a href="${createUrl}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`;
+                },
+            },
+            escapeMarkup: function (m) { return m; },
+        });
+    }
+
     $(document).ready(function () {
+        initNumericMask(document.body);
+        initFpDate(document);
+
         createFileUploader(".filepond");
-        $('#status').select2({ placeholder: '-- Pilih Status --', width: '100%' });
+        $('#status').select2({ placeholder: '-- Pilih Status --', allowClear: true, width: '100%' });
 
-        $.ajax({
-            url: window.route.getDataBR,
-            method: 'GET',
-            success: function (response) {
-                $.each(response, function (index, item) {
-                    $('#id_business_relation').append(new Option(item.text, item.id));
-                });
-                $('#id_business_relation').select2({
-                    width: '100%',
-                    placeholder: '-- Pilih Pelanggan --',
-                    allowClear: true,
-                    language: {
-                        noResults: function () {
-                            return '<span>Tidak ditemukan. <a href="{{ route('business-relations.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>';
-                        },
-                    },
-                    escapeMarkup: function (m) { return m; },
-                });
-            },
-            error: function () {
-                Notify.error('Gagal memuat data pelanggan');
-            },
+        $('#id_business_relation').select2({
+            width: '100%', placeholder: '-- Pilih Pelanggan --', allowClear: true, minimumInputLength: 2,
+            ajax: { url: window.route.select2BR, delay: 300, dataType: 'json',
+                    data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }) },
         });
 
-        $.ajax({
-            url: window.route.select2Contact,
-            method: 'GET',
-            data: { q: '' },
-            success: function (response) {
-                $('#id_pic_pelanggan').append(new Option('', ''));
-                $.each(response, function (index, item) {
-                    $('#id_pic_pelanggan').append(new Option(item.text, item.id));
-                });
-                $('#id_pic_pelanggan').select2({
-                    width: '100%',
-                    placeholder: '-- Pilih PIC Pelanggan --',
-                    allowClear: true,
-                });
-            },
-            error: function () {
-                Notify.error('Gagal memuat data PIC pelanggan');
-            },
+        $('#id_pic_pelanggan').select2({
+            width: '100%', placeholder: '-- Pilih PIC Pelanggan --', allowClear: true, minimumInputLength: 2,
+            ajax: { url: window.route.select2Contact, delay: 300, dataType: 'json',
+                    data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }) },
         });
 
-        $.ajax({
-            url: window.route.select2User,
-            method: 'GET',
-            data: { q: '' },
-            success: function (response) {
-                $('#id_pic_pramatek').append(new Option('', ''));
-                $.each(response, function (index, item) {
-                    $('#id_pic_pramatek').append(new Option(item.text, item.id));
-                });
-                $('#id_pic_pramatek').select2({
-                    width: '100%',
-                    placeholder: '-- Pilih PIC Pramatek --',
-                    allowClear: true,
-                });
-            },
-            error: function () {
-                Notify.error('Gagal memuat data PIC Pramatek');
-            },
+        $('#id_pic_pramatek').select2({
+            width: '100%', placeholder: '-- Pilih PIC Pramatek --', allowClear: true, minimumInputLength: 2,
+            ajax: { url: window.route.select2User, delay: 300, dataType: 'json',
+                    data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }) },
         });
     });
 
     submitCreateForm({
         formId:   "#contractForm",
         url:      "{{ route('contracts.store') }}",
-        redirect: "{{ route('contracts.index') }}",
         filepond: ".filepond",
+        onSuccess: function (res) {
+            window.location.href = "{{ route('contracts.index') }}?open=" + res.id;
+        },
     });
 </script>
 @endsection

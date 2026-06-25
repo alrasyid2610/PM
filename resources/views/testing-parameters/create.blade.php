@@ -95,8 +95,10 @@
     submitCreateForm({
         formId: "#testingParameterForm",
         url: "{{ route('testing-parameters.store') }}",
-        redirect: "{{ route('testing-parameters.index') }}",
         filepond: ".filepond",
+        onSuccess: function (res) {
+            window.location.href = "{{ route('testing-parameters.index') }}?open=" + res.id;
+        },
     });
 </script>
 @endsection
