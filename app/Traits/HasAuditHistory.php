@@ -2,9 +2,7 @@
 
 namespace App\Traits;
 
-use Illuminate\Support\Facades\DB;
-
-trait HasAuditHistory
+use Illuminate\Support\Facades\DB;trait HasAuditHistory
 {
     public function history($id)
     {
