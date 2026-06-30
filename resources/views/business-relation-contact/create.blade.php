@@ -39,11 +39,12 @@
                     </div>
                     <div class="col-md-3 col-12">
                         <label class="form-label required">No. Telp PIC</label>
-                        <input type="text" class="form-control" id="nomor_telepon_pic" name="nomor_telepon_pic" required>
+                        <input type="text" class="form-control numeric-only" id="nomor_telepon_pic" name="nomor_telepon_pic" inputmode="numeric" required>
                     </div>
                     <div class="col-md-3 col-12">
-                        <label class="form-label required">Email PIC</label>
-                        <input type="text" class="form-control" id="email_pic" name="email_pic" required>
+                        <label class="form-label">Email PIC</label>
+                        <input type="text" class="form-control" id="email_pic" name="email_pic" autocomplete="off">
+                        <div class="invalid-feedback" id="email_pic_error"></div>
                     </div>
                     <div class="col-md-3 col-12">
                         <label class="form-label required">Lokasi PIC</label>
@@ -100,11 +101,53 @@
         });
     });
 
+    function setEmailError(msg) {
+        const el = document.getElementById('email_pic');
+        const err = document.getElementById('email_pic_error');
+        if (msg) {
+            el.classList.add('is-invalid');
+            err.textContent = msg;
+        } else {
+            el.classList.remove('is-invalid');
+            err.textContent = '';
+        }
+    }
+
+    $('#email_pic').on('input', function () {
+        const val = this.value;
+        if (!val) { setEmailError(''); return; }
+        setEmailError(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) ? '' : 'Format email tidak valid');
+    });
+
+    $('#createBusinesRelationContact').on('submit', function (e) {
+        const emailVal = $('#email_pic').val();
+        if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            setEmailError('Format email tidak valid');
+            $('#email_pic').focus();
+            return;
+        }
+        setEmailError('');
+    });
+
     submitCreateForm({
         formId: "#createBusinesRelationContact",
         url: "{{ route('business-relation-contacts.store') }}",
         onSuccess: function (res) {
             window.location.href = "{{ route('business-relation-contacts.index') }}?open=" + res.id;
+        },
+        onError: function (xhr) {
+            if (xhr.status === 422 && xhr.responseJSON?.errors) {
+                const errors = xhr.responseJSON.errors;
+                if (errors.email_pic) setEmailError(errors.email_pic[0]);
+                const otherMsgs = Object.entries(errors)
+                    .filter(([k]) => k !== 'email_pic')
+                    .map(([, v]) => v[0]);
+                if (otherMsgs.length) Notify.error(otherMsgs.join('<br>'));
+            } else {
+                Notify.error(xhr.responseJSON?.message ?? 'Gagal menyimpan data');
+            }
         },
     });
 </script>

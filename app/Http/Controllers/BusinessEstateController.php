@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Yajra\DataTables\DataTables;
 use Illuminate\Support\Facades\Auth;
 use App\Traits\HasAuditHistory;
@@ -89,14 +90,17 @@ class BusinessEstateController extends Controller
         // =========================
         $validated = $request->validate([
             'nama'           => 'required|string|max:255',
-            'kode'           => 'nullable|string|max:50',
-            'alamat'         => 'required|string',
+            'kode'           => 'required|string|max:50|unique:business_estates,kode',
+            'alamat'         => 'nullable|string',
             'provinsi'       => 'nullable|string|max:100',
             'kota_kabupaten' => 'nullable|string|max:100',
             'website'        => 'nullable|string|max:255',
             'pemilik'        => 'nullable|string|max:255',
             'pengurus'       => 'nullable|string|max:255',
             'is_aktif'       => 'required|in:0,1',
+        ], [
+            'kode.required' => 'Kode wajib diisi.',
+            'kode.unique'   => 'Kode sudah digunakan, gunakan kode lain.',
         ]);
 
         // =========================
@@ -187,13 +191,16 @@ class BusinessEstateController extends Controller
 
         $validated = $request->validate([
             'nama'           => 'required|string|max:255',
-            'kode'           => 'nullable|string|max:50',
+            'kode'           => ['required', 'string', 'max:50', Rule::unique('business_estates', 'kode')->ignore((int)$id, 'id_bestate')],
             'alamat'         => 'nullable|string',
             'provinsi'       => 'nullable|string|max:100',
             'kota_kabupaten' => 'nullable|string|max:100',
             'website'        => 'nullable|string|max:255',
             'pemilik'        => 'nullable|string|max:255',
             'pengurus'       => 'nullable|string|max:255',
+        ], [
+            'kode.required' => 'Kode wajib diisi.',
+            'kode.unique'   => 'Kode sudah digunakan, gunakan kode lain.',
         ]);
 
         $validated['is_aktif'] = $request->is_aktif;

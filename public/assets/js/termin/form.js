@@ -88,21 +88,24 @@ function renderForm(res) {
         number: escHtml(res.no_termin ?? '—'),
         createdAt: escHtml(res.created_at ?? '—'),
         updatedAt: escHtml(res.updated_at ?? '—'),
-        deleteId: res.id_termin,
-        editText: 'Edit Termin',
+        deleteId: statusKey === 'selesai' ? null : res.id_termin,
+        editText: statusKey === 'selesai' ? '' : 'Edit Termin',
         statusBadge: `<span class="detail-status-inline detail-status-${statusKey}">${escHtml(res.status ?? 'Pending')}</span>`,
         tags: soTag + pelangganTag,
-        extra: statusKey === 'siap_kirim'
+        extra: statusKey === 'selesai'
+            ? `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
+                   <i class="fa-solid fa-lock" style="font-size:10px;"></i>
+                   Termin sudah selesai, data tidak dapat diubah
+               </span>`
+            : statusKey === 'siap_kirim'
             ? `<button type="button" id="btnSelesaikanTermin" data-termin-id="${res.id_termin}" data-no-disable
                 class="btn btn-sm btn-success" style="font-size:12px;">
                 <i class="fa-solid fa-circle-check me-1"></i> Selesaikan
                </button>`
-            : statusKey !== 'selesai'
-            ? `<button type="button" id="btnSiapKirimTermin" data-termin-id="${res.id_termin}" data-no-disable
+            : `<button type="button" id="btnSiapKirimTermin" data-termin-id="${res.id_termin}" data-no-disable
                 class="btn btn-sm btn-primary" style="font-size:12px;">
                 <i class="fa-solid fa-paper-plane me-1"></i> Siap Kirim
-               </button>`
-            : '',
+               </button>`,
         noWrap: true,
     })}
 
@@ -132,12 +135,17 @@ function renderForm(res) {
                     <button type="button" id="btnRefreshOutputTermin" class="pm-btn-icon" title="Refresh" data-no-disable>
                         <i class="fa-solid fa-rotate-right"></i>
                     </button>
-                    ${res.id_so
+                    ${res.id_so && statusKey !== 'selesai'
                         ? `<button type="button" id="btnAddOutputTermin" data-so-id="${res.id_so}"
                                class="pm-btn-pill pm-btn-pill--teal" data-no-disable>
                                <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                                <i class="fa-solid fa-file-circle-check" style="font-size:11px;"></i> Output
                            </button>`
+                        : statusKey === 'selesai'
+                        ? `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
+                               <i class="fa-solid fa-lock" style="font-size:10px;"></i>
+                               Termin sudah selesai, data tidak dapat diubah
+                           </span>`
                         : ''}
                 </div>
             </div>

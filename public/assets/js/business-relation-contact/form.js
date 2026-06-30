@@ -46,8 +46,16 @@ function renderForm(res) {
                                     className: "col-md-12", createUrl: "/business-relations/create",
                                 })}
                                 ${formGroup.text("nama_pic", "Nama PIC", res.nama_pic, true, { className: "col-md-12" })}
-                                ${formGroup.text("nomor_telepon_pic", "No. Telp PIC", res.nomor_telepon_pic, true, { className: "col-md-3" })}
-                                ${formGroup.text("email_pic", "Email PIC", res.email_pic, true, { className: "col-md-3" })}
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label form-label-sm text-muted mb-1 required">No. Telp PIC</label>
+                                    <input type="text" name="nomor_telepon_pic" class="form-control disabled numeric-only"
+                                        inputmode="numeric" value="${escHtml(res.nomor_telepon_pic ?? '')}" required>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label form-label-sm text-muted mb-1">Email PIC</label>
+                                    <input type="email" name="email_pic" class="form-control disabled"
+                                        value="${escHtml(res.email_pic ?? '')}">
+                                </div>
                                 ${formGroup.text("lokasi_pic", "Lokasi PIC", res.lokasi_pic, true, { className: "col-md-3" })}
                                 ${formGroup.select("is_aktif", "Status", res.is_aktif,
                                     [

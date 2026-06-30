@@ -112,6 +112,9 @@
             });
         });
     }
+    $(document).on('input', '.numeric-only', function () {
+        this.value = this.value.replace(/[^0-9]/g, '');
+    });
 </script>
 @yield('custom-script')
 

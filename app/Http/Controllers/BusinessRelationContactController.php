@@ -191,9 +191,13 @@ class BusinessRelationContactController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'id_br' => 'required|integer',
-            'nama_pic' => 'required|string|max:50',
-            'nomor_telepon_pic' => 'required|string|max:255',
+            'id_br'             => 'required|integer',
+            'nama_pic'          => 'required|string|max:50',
+            'nomor_telepon_pic' => 'required|string|max:20|regex:/^[0-9]+$/',
+            'email_pic'         => 'nullable|email|max:100',
+        ], [
+            'nomor_telepon_pic.regex' => 'No. Telp PIC hanya boleh berisi angka.',
+            'email_pic.email'         => 'Format email tidak valid.',
         ]);
 
         $id = DB::table('business_relation_contacts')->insertGetId([
@@ -230,10 +234,13 @@ class BusinessRelationContactController extends Controller
         $validated = $request->validate([
             'id_br'             => 'required|integer',
             'nama_pic'          => 'required|string|max:255',
-            'nomor_telepon_pic' => 'required|string|max:20',
+            'nomor_telepon_pic' => 'required|string|max:20|regex:/^[0-9]+$/',
             'email_pic'         => 'nullable|email|max:100',
             'lokasi_pic'        => 'nullable|string|max:255',
             'is_aktif'          => 'required|boolean',
+        ], [
+            'nomor_telepon_pic.regex' => 'No. Telp PIC hanya boleh berisi angka.',
+            'email_pic.email'         => 'Format email tidak valid.',
         ]);
 
         $before = DB::table('business_relation_contacts')

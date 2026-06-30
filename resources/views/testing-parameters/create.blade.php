@@ -31,7 +31,7 @@
             <x-section-card icon="fa-flask" color="icon-amber" title="Informasi Parameter" subtitle="Data parameter pengujian laboratorium">
                 <div class="row g-3">
                     <div class="col-md-4 col-12">
-                        <label for="kelompok" class="form-label">Kelompok</label>
+                        <label for="kelompok" class="form-label required">Kelompok</label>
                         <select name="kelompok" id="kelompok" class="form-select select2">
                             <option value="Fisika">Fisika</option>
                             <option value="Kimia Logam">Kimia Logam</option>
@@ -49,8 +49,8 @@
                         <input type="text" class="form-control" id="judul_indonesia" name="judul_indonesia" required>
                     </div>
                     <div class="col-md-4 col-12">
-                        <label for="judul_inggris" class="form-label">Judul Inggris</label>
-                        <input type="text" class="form-control" id="judul_inggris" name="judul_inggris">
+                        <label for="judul_inggris" class="form-label required">Judul Inggris</label>
+                        <input type="text" class="form-control" id="judul_inggris" name="judul_inggris" required>
                     </div>
                     <div class="col-md-4 col-12">
                         <label for="rumus_empiris" class="form-label">Rumus Empiris</label>

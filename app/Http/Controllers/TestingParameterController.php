@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistory;
 use App\Traits\HasAttachment;
@@ -124,14 +125,19 @@ class TestingParameterController extends Controller
     {
 
         $validated = $request->validate([
-            'kelompok' => 'nullable|string|max:255',
-            'kode' => 'required|string|max:100',
+            'kelompok'        => 'nullable|string|max:255',
+            'kode'            => ['required', 'string', 'max:100', Rule::unique('testing_parameters', 'kode')->ignore((int)$id, 'id_testing_parameter')],
             'judul_indonesia' => 'required|string|max:255',
-            'judul_inggris' => 'nullable|string|max:255',
-            'rumus_empiris' => 'nullable|string',
-            'judul_iupac' => 'nullable|string|max:255',
-            'referensi' => 'nullable|string|max:255',
-            'keterangan' => 'nullable|string'
+            'judul_inggris'   => 'required|string|max:255',
+            'rumus_empiris'   => 'nullable|string',
+            'judul_iupac'     => 'nullable|string|max:255',
+            'referensi'       => 'nullable|string|max:255',
+            'keterangan'      => 'nullable|string',
+        ], [
+            'kode.required'          => 'Kode wajib diisi.',
+            'kode.unique'            => 'Kode sudah digunakan, gunakan kode lain.',
+            'judul_indonesia.required' => 'Judul indonesia wajib diisi.',
+            'judul_inggris.required'   => 'Judul inggris wajib diisi.',
         ]);
 
 

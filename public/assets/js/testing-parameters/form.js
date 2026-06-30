@@ -45,11 +45,11 @@ function renderParameterForm(res) {
                                         { value: "Kimia Organik",   label: "Kimia Organik" },
                                         { value: "Mikrobiologi",    label: "Mikrobiologi" },
                                     ],
-                                    { className: "col-md-4" }
+                                    { className: "col-md-4", required: true }
                                 )}
                                 ${formGroup.text("kode", "Kode", res.kode, true, { className: "col-md-4" })}
                                 ${formGroup.text("judul_indonesia", "Judul Indonesia", res.judul_indonesia, true, { className: "col-md-4" })}
-                                ${formGroup.text("judul_inggris", "Judul Inggris", res.judul_inggris, false, { className: "col-md-4" })}
+                                ${formGroup.text("judul_inggris", "Judul Inggris", res.judul_inggris, true, { className: "col-md-4" })}
                                 ${formGroup.text("rumus_empiris", "Rumus Empiris", res.rumus_empiris, false, { className: "col-md-4" })}
                                 ${formGroup.text("judul_iupac", "Judul IUPAC", res.judul_iupac, false, { className: "col-md-4" })}
                                 ${formGroup.text("referensi", "Referensi", res.referensi, false, { className: "col-md-12" })}

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistory;
 
@@ -52,6 +53,12 @@ class CommercialBuildingController extends Controller
 
         $dt = DataTables::of($data)
             ->addIndexColumn()
+            ->editColumn('is_aktif', function ($row) {
+                return $row->is_aktif
+                    ? '<span class="badge rounded-pill" style="background:#dcfce7;color:#166534;font-size:11px;font-weight:600;">Aktif</span>'
+                    : '<span class="badge rounded-pill" style="background:#fee2e2;color:#991b1b;font-size:11px;font-weight:600;">Tidak Aktif</span>';
+            })
+            ->rawColumns(['is_aktif'])
             ->make(true)
             ->getData();
 
@@ -88,9 +95,9 @@ class CommercialBuildingController extends Controller
         // VALIDASI
         // =========================
         $validated = $request->validate([
-            'nama'            => 'required|string|max:255',
-            'kode'            => 'nullable|string|max:50',
-            'alamat'          => 'required|string',
+            'nama'            => 'required|string|max:255|unique:commercial_buildings,nama',
+            'kode'            => 'required|string|max:50|unique:commercial_buildings,kode',
+            'alamat'          => 'nullable|string',
             'provinsi'        => 'nullable|string|max:100',
             'kota_kabupaten'  => 'nullable|string|max:100',
             'kode_pos'        => 'nullable|string|max:20',
@@ -98,6 +105,11 @@ class CommercialBuildingController extends Controller
             'pemilik'         => 'nullable|string|max:255',
             'pengurus'        => 'nullable|string|max:255',
             'is_aktif'        => 'required|in:0,1',
+        ], [
+            'nama.required' => 'Nama gedung wajib diisi.',
+            'nama.unique'   => 'Nama gedung sudah digunakan, gunakan nama lain.',
+            'kode.required' => 'Kode wajib diisi.',
+            'kode.unique'   => 'Kode sudah digunakan, gunakan kode lain.',
         ]);
 
         // =========================
@@ -187,8 +199,8 @@ class CommercialBuildingController extends Controller
         // VALIDASI
         // =========================
         $validated = $request->validate([
-            'nama'            => 'required|string|max:255',
-            'kode'            => 'nullable|string|max:50',
+            'nama'            => ['required', 'string', 'max:255', Rule::unique('commercial_buildings', 'nama')->ignore((int)$id, 'id_building')],
+            'kode'            => ['required', 'string', 'max:50', Rule::unique('commercial_buildings', 'kode')->ignore((int)$id, 'id_building')],
             'alamat'          => 'nullable|string',
             'provinsi'        => 'nullable|string|max:150',
             'kota_kabupaten'  => 'nullable|string|max:150',
@@ -197,6 +209,11 @@ class CommercialBuildingController extends Controller
             'pemilik'         => 'nullable|string|max:255',
             'pengurus'        => 'nullable|string|max:255',
             'is_aktif'        => 'required|in:0,1',
+        ], [
+            'nama.required' => 'Nama gedung wajib diisi.',
+            'nama.unique'   => 'Nama gedung sudah digunakan, gunakan nama lain.',
+            'kode.required' => 'Kode wajib diisi.',
+            'kode.unique'   => 'Kode sudah digunakan, gunakan kode lain.',
         ]);
 
         DB::beginTransaction();

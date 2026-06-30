@@ -34,8 +34,8 @@
                         <input type="text" name="nama" class="form-control" required>
                     </div>
                     <div class="col-md-3 col-12">
-                        <label class="form-label">Kode</label>
-                        <input type="text" name="kode" class="form-control">
+                        <label class="form-label required">Kode</label>
+                        <input type="text" name="kode" class="form-control" required>
                     </div>
                     <div class="col-md-3 col-12">
                         <label class="form-label">Status</label>
@@ -45,8 +45,8 @@
                         </select>
                     </div>
                     <div class="col-md-12">
-                        <label class="form-label required">Alamat</label>
-                        <textarea name="alamat" class="form-control" rows="3" required></textarea>
+                        <label class="form-label">Alamat</label>
+                        <textarea name="alamat" class="form-control" rows="3"></textarea>
                     </div>
                     <div class="col-md-4 col-12">
                         <label class="form-label">Provinsi</label>

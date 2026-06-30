@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistory;
 
@@ -52,10 +53,12 @@ class TestingUnitController extends Controller
     {
         // Validasi dan simpan data baru
         $validated = $request->validate([
-            'kode' => 'required|string|max:50',
+            'kode'            => 'required|string|max:50|unique:testing_units,kode',
             'judul_indonesia' => 'required|string|max:255',
-            'judul_inggris' => 'required|string|max:255',
-            'keterangan' => 'nullable|string',
+            'judul_inggris'   => 'required|string|max:255',
+            'keterangan'      => 'nullable|string',
+        ], [
+            'kode.unique' => 'Kode sudah digunakan, gunakan kode lain.',
         ]);
 
         $id = DB::table('testing_units')->insertGetId([
@@ -110,10 +113,12 @@ class TestingUnitController extends Controller
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
-            'kode' => 'required|string|max:50',
+            'kode'            => ['required', 'string', 'max:50', Rule::unique('testing_units', 'kode')->ignore((int)$id, 'id_testing_unit')],
             'judul_indonesia' => 'required|string|max:255',
-            'judul_inggris' => 'required|string|max:255',
-            'keterangan' => 'nullable|string',
+            'judul_inggris'   => 'required|string|max:255',
+            'keterangan'      => 'nullable|string',
+        ], [
+            'kode.unique' => 'Kode sudah digunakan, gunakan kode lain.',
         ]);
         try {
 

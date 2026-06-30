@@ -61,8 +61,21 @@ function submitCrudForm(options) {
                 }
             },
 
-            error: function () {
-                Notify.error("Gagal memperbarui data");
+            error: function (xhr) {
+                if (xhr.status === 422 && xhr.responseJSON) {
+                    const json = xhr.responseJSON;
+                    let html = '';
+                    if (json.errors) {
+                        const msgs = Object.values(json.errors).map(e => Array.isArray(e) ? e[0] : e);
+                        html = '<ul style="text-align:left;margin:8px 0 0;padding-left:20px;">' +
+                            msgs.map(m => `<li>${m}</li>`).join('') + '</ul>';
+                    } else if (json.message) {
+                        html = json.message;
+                    }
+                    Swal.fire({ icon: 'error', title: 'Validasi Gagal', html: html });
+                } else {
+                    Notify.error("Gagal memperbarui data");
+                }
             },
         });
     });

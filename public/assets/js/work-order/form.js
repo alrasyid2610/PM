@@ -9,6 +9,13 @@ function periodBadge(interval, urutan) {
     </span>`;
 }
 
+function woLockedLabel() {
+    return `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
+        <i class="fa-solid fa-lock" style="font-size:10px;"></i>
+        WO sudah selesai, data tidak dapat diubah
+    </span>`;
+}
+
 function woStatusBadge(status) {
     if (status === 'selesai') {
         return `<span class="pm-badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;">
@@ -43,16 +50,19 @@ function renderForm(res) {
         number: escHtml(res.no_wo ?? "—"),
         createdAt: escHtml(res.created_at ?? "—"),
         updatedAt: escHtml(res.updated_at ?? "—"),
-        deleteId: res.id_wo,
-        editText: "Edit WO",
+        deleteId: res.status === 'selesai' ? null : res.id_wo,
+        editText: res.status === 'selesai' ? '' : 'Edit WO',
         tags: soTag + pelangganTag,
         statusBadge: woStatusBadge(res.status),
-        extra: res.status !== 'selesai'
-            ? `<button type="button" id="btnSelesaikanWo" data-wo-id="${res.id_wo}" data-no-disable
+        extra: res.status === 'selesai'
+            ? `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
+                   <i class="fa-solid fa-lock" style="font-size:10px;"></i>
+                   WO sudah selesai, data tidak dapat diubah
+               </span>`
+            : `<button type="button" id="btnSelesaikanWo" data-wo-id="${res.id_wo}" data-no-disable
                 class="btn btn-sm btn-success" style="font-size:12px;">
                 <i class="fa-solid fa-circle-check me-1"></i> Selesaikan WO
-               </button>`
-            : '',
+               </button>`,
         noWrap: true,
     })}
 
@@ -103,29 +113,32 @@ function renderForm(res) {
                             class="pm-btn-icon" title="Refresh" data-no-disable>
                             <i class="fa-solid fa-rotate-right"></i>
                         </button>
+                        ${res.status !== 'selesai' ? `
                         <button type="button" class="pm-btn-pill pm-btn-pill--green btn-add-boq-modal"
                             data-wo-id="${res.id_wo}" data-no-disable>
                             <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                             <i class="fa-solid fa-layer-group" style="font-size:11px;"></i> BOQ
-                        </button>
+                        </button>` : woLockedLabel()}
                     </div>
                     <div id="woTabActionsFwo" class="d-flex align-items-center gap-2 d-none">
                         <button type="button" id="btnRefreshFwoProgress" data-wo-id="${res.id_wo}"
                             class="pm-btn-icon" title="Refresh" data-no-disable>
                             <i class="fa-solid fa-rotate-right"></i>
                         </button>
+                        ${res.status !== 'selesai' ? `
                         <button type="button" class="pm-btn-pill pm-btn-pill--blue btn-add-fwo-modal"
                             data-wo-id="${res.id_wo}" data-no-disable>
                             <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                             <i class="fa-solid fa-hard-hat" style="font-size:11px;"></i> FWO
-                        </button>
+                        </button>` : woLockedLabel()}
                     </div>
                     <div id="woTabActionsOutput" class="d-flex align-items-center gap-2 d-none">
+                        ${res.status !== 'selesai' ? `
                         <button type="button" id="btnAddOutput" data-wo-id="${res.id_wo}"
                             class="pm-btn-pill pm-btn-pill--teal" data-no-disable>
                             <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                             <i class="fa-solid fa-file-circle-check" style="font-size:11px;"></i> Output
-                        </button>
+                        </button>` : woLockedLabel()}
                     </div>
                 </div>
             </div>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistory;
 
@@ -55,10 +56,12 @@ class TestingKelompokMatriksSampleController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'kode' => 'required|string|max:50',
+            'kode' => ['required', 'string', 'max:50', Rule::unique('testing_kelompok_matriks_samples', 'kode')],
             'judul_indonesia' => 'required|string|max:255',
             'judul_inggris' => 'required|string|max:255',
             'keterangan' => 'nullable|string',
+        ], [
+            'kode.unique' => 'Kode sudah digunakan, gunakan kode lain.',
         ]);
 
         $id = DB::table('testing_kelompok_matriks_samples')->insertGetId([
@@ -99,10 +102,12 @@ class TestingKelompokMatriksSampleController extends Controller
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
-            'kode' => 'required|string|max:50',
+            'kode' => ['required', 'string', 'max:50', Rule::unique('testing_kelompok_matriks_samples', 'kode')->ignore((int)$id, 'id_testing_kelompok_matriks_sample')],
             'judul_indonesia' => 'required|string|max:255',
             'judul_inggris' => 'required|string|max:255',
             'keterangan' => 'nullable|string',
+        ], [
+            'kode.unique' => 'Kode sudah digunakan, gunakan kode lain.',
         ]);
 
         try {

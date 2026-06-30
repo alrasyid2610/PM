@@ -326,7 +326,7 @@
                         <div class="input-wrap {{ $errors->has('email') ? 'is-error' : '' }}">
                             <i class="fa-regular fa-envelope input-icon"></i>
                             <input
-                                type="email"
+                                type="text"
                                 id="email"
                                 name="email"
                                 value="{{ old('email') }}"
@@ -359,11 +359,42 @@
                         <a href="#" class="forgot-link">Lupa password?</a>
                     </div>
 
-                    <button type="submit" class="btn-login">
+                                    <button type="submit" class="btn-login">
                         Masuk
                     </button>
 
                 </form>
+                {{-- <script>
+                    document.getElementById('email').addEventListener('input', function () {
+                        const val = this.value;
+                        const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+                        const wrap = this.closest('.input-wrap');
+                        let msg = document.getElementById('email-format-msg');
+                        if (val && !valid) {
+                            wrap.classList.add('is-error');
+                            if (!msg) {
+                                msg = document.createElement('small');
+                                msg.id = 'email-format-msg';
+                                msg.style.cssText = 'color:#dc2626;font-size:12px;margin-top:4px;display:block;';
+                                msg.textContent = 'Format email tidak valid';
+                                wrap.insertAdjacentElement('afterend', msg);
+                            }
+                        } else {
+                            wrap.classList.remove('is-error');
+                            if (msg) msg.remove();
+                        }
+                    });
+
+                    document.querySelector('form').addEventListener('submit', function (e) {
+                        const emailEl = document.getElementById('email');
+                        const val = emailEl.value;
+                        const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+                        if (!valid) {
+                            e.preventDefault();
+                            emailEl.focus();
+                        }
+                    });
+                </script> --}}
             </div>
         </div>
 

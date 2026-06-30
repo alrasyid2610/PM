@@ -27,16 +27,19 @@ function renderFwoForm(res) {
         number: escHtml(res.no_fwo ?? '—'),
         createdAt: escHtml(res.created_at ?? '—'),
         updatedAt: escHtml(res.updated_at ?? '—'),
-        deleteId: res.id_fwo,
-        editText: 'Edit FWO',
+        deleteId: isCompleted ? null : res.id_fwo,
+        editText: isCompleted ? '' : 'Edit FWO',
         statusBadge: `<span class="detail-status-inline ${statusClass}">${statusLabel}</span>`,
         tags: woBadge + siteBadge,
-        extra: !isCompleted
-            ? `<button type="button" id="btnCompleteFwo" data-fwo-id="${res.id_fwo}" data-no-disable
+        extra: isCompleted
+            ? `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
+                   <i class="fa-solid fa-lock" style="font-size:10px;"></i>
+                   FWO sudah selesai, data tidak dapat diubah
+               </span>`
+            : `<button type="button" id="btnCompleteFwo" data-fwo-id="${res.id_fwo}" data-no-disable
                 class="btn btn-sm btn-success" style="font-size:12px;">
                 <i class="fa-solid fa-circle-check me-1"></i> Selesaikan FWO
-               </button>`
-            : '',
+               </button>`,
         noWrap: true,
     })}
 
@@ -80,11 +83,16 @@ function renderFwoForm(res) {
                     <!-- Edit personel via tombol Edit FWO di atas -->
                 </div>
                 <div id="fwoTabActionsBoq" class="d-flex align-items-center gap-2 d-none">
-                    <button type="button" id="btnAddFwoBoqDirect" data-no-disable
-                        class="pm-btn-pill pm-btn-pill--green">
-                        <i class="fa-solid fa-plus" style="font-size:10px;"></i>
-                        <i class="fa-solid fa-clipboard-list" style="font-size:11px;"></i> Kelola BOQ
-                    </button>
+                    ${!isCompleted
+                        ? `<button type="button" id="btnAddFwoBoqDirect" data-no-disable
+                                class="pm-btn-pill pm-btn-pill--green">
+                                <i class="fa-solid fa-plus" style="font-size:10px;"></i>
+                                <i class="fa-solid fa-clipboard-list" style="font-size:11px;"></i> Kelola BOQ
+                           </button>`
+                        : `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
+                               <i class="fa-solid fa-lock" style="font-size:10px;"></i>
+                               FWO sudah selesai, data tidak dapat diubah
+                           </span>`}
                 </div>
                 <div id="fwoTabActionsAttachment" class="d-flex align-items-center gap-2 d-none">
                     <!-- Attachment dikelola via tombol Edit FWO di atas -->
