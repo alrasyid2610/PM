@@ -59,32 +59,41 @@ function renderForm(res) {
                             </div>`
                         )}
 
-                        ${formGroup.sectionCard(
-                            { icon: 'fa-building', color: 'icon-navy', title: 'Data Pelanggan', subtitle: res.nama_pelanggan ?? '-' },
-                            `<div class="row g-3 form-2">
-                                ${formGroup.select('id_business_relation', 'Pelanggan', res.id_business_relation, [], {
-                                    className: 'col-md-6', mode: 'ajax', url: window.route.select2BR,
-                                    label: res.nama_pelanggan, placeholder: '-- Pilih Pelanggan --', minimumInputLength: 0,
-                                    createUrl: '/business-relations/create',
-                                })}
-                                ${formGroup.select('id_pic_pelanggan', 'PIC Pelanggan', res.id_pic_pelanggan, [], {
-                                    className: 'col-md-6', mode: 'ajax', url: window.route.select2Contact,
-                                    label: res.nama_pic_pelanggan, placeholder: '-- Pilih PIC --', minimumInputLength: 0,
-                                    createUrl: '/business-relation-contacts/create',
-                                })}
-                            </div>`
-                        )}
+    ${formGroup.sectionCard(
+        { icon: 'fa-building', color: 'icon-navy', title: 'Data Pelanggan', subtitle: res.nama_pelanggan ?? '-' },
+        `<div class="row g-3 form-2">
+            ${formGroup.select('id_business_relation', 'Pelanggan', res.id_business_relation, [], {
+                className: 'col-md-6',
+                mode: 'ajax',
+                url: window.route.select2BR,
+                label: res.nama_pelanggan,
+                placeholder: '-- Pilih Pelanggan --',
+                minimumInputLength: 2,
+            })}
+            ${formGroup.select('id_pic_pelanggan', 'PIC Pelanggan', res.id_pic_pelanggan, [], {
+                className: 'col-md-6',
+                mode: 'ajax',
+                url: window.route.select2Contact,
+                label: res.nama_pic_pelanggan,
+                placeholder: '-- Pilih PIC --',
+                minimumInputLength: 2,
+            })}
+        </div>`
+    )}
 
-                        ${formGroup.sectionCard(
-                            { icon: 'fa-user-tie', color: 'icon-green', title: 'PIC Internal Pramatek', subtitle: res.nama_pic_pramatek ?? '-' },
-                            `<div class="row g-3 form-3">
-                                ${formGroup.select('id_pic_pramatek', 'PIC Pramatek', res.id_pic_pramatek, [], {
-                                    className: 'col-md-6', mode: 'ajax', url: window.route.select2User,
-                                    label: res.nama_pic_pramatek, placeholder: '-- Pilih User --', minimumInputLength: 0,
-                                    createUrl: '/users/create',
-                                })}
-                            </div>`
-                        )}
+    ${formGroup.sectionCard(
+        { icon: 'fa-user-tie', color: 'icon-green', title: 'PIC Internal Pramatek', subtitle: res.nama_pic_pramatek ?? '-' },
+        `<div class="row g-3 form-3">
+            ${formGroup.select('id_pic_pramatek', 'PIC Pramatek', res.id_pic_pramatek, [], {
+                className: 'col-md-6',
+                mode: 'ajax',
+                url: window.route.select2User,
+                label: res.nama_pic_pramatek,
+                placeholder: '-- Pilih User --',
+                minimumInputLength: 2,
+            })}
+        </div>`
+    )}
 
                         ${formGroup.sectionCard(
                             { icon: 'fa-paperclip', color: 'icon-teal', title: 'Attachment', subtitle: 'File pendukung kontrak' },

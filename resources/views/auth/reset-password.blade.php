@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="id">
 <head>
-    <title>Pramatek — Sign In</title>
+    <title>Pramatek — Reset Password</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/png" href="{{ asset('assets/images/favicon.png') }}" />
@@ -21,7 +21,6 @@
             align-items: stretch;
         }
 
-        /* ===== LEFT PANEL ===== */
         .login-left {
             width: 420px;
             flex-shrink: 0;
@@ -94,7 +93,6 @@
             letter-spacing: 0.5px;
         }
 
-        /* ===== RIGHT PANEL ===== */
         .login-right {
             flex: 1;
             display: flex;
@@ -152,9 +150,24 @@
             pointer-events: none;
         }
 
+        .input-wrap .toggle-password {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            font-size: 14px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+
+        .input-wrap .toggle-password:hover { color: #6b7280; }
+
         .input-wrap input {
             width: 100%;
-            padding: 11px 14px 11px 40px;
+            padding: 11px 40px 11px 40px;
             border: 1.5px solid #e5e7eb;
             border-radius: 8px;
             font-size: 14px;
@@ -169,43 +182,24 @@
             box-shadow: 0 0 0 3px rgba(26, 95, 190, 0.1);
         }
 
-        .input-wrap input::placeholder {
-            color: #d1d5db;
+        .input-wrap input::placeholder { color: #d1d5db; }
+
+        .input-wrap.is-error input {
+            border-color: #fca5a5;
+            background: #fff9f9;
         }
 
-        .form-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 28px;
+        .input-wrap.is-error input:focus {
+            border-color: #dc2626;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
         }
 
-        .remember-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            color: #6b7280;
-            cursor: pointer;
-            user-select: none;
-        }
+        .input-wrap.is-error .input-icon { color: #fca5a5; }
 
-        .remember-label input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            accent-color: #1a5fbe;
-            cursor: pointer;
-        }
-
-        .forgot-link {
-            font-size: 13px;
-            color: #1a5fbe;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .forgot-link:hover {
-            text-decoration: underline;
+        .field-hint {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 5px;
         }
 
         .btn-login {
@@ -220,15 +214,11 @@
             cursor: pointer;
             transition: opacity 0.2s, transform 0.1s;
             letter-spacing: 0.3px;
+            margin-bottom: 16px;
         }
 
-        .btn-login:hover {
-            opacity: 0.92;
-        }
-
-        .btn-login:active {
-            transform: scale(0.99);
-        }
+        .btn-login:hover { opacity: 0.92; }
+        .btn-login:active { transform: scale(0.99); }
 
         .alert-error {
             background: #fef2f2;
@@ -246,26 +236,20 @@
             animation: shake 0.4s ease;
         }
 
-        .alert-error i {
-            margin-top: 1px;
-            flex-shrink: 0;
-            font-size: 15px;
-            color: #dc2626;
+        .alert-error i { margin-top: 1px; flex-shrink: 0; font-size: 15px; color: #dc2626; }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #1a5fbe;
+            text-decoration: none;
+            font-weight: 500;
         }
 
-        .input-wrap.is-error input {
-            border-color: #fca5a5;
-            background: #fff9f9;
-        }
-
-        .input-wrap.is-error input:focus {
-            border-color: #dc2626;
-            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
-        }
-
-        .input-wrap.is-error .input-icon {
-            color: #fca5a5;
-        }
+        .back-link:hover { text-decoration: underline; }
 
         @keyframes shake {
             0%   { transform: translateX(0); }
@@ -276,7 +260,6 @@
             100% { transform: translateX(0); }
         }
 
-        /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
             .login-left { display: none; }
             .login-right { background: #fff; padding: 24px 20px; align-items: flex-start; padding-top: 60px; }
@@ -287,7 +270,6 @@
 <body>
     <div class="login-wrapper">
 
-        <!-- LEFT -->
         <div class="login-left">
             <div class="left-content">
                 <img class="left-logo" src="{{ asset('assets/images/logo.png') }}" alt="Pramatek Logo">
@@ -302,21 +284,13 @@
             </div>
         </div>
 
-        <!-- RIGHT -->
         <div class="login-right">
             <div class="login-card">
 
                 <div class="login-heading">
-                    <h1>Selamat datang</h1>
-                    <p>Masuk ke akun Pramatek Anda</p>
+                    <h1>Reset Password</h1>
+                    <p>Buat password baru untuk akun Anda</p>
                 </div>
-
-                @if (session('success'))
-                    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-left:4px solid #16a34a;border-radius:8px;padding:13px 16px;margin-bottom:24px;color:#15803d;font-size:13.5px;font-weight:500;display:flex;align-items:flex-start;gap:10px;">
-                        <i class="fa-solid fa-circle-check" style="margin-top:1px;flex-shrink:0;font-size:15px;color:#16a34a;"></i>
-                        <span>{{ session('success') }}</span>
-                    </div>
-                @endif
 
                 @if ($errors->any())
                     <div class="alert-error">
@@ -325,18 +299,19 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('login.submit') }}">
+                <form method="POST" action="{{ route('password.update') }}">
                     @csrf
+                    <input type="hidden" name="token" value="{{ $token }}">
 
                     <div class="form-group">
                         <label for="email">Email</label>
                         <div class="input-wrap {{ $errors->has('email') ? 'is-error' : '' }}">
                             <i class="fa-regular fa-envelope input-icon"></i>
                             <input
-                                type="text"
+                                type="email"
                                 id="email"
                                 name="email"
-                                value="{{ old('email') }}"
+                                value="{{ old('email', $email ?? '') }}"
                                 placeholder="nama@pramatek.id"
                                 required
                                 autofocus
@@ -345,8 +320,8 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="password">Password</label>
-                        <div class="input-wrap {{ $errors->has('email') ? 'is-error' : '' }}">
+                        <label for="password">Password Baru</label>
+                        <div class="input-wrap {{ $errors->has('password') ? 'is-error' : '' }}">
                             <i class="fa-solid fa-lock input-icon"></i>
                             <input
                                 type="password"
@@ -355,56 +330,57 @@
                                 placeholder="••••••••"
                                 required
                             >
+                            <button type="button" class="toggle-password" onclick="togglePassword('password', this)">
+                                <i class="fa-regular fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="field-hint">Minimal 8 karakter</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password_confirmation">Konfirmasi Password</label>
+                        <div class="input-wrap">
+                            <i class="fa-solid fa-lock input-icon"></i>
+                            <input
+                                type="password"
+                                id="password_confirmation"
+                                name="password_confirmation"
+                                placeholder="••••••••"
+                                required
+                            >
+                            <button type="button" class="toggle-password" onclick="togglePassword('password_confirmation', this)">
+                                <i class="fa-regular fa-eye"></i>
+                            </button>
                         </div>
                     </div>
 
-                    <div class="form-row">
-                        <label class="remember-label">
-                            <input type="checkbox" name="remember" id="remember">
-                            Ingat saya
-                        </label>
-                        <a href="{{ route('password.request') }}" class="forgot-link">Lupa password?</a>
-                    </div>
-
-                                    <button type="submit" class="btn-login">
-                        Masuk
+                    <button type="submit" class="btn-login">
+                        <i class="fa-solid fa-key me-1"></i> Reset Password
                     </button>
 
                 </form>
-                {{-- <script>
-                    document.getElementById('email').addEventListener('input', function () {
-                        const val = this.value;
-                        const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-                        const wrap = this.closest('.input-wrap');
-                        let msg = document.getElementById('email-format-msg');
-                        if (val && !valid) {
-                            wrap.classList.add('is-error');
-                            if (!msg) {
-                                msg = document.createElement('small');
-                                msg.id = 'email-format-msg';
-                                msg.style.cssText = 'color:#dc2626;font-size:12px;margin-top:4px;display:block;';
-                                msg.textContent = 'Format email tidak valid';
-                                wrap.insertAdjacentElement('afterend', msg);
-                            }
-                        } else {
-                            wrap.classList.remove('is-error');
-                            if (msg) msg.remove();
-                        }
-                    });
 
-                    document.querySelector('form').addEventListener('submit', function (e) {
-                        const emailEl = document.getElementById('email');
-                        const val = emailEl.value;
-                        const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-                        if (!valid) {
-                            e.preventDefault();
-                            emailEl.focus();
-                        }
-                    });
-                </script> --}}
+                <a href="{{ route('login') }}" class="back-link">
+                    <i class="fa-solid fa-arrow-left"></i> Kembali ke Login
+                </a>
+
             </div>
         </div>
 
     </div>
+
+    <script>
+        function togglePassword(fieldId, btn) {
+            const input = document.getElementById(fieldId);
+            const icon  = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+    </script>
 </body>
 </html>
