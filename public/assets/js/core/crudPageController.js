@@ -196,6 +196,19 @@ class CrudPageController {
 
                     renderAttachments(self.attachmentData);
                 }
+
+                // Hapus baris baru (id kosong) yang ditambahkan saat edit tapi tidak disimpan
+                if (self.initDynamicTable) {
+                    const $tbody = $("#Table tbody");
+                    $tbody.find("tr").each(function () {
+                        const idVal = $(this).find('input[name="id_testing_item[]"]').val();
+                        if (idVal === '' || idVal === null || idVal === undefined) {
+                            if ($tbody.find("tr").length > 1) {
+                                $(this).remove();
+                            }
+                        }
+                    });
+                }
             },
 
             onSave: function () {

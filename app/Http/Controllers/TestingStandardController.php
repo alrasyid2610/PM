@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistory;
 use App\Traits\HasAttachment;
@@ -105,10 +106,12 @@ class TestingStandardController extends Controller
 
         $table = 'testing_standards';
         $validated = $request->validate([
-            'nomor' => 'required|string|max:100',
+            'nomor' => ['required', 'string', 'max:100', Rule::unique('testing_standards', 'nomor')],
             'judul' => 'required|string|max:255',
             'is_aktif' => 'required|boolean',
             'attachments.*' => 'nullable|file|max:5120'
+        ], [
+            'nomor.unique' => 'Nomor sudah digunakan, gunakan nomor lain.',
         ]);
 
         $upload = uploadAttachment($request->file('attachments'), $table);
@@ -154,9 +157,11 @@ class TestingStandardController extends Controller
         // dd($request->all());
 
         $validated = $request->validate([
-            'nomor' => 'required|string|max:50',
+            'nomor' => ['required', 'string', 'max:50', Rule::unique('testing_standards', 'nomor')->ignore((int)$id, 'id_testing_standard')],
             'judul' => 'required|string|max:255',
             'is_aktif' => 'required|boolean',
+        ], [
+            'nomor.unique' => 'Nomor sudah digunakan, gunakan nomor lain.',
         ]);
 
 
