@@ -21,7 +21,7 @@
 <x-crud-index
     title="List of Contracts"
     create-route="contracts.create"
-    add-label="Tambah Contract"
+    {{-- add-label="Tambah Contract" --}}
     :with-history="true"
 />
 @endsection

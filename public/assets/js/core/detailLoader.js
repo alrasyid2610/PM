@@ -16,6 +16,9 @@ function loadDetailEngine(options) {
             afterRender(res);
         }
     }).fail(function () {
-        $(container).html("Gagal memuat detail");
+        $(container).html('');
+        Notify.error('Data tidak ditemukan atau sudah dihapus');
+        window.history.replaceState(null, '', window.location.pathname);
+        $('button[data-bs-target="#tab-data"]').trigger('click');
     });
 }

@@ -14,7 +14,7 @@ $(document).ready(function () {
 
     $(document).on('click', '.btn-delete-unit', function () {
         const id = $(this).data('id');
-        Notify.confirm('Hapus Testing Unit?', function () {
+        Notify.confirmDelete('Hapus Testing Unit?', function () {
             $.ajax({
                 url: window.route.update + id,
                 method: 'POST',
@@ -24,11 +24,7 @@ $(document).ready(function () {
                 },
                 success: function (res) {
                     Notify.success(res.message || 'Data berhasil dihapus');
-                    $('#detailContent').html('');
-                    page.selectedRow.id = null;
-                    if ($.fn.DataTable.isDataTable('#masterTable')) {
-                        $('#masterTable').DataTable().ajax.reload(null, false);
-                    }
+                    setTimeout(function () { window.location.href = window.location.pathname; }, 1000);
                 },
                 error: function (xhr) {
                     Notify.error(xhr.responseJSON?.message || 'Terjadi kesalahan');

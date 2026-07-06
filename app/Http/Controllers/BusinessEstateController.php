@@ -244,9 +244,9 @@ class BusinessEstateController extends Controller
 
         $id = $request->id;
 
-        $data = DB::table('business_estates')->where('id_bestate', $id)->first();
+        $data = DB::table('business_estates')->where('id_bestate', $id)->whereNull('deleted_at')->first();
         if (!$data) {
-            return response()->json(['message' => 'Testing parameter tidak ditemukan'], 404);
+            return response()->json(['message' => 'Data tidak ditemukan atau sudah dihapus'], 404);
         }
 
         return response()->json($data);

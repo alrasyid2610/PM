@@ -146,22 +146,33 @@
         $('#status').select2({ placeholder: '-- Pilih Status --', allowClear: true, width: '100%' });
 
         $('#id_business_relation').select2({
-            width: '100%', placeholder: '-- Pilih Pelanggan --', allowClear: true, minimumInputLength: 2,
-            ajax: { url: window.route.select2BR, delay: 300, dataType: 'json',
+            width: '100%', placeholder: '-- Pilih Pelanggan --', allowClear: true, minimumInputLength: 0,
+            ajax: { url: window.route.select2BR, delay: 250, dataType: 'json',
                     data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }) },
+            language: { noResults: () => `<span>Tidak ditemukan. <a href="{{ route('business-relations.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>` },
+            escapeMarkup: (m) => m,
         });
 
         $('#id_pic_pelanggan').select2({
-            width: '100%', placeholder: '-- Pilih PIC Pelanggan --', allowClear: true, minimumInputLength: 2,
-            ajax: { url: window.route.select2Contact, delay: 300, dataType: 'json',
+            width: '100%', placeholder: '-- Pilih PIC Pelanggan --', allowClear: true, minimumInputLength: 0,
+            ajax: { url: window.route.select2Contact, delay: 250, dataType: 'json',
                     data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }) },
+            language: { noResults: () => `<span>Tidak ditemukan. <a href="{{ route('business-relation-contacts.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>` },
+            escapeMarkup: (m) => m,
         });
 
         $('#id_pic_pramatek').select2({
-            width: '100%', placeholder: '-- Pilih PIC Pramatek --', allowClear: true, minimumInputLength: 2,
-            ajax: { url: window.route.select2User, delay: 300, dataType: 'json',
+            width: '100%', placeholder: '-- Pilih PIC Pramatek --', allowClear: true, minimumInputLength: 0,
+            ajax: { url: window.route.select2User, delay: 250, dataType: 'json',
                     data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }) },
+            language: { noResults: () => `<span>Tidak ditemukan. <a href="{{ route('users.index') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>` },
+            escapeMarkup: (m) => m,
         });
+    });
+
+    $('#contractForm').on('submit', function () {
+        const el = this.querySelector('input[name="nilai_kontrak"]');
+        if (el) el.value = el.value.replace(/,/g, '');
     });
 
     submitCreateForm({

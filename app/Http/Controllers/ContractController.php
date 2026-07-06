@@ -67,6 +67,10 @@ class ContractController extends Controller
 
     public function store(Request $request)
     {
+        if ($request->nilai_kontrak) {
+            $request->merge(['nilai_kontrak' => str_replace(',', '', $request->nilai_kontrak)]);
+        }
+
         $request->validate([
             'no_contract_client'   => 'nullable|string|max:100',
             'id_business_relation' => 'nullable|integer',
@@ -133,6 +137,10 @@ class ContractController extends Controller
 
     public function update(Request $request, $id)
     {
+        if ($request->nilai_kontrak) {
+            $request->merge(['nilai_kontrak' => str_replace(',', '', $request->nilai_kontrak)]);
+        }
+
         $request->validate([
             'no_contract_client'   => 'nullable|string|max:100',
             'id_business_relation' => 'nullable|integer',

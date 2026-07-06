@@ -390,7 +390,7 @@ $(document).ready(function () {
 
     $(document).on('click', '.btn-delete-record', function () {
         const id = $(this).data('id');
-        Notify.confirm('Hapus Fieldwork?', function () {
+        Notify.confirmDelete('Hapus Fieldwork?', function () {
             $.ajax({
                 url: window.route.update + id,
                 method: 'POST',
@@ -398,15 +398,9 @@ $(document).ready(function () {
                 success: function (res) {
                     Notify.success(res.message || 'Data berhasil dihapus');
                     const woId = currentFwoData && currentFwoData.id_wo;
-                    if (woId) {
-                        window.location.href = '/work-orders?open=' + woId;
-                    } else {
-                        $('#detailContent').html('');
-                        page.selectedRow.id = null;
-                        if ($.fn.DataTable.isDataTable('#masterTable')) {
-                            $('#masterTable').DataTable().ajax.reload(null, false);
-                        }
-                    }
+                    setTimeout(function () {
+                        window.location.href = woId ? '/work-orders?open=' + woId : window.location.pathname;
+                    }, 1000);
                 },
                 error: function (xhr) {
                     Notify.error(xhr.responseJSON?.message || 'Terjadi kesalahan');

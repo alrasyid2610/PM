@@ -738,18 +738,14 @@ $(document).ready(function () {
 
     $(document).on("click", ".btn-delete-record", function () {
         const id = $(this).data("id");
-        Notify.confirm("Hapus Sales Order?", function () {
+        Notify.confirmDelete("Hapus Sales Order?", function () {
             $.ajax({
                 url: window.route.update + id,
                 method: "POST",
                 data: { _token: window.route.csrf, _method: "DELETE" },
                 success: function (res) {
                     Notify.success(res.message || "Data berhasil dihapus");
-                    $("#detailContent").html("");
-                    page.selectedRow.id = null;
-                    if ($.fn.DataTable.isDataTable("#masterTable")) {
-                        $("#masterTable").DataTable().ajax.reload(null, false);
-                    }
+                    setTimeout(function () { window.location.href = window.location.pathname; }, 1000);
                 },
                 error: function (xhr) {
                     Notify.error(

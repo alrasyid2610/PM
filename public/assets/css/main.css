@@ -574,7 +574,9 @@ section .card {
 .detail-action-sticky-wrap.is-stuck {
     background: #fff;
     padding: 12px 20px;
-    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.12));
+    border-radius: 0 !important;
+    /* filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.12)); */
+    border-bottom: 1px solid #b5b5b5 !important;
 }
 
 .detail-action-bar {
@@ -1214,10 +1216,76 @@ section .card {
    RESPONSIVE
    ===================== */
 @media (max-width: 767.98px) {
+    /* Page header bar: title penuh di atas, tombol+tabs sejajar di bawah */
+    .page-header-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 10px 0 6px;
+    }
+
+    .page-header-right {
+        width: 100%;
+        gap: 6px;
+    }
+
+    /* Tombol Add kecil di mobile */
+    .page-header-right .btn {
+        flex-shrink: 0;
+        white-space: nowrap;
+        font-size: 12px;
+        padding: 5px 10px;
+    }
+
+    /* Nav tabs: bisa scroll horizontal */
+    .page-header-right .nav-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .page-header-right .nav-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .page-header-right .nav-tabs .nav-link {
+        white-space: nowrap;
+        font-size: 12px;
+        padding: 6px 10px;
+    }
+
+    /* Action bar — stack info di atas, tombol di bawah */
     .detail-action-bar {
         flex-direction: column;
         align-items: flex-start;
-        gap: 10px;
+        gap: 8px;
+    }
+
+    /* Grup tombol di action bar: sejajar & bisa wrap, reset translateY inline */
+    .detail-action-bar > div:last-child,
+    .detail-action-bar > .d-flex:last-child {
+        display: flex !important;
+        flex-wrap: wrap;
+        gap: 6px;
+        width: 100%;
+        transform: none !important;
+    }
+
+    /* Tombol edit & hapus full-width di mobile */
+    .detail-action-bar .btn-action-edit,
+    .detail-action-bar .btn-action-danger,
+    .detail-action-bar .btn-action-save {
+        flex: 1;
+        justify-content: center;
+        min-width: 80px;
+    }
+
+    /* Hilangkan padding bawah berlebih di mobile */
+    .detail-action-bar {
+        padding-bottom: 12px;
     }
 
     .detail-header {
@@ -1236,6 +1304,45 @@ section .card {
 
     .detail-section-body {
         padding: 12px;
+    }
+
+    /* Tab header: nav bisa di-scroll horizontal, actions tetap visible */
+    .pm-tab-header {
+        flex-wrap: nowrap;
+        overflow: hidden;
+        gap: 0;
+        padding: 0 8px;
+    }
+
+    .pm-tab-nav {
+        overflow-x: auto;
+        overflow-y: hidden;
+        flex-shrink: 1;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding-bottom: 2px;
+    }
+
+    .pm-tab-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Tab btn: icon saja di mobile, sembunyikan teks via font-size trick */
+    .pm-tab-btn {
+        scroll-snap-align: start;
+        padding: 10px 14px;
+        font-size: 0;
+    }
+
+    .pm-tab-btn i {
+        font-size: 14px !important;
+    }
+
+    /* Tab actions (tombol + Add, dll) — selalu terlihat di kanan */
+    .pm-tab-actions {
+        flex-shrink: 0;
+        margin-left: 6px;
     }
 }
 
