@@ -1216,6 +1216,91 @@ section .card {
    RESPONSIVE
    ===================== */
 @media (max-width: 767.98px) {
+    /* Sidebar: hapus scroll ganda pada submenu, biar sidebar scroll sebagai 1 unit */
+    .sidebar-wrapper .menu .submenu.active {
+        overflow-y: visible !important;
+        max-height: none !important;
+    }
+
+    /* DataTable toolbar: baris 1 = excel+length, baris 2 = search full */
+    .dt-top {
+        flex-wrap: wrap;
+        gap: 6px !important;
+        margin-bottom: 8px !important;
+        align-items: center;
+    }
+
+    /* Baris 1: Excel (kiri) + length (kanan), baris 2: search full */
+    .dt-top .dt-buttons {
+        flex: 0 0 auto;
+        order: 1;
+    }
+
+    .dt-top .dataTables_length {
+        flex: 1 1 auto;
+        order: 2;
+        text-align: right;
+    }
+
+    .dt-top .ms-auto {
+        flex: 0 0 100%;
+        order: 3;
+        margin-left: 0 !important;
+    }
+
+    /* Export Excel: compact, auto width, teks tetap */
+    .dt-top .dt-buttons .btn {
+        font-size: 12px !important;
+        padding: 5px 12px !important;
+        width: auto !important;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.3px;
+    }
+
+    .dt-top .dt-buttons .btn i {
+        font-size: 13px !important;
+    }
+
+    /* Length select compact */
+    .dt-top .dataTables_length label {
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin: 0;
+    }
+
+    /* Search full width di baris 2 */
+    .dt-top .dataTables_filter label {
+        width: 100%;
+        margin: 0;
+    }
+
+    .dt-top .dataTables_filter input {
+        height: 32px;
+        font-size: 12px;
+        flex: 1;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    /* Pagination compact */
+    .dt-bottom {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 11px !important;
+        min-width: 28px !important;
+    }
+
     /* Page header bar: title penuh di atas, tombol+tabs sejajar di bawah */
     .page-header-bar {
         flex-direction: column;
@@ -1322,6 +1407,9 @@ section .card {
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
         padding-bottom: 2px;
+        /* Gradient fade kanan sebagai indikator bisa di-scroll */
+        mask-image: linear-gradient(to right, black 75%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to right, black 75%, transparent 100%);
     }
 
     .pm-tab-nav::-webkit-scrollbar {
