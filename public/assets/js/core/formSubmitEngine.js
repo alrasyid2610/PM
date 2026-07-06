@@ -7,6 +7,11 @@ function submitCrudForm(options) {
 
     let form = document.querySelector(formId);
 
+    // Strip koma dari semua input numeric mask sebelum submit
+    form.querySelectorAll('input.input-num-mask').forEach(function (el) {
+        el.value = el.value.replace(/,/g, '');
+    });
+
     let formData = new FormData(form);
 
     let currentForms = getAllFormsData();

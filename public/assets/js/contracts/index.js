@@ -7,6 +7,7 @@ $(document).ready(function () {
         useAttachment: true,
         afterLoad: function () {
             initFpDate('#detailContent');
+            initNumericMask(document.getElementById('detailContent'));
         },
     });
 

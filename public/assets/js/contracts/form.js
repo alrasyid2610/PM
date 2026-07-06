@@ -54,7 +54,7 @@ function renderForm(res) {
                                 ${formGroup.date('tanggal_mulai', 'Tanggal Mulai', res.tanggal_mulai, false, { className: 'col-md-4' })}
                                 ${formGroup.date('tanggal_selesai', 'Tanggal Selesai', res.tanggal_selesai, false, { className: 'col-md-4' })}
                                 ${formGroup.text('durasi_bulan', 'Durasi (Bulan)', res.durasi_bulan, false, { className: 'col-md-4' })}
-                                ${formGroup.text('nilai_kontrak', 'Nilai Kontrak (Rp)', res.nilai_kontrak, false, { className: 'col-md-6' })}
+                                ${formGroup.text('nilai_kontrak', 'Nilai Kontrak (Rp)', res.nilai_kontrak, false, { className: 'col-md-6', inputClass: 'input-num-mask input-num-int' })}
                                 ${formGroup.textarea('catatan', 'Catatan', res.catatan, { className: 'col-md-6' })}
                             </div>`
                         )}

@@ -1,6 +1,6 @@
 const formGroup = {
     text(name, label, value = "", required = false, config = {}) {
-        let { className = "" } = config;
+        let { className = "", inputClass = "" } = config;
         return `
         <div class="${config.className + " mb-3" ?? "col-md-12 col-lg-3"}">
 
@@ -8,10 +8,10 @@ const formGroup = {
                 ${label}
             </label>
 
-            <input 
+            <input
                 type="text"
                 name="${name}"
-                class="form-control disabled"
+                class="form-control disabled ${inputClass}"
                 value="${value ?? ""}"
                 ${required ? "required" : ""}
             >
