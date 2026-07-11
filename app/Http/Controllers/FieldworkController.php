@@ -442,7 +442,7 @@ class FieldworkController extends Controller
             // Pelanggan brsFw
             ->leftJoin('business_relation_sites as brsFw', 'brsFw.id_site', '=', 'fw.id_site_pelanggan_pekerjaan')
             // Pelanggan brsWO
-            ->leftJoin('business_relation_sites as brsWO', 'brsWO.id_site', '=', 'WO.id_site_pelanggan_pekerjaan')
+            ->leftJoin('business_relation_sites as brsWO', 'brsWO.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
             ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'fw.id_pic_pelanggan_pekerjaan')
 
             ->where('fw.id_fwo', $id)
