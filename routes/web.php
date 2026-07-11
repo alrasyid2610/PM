@@ -26,13 +26,16 @@ use App\Http\Controllers\WilayahController;
 use App\Http\Controllers\TerminController;
 use Spatie\LaravelPdf\Facades\Pdf;
 
+Route::get('/test-pdf-header', function () {
+    return view('pdf.layouts.sections.header');
+});
+
+Route::get('/test-fwo-view', function () {
+    return view('pdf.fwo.index');
+});
+
 Route::get('/test-so-pdf', function () {
-    // return view('pdf.sales_order');
     return Pdf::view('pdf.sales_order')
-        ->withBrowsershot(function ($browsershot) {
-            $browsershot->setChromePath('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
-            $browsershot->timeout(120);
-        })
         ->format('a4')
         ->name('SO-25-001.pdf');
 });
@@ -502,6 +505,7 @@ Route::prefix('fieldworks')->name('fieldworks.')->group(function () {
     Route::post('/{id}/duplicate', [FieldworkController::class, 'duplicate'])->name('duplicate')->whereNumber('id');
     Route::post('/{id}/complete',    [FieldworkController::class, 'complete'])->name('complete')->whereNumber('id');
     Route::post('/{id}/attachments', [FieldworkController::class, 'updateAttachments'])->name('updateAttachments')->whereNumber('id');
+    Route::get('/{id}/pdf',          [FieldworkController::class, 'generatePdf'])->name('pdf')->whereNumber('id');
 });
 
 Route::prefix('termin')->name('termin.')->group(function () {

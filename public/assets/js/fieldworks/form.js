@@ -35,8 +35,16 @@ function renderFwoForm(res) {
             ? `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
                    <i class="fa-solid fa-lock" style="font-size:10px;"></i>
                    FWO sudah selesai, data tidak dapat diubah
-               </span>`
-            : `<button type="button" id="btnCompleteFwo" data-fwo-id="${res.id_fwo}" data-no-disable
+               </span>
+               <a href="/fieldworks/${res.id_fwo}/pdf" target="_blank"
+                  class="btn btn-sm btn-outline-secondary" style="font-size:12px;">
+                  <i class="fa-solid fa-file-pdf me-1"></i> PDF
+               </a>`
+            : `<a href="/fieldworks/${res.id_fwo}/pdf" target="_blank"
+                  class="btn btn-sm btn-outline-secondary" style="font-size:12px;">
+                  <i class="fa-solid fa-file-pdf me-1"></i> PDF
+               </a>
+               <button type="button" id="btnCompleteFwo" data-fwo-id="${res.id_fwo}" data-no-disable
                 class="btn btn-sm btn-success" style="font-size:12px;">
                 <i class="fa-solid fa-circle-check me-1"></i> Selesaikan FWO
                </button>`,
@@ -338,9 +346,10 @@ function renderPersonelView(personels) {
     }
 
     const roleColors = {
-        'Leader':  { bg: '#fef9c3', color: '#854d0e' },
-        'Driver':  { bg: '#dbeafe', color: '#1e40af' },
-        'Anggota': { bg: '#f0fdf4', color: '#166534' },
+        'Leader':      { bg: '#fef9c3', color: '#854d0e' },
+        'Driver':      { bg: '#dbeafe', color: '#1e40af' },
+        'Anggota':     { bg: '#f0fdf4', color: '#166534' },
+        'PIC Project': { bg: '#fce7f3', color: '#9d174d' },
     };
 
     const TH = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';

@@ -6,13 +6,20 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistory;
+use Spatie\LaravelPdf\Facades\Pdf;
 
 class FieldworkController extends Controller
 {
     use HasAuditHistory;
 
-    protected function auditTable(): string        { return 'fieldworks'; }
-    protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_fwo']; }
+    protected function auditTable(): string
+    {
+        return 'fieldworks';
+    }
+    protected function auditExcludeFields(): array
+    {
+        return ['updated_at', 'created_at', 'id_fwo'];
+    }
 
     public function index()
     {
@@ -425,5 +432,95 @@ class FieldworkController extends Controller
         }
 
         return sprintf('FWO.%s.%s.0001', $year, chr(ord($letter) + 1));
+    }
+
+    public function generatePdf($id)
+    {
+        $fwo = DB::table('fieldworks as fw')
+            ->leftJoin('work_orders as wo', 'fw.id_wo', '=', 'wo.id_wo')
+            ->leftJoin('sales_orders as so', 'wo.id_so', '=', 'so.id_so')
+            // Pelanggan brsFw
+            ->leftJoin('business_relation_sites as brsFw', 'brsFw.id_site', '=', 'fw.id_site_pelanggan_pekerjaan')
+            // Pelanggan brsWO
+            ->leftJoin('business_relation_sites as brsWO', 'brsWO.id_site', '=', 'WO.id_site_pelanggan_pekerjaan')
+            ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'fw.id_pic_pelanggan_pekerjaan')
+
+            ->where('fw.id_fwo', $id)
+            ->select([
+                'fw.*',
+                'wo.judul_pekerjaan as wo_judul_pekerjaan',
+                'so.no_so',
+                'so.no_po',
+                'brsFw.nama_lokasi as nama_lokasi_fwo',
+                'brsFw.alamat_lengkap as alamat_lengkap_fwo',
+                'brsWO.nama_lokasi as nama_lokasi_wo',
+                'brsWO.alamat_lengkap as alamat_lengkap_wo',
+                'brc.nama_pic',
+                'brc.nomor_telepon_pic',
+            ])
+            ->first();
+
+        abort_if(!$fwo, 404, 'FWO tidak ditemukan');
+
+        \Carbon\Carbon::setLocale('id');
+
+        $personels = DB::table('fieldwork_personels as fp')
+            ->join('users as u', 'fp.id_user', '=', 'u.id')
+            ->where('fp.id_fwo', $id)
+            ->select(['u.name', 'fp.role'])
+            ->get();
+
+        $fieldwork_boq = DB::table('fieldwork_boq as fwb')
+            ->leftJoin('fieldwork_boq_items as fwbi', 'fwbi.id_fwo_boq', '=', 'fwb.id_fwo_boq')
+            ->leftJoin('boq', 'boq.id_boq', '=', 'fwb.id_boq')
+            ->leftJoin('testing_points as tp', 'tp.id_testing_point', '=', 'boq.id_testing_point')
+            ->leftJoin('testing_standards as ts', 'ts.id_testing_standard', '=', 'tp.id_testing_standard')
+            ->leftJoin('testing_matriks_samples as tms', 'tms.id_testing_matriks_sample', '=', 'tp.id_testing_matriks_sample')
+            ->leftJoin('testing_items as ti', 'ti.id_testing_item', '=', 'fwbi.id_testing_item')
+            ->leftJoin('testing_parameters as tpFw', 'tpFw.id_testing_parameter', '=', 'ti.id_testing_parameter')
+            ->where('fwb.id_fwo', $id)
+            ->select(
+                'tms.kode as kode_tms',
+                'tms.judul_indonesia as judul_indonesia_tms',
+                'tms.judul_inggris as judul_inggris_tms',
+                'ts.nomor as nomor_ts',
+                'tp.nama as nama_tp',
+                'tp.nomor_halaman as nomor_halaman_tp',
+                'fwb.qty',
+                'boq.satuan',
+                'tpFw.kode as kode_tpfw',
+                'tpFw.judul_indonesia as judul_indonesia_tpfw',
+                'tpFw.judul_inggris as judul_inggris_tpfw',
+            )
+            ->get();
+        $boqGroups = $fieldwork_boq->groupBy(function ($row) {
+            return $row->kode_tms . '||' . $row->nama_tp . '||' . $row->qty;
+        })->map(function ($rows) {
+            $first = $rows->first();
+            return (object) [
+                'kode_tms'          => $first->kode_tms,
+                'judul_indonesia_tms' => $first->judul_indonesia_tms,
+                'judul_inggris_tms' => $first->judul_inggris_tms,
+                'nomor_ts'          => $first->nomor_ts,
+                'nama_tp'           => $first->nama_tp,
+                'nomor_halaman_tp'  => $first->nomor_halaman_tp,
+                'qty'               => $first->qty,
+                'satuan'               => $first->satuan,
+                'items'             => $rows->map(function ($r) {
+                    return (object) [
+                        'kode'             => $r->kode_tpfw,
+                        'judul_indonesia'  => $r->judul_indonesia_tpfw,
+                        'judul_inggris'    => $r->judul_inggris_tpfw,
+                    ];
+                })->values(),
+            ];
+        })->values();
+
+        return Pdf::view('pdf.fwo.index', compact('fwo', 'personels', 'boqGroups'))
+            ->headerView('pdf.layouts.sections.header')
+            ->footerView('pdf.layouts.sections.footer')
+            ->margins(top: 30, right: 0, bottom: 20, left: 0)
+            ->format('a4')
+            ->name("FWO-{$fwo->no_fwo}.pdf");
     }
 }

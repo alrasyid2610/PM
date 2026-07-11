@@ -8,13 +8,13 @@ use Illuminate\Http\Request;
 class CheckMenuPermission
 {
     // Route pertama yang tidak perlu autentikasi
-    private const PUBLIC_SEGMENTS = ['login', 'logout', 'up', 'test-pdf', 'test-pdf-view', 'test-pdf-download', 'test-so-pdf', 'wilayah', 'forgot-password', 'reset-password'];
+    private const PUBLIC_SEGMENTS = ['login', 'logout', 'up', 'test-pdf', 'test-pdf-view', 'test-pdf-download', 'test-so-pdf', 'test-fwo-view', 'wilayah', 'forgot-password', 'reset-password'];
 
     // Route yang tidak perlu cek permission (cukup auth)
     private const OPEN_SEGMENTS = ['dashboard', 'api'];
 
     // Endpoint supporting — tidak perlu cek permission spesifik
-    private const OPEN_LAST_SEGMENTS = ['select2', 'select2byid', 'data'];
+    private const OPEN_LAST_SEGMENTS = ['select2', 'select2byid', 'data', 'pdf'];
 
     // Sub-route supporting dari modul lain
     private const OPEN_PATH_KEYWORDS = ['by-point', 'by-so', 'wo-progress', 'boq-progress'];

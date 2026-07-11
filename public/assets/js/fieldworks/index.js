@@ -449,7 +449,7 @@ function exitPersonelEditMode() {
 
 function addPersonelEditRow(userData, roleVal) {
     const idx = personelEditIdx++;
-    const roleOptions = ['Leader', 'Driver', 'Anggota'].map(function (r) {
+    const roleOptions = ['Leader', 'Driver', 'Anggota', 'PIC Project'].map(function (r) {
         return `<option value="${r}" ${roleVal === r ? 'selected' : ''}>${r}</option>`;
     }).join('');
 
