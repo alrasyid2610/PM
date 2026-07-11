@@ -27,7 +27,11 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
-        "puppeteer": "^24.42.0",
+        "puppeteer": "^24.43.1",
         "puppeteer-core": "^24.42.0"
+    },
+    "puppeteer": {
+        "executablePath": "/usr/bin/chromium-browser",
+       "skipDownload": true
     }
 }
