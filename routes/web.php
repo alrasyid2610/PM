@@ -24,6 +24,7 @@ use App\Http\Controllers\TestingMatriksSampleController;
 use App\Http\Controllers\TestingPointController;
 use App\Http\Controllers\WilayahController;
 use App\Http\Controllers\TerminController;
+use App\Http\Controllers\CalendarController;
 use Spatie\LaravelPdf\Facades\Pdf;
 
 Route::get('/test-pdf-header', function () {
@@ -505,6 +506,11 @@ Route::prefix('fieldworks')->name('fieldworks.')->group(function () {
     Route::post('/{id}/complete',    [FieldworkController::class, 'complete'])->name('complete')->whereNumber('id');
     Route::post('/{id}/attachments', [FieldworkController::class, 'updateAttachments'])->name('updateAttachments')->whereNumber('id');
     Route::get('/{id}/pdf',          [FieldworkController::class, 'generatePdf'])->name('pdf')->whereNumber('id');
+});
+
+Route::prefix('calendar')->name('calendar.')->group(function () {
+    Route::get('/',        [CalendarController::class, 'index'])->name('index');
+    Route::get('/events',  [CalendarController::class, 'events'])->name('events');
 });
 
 Route::prefix('termin')->name('termin.')->group(function () {

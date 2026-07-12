@@ -1,8 +1,14 @@
 function renderForm(res) {
+    const isDeleted = !!res.deleted_at;
     const statusKey = (res.status ?? "draft")
         .toString()
         .toLowerCase()
         .replace(/\s+/g, "-");
+    const statusBadge = isDeleted
+        ? `<span class="pm-badge" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;">
+               <i class="fa-solid fa-trash" style="font-size:10px;"></i> Deleted
+           </span>`
+        : `<span class="detail-status-inline detail-status-${statusKey}">${escHtml(res.status ?? "Draft")}</span>`;
     const pelangganTag = res.nama_pelanggan
         ? `<a href="/business-relations${res.id_site_pelanggan ? '?open=' + res.id_site_pelanggan : ''}" class="pm-badge" style="background:#f1f5f9;color:#475569;text-decoration:none;">
                <i class="fa-solid fa-building" style="font-size:10px;"></i>
@@ -20,10 +26,16 @@ function renderForm(res) {
         number: escHtml(res.no_so ?? "—"),
         createdAt: escHtml(res.created_at ?? "—"),
         updatedAt: escHtml(res.updated_at ?? "—"),
-        deleteId: res.id_so,
-        editText: "Edit SO",
-        statusBadge: `<span class="detail-status-inline detail-status-${statusKey}">${escHtml(res.status ?? "Draft")}</span>`,
+        deleteId: isDeleted ? null : res.id_so,
+        editText: isDeleted ? '' : 'Edit SO',
+        statusBadge: statusBadge,
         tags: pelangganTag,
+        extra: isDeleted
+            ? `<span style="font-size:11px;color:#b91c1c;display:flex;align-items:center;gap:5px;">
+                   <i class="fa-solid fa-trash" style="font-size:10px;"></i>
+                   Data ini sudah dihapus pada ${new Date(res.deleted_at).toLocaleString('id-ID')}
+               </span>`
+            : '',
         noWrap: true,
     })}
 
@@ -67,22 +79,22 @@ function renderForm(res) {
                             class="pm-btn-icon" title="Refresh" data-no-disable>
                             <i class="fa-solid fa-rotate-right"></i>
                         </button>
-                        <button type="button" class="pm-btn-pill pm-btn-pill--blue btn-add-wo-modal"
+                        ${!isDeleted ? `<button type="button" class="pm-btn-pill pm-btn-pill--blue btn-add-wo-modal"
                             data-so-id="${res.id_so}" data-no-disable>
                             <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                             <i class="fa-solid fa-briefcase" style="font-size:11px;"></i> WO
-                        </button>
+                        </button>` : ''}
                     </div>
                     <div id="soTabActionsTermin" class="d-flex align-items-center gap-2 d-none">
                         <button type="button" id="btnRefreshTermin" data-so-id="${res.id_so}"
                             class="pm-btn-icon" title="Refresh" data-no-disable>
                             <i class="fa-solid fa-rotate-right"></i>
                         </button>
-                        <button type="button" class="pm-btn-pill pm-btn-pill--purple btn-add-termin-modal"
+                        ${!isDeleted ? `<button type="button" class="pm-btn-pill pm-btn-pill--purple btn-add-termin-modal"
                             data-so-id="${res.id_so}" data-no-disable>
                             <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                             <i class="fa-solid fa-file-invoice-dollar" style="font-size:11px;"></i> Termin
-                        </button>
+                        </button>` : ''}
                     </div>
                 </div>
             </div>

@@ -230,18 +230,35 @@ class WorkOrderController extends Controller
 
     public function data(Request $request)
     {
-        // dd($request->all(), 'poke');
-        // =========================
-        // QUERY DASAR (JOIN BR + BRS)
-        // =========================
+        $searchBy   = $request->input('search_by');
+        $searchQ    = trim($request->input('search_q', ''));
+        $isSearching = $searchBy && $searchQ;
+
         $query = DB::table('work_orders as wo')
             ->leftJoin('sales_orders as s', 'wo.id_so', '=', 's.id_so')
             ->leftJoin('business_relations as br', 'wo.id_pelanggan_pekerjaan', '=', 'br.id_br')
             ->leftJoin('business_relation_sites as brs', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
-            ->whereNull('wo.deleted_at')
+            ->when(!$isSearching, fn($q) => $q->whereNull('wo.deleted_at'))
+            ->when(!$isSearching && !$request->boolean('show_selesai'), fn($q) => $q->where('wo.status', '!=', 'selesai'))
+            ->when($isSearching, function ($q) use ($searchBy, $searchQ) {
+                $like = '%' . $searchQ . '%';
+                match ($searchBy) {
+                    'no_wo'     => $q->where('wo.no_wo', 'like', $like),
+                    'no_so'     => $q->where('s.no_so', 'like', $like),
+                    'judul'     => $q->where('s.judul_order', 'like', $like),
+                    'pelanggan' => $q->where('br.nama', 'like', $like),
+                    'status'    => match ($searchQ) {
+                        'all'     => null,
+                        'deleted' => $q->whereNotNull('wo.deleted_at'),
+                        default   => $q->where('wo.status', $searchQ),
+                    },
+                    default     => null,
+                };
+            })
             ->select([
                 'wo.id_wo',
                 's.id_so',
+                DB::raw("CASE WHEN wo.deleted_at IS NOT NULL THEN 'deleted' ELSE wo.status END as status"),
                 'wo.no_wo',
                 's.no_so',
                 's.judul_order',
@@ -484,11 +501,11 @@ class WorkOrderController extends Controller
                 's.judul_order',
                 'wo.keterangan',
                 'wo.status',
+                'wo.deleted_at',
                 'wo.created_at',
                 'wo.updated_at',
             ])
             ->where('wo.id_wo', $id)
-            ->whereNull('wo.deleted_at')
             ->first();
 
         if (!$wo) {
@@ -670,7 +687,6 @@ class WorkOrderController extends Controller
             ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
             ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'wo.id_pic_pelanggan_pekerjaan')
             ->where('wo.id_wo', $id)
-            ->whereNull('wo.deleted_at')
             ->select([
                 'wo.id_wo',
                 'wo.no_wo',
@@ -689,6 +705,7 @@ class WorkOrderController extends Controller
                 'wo.tanggal_mulai',
                 'wo.tanggal_selesai',
                 'wo.status',
+                'wo.deleted_at',
                 'wo.created_at',
                 'wo.updated_at',
             ])

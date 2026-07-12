@@ -16,7 +16,12 @@ function woLockedLabel() {
     </span>`;
 }
 
-function woStatusBadge(status) {
+function woStatusBadge(status, deletedAt) {
+    if (deletedAt) {
+        return `<span class="pm-badge" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;">
+            <i class="fa-solid fa-trash" style="font-size:10px;"></i> Deleted
+        </span>`;
+    }
     if (status === 'selesai') {
         return `<span class="pm-badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;">
             <i class="fa-solid fa-circle-check" style="font-size:10px;"></i> Selesai
@@ -50,11 +55,16 @@ function renderForm(res) {
         number: escHtml(res.no_wo ?? "—"),
         createdAt: escHtml(res.created_at ?? "—"),
         updatedAt: escHtml(res.updated_at ?? "—"),
-        deleteId: res.status === 'selesai' ? null : res.id_wo,
-        editText: res.status === 'selesai' ? '' : 'Edit WO',
+        deleteId: (res.deleted_at || res.status === 'selesai') ? null : res.id_wo,
+        editText: (res.deleted_at || res.status === 'selesai') ? '' : 'Edit WO',
         tags: soTag + pelangganTag,
-        statusBadge: woStatusBadge(res.status),
-        extra: res.status === 'selesai'
+        statusBadge: woStatusBadge(res.status, res.deleted_at),
+        extra: res.deleted_at
+            ? `<span style="font-size:11px;color:#b91c1c;display:flex;align-items:center;gap:5px;">
+                   <i class="fa-solid fa-trash" style="font-size:10px;"></i>
+                   Data ini sudah dihapus pada ${new Date(res.deleted_at).toLocaleString('id-ID')}
+               </span>`
+            : res.status === 'selesai'
             ? `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
                    <i class="fa-solid fa-lock" style="font-size:10px;"></i>
                    WO sudah selesai, data tidak dapat diubah

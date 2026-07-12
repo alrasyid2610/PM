@@ -25,6 +25,23 @@ function fmtDate(str) {
     );
 }
 
+window.datatableColumnRenderers = {
+    status: function (data) {
+        var map = {
+            draft:        { bg: '#f8fafc', color: '#64748b', border: '#e2e8f0', icon: 'fa-file',         label: 'Draft' },
+            confirmed:    { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-circle-check', label: 'Confirmed' },
+            'on-progress':{ bg: '#fefce8', color: '#854d0e', border: '#fde68a', icon: 'fa-spinner',      label: 'On Progress' },
+            done:         { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-circle-check', label: 'Done' },
+            selesai:      { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-circle-check', label: 'Selesai' },
+            cancel:       { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa', icon: 'fa-ban',          label: 'Cancel' },
+            deleted:      { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: 'fa-trash',        label: 'Deleted' },
+        };
+        var s = map[data] || { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0', icon: 'fa-circle', label: data || '-' };
+        return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:6px;background:' + s.bg + ';color:' + s.color + ';font-size:11px;font-weight:600;border:1px solid ' + s.border + ';white-space:nowrap;">'
+            + '<i class="fa-solid ' + s.icon + '" style="font-size:10px;"></i> ' + s.label + '</span>';
+    },
+};
+
 window.addEventListener("storage", function (e) {
     if (e.key === "wo_created" && e.newValue) {
         try {
@@ -705,10 +722,6 @@ $(document).ready(function () {
         });
     });
 
-    $(document).on("change", "#copyWoTglMulai, #copyWoTglSelesai", function () {
-        $("#copyWoTglSelesaiError").remove();
-    });
-
     $("#modalCopyWo").on("hidden.bs.modal", function () {
         sourceWoId = null;
         $("#btnConfirmCopyWo")
@@ -906,11 +919,11 @@ function fillCopyWoModal(wo) {
             </div>
             <div class="col-md-3">
                 <label class="form-label">Tanggal Mulai</label>
-                <input type="date" id="copyWoTglMulai" class="form-control form-control-sm" value="${dateMulai}">
+                <input type="text" id="copyWoTglMulai" name="tanggal_mulai" class="form-control form-control-sm fp-date" value="${dateMulai}" autocomplete="off">
             </div>
             <div class="col-md-3">
                 <label class="form-label">Tanggal Selesai</label>
-                <input type="date" id="copyWoTglSelesai" class="form-control form-control-sm" value="${dateSelesai}">
+                <input type="text" id="copyWoTglSelesai" name="tanggal_selesai" class="form-control form-control-sm fp-date" value="${dateSelesai}" autocomplete="off">
             </div>
             ${woListHtml}
             <div class="col-12">
@@ -947,6 +960,8 @@ function fillCopyWoModal(wo) {
     }
 
     renderCopyWoBoq(wo.boq_items || []);
+
+    initFpDate('#modalCopyWoBody');
 }
 
 let copyWoBoqIdx = 0;

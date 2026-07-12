@@ -3,6 +3,19 @@
 <x-crud-index
     title="List of Work Orders"
     :with-history="true"
+    :with-selesai-filter="true"
+    :search-fields="[
+        ['label' => 'No. WO',          'value' => 'no_wo'],
+        ['label' => 'No. SO',          'value' => 'no_so'],
+        ['label' => 'Judul Pekerjaan', 'value' => 'judul'],
+        ['label' => 'Pelanggan',       'value' => 'pelanggan'],
+        ['label' => 'Status',          'value' => 'status', 'type' => 'select', 'options' => [
+            ['label' => 'All',         'value' => 'all'],
+            ['label' => 'On Progress', 'value' => 'onprogress'],
+            ['label' => 'Selesai',     'value' => 'selesai'],
+            ['label' => 'Deleted',     'value' => 'deleted'],
+        ]],
+    ]"
 />
 
 {{-- Modal: Create FWO --}}
@@ -130,6 +143,19 @@
         tpSelect2:     "{{ route('testing-points.select2') }}",
         outputBase:    "{{ url('output-pekerjaan') }}/",
     }
+
+    window.datatableColumnRenderers = {
+        status: function (data) {
+            var map = {
+                onprogress: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-spinner',      label: 'On Progress' },
+                selesai:    { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-circle-check', label: 'Selesai' },
+                deleted:    { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: 'fa-trash',        label: 'Deleted' },
+            };
+            var s = map[data] || { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0', icon: 'fa-circle', label: data || '-' };
+            return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:6px;background:' + s.bg + ';color:' + s.color + ';font-size:11px;font-weight:600;border:1px solid ' + s.border + ';white-space:nowrap;">'
+                + '<i class="fa-solid ' + s.icon + '" style="font-size:10px;"></i> ' + s.label + '</span>';
+        },
+    };
 </script>
 <script src="{{ asset('assets/js/work-order/index.js') }}"></script>
 <script src="{{ asset('assets/js/work-order/form.js') }}"></script>

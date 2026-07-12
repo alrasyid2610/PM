@@ -260,9 +260,10 @@
                     <label class="form-label form-label-sm text-muted mb-1">Role</label>
                     <select name="personels[${idx}][role]" class="form-select personel-role-select">
                         <option value="">-- Pilih Role --</option>
-                        <option value="Leader"  ${roleVal === 'Leader'  ? 'selected' : ''}>Leader</option>
-                        <option value="Driver"  ${roleVal === 'Driver'  ? 'selected' : ''}>Driver</option>
-                        <option value="Anggota" ${roleVal === 'Anggota' ? 'selected' : ''}>Anggota</option>
+                        <option value="Leader"      ${roleVal === 'Leader'      ? 'selected' : ''}>Leader</option>
+                        <option value="Driver"      ${roleVal === 'Driver'      ? 'selected' : ''}>Driver</option>
+                        <option value="Anggota"     ${roleVal === 'Anggota'     ? 'selected' : ''}>Anggota</option>
+                        <option value="PIC Project" ${roleVal === 'PIC Project' ? 'selected' : ''}>PIC Project</option>
                     </select>
                 </div>
                 <div style="padding-top:26px;flex-shrink:0;">
@@ -322,10 +323,17 @@
     $('#fieldworkForm').on('submit', function (e) {
         const mulai    = $('input[name="tanggal_mulai"]').val();
         const selesai  = $('input[name="tanggal_selesai"]').val();
+        const tiba     = $('input[name="waktu_kedatangan"]').val();
         if (mulai && selesai && selesai < mulai) {
             e.stopImmediatePropagation();
             e.preventDefault();
             Swal.fire({ icon: 'warning', title: 'Periksa Tanggal', text: 'Tanggal selesai tidak boleh kurang dari tanggal mulai' });
+            return;
+        }
+        if (mulai && tiba && new Date(tiba) < new Date(mulai)) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            Swal.fire({ icon: 'warning', title: 'Periksa Waktu Kedatangan', text: 'Waktu kedatangan tidak boleh lebih kecil dari tanggal mulai' });
         }
     });
 

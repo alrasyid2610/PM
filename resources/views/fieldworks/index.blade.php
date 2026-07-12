@@ -20,6 +20,18 @@
 <x-crud-index
     title="List Fieldwork"
     :with-history="true"
+    :with-selesai-filter="true"
+    :search-fields="[
+        ['label' => 'No. FWO',         'value' => 'no_fwo'],
+        ['label' => 'No. WO',          'value' => 'no_wo'],
+        ['label' => 'Judul Pekerjaan', 'value' => 'judul'],
+        ['label' => 'Status',          'value' => 'status', 'type' => 'select', 'options' => [
+            ['label' => 'All',       'value' => 'all'],
+            ['label' => 'Planned',   'value' => 'planned'],
+            ['label' => 'Completed', 'value' => 'completed'],
+            ['label' => 'Deleted',   'value' => 'deleted'],
+        ]],
+    ]"
 />
 
 {{-- Modal: Tambah Fieldwork BOQ Section --}}

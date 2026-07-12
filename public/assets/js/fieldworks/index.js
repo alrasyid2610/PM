@@ -27,12 +27,14 @@ $(document).on('shown.bs.tab', '#fwoDetailTabs button[data-bs-toggle="tab"]', fu
 // ── Init ───────────────────────────────────────────────────────────────────────
 window.datatableColumnRenderers = {
     status: function (data) {
-        if (data === 'completed') {
-            return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:6px;background:#f0fdf4;color:#15803d;font-size:11px;font-weight:600;border:1px solid #bbf7d0;white-space:nowrap;">'
-                + '<i class="fa-solid fa-circle-check" style="font-size:10px;"></i> Completed</span>';
-        }
-        return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:6px;background:#fffbeb;color:#b45309;font-size:11px;font-weight:600;border:1px solid #fde68a;white-space:nowrap;">'
-            + '<i class="fa-solid fa-hourglass-half" style="font-size:10px;"></i> Planned</span>';
+        var map = {
+            planned:   { bg: '#fffbeb', color: '#92400e', border: '#fde68a', icon: 'fa-hourglass-half', label: 'Planned' },
+            completed: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-circle-check',  label: 'Completed' },
+            deleted:   { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: 'fa-trash',         label: 'Deleted' },
+        };
+        var s = map[data] || { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0', icon: 'fa-circle', label: data || '-' };
+        return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:6px;background:' + s.bg + ';color:' + s.color + ';font-size:11px;font-weight:600;border:1px solid ' + s.border + ';white-space:nowrap;">'
+            + '<i class="fa-solid ' + s.icon + '" style="font-size:10px;"></i> ' + s.label + '</span>';
     },
 };
 
@@ -594,6 +596,17 @@ function saveAll(id_fwo) {
             const ptName = $sec.find('.fw-semibold').first().text();
             const hint   = boqTotal ? ` (maks BOQ: ${boqTotal})` : ` (maks: ${maxAllow})`;
             Notify.warning(`Qty section "${ptName}" melebihi batas${hint}`);
+            return;
+        }
+    }
+
+    const tanggalMulai     = $('[name="tanggal_mulai"]').val();
+    const waktuKedatangan  = $('[name="waktu_kedatangan"]').val();
+    if (tanggalMulai && waktuKedatangan) {
+        const tglMulai = new Date(tanggalMulai);
+        const tglTiba  = new Date(waktuKedatangan);
+        if (tglTiba < tglMulai) {
+            Notify.warning('Waktu kedatangan tidak boleh lebih kecil dari tanggal mulai');
             return;
         }
     }

@@ -1,5 +1,6 @@
 function renderFwoForm(res) {
-    const isCompleted = res.status === 'completed';
+    const isDeleted   = !!res.deleted_at;
+    const isCompleted = !isDeleted && res.status === 'completed';
 
     const woBadge = res.id_wo
         ? `<a href="/work-orders?open=${res.id_wo}" class="pm-badge pm-badge--blue" style="text-decoration:none;">
@@ -15,8 +16,13 @@ function renderFwoForm(res) {
            </a>`
         : '';
 
-    const statusClass = isCompleted ? 'detail-status-selesai' : 'detail-status-pending';
-    const statusLabel = isCompleted ? 'Completed' : 'Planned';
+    const statusClass = isDeleted ? '' : (isCompleted ? 'detail-status-selesai' : 'detail-status-pending');
+    const statusLabel = isDeleted ? '' : (isCompleted ? 'Completed' : 'Planned');
+    const statusBadge = isDeleted
+        ? `<span class="pm-badge" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;">
+               <i class="fa-solid fa-trash" style="font-size:10px;"></i> Deleted
+           </span>`
+        : `<span class="detail-status-inline ${statusClass}">${statusLabel}</span>`;
 
     return `
 <form id="detailForm">
@@ -27,11 +33,16 @@ function renderFwoForm(res) {
         number: escHtml(res.no_fwo ?? '—'),
         createdAt: escHtml(res.created_at ?? '—'),
         updatedAt: escHtml(res.updated_at ?? '—'),
-        deleteId: isCompleted ? null : res.id_fwo,
-        editText: isCompleted ? '' : 'Edit FWO',
-        statusBadge: `<span class="detail-status-inline ${statusClass}">${statusLabel}</span>`,
+        deleteId: (isDeleted || isCompleted) ? null : res.id_fwo,
+        editText: (isDeleted || isCompleted) ? '' : 'Edit FWO',
+        statusBadge: statusBadge,
         tags: woBadge + siteBadge,
-        extra: isCompleted
+        extra: isDeleted
+            ? `<span style="font-size:11px;color:#b91c1c;display:flex;align-items:center;gap:5px;">
+                   <i class="fa-solid fa-trash" style="font-size:10px;"></i>
+                   Data ini sudah dihapus pada ${new Date(res.deleted_at).toLocaleString('id-ID')}
+               </span>`
+            : isCompleted
             ? `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
                    <i class="fa-solid fa-lock" style="font-size:10px;"></i>
                    FWO sudah selesai, data tidak dapat diubah
@@ -91,7 +102,9 @@ function renderFwoForm(res) {
                     <!-- Edit personel via tombol Edit FWO di atas -->
                 </div>
                 <div id="fwoTabActionsBoq" class="d-flex align-items-center gap-2 d-none">
-                    ${!isCompleted
+                    ${isDeleted
+                        ? ''
+                        : !isCompleted
                         ? `<button type="button" id="btnAddFwoBoqDirect" data-no-disable
                                 class="pm-btn-pill pm-btn-pill--green">
                                 <i class="fa-solid fa-plus" style="font-size:10px;"></i>

@@ -791,12 +791,11 @@ function showOutputForm(data) {
         '</div>' +
         '<div class="col-md-3">' +
         '<label class="form-label form-label-sm text-muted mb-1">Tanggal Mulai</label>' +
-        '<input type="date" id="outputTanggalMulai" class="form-control form-control-sm" value="' + (isEdit && data.tanggal_mulai ? data.tanggal_mulai.substring(0,10) : '') + '">' +
+        '<input type="text" id="outputTanggalMulai" name="tanggal_mulai" class="form-control form-control-sm fp-date" value="' + (isEdit && data.tanggal_mulai ? data.tanggal_mulai.substring(0,10) : '') + '" autocomplete="off">' +
         '</div>' +
         '<div class="col-md-3">' +
         '<label class="form-label form-label-sm text-muted mb-1">Tanggal Selesai</label>' +
-        '<input type="date" id="outputTanggalSelesai" class="form-control form-control-sm" value="' + (isEdit && data.tanggal_selesai ? data.tanggal_selesai.substring(0,10) : '') + '">' +
-        '<div id="outputTanggalSelesaiError" class="text-danger mt-1" style="font-size:11px;display:none;">Tanggal selesai tidak boleh lebih kecil dari tanggal mulai.</div>' +
+        '<input type="text" id="outputTanggalSelesai" name="tanggal_selesai" class="form-control form-control-sm fp-date" value="' + (isEdit && data.tanggal_selesai ? data.tanggal_selesai.substring(0,10) : '') + '" autocomplete="off">' +
         '</div>' +
         '<div class="col-md-6">' +
         '<label class="form-label form-label-sm text-muted mb-1"><i class="fa-brands fa-google-drive me-1" style="color:#1a73e8;"></i>Link Drive</label>' +
@@ -818,6 +817,7 @@ function showOutputForm(data) {
         (isEdit ? 'Edit Output' : 'Tambah Output')
     );
     $('#modalOutputFormBody').html(html);
+    initFpDate('#modalOutputFormBody');
     outputFilePond = createFileUploader('#outputAttachments');
     triggerOutputQtyVisibility(isEdit ? (data.jenis_dokumen || '') : '');
 
@@ -968,26 +968,10 @@ $(document).ready(function () {
         $(this).closest(".existing-file-item").remove();
     });
 
-    $(document).on("change", "#outputTanggalMulai, #outputTanggalSelesai", function () {
-        var mulai = $("#outputTanggalMulai").val();
-        var selesai = $("#outputTanggalSelesai").val();
-        if (mulai && selesai && selesai < mulai) {
-            $("#outputTanggalSelesaiError").show();
-            $("#outputTanggalSelesai").addClass("is-invalid");
-        } else {
-            $("#outputTanggalSelesaiError").hide();
-            $("#outputTanggalSelesai").removeClass("is-invalid");
-        }
-    });
 
     $(document).on("click", "#btnSaveOutput", function () {
         var mulai = $("#outputTanggalMulai").val();
         var selesai = $("#outputTanggalSelesai").val();
-        if (mulai && selesai && selesai < mulai) {
-            $("#outputTanggalSelesaiError").show();
-            $("#outputTanggalSelesai").addClass("is-invalid").focus();
-            return;
-        }
         var woSelesai = currentWoData && currentWoData.tanggal_selesai
             ? currentWoData.tanggal_selesai.substring(0, 10) : null;
         if (selesai && woSelesai && selesai > woSelesai) {
@@ -1577,11 +1561,11 @@ function fillCopyWoModal(wo) {
             </div>
             <div class="col-md-3">
                 <label class="form-label">Tanggal Mulai</label>
-                <input type="date" id="copyWoTglMulai" class="form-control form-control-sm" value="${dateMulai}">
+                <input type="text" id="copyWoTglMulai" name="tanggal_mulai" class="form-control form-control-sm fp-date" value="${dateMulai}" autocomplete="off">
             </div>
             <div class="col-md-3">
                 <label class="form-label">Tanggal Selesai</label>
-                <input type="date" id="copyWoTglSelesai" class="form-control form-control-sm" value="${dateSelesai}">
+                <input type="text" id="copyWoTglSelesai" name="tanggal_selesai" class="form-control form-control-sm fp-date" value="${dateSelesai}" autocomplete="off">
             </div>
             ${woListHtml}
             <div class="col-12">
@@ -1614,6 +1598,8 @@ function fillCopyWoModal(wo) {
 
     // Render BOQ section
     renderCopyWoBoq(wo.boq_items || []);
+
+    initFpDate('#modalCopyWoBody');
 }
 
 let copyWoBoqIdx = 0;
@@ -1838,11 +1824,11 @@ function fillCopyFwoModal(fwo, boqs) {
         <div class="row g-3 mb-3">
             <div class="col-md-6">
                 <label class="form-label fw-semibold">Tanggal Mulai</label>
-                <input type="date" id="copyFwoTglMulai" class="form-control" value="${dateMulai}">
+                <input type="text" id="copyFwoTglMulai" name="tanggal_mulai" class="form-control fp-date" value="${dateMulai}" autocomplete="off">
             </div>
             <div class="col-md-6">
                 <label class="form-label fw-semibold">Tanggal Selesai</label>
-                <input type="date" id="copyFwoTglSelesai" class="form-control" value="${dateSelesai}">
+                <input type="text" id="copyFwoTglSelesai" name="tanggal_selesai" class="form-control fp-date" value="${dateSelesai}" autocomplete="off">
             </div>
         </div>
         <div class="mb-3">
@@ -1857,6 +1843,8 @@ function fillCopyFwoModal(fwo, boqs) {
         </button>
         <div style="height:220px;"></div>
     `);
+
+    initFpDate("#modalCopyFwoBody");
 
     $("#copyFwoPersonelContainer .copy-personel-user-select").each(function () {
         initCopyPersonelSelect2($(this));

@@ -22,6 +22,18 @@
     title="List of Sales Orders"
     create-route="sales-orders.create"
     :with-history="true"
+    :with-selesai-filter="true"
+    :search-fields="[
+        ['label' => 'No. SO',          'value' => 'no_so'],
+        ['label' => 'Judul Order',     'value' => 'judul'],
+        ['label' => 'Pelanggan',       'value' => 'pelanggan'],
+        ['label' => 'Status',          'value' => 'status', 'type' => 'select', 'options' => [
+            ['label' => 'All',         'value' => 'all'],
+            ['label' => 'On Progress', 'value' => 'onprogress'],
+            ['label' => 'Selesai',     'value' => 'selesai'],
+            ['label' => 'Deleted',     'value' => 'deleted'],
+        ]],
+    ]"
 />
 
 {{-- Modal iframe: Create Termin --}}

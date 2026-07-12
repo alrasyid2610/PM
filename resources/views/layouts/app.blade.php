@@ -241,6 +241,7 @@
             });
             $(container).find('.fp-datetime').each(function () {
                 if (this._fp) return;
+                const mulaiVal = $(container).find('.fp-date[name*="mulai"], input[name*="mulai"]').val();
                 this._fp = flatpickr(this, {
                     locale: 'id',
                     dateFormat: 'Y-m-d H:i',
@@ -248,6 +249,23 @@
                     time_24hr: true,
                     allowInput: false,
                     defaultDate: $(this).val() || null,
+                    minDate: mulaiVal || null,
+                });
+            });
+
+            // Saat tanggal_mulai berubah, update minDate fp-datetime
+            $(container).find('.fp-date[name*="mulai"]').each(function () {
+                const fpMulai = this._fp;
+                if (!fpMulai) return;
+                const origOnChange = fpMulai.config.onChange || [];
+                fpMulai.config.onChange.push(function (selectedDates, dateStr) {
+                    $(container).find('.fp-datetime').each(function () {
+                        if (!this._fp) return;
+                        this._fp.set('minDate', dateStr || null);
+                        if (this._fp.selectedDates[0] && selectedDates[0] && this._fp.selectedDates[0] < selectedDates[0]) {
+                            this._fp.clear();
+                        }
+                    });
                 });
             });
         }

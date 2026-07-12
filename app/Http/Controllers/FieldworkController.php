@@ -31,14 +31,34 @@ class FieldworkController extends Controller
         return view('fieldworks.create', ['title' => 'Tambah Fieldwork']);
     }
 
-    public function data()
+    public function data(Request $request)
     {
+        $searchBy = $request->input('search_by');
+        $searchQ  = trim($request->input('search_q', ''));
+
+        $isSearching = $searchBy && $searchQ;
+
         $query = DB::table('fieldworks as fw')
             ->leftJoin('work_orders as wo', 'fw.id_wo', '=', 'wo.id_wo')
-            ->whereNull('fw.deleted_at')
+            ->when(!$isSearching, fn($q) => $q->whereNull('fw.deleted_at'))
+            ->when(!$isSearching && !$request->boolean('show_selesai'), fn($q) => $q->where('fw.status', '!=', 'completed'))
+            ->when($isSearching, function ($q) use ($searchBy, $searchQ) {
+                $like = '%' . $searchQ . '%';
+                match ($searchBy) {
+                    'no_fwo' => $q->where('fw.no_fwo', 'like', $like),
+                    'no_wo'  => $q->where('wo.no_wo',  'like', $like),
+                    'judul'  => $q->where('fw.judul_pekerjaan', 'like', $like),
+                    'status' => match ($searchQ) {
+                        'all'     => null,
+                        'deleted' => $q->whereNotNull('fw.deleted_at'),
+                        default   => $q->where('fw.status', $searchQ),
+                    },
+                    default  => null,
+                };
+            })
             ->select([
                 'fw.id_fwo',
-                'fw.status',
+                DB::raw("CASE WHEN fw.deleted_at IS NOT NULL THEN 'deleted' ELSE fw.status END as status"),
                 'fw.no_fwo',
                 'wo.no_wo',
                 'fw.judul_pekerjaan',
@@ -60,7 +80,6 @@ class FieldworkController extends Controller
             ->leftJoin('business_relation_sites as brs', 'fw.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
             ->leftJoin('business_relation_contacts as brc', 'fw.id_pic_pelanggan_pekerjaan', '=', 'brc.id_contact')
             ->where('fw.id_fwo', $id)
-            ->whereNull('fw.deleted_at')
             ->leftJoin('business_relation_sites as brs_wo', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs_wo.id_site')
             ->select([
                 'fw.*',
@@ -148,6 +167,12 @@ class FieldworkController extends Controller
             }
         }
 
+        $fwoMulai         = !empty($validated['tanggal_mulai'])   ? substr($validated['tanggal_mulai'], 0, 10) : null;
+        $waktuKedatangan  = !empty($validated['waktu_kedatangan']) ? substr($validated['waktu_kedatangan'], 0, 10) : null;
+        if ($fwoMulai && $waktuKedatangan && $waktuKedatangan < $fwoMulai) {
+            return response()->json(['message' => 'Waktu kedatangan tidak boleh lebih kecil dari tanggal mulai FWO (' . $fwoMulai . ')'], 422);
+        }
+
         $id = DB::table('fieldworks')->insertGetId([
             'id_wo'                       => $validated['id_wo'],
             'judul_pekerjaan'             => $validated['judul_pekerjaan'],
@@ -193,6 +218,12 @@ class FieldworkController extends Controller
             'waktu_kedatangan'            => 'nullable|date',
             'keterangan'                  => 'nullable|string',
         ]);
+
+        $fwoMulai        = !empty($validated['tanggal_mulai'])   ? substr($validated['tanggal_mulai'], 0, 10) : null;
+        $waktuKedatangan = !empty($validated['waktu_kedatangan']) ? substr($validated['waktu_kedatangan'], 0, 10) : null;
+        if ($fwoMulai && $waktuKedatangan && $waktuKedatangan < $fwoMulai) {
+            return response()->json(['message' => 'Waktu kedatangan tidak boleh lebih kecil dari tanggal mulai FWO (' . $fwoMulai . ')'], 422);
+        }
 
         $before = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
 

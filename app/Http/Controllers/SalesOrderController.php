@@ -178,7 +178,6 @@ class SalesOrderController extends Controller
                 'marketing_eksternal.id_contact as marketing_eksternal_id',
             )
             ->where('so.id_so', $id)
-            ->whereNull('so.deleted_at')
             ->first();
 
 
@@ -206,7 +205,6 @@ class SalesOrderController extends Controller
                 'ct.no_contract_client as contract_no_client',
             )
             ->where('so.id_so', $id)
-            ->whereNull('so.deleted_at')
             ->first();
 
 
@@ -461,14 +459,30 @@ class SalesOrderController extends Controller
 
     public function data(Request $request)
     {
-        // dd($request->all(), 'poke');
-        // =========================
-        // QUERY DASAR (JOIN BR + BRS)
-        // =========================
+        $searchBy = $request->input('search_by');
+        $searchQ  = trim($request->input('search_q', ''));
+
+        $isSearching = $searchBy && $searchQ;
+
         $query = DB::table('sales_orders as s')
             ->leftJoin('business_relations as br', 's.id_pelanggan', '=', 'br.id_br')
             ->leftJoin('business_relation_sites as brs', 's.id_site_pelanggan', '=', 'brs.id_site')
-            ->whereNull('s.deleted_at')
+            ->when(!$isSearching, fn($q) => $q->whereNull('s.deleted_at'))
+            ->when(!$isSearching && !$request->boolean('show_selesai'), fn($q) => $q->where('s.status', '!=', 'selesai'))
+            ->when($isSearching, function ($q) use ($searchBy, $searchQ) {
+                $like = '%' . $searchQ . '%';
+                match ($searchBy) {
+                    'no_so'    => $q->where('s.no_so', 'like', $like),
+                    'judul'    => $q->where('s.judul_order', 'like', $like),
+                    'pelanggan' => $q->where('br.nama', 'like', $like),
+                    'status'   => match ($searchQ) {
+                        'all'     => null,
+                        'deleted' => $q->whereNotNull('s.deleted_at'),
+                        default   => $q->where('s.status', $searchQ),
+                    },
+                    default    => null,
+                };
+            })
             ->select([
                 's.id_so',
                 's.no_so',
@@ -477,7 +491,7 @@ class SalesOrderController extends Controller
                 's.judul_order',
                 's.id_pelanggan',
                 's.id_site_pelanggan',
-                's.status',
+                DB::raw("CASE WHEN s.deleted_at IS NOT NULL THEN 'deleted' ELSE s.status END as status"),
                 's.created_at',
             ]);
 
