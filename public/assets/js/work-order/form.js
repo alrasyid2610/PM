@@ -22,9 +22,9 @@ function woStatusBadge(status, deletedAt) {
             <i class="fa-solid fa-trash" style="font-size:10px;"></i> Deleted
         </span>`;
     }
-    if (status === 'selesai') {
+    if (status === 'completed') {
         return `<span class="pm-badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;">
-            <i class="fa-solid fa-circle-check" style="font-size:10px;"></i> Selesai
+            <i class="fa-solid fa-circle-check" style="font-size:10px;"></i> Completed
         </span>`;
     }
     return `<span class="pm-badge" style="background:#eff6ff;color:#1a56db;border:1px solid #bfdbfe;">
@@ -55,8 +55,8 @@ function renderForm(res) {
         number: escHtml(res.no_wo ?? "—"),
         createdAt: escHtml(res.created_at ?? "—"),
         updatedAt: escHtml(res.updated_at ?? "—"),
-        deleteId: (res.deleted_at || res.status === 'selesai') ? null : res.id_wo,
-        editText: (res.deleted_at || res.status === 'selesai') ? '' : 'Edit WO',
+        deleteId: (res.deleted_at || res.status === 'completed') ? null : res.id_wo,
+        editText: (res.deleted_at || res.status === 'completed') ? '' : 'Edit WO',
         tags: soTag + pelangganTag,
         statusBadge: woStatusBadge(res.status, res.deleted_at),
         extra: res.deleted_at
@@ -64,7 +64,7 @@ function renderForm(res) {
                    <i class="fa-solid fa-trash" style="font-size:10px;"></i>
                    Data ini sudah dihapus pada ${new Date(res.deleted_at).toLocaleString('id-ID')}
                </span>`
-            : res.status === 'selesai'
+            : res.status === 'completed'
             ? `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
                    <i class="fa-solid fa-lock" style="font-size:10px;"></i>
                    WO sudah selesai, data tidak dapat diubah
@@ -123,7 +123,7 @@ function renderForm(res) {
                             class="pm-btn-icon" title="Refresh" data-no-disable>
                             <i class="fa-solid fa-rotate-right"></i>
                         </button>
-                        ${res.status !== 'selesai' ? `
+                        ${res.status !== 'completed' ? `
                         <button type="button" class="pm-btn-pill pm-btn-pill--green btn-add-boq-modal"
                             data-wo-id="${res.id_wo}" data-no-disable>
                             <i class="fa-solid fa-plus" style="font-size:10px;"></i>
@@ -135,7 +135,7 @@ function renderForm(res) {
                             class="pm-btn-icon" title="Refresh" data-no-disable>
                             <i class="fa-solid fa-rotate-right"></i>
                         </button>
-                        ${res.status !== 'selesai' ? `
+                        ${res.status !== 'completed' ? `
                         <button type="button" class="pm-btn-pill pm-btn-pill--blue btn-add-fwo-modal"
                             data-wo-id="${res.id_wo}" data-no-disable>
                             <i class="fa-solid fa-plus" style="font-size:10px;"></i>
@@ -143,7 +143,7 @@ function renderForm(res) {
                         </button>` : woLockedLabel()}
                     </div>
                     <div id="woTabActionsOutput" class="d-flex align-items-center gap-2 d-none">
-                        ${res.status !== 'selesai' ? `
+                        ${res.status !== 'completed' ? `
                         <button type="button" id="btnAddOutput" data-wo-id="${res.id_wo}"
                             class="pm-btn-pill pm-btn-pill--teal" data-no-disable>
                             <i class="fa-solid fa-plus" style="font-size:10px;"></i>

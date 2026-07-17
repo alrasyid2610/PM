@@ -230,30 +230,33 @@ class WorkOrderController extends Controller
 
     public function data(Request $request)
     {
-        $searchBy   = $request->input('search_by');
-        $searchQ    = trim($request->input('search_q', ''));
-        $isSearching = $searchBy && $searchQ;
+        $filters     = collect($request->input('filters', []))->filter(fn($f) => !empty($f['by']) && !empty($f['q']));
+        $isSearching = $filters->isNotEmpty();
 
         $query = DB::table('work_orders as wo')
             ->leftJoin('sales_orders as s', 'wo.id_so', '=', 's.id_so')
             ->leftJoin('business_relations as br', 'wo.id_pelanggan_pekerjaan', '=', 'br.id_br')
             ->leftJoin('business_relation_sites as brs', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
             ->when(!$isSearching, fn($q) => $q->whereNull('wo.deleted_at'))
-            ->when(!$isSearching && !$request->boolean('show_selesai'), fn($q) => $q->where('wo.status', '!=', 'selesai'))
-            ->when($isSearching, function ($q) use ($searchBy, $searchQ) {
-                $like = '%' . $searchQ . '%';
-                match ($searchBy) {
-                    'no_wo'     => $q->where('wo.no_wo', 'like', $like),
-                    'no_so'     => $q->where('s.no_so', 'like', $like),
-                    'judul'     => $q->where('s.judul_order', 'like', $like),
-                    'pelanggan' => $q->where('br.nama', 'like', $like),
-                    'status'    => match ($searchQ) {
-                        'all'     => null,
-                        'deleted' => $q->whereNotNull('wo.deleted_at'),
-                        default   => $q->where('wo.status', $searchQ),
-                    },
-                    default     => null,
-                };
+            ->when(!$isSearching && !$request->boolean('show_selesai'), fn($q) => $q->where('wo.status', '!=', 'completed'))
+            ->when($isSearching, function ($q) use ($filters) {
+                foreach ($filters as $f) {
+                    $by   = $f['by'];
+                    $val  = $f['q'];
+                    $like = '%' . $val . '%';
+                    match ($by) {
+                        'no_wo'     => $q->where('wo.no_wo', 'like', $like),
+                        'no_so'     => $q->where('s.no_so', 'like', $like),
+                        'judul'     => $q->where('s.judul_order', 'like', $like),
+                        'pelanggan' => $q->where('br.nama', 'like', $like),
+                        'status'    => match ($val) {
+                            'all'     => null,
+                            'deleted' => $q->whereNotNull('wo.deleted_at'),
+                            default   => $q->where('wo.status', $val),
+                        },
+                        default => null,
+                    };
+                }
             })
             ->select([
                 'wo.id_wo',
@@ -300,17 +303,18 @@ class WorkOrderController extends Controller
         if (!$wo) {
             return response()->json(['message' => 'Work Order tidak ditemukan'], 404);
         }
-        if ($wo->status === 'selesai') {
-            return response()->json(['message' => 'Work Order sudah berstatus selesai'], 422);
+        if ($wo->status === 'completed') {
+            return response()->json(['message' => 'Work Order sudah berstatus completed'], 422);
         }
 
-        $totalOutput = DB::table('output_pekerjaan')->where('id_wo', $id)->count();
+        $totalOutput = DB::table('output_pekerjaan')->where('id_wo', $id)->whereNull('deleted_at')->count();
         if ($totalOutput === 0) {
             return response()->json(['message' => 'Belum ada output pekerjaan. Tambahkan output terlebih dahulu sebelum menyelesaikan WO.'], 422);
         }
 
         $belumSiap = DB::table('output_pekerjaan')
             ->where('id_wo', $id)
+            ->whereNull('deleted_at')
             ->where('status', '!=', 'siap')
             ->count();
 
@@ -321,7 +325,7 @@ class WorkOrderController extends Controller
         }
 
         DB::table('work_orders')->where('id_wo', $id)->update([
-            'status'     => 'selesai',
+            'status'     => 'completed',
             'updated_at' => now(),
         ]);
 

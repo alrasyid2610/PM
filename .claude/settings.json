@@ -2,6 +2,31 @@
   "permissions": {
     "allow": [
       "PowerShell(npm run report:matriks 2>&1)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\5891\\Documents\\Obsidian Vault\\PM"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:\\Users\\5891\\AppData\\Local\\Programs\\Python\\Python314\\Scripts\\graphify.EXE hook-guard search"
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:\\Users\\5891\\AppData\\Local\\Programs\\Python\\Python314\\Scripts\\graphify.EXE hook-guard read"
+          }
+        ]
+      }
     ]
   }
 }

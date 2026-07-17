@@ -19,126 +19,79 @@
 @section('content')
 <section class="section">
 
-    {{-- STAT CARDS --}}
-    <p class="section-label mb-2">Ringkasan Bisnis</p>
-    <div class="row g-3 mb-4">
-        <div class="col-md-3 col-6">
-            <div class="stat-card">
-                <div class="stat-icon icon-navy">
-                    <i class="fa-solid fa-building"></i>
-                </div>
-                <div class="stat-info">
-                    <div class="stat-label">Kantor Pusat</div>
-                    <div class="stat-value" id="statKantorPusat">—</div>
-                    <div class="stat-sub">Business Relations</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 col-6">
-            <div class="stat-card">
-                <div class="stat-icon icon-blue">
-                    <i class="fa-solid fa-sitemap"></i>
-                </div>
-                <div class="stat-info">
-                    <div class="stat-label">Kantor Cabang</div>
-                    <div class="stat-value" id="statKantorCabang">—</div>
-                    <div class="stat-sub">Total Sites</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 col-6">
-            <div class="stat-card">
-                <div class="stat-icon icon-green">
-                    <i class="fa-solid fa-file-lines"></i>
-                </div>
-                <div class="stat-info">
-                    <div class="stat-label">Total Sales Order</div>
-                    <div class="stat-value" id="statTotalSo">—</div>
-                    <div class="stat-sub">Semua status</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 col-6">
-            <div class="stat-card">
-                <div class="stat-icon icon-amber">
-                    <i class="fa-solid fa-clock"></i>
-                </div>
-                <div class="stat-info">
-                    <div class="stat-label">Work Orders</div>
-                    <div class="stat-value" id="statTotalWo">—</div>
-                    <div class="stat-sub">Total work order</div>
-                </div>
-            </div>
-        </div>
+    <div class="row row-cols-xl-6 row-cols-md-3 row-cols-2 g-3 mb-4">
+        <x-dashboard-widget
+            id="wg-so-outstanding"
+            label="Outstanding SO"
+            icon="fa-solid fa-file-lines"
+            icon-color="#6366f1"
+            icon-bg="#eef2ff"
+            data-tab="so"
+        />
+        <x-dashboard-widget
+            id="wg-wo-outstanding"
+            label="Outstanding WO"
+            icon="fa-solid fa-briefcase"
+            icon-color="#0284c7"
+            icon-bg="#e0f2fe"
+            data-tab="wo"
+        />
+        <x-dashboard-widget
+            id="wg-fwo-outstanding"
+            label="Outstanding FWO"
+            icon="fa-solid fa-helmet-safety"
+            icon-color="#0d9488"
+            icon-bg="#f0fdfa"
+            data-tab="fwo"
+        />
+        <x-dashboard-widget
+            id="wg-termin-outstanding"
+            label="Outstanding Termin"
+            icon="fa-solid fa-receipt"
+            icon-color="#7c3aed"
+            icon-bg="#f5f3ff"
+            data-tab="termin"
+        />
+        <x-dashboard-widget
+            id="wg-overdue"
+            label="Overdue"
+            sub="lewat tenggat"
+            icon="fa-solid fa-flag"
+            icon-color="#dc2626"
+            icon-bg="#fef2f2"
+        />
+        {{-- <x-dashboard-widget
+            id="wg-due-7"
+            label="Jatuh Tempo 7 Hari"
+            sub="perlu perhatian"
+            icon="fa-solid fa-clock"
+            icon-color="#d97706"
+            icon-bg="#fffbeb"
+        /> --}}
     </div>
 
-    {{-- SO STATUS --}}
-    <p class="section-label mb-2">Status Sales Order</p>
-    <div class="row g-3 mb-4">
-        <div class="col-md-3 col-6">
-            <div class="so-card draft">
-                <div class="so-status">Draft</div>
-                <div class="so-value" id="soDraft">—</div>
-                <div class="so-desc">Belum dikonfirmasi</div>
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <button class="dw-tab-btn active" data-type="so">
+                    <i class="fa-solid fa-file-lines me-1"></i> Sales Order
+                </button>
+                <button class="dw-tab-btn" data-type="wo">
+                    <i class="fa-solid fa-briefcase me-1"></i> Work Order
+                </button>
+                <button class="dw-tab-btn" data-type="fwo">
+                    <i class="fa-solid fa-helmet-safety me-1"></i> Fieldwork Order
+                </button>
+                <button class="dw-tab-btn" data-type="termin">
+                    <i class="fa-solid fa-receipt me-1"></i> Termin
+                </button>
             </div>
-        </div>
-        <div class="col-md-3 col-6">
-            <div class="so-card confirmed">
-                <div class="so-status">Confirmed</div>
-                <div class="so-value" id="soConfirmed">—</div>
-                <div class="so-desc">Sudah dikonfirmasi</div>
-            </div>
-        </div>
-        <div class="col-md-3 col-6">
-            <div class="so-card on-progress">
-                <div class="so-status">On Progress</div>
-                <div class="so-value" id="soOnProgress">—</div>
-                <div class="so-desc">Sedang dikerjakan</div>
-            </div>
-        </div>
-        <div class="col-md-3 col-6">
-            <div class="so-card done">
-                <div class="so-status">Done</div>
-                <div class="so-value" id="soDone">—</div>
-                <div class="so-desc">Selesai</div>
-            </div>
-        </div>
-    </div>
 
-    {{-- CHARTS --}}
-    <p class="section-label mb-2">Analitik</p>
-    <div class="row g-3">
-        <div class="col-md-8">
-            <div class="chart-card">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div>
-                        <div class="chart-title">Jumlah Sales Order per Bulan</div>
-                        <div class="text-muted" style="font-size:12px;">
-                            Tren SO sepanjang tahun
-                        </div>
-                    </div>
-                    <select class="form-select form-select-sm w-auto" id="yearSelect">
-                        <option value="{{ now()->year }}">{{ now()->year }}</option>
-                        <option value="{{ now()->year - 1 }}">{{ now()->year - 1 }}</option>
-                        <option value="{{ now()->year - 2 }}">{{ now()->year - 2 }}</option>
-                    </select>
-                </div>
-                <canvas id="barChart" height="100"></canvas>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="chart-card">
-                <div class="mb-3">
-                    <div class="chart-title">Distribusi Status SO</div>
-                    <div class="text-muted" style="font-size:12px;">
-                        Proporsi per status
-                    </div>
-                </div>
-                <div class="d-flex justify-content-center mb-3">
-                    <canvas id="pieChart" width="160" height="160"></canvas>
-                </div>
-                <div id="pieLegend"></div>
-            </div>
+            <table id="dashboard-list-table" data-datatable-auto-columns="true"
+                class="table table-hover align-middle w-100">
+                <thead></thead>
+                <tbody></tbody>
+            </table>
         </div>
     </div>
 
@@ -148,8 +101,12 @@
 @section('custom-script')
 <script>
     window.route = {
-        summary:    "{{ route('dashboard.summary') }}",
-        soPerMonth: "{{ route('dashboard.soPerMonth') }}",
+        summary: "{{ route('dashboard.summary') }}",
+        list:    "{{ route('dashboard.list') }}",
+        wo:      "{{ url('work-orders') }}",
+        fwo:     "{{ url('fieldworks') }}",
+        so:      "{{ url('sales-orders') }}",
+        termin:  "{{ url('termin') }}",
     }
 </script>
 <script src="{{ asset('assets/js/dashboard/index.js') }}"></script>

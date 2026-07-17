@@ -622,6 +622,7 @@ Route::prefix('dashboard')->name('dashboard.')->group(function () {
     Route::get('/',             [DashboardController::class, 'index'])->name('index');
     Route::get('/summary',      [DashboardController::class, 'summary'])->name('summary');
     Route::get('/so-per-month', [DashboardController::class, 'soPerMonth'])->name('soPerMonth');
+    Route::get('/list',         [DashboardController::class, 'list'])->name('list');
 });
 
 Route::prefix('/wilayah')->name('wilayah.')->group(function () {

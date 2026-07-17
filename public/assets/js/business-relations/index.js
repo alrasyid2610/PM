@@ -39,12 +39,34 @@ $(document).ready(function () {
     });
 });
 
+const _siteTotalCache = {};
+
+function _renderSiteBadge($switcher, total) {
+    const $label = $switcher.closest('.col-md-12').find('label');
+    $label.find('.site-count-badge').remove();
+    if (total > 1) {
+        $label.append(
+            ` <span class="site-count-badge badge rounded-pill ms-1" style="background:#e0f2fe;color:#0284c7;font-size:11px;font-weight:600;">`
+            + `<i class="fa-solid fa-location-dot me-1" style="font-size:10px;"></i>${total} Site`
+            + `</span>`
+            + ` <span class="site-count-badge text-muted ms-1" style="font-size:11px;">`
+            + `— gunakan dropdown untuk melihat site lainnya`
+            + `</span>`
+        );
+    }
+}
+
 function initSiteSwitcher() {
     const $switcher = $("#site-switcher");
     if (!$switcher.length) return;
 
     const idBr = $switcher.data("id-br");
     const idSiteCur = $switcher.data("id-site");
+
+    // Tampilkan badge dari cache sebelum AJAX selesai (hindari flicker)
+    if (_siteTotalCache[idBr]) {
+        _renderSiteBadge($switcher, _siteTotalCache[idBr]);
+    }
 
     // Init select2 dulu dengan opsi yang sudah ada (current site)
     $switcher
@@ -67,5 +89,10 @@ function initSiteSwitcher() {
             $switcher.append(new Option(s.text, s.id, selected, selected));
         });
         $switcher.trigger("change.select2");
+
+        // Cache dan tampilkan badge
+        const total = data.length;
+        _siteTotalCache[idBr] = total;
+        _renderSiteBadge($switcher, total);
     });
 }

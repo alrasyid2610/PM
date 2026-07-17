@@ -18,11 +18,15 @@ $(document).on('click', '#btnToggleDtSearch', function () {
 
     if (isOpen) {
         $bar.slideUp(150);
-        $btn.removeClass('btn-primary').addClass('btn-outline-secondary');
+        $btn.removeClass('btn-primary search-on').addClass('btn-outline-secondary');
     } else {
         $bar.slideDown(150);
-        $btn.removeClass('btn-outline-secondary').addClass('btn-primary');
-        $('#dtSearchBy').trigger('focus');
+        $btn.removeClass('btn-outline-secondary').addClass('btn-primary search-on');
+        // Inisialisasi baris pertama jika belum ada
+        if ($('#dtFilterRows .dt-filter-row').length === 0) {
+            _addFilterRow(window._dtSearchFields || []);
+        }
+        $('#dtFilterRows .dt-filter-by').first().trigger('focus');
     }
 });
 
@@ -36,73 +40,126 @@ $(document).on('change', '#toggleShowSelesai', function () {
     initDataTable(window.tableSelector, window._dtOnReady);
 });
 
-// ── Search bar ─────────────────────────────────────────────────────────────────
-$(document).on('change', '#dtSearchBy', function () {
-    var $opt     = $(this).find('option:selected');
-    var hasVal   = !!$(this).val();
-    var type     = $opt.data('type') || 'text';
-    var options  = $opt.data('options') || null;
+// ── Multi-filter search bar ────────────────────────────────────────────────────
 
-    // Hapus elemen input/select lama, ganti sesuai type
-    $('#dtSearchQ, #dtSearchQSelect').remove();
-
-    if (!hasVal) {
-        // Kembalikan ke text input kosong
-        $('#btnDtSearch').before('<input type="text" id="dtSearchQ" class="form-control form-control-sm" placeholder="Kata kunci..." style="max-width:240px;" disabled>');
-        $('#btnDtSearch').prop('disabled', true);
-        return;
-    }
-
+// Render satu baris filter berdasarkan config field yang dipilih
+function _renderFilterValueInput(rowId, field) {
+    if (!field) return '<input type="text" class="form-control form-control-sm dt-filter-q" data-row="' + rowId + '" placeholder="Kata kunci..." style="min-width:180px;" disabled>';
+    var type    = field.type    || 'text';
+    var options = field.options || null;
     if (type === 'select' && options) {
-        var selectHtml = '<select id="dtSearchQSelect" class="form-select form-select-sm" style="width:auto;min-width:160px;">';
-        selectHtml += '<option value="">-- Pilih --</option>';
+        var html = '<select class="form-select form-select-sm dt-filter-q" data-row="' + rowId + '" style="min-width:160px;"><option value="">-- Pilih --</option>';
         $.each(options, function (i, opt) {
-            selectHtml += '<option value="' + opt.value + '">' + opt.label + '</option>';
+            html += '<option value="' + opt.value + '">' + opt.label + '</option>';
         });
-        selectHtml += '</select>';
-        $('#btnDtSearch').before(selectHtml);
-        $('#btnDtSearch').prop('disabled', false);
-    } else {
-        $('#btnDtSearch').before('<input type="text" id="dtSearchQ" class="form-control form-control-sm" placeholder="Kata kunci..." style="max-width:240px;">');
-        $('#btnDtSearch').prop('disabled', false);
+        return html + '</select>';
     }
+    return '<input type="text" class="form-control form-control-sm dt-filter-q" data-row="' + rowId + '" placeholder="Kata kunci..." style="min-width:180px;">';
+}
+
+function _addFilterRow(fieldDefs) {
+    var rowId  = Date.now();
+    var opts   = '<option value="">-- Cari berdasarkan --</option>';
+    $.each(fieldDefs, function (i, f) {
+        opts += '<option value="' + f.value + '" data-type="' + (f.type || 'text') + '" data-options=\'' + JSON.stringify(f.options || []) + '\'>' + f.label + '</option>';
+    });
+
+    var $row = $('<div class="d-flex align-items-center gap-2 dt-filter-row" data-row="' + rowId + '" style="flex-wrap:nowrap;">' +
+        '<select class="form-select form-select-sm dt-filter-by" data-row="' + rowId + '" style="min-width:170px;">' + opts + '</select>' +
+        _renderFilterValueInput(rowId, null) +
+        '<button type="button" class="btn btn-sm btn-outline-danger dt-filter-remove" data-row="' + rowId + '" title="Hapus baris"><i class="fa-solid fa-xmark"></i></button>' +
+    '</div>');
+
+    $('#dtFilterRows').append($row);
+    _syncFilterActions();
+}
+
+function _syncFilterActions() {
+    var count = $('#dtFilterRows .dt-filter-row').length;
+    $('#btnDtSearch').prop('disabled', count === 0);
+}
+
+// Saat field dipilih → ganti input sesuai type
+$(document).on('change', '.dt-filter-by', function () {
+    var rowId   = $(this).data('row');
+    var val     = $(this).val();
+    var $row    = $(this).closest('.dt-filter-row');
+    var fieldDefs = window._dtSearchFields || [];
+    var field   = fieldDefs.find(function (f) { return f.value === val; }) || null;
+    $row.find('.dt-filter-q').replaceWith(_renderFilterValueInput(rowId, field));
+    if (!val) $row.find('.dt-filter-q').prop('disabled', true);
+});
+
+// Hapus baris filter
+$(document).on('click', '.dt-filter-remove', function () {
+    $(this).closest('.dt-filter-row').remove();
+    _syncFilterActions();
+});
+
+// Enter di input teks → langsung cari
+$(document).on('keydown', '.dt-filter-q', function (e) {
+    if (e.key === 'Enter') _applyDtSearch();
+});
+
+// Tambah baris filter
+$(document).on('click', '#btnAddFilterRow', function () {
+    _addFilterRow(window._dtSearchFields || []);
 });
 
 $(document).on('click', '#btnDtSearch', function () {
     _applyDtSearch();
 });
 
-$(document).on('keydown', '#dtSearchQ', function (e) {
-    if (e.key === 'Enter') _applyDtSearch();
-});
-
 $(document).on('click', '#btnDtClearSearch', function () {
-    delete window._dtParams.search_by;
-    delete window._dtParams.search_q;
-    $('#dtSearchBy').val('').trigger('change');
-    $('#btnDtSearch').prop('disabled', true);
-    $('#dtSearchBadge').hide();
+    // Hapus semua params filter
+    Object.keys(window._dtParams).forEach(function (k) {
+        if (k.startsWith('filters[')) delete window._dtParams[k];
+    });
+    $('#dtFilterRows').empty();
+    _addFilterRow(window._dtSearchFields || []);
+    $('#dtSearchBadge').hide().empty();
     $('#btnDtClearSearch').hide();
-    // Kembalikan icon ke state normal jika panel tertutup
     if (!$('#dtSearchBar').is(':visible')) {
-        $('#btnToggleDtSearch').removeClass('btn-primary').addClass('btn-outline-secondary');
+        $('#btnToggleDtSearch').removeClass('btn-primary search-on').addClass('btn-outline-secondary');
     }
     initDataTable(window.tableSelector, window._dtOnReady);
 });
 
 function _applyDtSearch() {
-    var by = $('#dtSearchBy').val();
-    var q  = ($('#dtSearchQSelect').length ? $('#dtSearchQSelect').val() : $('#dtSearchQ').val()).trim();
-    if (!by || !q) return;
+    // Hapus params filter lama
+    Object.keys(window._dtParams).forEach(function (k) {
+        if (k.startsWith('filters[')) delete window._dtParams[k];
+    });
 
-    window._dtParams.search_by = by;
-    window._dtParams.search_q  = q;
+    var filters = [];
+    var valid   = true;
 
-    var label = $('#dtSearchBy option:selected').text();
-    $('#dtSearchBadge').text(label + ': "' + q + '"').show();
+    $('#dtFilterRows .dt-filter-row').each(function () {
+        var by = $(this).find('.dt-filter-by').val();
+        var q  = $(this).find('.dt-filter-q').val();
+        if (!by) return; // skip baris kosong
+        if (!q || !q.trim()) { valid = false; return false; }
+        filters.push({ by: by, q: q.trim() });
+    });
+
+    if (!valid) { alert('Isi semua kata kunci filter yang sudah dipilih.'); return; }
+    if (!filters.length) return;
+
+    // Kirim sebagai filters[0][by], filters[0][q], dst.
+    $.each(filters, function (i, f) {
+        window._dtParams['filters[' + i + '][by]'] = f.by;
+        window._dtParams['filters[' + i + '][q]']  = f.q;
+    });
+
+    // Badge ringkasan
+    var labels = filters.map(function (f) {
+        var fieldDef = (window._dtSearchFields || []).find(function (d) { return d.value === f.by; });
+        var fieldLabel = fieldDef ? fieldDef.label : f.by;
+        return fieldLabel + ': "' + f.q + '"';
+    });
+    $('#dtSearchBadge').html(labels.join(' &amp; ')).show();
     $('#btnDtClearSearch').show();
-    // Icon tetap biru sebagai indikator filter aktif
-    $('#btnToggleDtSearch').removeClass('btn-outline-secondary').addClass('btn-primary');
+    $('#btnToggleDtSearch').removeClass('btn-outline-secondary').addClass('btn-primary search-on');
 
     initDataTable(window.tableSelector, window._dtOnReady);
 }

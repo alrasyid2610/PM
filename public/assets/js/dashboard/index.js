@@ -1,135 +1,85 @@
-let barChartInstance = null;
-let pieChartInstance = null;
+let _listType = 'wo';
 
 $(document).ready(function () {
     loadSummary();
-    loadSoPerMonth($('#yearSelect').val());
+    switchTab('so');
 
-    $('#yearSelect').on('change', function () {
-        loadSoPerMonth($(this).val());
+    $(document).on('click', '.dw-card-clickable', function () {
+        var type = $(this).data('tab');
+        $('.dw-tab-btn[data-type]').removeClass('active');
+        $('.dw-tab-btn[data-type="' + type + '"]').addClass('active');
+        switchTab(type);
+        $('html, body').animate({ scrollTop: $('.card').last().offset().top - 20 }, 300);
+    });
+
+    $(document).on('click', '.dw-tab-btn[data-type]', function () {
+        $('.dw-tab-btn[data-type]').removeClass('active');
+        $(this).addClass('active');
+        switchTab($(this).data('type'));
     });
 });
 
+function switchTab(type) {
+    _listType = type;
+
+    window.route.data    = window.route.list;
+    window._dtParams     = { type: type };
+
+    window.datatableHeaderLabels = {
+        no:         'No.',
+        judul:      'Judul',
+        pelanggan:  'Pelanggan',
+        pic:        'PIC',
+        deadline:   'Deadline',
+        status:     'Status',
+    };
+
+    window.datatableColumnRenderers = {
+        no: function (data, t, row) {
+            var base = window.route[type];
+            return '<a href="' + base + '?open=' + row.id_rec + '" class="fw-semibold text-decoration-none" style="color:#1a56db">' + (data ?? '-') + '</a>';
+        },
+        status: function (data) {
+            var map = {
+                'on-progress': '<span class="badge bg-primary">On Progress</span>',
+                completed:     '<span class="badge bg-success">Completed</span>',
+                cancel:        '<span class="badge bg-danger">Cancel</span>',
+                planned:       '<span class="badge bg-info text-dark">Planned</span>',
+            };
+            return map[data] ?? ('<span class="badge bg-secondary">' + (data ?? '-') + '</span>');
+        },
+        deadline: function (data) {
+            return data ? data : '<span class="text-muted">-</span>';
+        },
+    };
+
+    $('#global-loader').fadeIn(150);
+    initDataTable('#dashboard-list-table', function () {
+        $('#global-loader').fadeOut(300);
+    });
+}
+
 function loadSummary() {
     $.get(window.route.summary, function (res) {
-        $('#statKantorPusat').text(res.kantor_pusat);
-        $('#statKantorCabang').text(res.kantor_cabang);
-        $('#statTotalSo').text(res.total_so);
-        $('#statTotalWo').text(res.total_wo);
+        $('#wg-so-outstanding-value').text(res.so_outstanding ?? 0);
+        $('#wg-so-outstanding-sub').text('SO aktif');
 
-        const s = res.so_by_status;
-        $('#soDraft').text(s.draft ?? 0);
-        $('#soConfirmed').text(s.confirmed ?? 0);
-        $('#soOnProgress').text(s['on progress'] ?? s.on_progress ?? 0);
-        $('#soDone').text(s.done ?? 0);
+        $('#wg-wo-outstanding-value').text(res.wo_outstanding ?? 0);
+        $('#wg-wo-outstanding-sub').text('WO on progress');
 
-        renderPieChart([
-            s.draft ?? 0,
-            s.confirmed ?? 0,
-            s['on progress'] ?? s.on_progress ?? 0,
-            s.done ?? 0,
-        ]);
+        $('#wg-fwo-outstanding-value').text(res.fwo_outstanding ?? 0);
+        $('#wg-fwo-outstanding-sub').text('FWO planned');
+
+        $('#wg-overdue-value').text(res.overdue ?? 0);
+        $('#wg-overdue-sub').text('lewat tenggat');
+
+        $('#wg-due-7-value').text(res.due_7 ?? 0);
+        $('#wg-due-7-sub').text('perlu perhatian');
+
+        $('#wg-termin-outstanding-value').text(res.termin_outstanding ?? 0);
+        $('#wg-termin-outstanding-sub').text('belum selesai');
+
     }).fail(function () {
-        Notify.error('Gagal memuat data summary');
+        Notify.error('Gagal memuat data dashboard');
     });
-}
-
-function loadSoPerMonth(year) {
-    $.get(window.route.soPerMonth, { year: year }, function (res) {
-        renderBarChart(res.data);
-    }).fail(function () {
-        Notify.error('Gagal memuat data chart');
-    });
-}
-
-function renderBarChart(data) {
-    const ctx = document.getElementById('barChart').getContext('2d');
-    if (barChartInstance) barChartInstance.destroy();
-
-    barChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['Jan','Feb','Mar','Apr','Mei','Jun',
-                     'Jul','Agu','Sep','Okt','Nov','Des'],
-            datasets: [{
-                label: 'Jumlah SO',
-                data: data,
-                backgroundColor: '#18386b',
-                borderRadius: 4,
-                borderSkipped: false,
-                hoverBackgroundColor: '#1a5fbe',
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => ` ${ctx.parsed.y} SO`
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1,
-                        font: { size: 11 },
-                        color: '#9ca3af',
-                    },
-                    grid: { color: '#f3f4f6' },
-                },
-                x: {
-                    ticks: { font: { size: 11 }, color: '#9ca3af' },
-                    grid: { display: false },
-                }
-            }
-        }
-    });
-}
-
-function renderPieChart(data) {
-    const ctx = document.getElementById('pieChart').getContext('2d');
-    if (pieChartInstance) pieChartInstance.destroy();
-
-    const labels = ['Draft', 'Confirmed', 'On Progress', 'Done'];
-    const colors = ['#9ca3af', '#1a5fbe', '#f59e0b', '#10b981'];
-    const total  = data.reduce((a, b) => a + b, 0);
-
-    pieChartInstance = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: data,
-                backgroundColor: colors,
-                borderWidth: 0,
-                hoverOffset: 4,
-            }]
-        },
-        options: {
-            cutout: '65%',
-            plugins: { legend: { display: false } },
-            responsive: false,
-        }
-    });
-
-    let html = '';
-    labels.forEach((label, i) => {
-        const pct = total > 0
-            ? Math.round((data[i] / total) * 100)
-            : 0;
-        html += `
-            <div class="d-flex align-items-center gap-2 mb-2">
-                <div style="width:10px;height:10px;border-radius:3px;
-                    background:${colors[i]};flex-shrink:0;"></div>
-                <span style="font-size:12px;color:#374151;">${label}</span>
-                <span style="margin-left:auto;font-size:12px;
-                    font-weight:600;color:#111827;">${data[i]}</span>
-                <span style="font-size:11px;color:#9ca3af;">${pct}%</span>
-            </div>
-        `;
-    });
-    $('#pieLegend').html(html);
 }

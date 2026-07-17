@@ -33,28 +33,31 @@ class FieldworkController extends Controller
 
     public function data(Request $request)
     {
-        $searchBy = $request->input('search_by');
-        $searchQ  = trim($request->input('search_q', ''));
-
-        $isSearching = $searchBy && $searchQ;
+        $filters     = $request->input('filters', []);
+        $isSearching = !empty($filters);
 
         $query = DB::table('fieldworks as fw')
             ->leftJoin('work_orders as wo', 'fw.id_wo', '=', 'wo.id_wo')
             ->when(!$isSearching, fn($q) => $q->whereNull('fw.deleted_at'))
-            ->when(!$isSearching && !$request->boolean('show_selesai'), fn($q) => $q->where('fw.status', '!=', 'completed'))
-            ->when($isSearching, function ($q) use ($searchBy, $searchQ) {
-                $like = '%' . $searchQ . '%';
-                match ($searchBy) {
-                    'no_fwo' => $q->where('fw.no_fwo', 'like', $like),
-                    'no_wo'  => $q->where('wo.no_wo',  'like', $like),
-                    'judul'  => $q->where('fw.judul_pekerjaan', 'like', $like),
-                    'status' => match ($searchQ) {
-                        'all'     => null,
-                        'deleted' => $q->whereNotNull('fw.deleted_at'),
-                        default   => $q->where('fw.status', $searchQ),
-                    },
-                    default  => null,
-                };
+            ->when(!$isSearching, fn($q) => $q->where('fw.status', '!=', 'completed'))
+            ->when($isSearching, function ($q) use ($filters) {
+                foreach ($filters as $f) {
+                    $by   = $f['by']  ?? '';
+                    $term = trim($f['q'] ?? '');
+                    if (!$by || $term === '') continue;
+                    $like = '%' . $term . '%';
+                    match ($by) {
+                        'no_fwo' => $q->where('fw.no_fwo', 'like', $like),
+                        'no_wo'  => $q->where('wo.no_wo',  'like', $like),
+                        'judul'  => $q->where('fw.judul_pekerjaan', 'like', $like),
+                        'status' => match ($term) {
+                            'all'     => null,
+                            'deleted' => $q->whereNotNull('fw.deleted_at'),
+                            default   => $q->whereNull('fw.deleted_at')->where('fw.status', $term),
+                        },
+                        default  => null,
+                    };
+                }
             })
             ->select([
                 'fw.id_fwo',
@@ -85,6 +88,7 @@ class FieldworkController extends Controller
                 'fw.*',
                 'wo.no_wo as wo_no_wo',
                 'wo.judul_pekerjaan as wo_judul_pekerjaan',
+                'wo.status as wo_status',
                 'brs.nama_lokasi as site_name',
                 'brc.nama_pic as pic_name',
                 'brs_wo.nama_lokasi as wo_site_name',

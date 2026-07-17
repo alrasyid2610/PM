@@ -679,13 +679,16 @@ function renderOutputTable(outputs) {
                     "<td " + TD + ">" + attachHtml + "</td>" +
                     '<td ' + TD + ' style="white-space:nowrap;">' +
                     '<div class="d-flex align-items-center gap-1">' +
-                    (item.status === 'belum_siap'
-                        ? '<button type="button" class="btn btn-sm btn-success py-0 px-2 btn-output-status" data-id="' + item.id_output + '" data-status="siap" data-no-disable style="font-size:11px;"><i class="fa-solid fa-check me-1"></i>Siap</button>'
-                        : '') +
-                    '<button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 btn-edit-output" ' +
-                    'data-id="' + item.id_output + '" data-no-disable style="font-size:11px;"><i class="fa-solid fa-pen"></i></button>' +
-                    '<button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-delete-output" ' +
-                    'data-id="' + item.id_output + '" data-no-disable style="font-size:11px;"><i class="fa-solid fa-trash"></i></button>' +
+                    (currentWoData && currentWoData.status === 'completed'
+                        ? '<span class="text-muted" style="font-size:11px;">—</span>'
+                        : (item.status === 'belum_siap'
+                            ? '<button type="button" class="btn btn-sm btn-success py-0 px-2 btn-output-status" data-id="' + item.id_output + '" data-status="siap" data-no-disable style="font-size:11px;"><i class="fa-solid fa-check me-1"></i>Siap</button>'
+                            : '') +
+                          '<button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 btn-edit-output" ' +
+                          'data-id="' + item.id_output + '" data-no-disable style="font-size:11px;"><i class="fa-solid fa-pen"></i></button>' +
+                          '<button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-delete-output" ' +
+                          'data-id="' + item.id_output + '" data-no-disable style="font-size:11px;"><i class="fa-solid fa-trash"></i></button>'
+                    ) +
                     '</div>' +
                     "</td></tr>"
                 );
@@ -931,7 +934,7 @@ $(document).ready(function () {
         Notify.confirm('Ubah status menjadi <b>' + label + '</b>?', function () {
             $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
             $.ajax({
-                url: window.route.outputBase + id + '/status',
+                url: window.route.outputBase + '/' + id + '/status',
                 method: 'POST',
                 data: { _token: window.route.csrf, status: newStatus },
                 success: function () {
@@ -1021,7 +1024,7 @@ $(document).ready(function () {
         }
 
         var url = isEdit
-            ? window.route.outputBase + editId
+            ? window.route.outputBase + '/' + editId
             : window.route.outputBase;
         var $btn = $("#btnSaveOutput");
         $btn.prop("disabled", true).html(
@@ -1055,7 +1058,7 @@ $(document).ready(function () {
         var id = $(this).data("id");
         Notify.confirm("Hapus output pekerjaan ini?", function () {
             $.ajax({
-                url: window.route.outputBase + id,
+                url: window.route.outputBase + '/' + id,
                 method: "POST",
                 data: { _token: window.route.csrf, _method: "DELETE" },
                 success: function () {

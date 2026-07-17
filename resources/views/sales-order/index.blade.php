@@ -29,8 +29,9 @@
         ['label' => 'Pelanggan',       'value' => 'pelanggan'],
         ['label' => 'Status',          'value' => 'status', 'type' => 'select', 'options' => [
             ['label' => 'All',         'value' => 'all'],
-            ['label' => 'On Progress', 'value' => 'onprogress'],
-            ['label' => 'Selesai',     'value' => 'selesai'],
+            ['label' => 'On Progress', 'value' => 'on-progress'],
+            ['label' => 'Completed',   'value' => 'completed'],
+            ['label' => 'Cancel',      'value' => 'cancel'],
             ['label' => 'Deleted',     'value' => 'deleted'],
         ]],
     ]"

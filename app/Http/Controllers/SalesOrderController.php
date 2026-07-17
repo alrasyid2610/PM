@@ -459,39 +459,42 @@ class SalesOrderController extends Controller
 
     public function data(Request $request)
     {
-        $searchBy = $request->input('search_by');
-        $searchQ  = trim($request->input('search_q', ''));
-
-        $isSearching = $searchBy && $searchQ;
+        $filters     = $request->input('filters', []);
+        $isSearching = !empty($filters);
 
         $query = DB::table('sales_orders as s')
             ->leftJoin('business_relations as br', 's.id_pelanggan', '=', 'br.id_br')
             ->leftJoin('business_relation_sites as brs', 's.id_site_pelanggan', '=', 'brs.id_site')
             ->when(!$isSearching, fn($q) => $q->whereNull('s.deleted_at'))
-            ->when(!$isSearching && !$request->boolean('show_selesai'), fn($q) => $q->where('s.status', '!=', 'selesai'))
-            ->when($isSearching, function ($q) use ($searchBy, $searchQ) {
-                $like = '%' . $searchQ . '%';
-                match ($searchBy) {
-                    'no_so'    => $q->where('s.no_so', 'like', $like),
-                    'judul'    => $q->where('s.judul_order', 'like', $like),
-                    'pelanggan' => $q->where('br.nama', 'like', $like),
-                    'status'   => match ($searchQ) {
-                        'all'     => null,
-                        'deleted' => $q->whereNotNull('s.deleted_at'),
-                        default   => $q->where('s.status', $searchQ),
-                    },
-                    default    => null,
-                };
+            ->when(!$isSearching, fn($q) => $q->where('s.status', '!=', 'completed'))
+            ->when($isSearching, function ($q) use ($filters) {
+                foreach ($filters as $f) {
+                    $by   = $f['by']  ?? '';
+                    $term = trim($f['q'] ?? '');
+                    if (!$by || $term === '') continue;
+                    $like = '%' . $term . '%';
+                    match ($by) {
+                        'no_so'     => $q->where('s.no_so', 'like', $like),
+                        'judul'     => $q->where('s.judul_order', 'like', $like),
+                        'pelanggan' => $q->where('br.nama', 'like', $like),
+                        'status'    => match ($term) {
+                            'all'     => null,
+                            'deleted' => $q->whereNotNull('s.deleted_at'),
+                            default   => $q->whereNull('s.deleted_at')->where('s.status', $term),
+                        },
+                        default => null,
+                    };
+                }
             })
             ->select([
                 's.id_so',
+                DB::raw("CASE WHEN s.deleted_at IS NOT NULL THEN 'deleted' ELSE s.status END as status"),
                 's.no_so',
                 'br.nama as Pelanggan',
                 'brs.nama_lokasi as Site Customer',
                 's.judul_order',
                 's.id_pelanggan',
                 's.id_site_pelanggan',
-                DB::raw("CASE WHEN s.deleted_at IS NOT NULL THEN 'deleted' ELSE s.status END as status"),
                 's.created_at',
             ]);
 

@@ -83,7 +83,7 @@
                     </label>
 
                     <label class="d-flex align-items-center gap-2 mb-0" style="cursor:pointer;user-select:none;">
-                        <input type="checkbox" class="slicer-status" value="selesai" checked
+                        <input type="checkbox" class="slicer-status" value="completed" checked
                                style="accent-color:#10b981;width:15px;height:15px;cursor:pointer;">
                         Selesai
                     </label>

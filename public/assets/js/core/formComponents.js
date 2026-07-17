@@ -273,6 +273,7 @@ const formGroup = {
         statusBadge = "",
         tags = "",
         noWrap = false,
+        moreActions = [],
     }) {
         const editBtn = editHtml
             ? editHtml
@@ -297,6 +298,26 @@ const formGroup = {
         const wrapClass = noWrap
             ? "detail-action-sticky-wrap"
             : "col-md-12 detail-action-sticky-wrap";
+
+        // Dropdown "Lainnya" untuk aksi sekunder
+        let moreBtn = "";
+        if (moreActions.length > 0) {
+            const items = moreActions.map(a => {
+                if (a === 'divider') return `<li><hr class="dropdown-divider"></li>`;
+                const icon  = a.icon  ? `<i class="${a.icon} me-2" style="width:14px;text-align:center;"></i>` : '';
+                const cls   = a.danger ? 'dropdown-item text-danger' : 'dropdown-item';
+                const attrs = a.attrs ?? '';
+                return `<li><button type="button" class="${cls}" ${attrs}>${icon}${a.label}</button></li>`;
+            }).join('');
+            moreBtn = `
+                <div class="dropdown">
+                    <button type="button" class="btn-action-more dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Lainnya">
+                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">${items}</ul>
+                </div>`;
+        }
+
         return `
         <div>
             <div class="${wrapClass}">
@@ -309,6 +330,7 @@ const formGroup = {
                     </div>
                     <div class="d-flex align-items-center gap-2" style="transform: translateY(-20px)">
                         ${badge}
+                        ${moreBtn}
                         ${editBtn}
                         ${deleteBtn}
                         ${extra}

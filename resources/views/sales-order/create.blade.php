@@ -225,7 +225,7 @@
                 <div class="row g-3">
                     <div class="col-md-3 col-12">
                         <label class="form-label">Status</label>
-                        <input type="text" name="status" class="form-control" value="Draft" readonly>
+                        <input type="text" name="status" class="form-control" value="on-progress" readonly>
                     </div>
                     <div class="col-md-9 col-12">
                         <label class="form-label">Keterangan Status</label>

@@ -1,14 +1,20 @@
 function renderForm(res) {
     const isDeleted = !!res.deleted_at;
-    const statusKey = (res.status ?? "draft")
-        .toString()
-        .toLowerCase()
-        .replace(/\s+/g, "-");
     const statusBadge = isDeleted
         ? `<span class="pm-badge" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;">
                <i class="fa-solid fa-trash" style="font-size:10px;"></i> Deleted
            </span>`
-        : `<span class="detail-status-inline detail-status-${statusKey}">${escHtml(res.status ?? "Draft")}</span>`;
+        : res.status === 'completed'
+          ? `<span class="pm-badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;">
+               <i class="fa-solid fa-circle-check" style="font-size:10px;"></i> Completed
+           </span>`
+          : res.status === 'cancel'
+          ? `<span class="pm-badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">
+               <i class="fa-solid fa-ban" style="font-size:10px;"></i> Cancel
+           </span>`
+          : `<span class="pm-badge" style="background:#eff6ff;color:#1a56db;border:1px solid #bfdbfe;">
+               <i class="fa-solid fa-spinner" style="font-size:10px;"></i> On Progress
+           </span>`;
     const pelangganTag = res.nama_pelanggan
         ? `<a href="/business-relations${res.id_site_pelanggan ? '?open=' + res.id_site_pelanggan : ''}" class="pm-badge" style="background:#f1f5f9;color:#475569;text-decoration:none;">
                <i class="fa-solid fa-building" style="font-size:10px;"></i>

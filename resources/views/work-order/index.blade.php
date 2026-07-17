@@ -11,8 +11,8 @@
         ['label' => 'Pelanggan',       'value' => 'pelanggan'],
         ['label' => 'Status',          'value' => 'status', 'type' => 'select', 'options' => [
             ['label' => 'All',         'value' => 'all'],
-            ['label' => 'On Progress', 'value' => 'onprogress'],
-            ['label' => 'Selesai',     'value' => 'selesai'],
+            ['label' => 'On Progress', 'value' => 'on-progress'],
+            ['label' => 'Completed',   'value' => 'completed'],
             ['label' => 'Deleted',     'value' => 'deleted'],
         ]],
     ]"
@@ -141,14 +141,14 @@
         fwoBoqForCopy: "{{ url('fieldwork-boq/for-copy') }}/",
         usersSelect2:  "{{ route('users.select2') }}",
         tpSelect2:     "{{ route('testing-points.select2') }}",
-        outputBase:    "{{ url('output-pekerjaan') }}/",
+        outputBase:    "{{ url('output-pekerjaan') }}",
     }
 
     window.datatableColumnRenderers = {
         status: function (data) {
             var map = {
-                onprogress: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-spinner',      label: 'On Progress' },
-                selesai:    { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-circle-check', label: 'Selesai' },
+                'on-progress': { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-spinner',      label: 'On Progress' },
+                completed:     { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-circle-check', label: 'Completed' },
                 deleted:    { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: 'fa-trash',        label: 'Deleted' },
             };
             var s = map[data] || { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0', icon: 'fa-circle', label: data || '-' };

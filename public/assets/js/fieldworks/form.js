@@ -1,28 +1,33 @@
 function renderFwoForm(res) {
-    const isDeleted   = !!res.deleted_at;
-    const isCompleted = !isDeleted && res.status === 'completed';
+    const isDeleted = !!res.deleted_at;
+    const isWoCompleted = res.wo_status === "completed";
+    const isCompleted = !isDeleted && (res.status === "completed" || isWoCompleted);
 
     const woBadge = res.id_wo
         ? `<a href="/work-orders?open=${res.id_wo}" class="pm-badge pm-badge--blue" style="text-decoration:none;">
                <i class="fa-solid fa-briefcase" style="font-size:10px;"></i>
-               ${escHtml(res.wo_no_wo ?? 'Lihat WO')}
+               ${escHtml(res.wo_no_wo ?? "Lihat WO")}
            </a>`
-        : '';
+        : "";
 
     const siteBadge = res.site_name
-        ? `<a href="/business-relations${res.id_site_pelanggan_pekerjaan ? '?open=' + res.id_site_pelanggan_pekerjaan : ''}" class="pm-badge" style="background:#f1f5f9;color:#475569;text-decoration:none;">
+        ? `<a href="/business-relations${res.id_site_pelanggan_pekerjaan ? "?open=" + res.id_site_pelanggan_pekerjaan : ""}" class="pm-badge" style="background:#f1f5f9;color:#475569;text-decoration:none;">
                <i class="fa-solid fa-location-dot" style="font-size:10px;"></i>
                ${escHtml(res.site_name)}
            </a>`
-        : '';
+        : "";
 
-    const statusClass = isDeleted ? '' : (isCompleted ? 'detail-status-selesai' : 'detail-status-pending');
-    const statusLabel = isDeleted ? '' : (isCompleted ? 'Completed' : 'Planned');
     const statusBadge = isDeleted
         ? `<span class="pm-badge" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;">
                <i class="fa-solid fa-trash" style="font-size:10px;"></i> Deleted
            </span>`
-        : `<span class="detail-status-inline ${statusClass}">${statusLabel}</span>`;
+        : isCompleted
+          ? `<span class="pm-badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;">
+               <i class="fa-solid fa-circle-check" style="font-size:10px;"></i> Completed
+           </span>`
+          : `<span class="pm-badge" style="background:#fffbeb;color:#d97706;border:1px solid #fde68a;">
+               <i class="fa-solid fa-circle" style="font-size:8px;"></i> Planned
+           </span>`;
 
     return `
 <form id="detailForm">
@@ -30,32 +35,31 @@ function renderFwoForm(res) {
     <input type="hidden" name="_method" value="PUT">
 
     ${formGroup.actionBar({
-        number: escHtml(res.no_fwo ?? '—'),
-        createdAt: escHtml(res.created_at ?? '—'),
-        updatedAt: escHtml(res.updated_at ?? '—'),
-        deleteId: (isDeleted || isCompleted) ? null : res.id_fwo,
-        editText: (isDeleted || isCompleted) ? '' : 'Edit FWO',
+        number: escHtml(res.no_fwo ?? "—"),
+        createdAt: escHtml(res.created_at ?? "—"),
+        updatedAt: escHtml(res.updated_at ?? "—"),
+        deleteId: isDeleted || isCompleted ? null : res.id_fwo,
+        editText: isDeleted || isCompleted ? "" : "Edit FWO",
         statusBadge: statusBadge,
         tags: woBadge + siteBadge,
+        moreActions: [
+            {
+                label: "Cetak PDF",
+                icon: "fa-solid fa-file-pdf",
+                attrs: `onclick="window.open('/fieldworks/${res.id_fwo}/pdf','_blank')"`,
+            },
+        ],
         extra: isDeleted
             ? `<span style="font-size:11px;color:#b91c1c;display:flex;align-items:center;gap:5px;">
                    <i class="fa-solid fa-trash" style="font-size:10px;"></i>
-                   Data ini sudah dihapus pada ${new Date(res.deleted_at).toLocaleString('id-ID')}
+                   Data ini sudah dihapus pada ${new Date(res.deleted_at).toLocaleString("id-ID")}
                </span>`
             : isCompleted
-            ? `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
-                   <i class="fa-solid fa-lock" style="font-size:10px;"></i>
-                   FWO sudah selesai, data tidak dapat diubah
-               </span>
-               <a href="/fieldworks/${res.id_fwo}/pdf" target="_blank"
-                  class="btn btn-sm btn-outline-secondary" style="font-size:12px;">
-                  <i class="fa-solid fa-file-pdf me-1"></i> PDF
-               </a>`
-            : `<a href="/fieldworks/${res.id_fwo}/pdf" target="_blank"
-                  class="btn btn-sm btn-outline-secondary" style="font-size:12px;">
-                  <i class="fa-solid fa-file-pdf me-1"></i> PDF
-               </a>
-               <button type="button" id="btnCompleteFwo" data-fwo-id="${res.id_fwo}" data-no-disable
+              ? `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
+                   <i class="fa-solid fa-lock" style="font-size:10px; line-height: 14px;"></i>
+                   ${isWoCompleted && res.status !== 'completed' ? 'WO sudah selesai, FWO tidak dapat diubah' : 'FWO sudah selesai, data tidak dapat diubah'}
+               </span>`
+              : `<button type="button" id="btnCompleteFwo" data-fwo-id="${res.id_fwo}" data-no-disable
                 class="btn btn-sm btn-success" style="font-size:12px;">
                 <i class="fa-solid fa-circle-check me-1"></i> Selesaikan FWO
                </button>`,
@@ -102,18 +106,20 @@ function renderFwoForm(res) {
                     <!-- Edit personel via tombol Edit FWO di atas -->
                 </div>
                 <div id="fwoTabActionsBoq" class="d-flex align-items-center gap-2 d-none">
-                    ${isDeleted
-                        ? ''
-                        : !isCompleted
-                        ? `<button type="button" id="btnAddFwoBoqDirect" data-no-disable
+                    ${
+                        isDeleted
+                            ? ""
+                            : !isCompleted
+                              ? `<button type="button" id="btnAddFwoBoqDirect" data-no-disable
                                 class="pm-btn-pill pm-btn-pill--green">
                                 <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                                 <i class="fa-solid fa-clipboard-list" style="font-size:11px;"></i> Kelola BOQ
                            </button>`
-                        : `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
+                              : `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
                                <i class="fa-solid fa-lock" style="font-size:10px;"></i>
                                FWO sudah selesai, data tidak dapat diubah
-                           </span>`}
+                           </span>`
+                    }
                 </div>
                 <div id="fwoTabActionsAttachment" class="d-flex align-items-center gap-2 d-none">
                     <!-- Attachment dikelola via tombol Edit FWO di atas -->
@@ -128,51 +134,78 @@ function renderFwoForm(res) {
                     <div class="row g-3">
                         ${formGroup.sectionCard(
                             {
-                                icon: 'fa-hard-hat',
-                                color: 'icon-amber',
-                                title: 'Informasi Fieldwork',
-                                subtitle: 'Data dan jadwal kunjungan lapangan',
+                                icon: "fa-hard-hat",
+                                color: "icon-amber",
+                                title: "Informasi Fieldwork",
+                                subtitle: "Data dan jadwal kunjungan lapangan",
                             },
                             `<div class="row g-3 form-1">
                                 <div class="mb-3 col-md-12">
                                     <label class="form-label">
                                         Work Order
-                                        ${res.id_wo ? `<a href="/work-orders?open=${res.id_wo}"
+                                        ${
+                                            res.id_wo
+                                                ? `<a href="/work-orders?open=${res.id_wo}"
                                             class="ms-2 text-decoration-none small" title="Buka halaman Work Order"
                                             style="color:var(--primary-500,#1a5fbe);">
                                             <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:11px;"></i>
-                                        </a>` : ''}
+                                        </a>`
+                                                : ""
+                                        }
                                     </label>
                                     <select name="id_wo" class="form-select form-select-dynamic disabled"
                                         id="detail_id_wo"
                                         data-mode="ajax" data-url="${window.route.woSelect2}"
                                         data-allow-clear="false" data-placeholder="Pilih Work Order"
                                         data-minimum-input="0" data-show-all="false">
-                                        ${res.id_wo && res.wo_no_wo
-                                            ? `<option value="${res.id_wo}" selected>${escHtml(res.wo_no_wo)}</option>`
-                                            : '<option value=""></option>'}
+                                        ${
+                                            res.id_wo && res.wo_no_wo
+                                                ? `<option value="${res.id_wo}" selected>${escHtml(res.wo_no_wo)}</option>`
+                                                : '<option value=""></option>'
+                                        }
                                     </select>
                                 </div>
-                                ${formGroup.text('judul_pekerjaan', 'Judul Pekerjaan', res.judul_pekerjaan, true, { className: 'col-md-12' })}
-                                ${formGroup.select('id_site_pelanggan_pekerjaan', 'Site Pelanggan', res.id_site_pelanggan_pekerjaan, [], {
-                                    mode: 'ajax', url: window.route.siteSelect2, placeholder: 'Pilih Site',
-                                    label: res.site_name, className: 'col-md-6', createUrl: '/business-relations/create',
-                                })}
-                                ${formGroup.select('id_pic_pelanggan_pekerjaan', 'PIC Pelanggan', res.id_pic_pelanggan_pekerjaan, [], {
-                                    mode: 'ajax', url: window.route.picSelect2, placeholder: 'Pilih PIC',
-                                    label: res.pic_name, className: 'col-md-6', createUrl: '/business-relation-contacts/create',
-                                })}
-                                ${formGroup.date('tanggal_mulai', 'Tanggal Mulai', res.tanggal_mulai ?? '', false, { className: 'col-md-4' })}
-                                ${formGroup.date('tanggal_selesai', 'Tanggal Selesai', res.tanggal_selesai ?? '', false, { className: 'col-md-4' })}
+                                ${formGroup.text("judul_pekerjaan", "Judul Pekerjaan", res.judul_pekerjaan, true, { className: "col-md-12" })}
+                                ${formGroup.select(
+                                    "id_site_pelanggan_pekerjaan",
+                                    "Site Pelanggan",
+                                    res.id_site_pelanggan_pekerjaan,
+                                    [],
+                                    {
+                                        mode: "ajax",
+                                        url: window.route.siteSelect2,
+                                        placeholder: "Pilih Site",
+                                        label: res.site_name,
+                                        className: "col-md-6",
+                                        createUrl: "/business-relations/create",
+                                    },
+                                )}
+                                ${formGroup.select(
+                                    "id_pic_pelanggan_pekerjaan",
+                                    "PIC Pelanggan",
+                                    res.id_pic_pelanggan_pekerjaan,
+                                    [],
+                                    {
+                                        mode: "ajax",
+                                        url: window.route.picSelect2,
+                                        placeholder: "Pilih PIC",
+                                        label: res.pic_name,
+                                        className: "col-md-6",
+                                        createUrl:
+                                            "/business-relation-contacts/create",
+                                    },
+                                )}
+                                ${formGroup.date("tanggal_mulai", "Tanggal Mulai", res.tanggal_mulai ?? "", false, { className: "col-md-4" })}
+                                ${formGroup.date("tanggal_selesai", "Tanggal Selesai", res.tanggal_selesai ?? "", false, { className: "col-md-4" })}
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label">Waktu Kedatangan</label>
                                     <input type="text" name="waktu_kedatangan"
                                         class="form-control disabled fp-datetime"
-                                        value="${res.waktu_kedatangan ? String(res.waktu_kedatangan).substring(0,16).replace('T',' ') : ''}"
+                                        value="${res.waktu_kedatangan ? String(res.waktu_kedatangan).substring(0, 16).replace("T", " ") : ""}"
                                         placeholder="Pilih tanggal & jam" autocomplete="off">
                                 </div>
-                                ${formGroup.textarea('keterangan', 'Keterangan', res.keterangan ?? '', { className: 'col-md-12' })}
-                            </div>`
+                                ${formGroup.textarea("keterangan", "Keterangan", res.keterangan ?? "", { className: "col-md-12" })}
+                            </div>`,
                         )}
                     </div>
                 </div>
@@ -227,16 +260,21 @@ function renderFwoBoqView(sections) {
         </div>`;
     }
 
-    const TH = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';
+    const TH =
+        'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';
     const TD = 'style="padding:8px 12px;vertical-align:middle;"';
 
-    const rows = sections.map(function (sec, i) {
-        const satuan   = sec.satuan ? ' ' + escHtml(sec.satuan) : '';
-        const qtyLabel = (sec.qty ?? '—') + (sec.boq_qty ? ' / ' + sec.boq_qty : '') + satuan;
+    const rows = sections
+        .map(function (sec, i) {
+            const satuan = sec.satuan ? " " + escHtml(sec.satuan) : "";
+            const qtyLabel =
+                (sec.qty ?? "—") +
+                (sec.boq_qty ? " / " + sec.boq_qty : "") +
+                satuan;
 
-        return `<tr>
+            return `<tr>
             <td ${TD} style="padding:8px 12px;color:#94a3b8;text-align:center;font-size:12px;">${i + 1}</td>
-            <td ${TD} style="padding:8px 12px;color:#374151;font-weight:500;">${escHtml(sec.point_name ?? '—')}</td>
+            <td ${TD} style="padding:8px 12px;color:#374151;font-weight:500;">${escHtml(sec.point_name ?? "—")}</td>
             <td ${TD} style="padding:8px 12px;color:#374151;white-space:nowrap;">${qtyLabel}</td>
             <td ${TD} style="padding:8px 8px;text-align:center;width:40px;">
                 <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-fwo-boq-delete" data-boq-id="${sec.id_boq}"
@@ -245,7 +283,8 @@ function renderFwoBoqView(sections) {
                 </button>
             </td>
         </tr>`;
-    }).join('');
+        })
+        .join("");
 
     return `<div class="table-responsive">
         <table class="table table-sm table-hover mb-0" style="font-size:13px;">
@@ -273,18 +312,20 @@ function renderFwoBoqEditBar() {
 
 // ── Edit mode: one section card ────────────────────────────────────────────────
 function renderFwoBoqSectionEdit(sec) {
-    const items       = sec.items ?? [];
-    const remaining   = sec.remaining_qty ?? '';          // max yang boleh diinput FWO ini
+    const items = sec.items ?? [];
+    const remaining = sec.remaining_qty ?? ""; // max yang boleh diinput FWO ini
     const unallocated = sec.unallocated_qty ?? remaining; // yang benar-benar belum dialokasikan siapapun
-    const satuan      = sec.satuan ? ' ' + escHtml(sec.satuan) : '';
-    const itemsHtml   = items.map(function (item, j) {
-        return `<div class="d-flex align-items-center flex-wrap gap-2 py-1" style="border-bottom:1px solid #f1f5f9;">
+    const satuan = sec.satuan ? " " + escHtml(sec.satuan) : "";
+    const itemsHtml = items
+        .map(function (item, j) {
+            return `<div class="d-flex align-items-center flex-wrap gap-2 py-1" style="border-bottom:1px solid #f1f5f9;">
             <span class="text-muted small fw-semibold">${j + 1}.</span>
-            <span class="fw-semibold small">${escHtml(item.judul_indonesia ?? '—')}</span>
-            <span class="text-muted small">/ ${escHtml(item.judul_inggris ?? '—')}</span>
-            <span class="item-meta-badge">${escHtml(item.kode_unit || '—')} · ${escHtml(String(item.nilai ?? '—'))}</span>
+            <span class="fw-semibold small">${escHtml(item.judul_indonesia ?? "—")}</span>
+            <span class="text-muted small">/ ${escHtml(item.judul_inggris ?? "—")}</span>
+            <span class="item-meta-badge">${escHtml(item.kode_unit || "—")} · ${escHtml(String(item.nilai ?? "—"))}</span>
         </div>`;
-    }).join('');
+        })
+        .join("");
 
     return `<div class="card mb-3 fwo-boq-section"
             data-boq-id="${sec.id_boq}"
@@ -294,11 +335,11 @@ function renderFwoBoqSectionEdit(sec) {
             style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <i class="fa-solid fa-layer-group" style="color:#2563eb;"></i>
-                <span class="fw-semibold">${escHtml(sec.point_name ?? '—')}</span>
+                <span class="fw-semibold">${escHtml(sec.point_name ?? "—")}</span>
                 <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary" style="font-size:11px;">
                     ${items.length} item
                 </span>
-                ${unallocated !== '' ? `<span class="badge bg-warning text-dark" style="font-size:11px;">Sisa: ${unallocated}${satuan}</span>` : ''}
+                ${unallocated !== "" ? `<span class="badge bg-warning text-dark" style="font-size:11px;">Sisa: ${unallocated}${satuan}</span>` : ""}
             </div>
             <button type="button" class="btn btn-sm btn-outline-danger btn-remove-fwo-boq py-1 px-2" style="font-size:12px;">
                 <i class="fa-solid fa-trash me-1"></i> Hapus
@@ -310,12 +351,12 @@ function renderFwoBoqSectionEdit(sec) {
                     <label class="form-label form-label-sm text-muted mb-1">Qty</label>
                     <input type="text" inputmode="numeric" class="form-control form-control-sm input-fwo-qty input-num-mask input-num-int"
                         placeholder="0"
-                        value="${sec.qty ?? ''}">
+                        value="${sec.qty ?? ""}">
                 </div>
                 <div class="col-md-8">
                     <label class="form-label form-label-sm text-muted mb-1">Keterangan</label>
                     <input type="text" class="form-control form-control-sm input-fwo-ket"
-                        placeholder="opsional" value="${escHtml(sec.keterangan ?? '')}">
+                        placeholder="opsional" value="${escHtml(sec.keterangan ?? "")}">
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2 mb-1">
@@ -336,18 +377,17 @@ function renderFwoBoqModalItem(item, j) {
     return `<div class="d-flex align-items-center gap-3 py-2" style="border-bottom:1px solid #f1f5f9;">
         <span class="text-muted small fw-semibold">${j + 1}.</span>
         <div>
-            <span class="fw-semibold small">${escHtml(item.judul_indonesia ?? '—')}</span>
-            <span class="text-muted small ms-1">/ ${escHtml(item.judul_inggris ?? '—')}</span>
+            <span class="fw-semibold small">${escHtml(item.judul_indonesia ?? "—")}</span>
+            <span class="text-muted small ms-1">/ ${escHtml(item.judul_inggris ?? "—")}</span>
         </div>
-        <span class="item-meta-badge ms-auto flex-shrink-0">${escHtml(item.kode_unit || '—')} · ${escHtml(String(item.nilai ?? '—'))}</span>
+        <span class="item-meta-badge ms-auto flex-shrink-0">${escHtml(item.kode_unit || "—")} · ${escHtml(String(item.nilai ?? "—"))}</span>
     </div>`;
 }
 
 function fwoDatetimeLocal(val) {
-    if (!val) return '';
-    return String(val).replace(' ', 'T').substring(0, 16);
+    if (!val) return "";
+    return String(val).replace(" ", "T").substring(0, 16);
 }
-
 
 // ── Personel view ──────────────────────────────────────────────────────────────
 function renderPersonelView(personels) {
@@ -359,26 +399,32 @@ function renderPersonelView(personels) {
     }
 
     const roleColors = {
-        'Leader':      { bg: '#fef9c3', color: '#854d0e' },
-        'Driver':      { bg: '#dbeafe', color: '#1e40af' },
-        'Anggota':     { bg: '#f0fdf4', color: '#166534' },
-        'PIC Project': { bg: '#fce7f3', color: '#9d174d' },
+        Leader: { bg: "#fef9c3", color: "#854d0e" },
+        Driver: { bg: "#dbeafe", color: "#1e40af" },
+        Anggota: { bg: "#f0fdf4", color: "#166534" },
+        "PIC Project": { bg: "#fce7f3", color: "#9d174d" },
     };
 
-    const TH = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';
+    const TH =
+        'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';
     const TD = 'style="padding:8px 12px;vertical-align:middle;"';
 
-    const rows = personels.map(function (p, i) {
-        const rc   = roleColors[p.role] || { bg: '#f1f5f9', color: '#475569' };
-        const role = p.role
-            ? `<span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;background:${rc.bg};color:${rc.color};">${escHtml(p.role)}</span>`
-            : `<span style="font-size:11px;color:#94a3b8;">—</span>`;
-        return `<tr>
+    const rows = personels
+        .map(function (p, i) {
+            const rc = roleColors[p.role] || {
+                bg: "#f1f5f9",
+                color: "#475569",
+            };
+            const role = p.role
+                ? `<span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;background:${rc.bg};color:${rc.color};">${escHtml(p.role)}</span>`
+                : `<span style="font-size:11px;color:#94a3b8;">—</span>`;
+            return `<tr>
             <td ${TD} style="padding:8px 12px;color:#94a3b8;text-align:center;font-size:12px;">${i + 1}</td>
             <td ${TD} style="padding:8px 12px;color:#1e293b;font-weight:500;">${escHtml(p.user_name)}</td>
             <td ${TD} style="padding:8px 12px;">${role}</td>
         </tr>`;
-    }).join('');
+        })
+        .join("");
 
     return `<div class="table-responsive">
         <table class="table table-sm table-hover mb-0" style="font-size:13px;">
@@ -395,17 +441,22 @@ function renderPersonelView(personels) {
 }
 
 // ── Attachment constants ───────────────────────────────────────────────────────
-const FWO_ATTACHMENT_TYPES = ['Berita Acara', 'Foto Lapangan', 'Laporan Teknis', 'Dokumen Lainnya'];
+const FWO_ATTACHMENT_TYPES = [
+    "Berita Acara",
+    "Foto Lapangan",
+    "Laporan Teknis",
+    "Dokumen Lainnya",
+];
 
 const FWO_ATT_ICON = {
-    pdf:  { icon: 'fa-file-pdf',   bg: '#fee2e2', color: '#dc2626' },
-    jpg:  { icon: 'fa-image',      bg: '#e8f0fe', color: '#1a5fbe' },
-    jpeg: { icon: 'fa-image',      bg: '#e8f0fe', color: '#1a5fbe' },
-    png:  { icon: 'fa-image',      bg: '#e8f0fe', color: '#1a5fbe' },
-    xls:  { icon: 'fa-file-excel', bg: '#dcfce7', color: '#166534' },
-    xlsx: { icon: 'fa-file-excel', bg: '#dcfce7', color: '#166534' },
-    doc:  { icon: 'fa-file-word',  bg: '#dbeafe', color: '#1d4ed8' },
-    docx: { icon: 'fa-file-word',  bg: '#dbeafe', color: '#1d4ed8' },
+    pdf: { icon: "fa-file-pdf", bg: "#fee2e2", color: "#dc2626" },
+    jpg: { icon: "fa-image", bg: "#e8f0fe", color: "#1a5fbe" },
+    jpeg: { icon: "fa-image", bg: "#e8f0fe", color: "#1a5fbe" },
+    png: { icon: "fa-image", bg: "#e8f0fe", color: "#1a5fbe" },
+    xls: { icon: "fa-file-excel", bg: "#dcfce7", color: "#166534" },
+    xlsx: { icon: "fa-file-excel", bg: "#dcfce7", color: "#166534" },
+    doc: { icon: "fa-file-word", bg: "#dbeafe", color: "#1d4ed8" },
+    docx: { icon: "fa-file-word", bg: "#dbeafe", color: "#1d4ed8" },
 };
 
 // ── Attachment view mode ───────────────────────────────────────────────────────
@@ -417,13 +468,19 @@ function renderFwoAttachmentView(groups) {
         </div>`;
     }
 
-    return groups.map(function (group) {
-        const files = (group.files || []).map(function (path) {
-            const ext  = path.split('.').pop().toLowerCase();
-            const name = path.split('/').pop();
-            const ic   = FWO_ATT_ICON[ext] || { icon: 'fa-file', bg: '#f3f4f6', color: '#6b7280' };
-            const url  = '/storage/' + path;
-            return `<div class="att-row">
+    return groups
+        .map(function (group) {
+            const files = (group.files || [])
+                .map(function (path) {
+                    const ext = path.split(".").pop().toLowerCase();
+                    const name = path.split("/").pop();
+                    const ic = FWO_ATT_ICON[ext] || {
+                        icon: "fa-file",
+                        bg: "#f3f4f6",
+                        color: "#6b7280",
+                    };
+                    const url = "/storage/" + path;
+                    return `<div class="att-row">
                 <div class="att-icon" style="background:${ic.bg};color:${ic.color};">
                     <i class="fa-solid ${ic.icon}"></i>
                 </div>
@@ -437,9 +494,10 @@ function renderFwoAttachmentView(groups) {
                     </a>
                 </div>
             </div>`;
-        }).join('');
+                })
+                .join("");
 
-        return `<div class="mb-4">
+            return `<div class="mb-4">
             <div class="d-flex align-items-center gap-2 mb-2">
                 <i class="fa-solid fa-folder-open" style="color:#7c3aed;font-size:13px;"></i>
                 <span class="fw-semibold" style="font-size:13px;color:#374151;">${escHtml(group.type)}</span>
@@ -447,7 +505,8 @@ function renderFwoAttachmentView(groups) {
             </div>
             <div class="att-list">${files || '<div class="text-muted small">Tidak ada file</div>'}</div>
         </div>`;
-    }).join('<hr style="margin:8px 0;border-color:#f1f5f9;">');
+        })
+        .join('<hr style="margin:8px 0;border-color:#f1f5f9;">');
 }
 
 // ── Attachment edit mode ───────────────────────────────────────────────────────
@@ -461,14 +520,19 @@ function renderFwoAttachmentEditBar() {
 
 function renderFwoAttachmentGroupEdit(group, idx) {
     const typeOptions = FWO_ATTACHMENT_TYPES.map(function (t) {
-        return `<option value="${escHtml(t)}" ${(group.type === t) ? 'selected' : ''}>${escHtml(t)}</option>`;
-    }).join('');
+        return `<option value="${escHtml(t)}" ${group.type === t ? "selected" : ""}>${escHtml(t)}</option>`;
+    }).join("");
 
-    const existingFiles = (group.files || []).map(function (path) {
-        const ext  = path.split('.').pop().toLowerCase();
-        const name = path.split('/').pop();
-        const ic   = FWO_ATT_ICON[ext] || { icon: 'fa-file', bg: '#f3f4f6', color: '#6b7280' };
-        return `<div class="att-row att-existing-file" data-path="${escHtml(path)}">
+    const existingFiles = (group.files || [])
+        .map(function (path) {
+            const ext = path.split(".").pop().toLowerCase();
+            const name = path.split("/").pop();
+            const ic = FWO_ATT_ICON[ext] || {
+                icon: "fa-file",
+                bg: "#f3f4f6",
+                color: "#6b7280",
+            };
+            return `<div class="att-row att-existing-file" data-path="${escHtml(path)}">
             <input type="hidden" class="fwo-att-existing" value="${escHtml(path)}">
             <div class="att-icon" style="background:${ic.bg};color:${ic.color};">
                 <i class="fa-solid ${ic.icon}"></i>
@@ -483,7 +547,8 @@ function renderFwoAttachmentGroupEdit(group, idx) {
                 </button>
             </div>
         </div>`;
-    }).join('');
+        })
+        .join("");
 
     return `<div class="card mb-3 fwo-att-group" data-idx="${idx}">
         <div class="card-header d-flex justify-content-between align-items-center py-2 px-3"
@@ -496,7 +561,7 @@ function renderFwoAttachmentGroupEdit(group, idx) {
             </button>
         </div>
         <div class="card-body px-3 py-3">
-            ${existingFiles ? `<div class="att-list mb-3">${existingFiles}</div>` : ''}
+            ${existingFiles ? `<div class="att-list mb-3">${existingFiles}</div>` : ""}
             <input type="file" class="fwo-att-filepond" multiple>
         </div>
     </div>`;
