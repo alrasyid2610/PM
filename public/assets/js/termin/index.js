@@ -1,5 +1,18 @@
 let page;
 let currentTerminData = null;
+
+window.datatableColumnRenderers = {
+    status: function (data) {
+        var map = {
+            'selesai': { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-circle-check', label: 'Selesai' },
+            'proses':  { bg: '#fefce8', color: '#854d0e', border: '#fde68a', icon: 'fa-spinner',      label: 'Proses' },
+            'pending': { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0', icon: 'fa-clock',        label: 'Pending' },
+        };
+        var s = map[data] || { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0', icon: 'fa-circle', label: data || '-' };
+        return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:6px;background:' + s.bg + ';color:' + s.color + ';font-size:11px;font-weight:600;border:1px solid ' + s.border + ';white-space:nowrap;">'
+            + '<i class="fa-solid ' + s.icon + '" style="font-size:10px;"></i> ' + s.label + '</span>';
+    },
+};
 const TH_STYLE = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:8px 12px;color:#64748b;font-weight:600;"';
 const TD_STYLE = 'style="padding:8px 12px;vertical-align:middle;"';
 

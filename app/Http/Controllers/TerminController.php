@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistory;
 use App\Traits\HasAttachment;
 
@@ -32,35 +31,48 @@ class TerminController extends Controller
         ]);
     }
 
-    public function data()
+    public function data(Request $request)
     {
-        $query = DB::table('termin')->select([
-            'id_termin',
-            'no_termin',
-            'nama',
-            'persentase',
-            'nilai',
-            'tanggal',
-            'status',
-            'attachment',
-            'created_at',
-        ]);
+        $filters     = $request->input('filters', []);
+        $isSearching = !empty($filters);
 
-        return DataTables::of($query)
-            ->addIndexColumn()
-            ->editColumn('tanggal', fn($row) => $row->tanggal ? date('d/m/Y', strtotime($row->tanggal)) : '-')
-            ->editColumn('nilai', fn($row) => number_format($row->nilai, 0, ',', '.'))
-            ->editColumn('persentase', fn($row) => $row->persentase . '%')
-            ->editColumn('status', function ($row) {
-                $badge = match ($row->status) {
-                    'selesai' => 'success',
-                    'proses'  => 'warning',
-                    default   => 'secondary',
-                };
-                return '<span class="badge bg-' . $badge . '">' . ucfirst($row->status) . '</span>';
+        $query = DB::table('termin as t')
+            ->select([
+                'id_termin',
+                'status',
+                'no_termin',
+                'nama',
+                'persentase',
+                'nilai',
+                'tanggal',
+            ])
+            ->when(!$isSearching, fn($q) => $q->where('t.status', '!=', 'selesai'))
+            ->when($isSearching, function ($q) use ($filters) {
+                foreach ($filters as $f) {
+                    $by   = $f['by'] ?? '';
+                    $term = $f['q']  ?? '';
+                    if (!$by || !$term) continue;
+                    match ($by) {
+                        'no_termin' => $q->where('t.no_termin', 'like', "%{$term}%"),
+                        'nama'      => $q->where('t.nama', 'like', "%{$term}%"),
+                        'status'    => match ($term) {
+                            'all'    => null,
+                            default  => $q->where('t.status', $term),
+                        },
+                        default => null,
+                    };
+                }
             })
-            ->rawColumns(['status'])
-            ->make(true);
+            ->orderBy('id_termin', 'desc')
+            ->get()
+            ->map(function ($row) {
+                $row->tanggal    = $row->tanggal ? date('d/m/Y', strtotime($row->tanggal)) : '-';
+                $row->nilai      = number_format($row->nilai, 0, ',', '.');
+                $row->persentase = $row->persentase . '%';
+                return $row;
+            });
+
+        return response()->json(['data' => $query->values()]);
     }
 
     public function create(Request $request)

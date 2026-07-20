@@ -19,6 +19,16 @@
 <x-crud-index
     title="List of Termin"
     :with-history="true"
+    :search-fields="[
+        ['label' => 'No. Termin', 'value' => 'no_termin'],
+        ['label' => 'Nama',       'value' => 'nama'],
+        ['label' => 'Status',     'value' => 'status', 'type' => 'select', 'options' => [
+            ['label' => 'All',     'value' => 'all'],
+            ['label' => 'Pending', 'value' => 'pending'],
+            ['label' => 'Proses',  'value' => 'proses'],
+            ['label' => 'Selesai', 'value' => 'selesai'],
+        ]],
+    ]"
 />
 @endsection
 
