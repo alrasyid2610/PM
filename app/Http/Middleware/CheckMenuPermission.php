@@ -21,8 +21,10 @@ class CheckMenuPermission
 
     // Mapping route prefix → menu slug (jika berbeda)
     private const SLUG_MAP = [
-        'business-relation-sites' => 'business-relations',
-        'testing-items'           => 'testing-points',
+        'business-relation-sites'  => 'business-relations',
+        'business-relation-contacts' => 'business-relations',
+        'brs-sampling-points'      => 'business-relations',
+        'testing-items'            => 'testing-points',
     ];
 
     public function handle(Request $request, Closure $next): mixed

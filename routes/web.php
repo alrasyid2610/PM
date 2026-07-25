@@ -25,6 +25,7 @@ use App\Http\Controllers\TestingPointController;
 use App\Http\Controllers\WilayahController;
 use App\Http\Controllers\TerminController;
 use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\BrsSamplingPointController;
 use Spatie\LaravelPdf\Facades\Pdf;
 
 Route::get('/test-pdf-header', function () {
@@ -382,6 +383,23 @@ Route::prefix('/business-estates')
             ->whereNumber('id');
     });
 
+
+Route::prefix('/brs-sampling-points')
+    ->name('brs-sampling-points.')
+    ->group(function () {
+        Route::get('/{id_site}/data', [BrsSamplingPointController::class, 'data'])
+            ->name('data')->whereNumber('id_site');
+        Route::post('/', [BrsSamplingPointController::class, 'store'])
+            ->name('store');
+        Route::get('/{id}', [BrsSamplingPointController::class, 'show'])
+            ->name('show')->whereNumber('id');
+        Route::put('/{id}', [BrsSamplingPointController::class, 'update'])
+            ->name('update')->whereNumber('id');
+        Route::delete('/{id}', [BrsSamplingPointController::class, 'destroy'])
+            ->name('destroy')->whereNumber('id');
+        Route::get('/{id}/history', [BrsSamplingPointController::class, 'history'])
+            ->name('history')->whereNumber('id');
+    });
 
 Route::prefix('/business-relation-contacts')
     ->name('business-relation-contacts.')
