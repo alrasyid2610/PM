@@ -20,6 +20,24 @@ class BrsSamplingPointController extends Controller
         return ['updated_at', 'created_at', 'id_sp'];
     }
 
+    public function select2BySite($id_site)
+    {
+        $rows = DB::table('brs_sampling_points')
+            ->where('id_site', $id_site)
+            ->where('is_aktif', 1)
+            ->whereNull('deleted_at')
+            ->orderBy('jenis')
+            ->orderBy('nama')
+            ->get(['id_sp', 'jenis', 'kode', 'nama']);
+
+        $results = $rows->map(fn($r) => [
+            'id'   => $r->id_sp,
+            'text' => "[{$r->jenis}] " . ($r->kode ? "{$r->kode} – " : '') . $r->nama,
+        ]);
+
+        return response()->json($results);
+    }
+
     public function data(Request $request, $id_site)
     {
         $jenis = $request->input('jenis'); // 'env' atau 'we'
@@ -54,6 +72,9 @@ class BrsSamplingPointController extends Controller
             'jenis'      => 'required|in:env,we',
             'kode'       => 'required|string|max:50',
             'nama'       => 'required|string|max:255',
+            'gedung'     => 'nullable|string|max:255',
+            'ruangan'    => 'nullable|string|max:255',
+            'lantai'     => 'nullable|string|max:50',
             'keterangan' => 'nullable|string',
             'is_aktif'   => 'nullable|boolean',
         ];
@@ -87,9 +108,12 @@ class BrsSamplingPointController extends Controller
             'jenis'      => $request->jenis,
             'kode'       => $request->kode,
             'nama'       => $request->nama,
-            'latitude'   => $request->latitude,
-            'longitude'  => $request->longitude,
-            'keterangan' => $request->keterangan,
+            'latitude'   => $request->latitude ?: null,
+            'longitude'  => $request->longitude ?: null,
+            'gedung'     => $request->gedung ?: null,
+            'ruangan'    => $request->ruangan ?: null,
+            'lantai'     => $request->lantai ?: null,
+            'keterangan' => $request->keterangan ?: null,
             'is_aktif'   => $request->boolean('is_aktif', true) ? 1 : 0,
             'created_at' => now(),
             'updated_at' => now(),
@@ -113,6 +137,9 @@ class BrsSamplingPointController extends Controller
         $rules = [
             'kode'       => 'required|string|max:50',
             'nama'       => 'required|string|max:255',
+            'gedung'     => 'nullable|string|max:255',
+            'ruangan'    => 'nullable|string|max:255',
+            'lantai'     => 'nullable|string|max:50',
             'keterangan' => 'nullable|string',
             'is_aktif'   => 'nullable|boolean',
         ];
@@ -146,9 +173,12 @@ class BrsSamplingPointController extends Controller
         DB::table('brs_sampling_points')->where('id_sp', $id)->update([
             'kode'       => $request->kode,
             'nama'       => $request->nama,
-            'latitude'   => $request->latitude,
-            'longitude'  => $request->longitude,
-            'keterangan' => $request->keterangan,
+            'latitude'   => $request->latitude ?: null,
+            'longitude'  => $request->longitude ?: null,
+            'gedung'     => $request->gedung ?: null,
+            'ruangan'    => $request->ruangan ?: null,
+            'lantai'     => $request->lantai ?: null,
+            'keterangan' => $request->keterangan ?: null,
             'is_aktif'   => $request->boolean('is_aktif', true) ? 1 : 0,
             'updated_at' => now(),
         ]);

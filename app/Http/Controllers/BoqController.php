@@ -361,11 +361,14 @@ class BoqController extends Controller
             ->get();
 
         $boqIds = $data->pluck('id_boq');
-        $usedByOthers = DB::table('fieldwork_boq')
-            ->whereIn('id_boq', $boqIds)
-            ->when($id_fwo, fn($q) => $q->where('id_fwo', '!=', $id_fwo))
-            ->selectRaw('id_boq, SUM(COALESCE(qty, 0)) as used_qty')
-            ->groupBy('id_boq')
+        $usedByOthers = DB::table('fieldwork_boq as fb')
+            ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
+            ->whereIn('fb.id_boq', $boqIds)
+            ->whereNull('fw.deleted_at')
+            ->whereNull('fb.deleted_at')
+            ->when($id_fwo, fn($q) => $q->where('fb.id_fwo', '!=', $id_fwo))
+            ->selectRaw('fb.id_boq, SUM(COALESCE(fb.qty, 0)) as used_qty')
+            ->groupBy('fb.id_boq')
             ->pluck('used_qty', 'id_boq');
 
         return response()->json(
@@ -402,10 +405,13 @@ class BoqController extends Controller
             return response()->json(['message' => 'Tidak ditemukan'], 404);
         }
 
-        $usedByOthers = (int) DB::table('fieldwork_boq')
-            ->where('id_boq', $id_boq)
-            ->when($id_fwo, fn($q) => $q->where('id_fwo', '!=', $id_fwo))
-            ->sum('qty');
+        $usedByOthers = (int) DB::table('fieldwork_boq as fb')
+            ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
+            ->where('fb.id_boq', $id_boq)
+            ->whereNull('fw.deleted_at')
+            ->whereNull('fb.deleted_at')
+            ->when($id_fwo, fn($q) => $q->where('fb.id_fwo', '!=', $id_fwo))
+            ->sum('fb.qty');
 
         $remaining = max(0, (int)($boq->qty ?? 0) - $usedByOthers);
 

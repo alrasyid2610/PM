@@ -22,9 +22,29 @@
         </div>
         @endif
         @if($createRoute)
+        @php
+            $routePrefix = explode('.', $createRoute)[0];
+            $slugMap = [
+                'business-relation-sites'    => 'business-relations',
+                'business-relation-contacts' => 'business-relations',
+                'brs-sampling-points'        => 'business-relations',
+                'brs-mp'                     => 'business-relations',
+                'br-products'                => 'business-relations',
+                'testing-items'              => 'testing-points',
+                'fwo-budgets'                => 'fieldworks',
+                'fwo-budget-actuals'         => 'fieldworks',
+                'lab-samples'                => 'fieldworks',
+                'fieldwork-boq'              => 'fieldworks',
+                'output-pekerjaan'           => 'work-orders',
+                'boq'                        => 'work-orders',
+            ];
+            $permSlug = $slugMap[$routePrefix] ?? $routePrefix;
+        @endphp
+        @if(userCan($permSlug, 'can_create'))
         <a href="{{ route($createRoute) }}" class="btn btn-primary btn-sm">
             <i class="fa-solid fa-plus me-1"></i> {{ $addLabel ?? 'Add Data' }}
         </a>
+        @endif
         @endif
         <ul class="nav nav-tabs" id="brTabs" role="tablist">
             {{ $extraTabs ?? '' }}

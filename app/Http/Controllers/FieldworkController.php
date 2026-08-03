@@ -80,6 +80,7 @@ class FieldworkController extends Controller
     {
         $data = DB::table('fieldworks as fw')
             ->leftJoin('work_orders as wo', 'fw.id_wo', '=', 'wo.id_wo')
+            ->leftJoin('sales_orders as so', 'wo.id_so', '=', 'so.id_so')
             ->leftJoin('business_relation_sites as brs', 'fw.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
             ->leftJoin('business_relation_contacts as brc', 'fw.id_pic_pelanggan_pekerjaan', '=', 'brc.id_contact')
             ->where('fw.id_fwo', $id)
@@ -87,8 +88,10 @@ class FieldworkController extends Controller
             ->select([
                 'fw.*',
                 'wo.no_wo as wo_no_wo',
+                'wo.id_so',
                 'wo.judul_pekerjaan as wo_judul_pekerjaan',
                 'wo.status as wo_status',
+                'so.no_so',
                 'brs.nama_lokasi as site_name',
                 'brc.nama_pic as pic_name',
                 'brs_wo.nama_lokasi as wo_site_name',

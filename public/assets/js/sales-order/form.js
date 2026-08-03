@@ -85,7 +85,7 @@ function renderForm(res) {
                             class="pm-btn-icon" title="Refresh" data-no-disable>
                             <i class="fa-solid fa-rotate-right"></i>
                         </button>
-                        ${!isDeleted ? `<button type="button" class="pm-btn-pill pm-btn-pill--blue btn-add-wo-modal"
+                        ${!isDeleted && can('work-orders', 'can_create') ? `<button type="button" class="pm-btn-pill pm-btn-pill--blue btn-add-wo-modal"
                             data-so-id="${res.id_so}" data-no-disable>
                             <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                             <i class="fa-solid fa-briefcase" style="font-size:11px;"></i> WO
@@ -96,7 +96,7 @@ function renderForm(res) {
                             class="pm-btn-icon" title="Refresh" data-no-disable>
                             <i class="fa-solid fa-rotate-right"></i>
                         </button>
-                        ${!isDeleted ? `<button type="button" class="pm-btn-pill pm-btn-pill--purple btn-add-termin-modal"
+                        ${!isDeleted && can('termin', 'can_create') ? `<button type="button" class="pm-btn-pill pm-btn-pill--purple btn-add-termin-modal"
                             data-so-id="${res.id_so}" data-no-disable>
                             <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                             <i class="fa-solid fa-file-invoice-dollar" style="font-size:11px;"></i> Termin

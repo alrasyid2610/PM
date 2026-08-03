@@ -11,7 +11,7 @@
         ['label' => 'Pelanggan',       'value' => 'pelanggan'],
         ['label' => 'Status',          'value' => 'status', 'type' => 'select', 'options' => [
             ['label' => 'All',         'value' => 'all'],
-            ['label' => 'On Progress', 'value' => 'on-progress'],
+            ['label' => 'On Progress', 'value' => 'onprogress'],
             ['label' => 'Completed',   'value' => 'completed'],
             ['label' => 'Deleted',     'value' => 'deleted'],
         ]],
@@ -147,9 +147,9 @@
     window.datatableColumnRenderers = {
         status: function (data) {
             var map = {
-                'on-progress': { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-spinner',      label: 'On Progress' },
+                'onprogress':  { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-spinner',      label: 'On Progress' },
                 completed:     { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-circle-check', label: 'Completed' },
-                deleted:    { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: 'fa-trash',        label: 'Deleted' },
+                deleted:       { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: 'fa-trash',        label: 'Deleted' },
             };
             var s = map[data] || { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0', icon: 'fa-circle', label: data || '-' };
             return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:6px;background:' + s.bg + ';color:' + s.color + ';font-size:11px;font-weight:600;border:1px solid ' + s.border + ';white-space:nowrap;">'

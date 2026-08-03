@@ -135,7 +135,7 @@ function renderForm(res) {
                             class="pm-btn-icon" title="Refresh" data-no-disable>
                             <i class="fa-solid fa-rotate-right"></i>
                         </button>
-                        ${res.status !== 'completed' ? `
+                        ${res.status !== 'completed' && can('fieldworks', 'can_create') ? `
                         <button type="button" class="pm-btn-pill pm-btn-pill--blue btn-add-fwo-modal"
                             data-wo-id="${res.id_wo}" data-no-disable>
                             <i class="fa-solid fa-plus" style="font-size:10px;"></i>

@@ -3,6 +3,13 @@ function renderFwoForm(res) {
     const isWoCompleted = res.wo_status === "completed";
     const isCompleted = !isDeleted && (res.status === "completed" || isWoCompleted);
 
+    const soBadge = res.id_so
+        ? `<a href="/sales-orders?open=${res.id_so}" class="pm-badge" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;text-decoration:none;">
+               <i class="fa-solid fa-file-contract" style="font-size:10px;"></i>
+               ${escHtml(res.no_so ?? "Lihat SO")}
+           </a>`
+        : "";
+
     const woBadge = res.id_wo
         ? `<a href="/work-orders?open=${res.id_wo}" class="pm-badge pm-badge--blue" style="text-decoration:none;">
                <i class="fa-solid fa-briefcase" style="font-size:10px;"></i>
@@ -41,7 +48,7 @@ function renderFwoForm(res) {
         deleteId: isDeleted || isCompleted ? null : res.id_fwo,
         editText: isDeleted || isCompleted ? "" : "Edit FWO",
         statusBadge: statusBadge,
-        tags: woBadge + siteBadge,
+        tags: soBadge + woBadge + siteBadge,
         moreActions: [
             {
                 label: "Cetak PDF",
@@ -97,6 +104,22 @@ function renderFwoForm(res) {
                         Attachment
                     </button>
                 </li>
+                <li role="presentation">
+                    <button class="pm-tab-btn" type="button" role="tab"
+                        data-bs-toggle="tab" data-bs-target="#tabFwoBudget"
+                        data-id-fwo="${res.id_fwo}">
+                        <i class="fa-solid fa-wallet me-1" style="color:#0f766e;font-size:11px;"></i>
+                        Budget
+                    </button>
+                </li>
+                <li role="presentation">
+                    <button class="pm-tab-btn" type="button" role="tab"
+                        data-bs-toggle="tab" data-bs-target="#tabFwoSample"
+                        data-id-fwo="${res.id_fwo}">
+                        <i class="fa-solid fa-flask me-1" style="color:#0369a1;font-size:11px;"></i>
+                        Sample
+                    </button>
+                </li>
             </ul>
             <div class="pm-tab-actions">
                 <div id="fwoTabActionsInfo" class="d-flex align-items-center gap-2">
@@ -123,6 +146,30 @@ function renderFwoForm(res) {
                 </div>
                 <div id="fwoTabActionsAttachment" class="d-flex align-items-center gap-2 d-none">
                     <!-- Attachment dikelola via tombol Edit FWO di atas -->
+                </div>
+                <div id="fwoTabActionsBudget" class="d-none align-items-center gap-2">
+                    ${
+                        isDeleted
+                            ? ""
+                            : !isCompleted
+                              ? `<button type="button" class="pm-btn-pill pm-btn-pill--teal btn-budget-add"
+                                data-id-fwo="${res.id_fwo}" data-no-disable>
+                                <i class="fa-solid fa-plus" style="font-size:10px;"></i>
+                                <i class="fa-solid fa-wallet" style="font-size:11px;"></i> Tambah Budget Plan
+                              </button>`
+                              : `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
+                                <i class="fa-solid fa-lock" style="font-size:10px;"></i>
+                                FWO sudah selesai, data tidak dapat diubah
+                              </span>`
+                    }
+                </div>
+                <div id="fwoTabActionsSample" class="d-none align-items-center gap-2">
+                    ${isCompleted
+                        ? `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
+                            <i class="fa-solid fa-lock" style="font-size:10px;"></i>
+                            FWO sudah selesai, data tidak dapat diubah
+                           </span>`
+                        : ''}
                 </div>
             </div>
         </div>
@@ -243,6 +290,359 @@ function renderFwoForm(res) {
                     </div>
                 </div>
 
+                <!-- TAB: BUDGET -->
+                <div class="tab-pane fade" id="tabFwoBudget" role="tabpanel">
+                    <div class="card card-body" id="fwoBudgetContent" style="overflow:visible;">
+                        <div class="text-center text-muted py-4">
+                            <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: SAMPLE -->
+                <div class="tab-pane fade" id="tabFwoSample" role="tabpanel">
+                    <div class="card card-body" id="fwoSampleContent">
+                        <div class="text-center text-muted py-4">
+                            <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: DETAIL SAMPLE -->
+    <div class="modal fade" id="sampleDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:480px;">
+            <div class="modal-content">
+                <div class="modal-header py-2 px-3" style="border-bottom:1px solid #e2e8f0;">
+                    <h6 class="modal-title mb-0" id="sampleDetailModalLabel">
+                        <i class="fa-solid fa-flask me-2" style="color:#0369a1;"></i>Detail Sample
+                    </h6>
+                    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3 px-3">
+                    <input type="hidden" id="sampleModal-id">
+                    <input type="hidden" id="sampleModal-id-fwo">
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Jenis Sample</label>
+                            <select class="form-select form-select-sm" id="sampleModal-jenis" data-no-disable>
+                                <option value="">-- Pilih --</option>
+                                <option value="env">ENV — Lingkungan Hidup</option>
+                                <option value="we">WE — Lingkungan Kerja</option>
+                                <option value="mp">MP — Makanan & Produk</option>
+                                <option value="product">Product — Produk Industri</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:12px;">No. Sample</label>
+                            <input type="text" class="form-control form-control-sm" id="sampleModal-no" placeholder="Kode/nomor sample" data-no-disable>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Pengambilan</label>
+                            <input type="text" class="form-control form-control-sm fp-date" id="sampleModal-tanggal" placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Kondisi Sample</label>
+                            <select class="form-select form-select-sm" id="sampleModal-kondisi" data-no-disable>
+                                <option value="">-- Pilih --</option>
+                                <option value="baik">Baik</option>
+                                <option value="rusak">Rusak</option>
+                                <option value="tidak_lengkap">Tidak Lengkap</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Titik / Lokasi</label>
+                            <select class="form-select form-select-sm" id="sampleModal-titik" data-no-disable></select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Status</label>
+                            <select class="form-select form-select-sm" id="sampleModal-status" data-no-disable>
+                                <option value="belum_diambil">Belum Diambil</option>
+                                <option value="diambil">Diambil</option>
+                                <option value="dikirim">Dikirim ke Lab</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Keterangan</label>
+                            <textarea class="form-control form-control-sm" id="sampleModal-keterangan" rows="2" placeholder="Opsional" data-no-disable></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3" style="border-top:1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" data-no-disable>Batal</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="sampleModal-btn-save" data-no-disable>
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Simpan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: BULK FILL SAMPLE -->
+    <div class="modal fade" id="sampleBulkFillModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
+            <div class="modal-content">
+                <div class="modal-header py-2 px-3" style="border-bottom:1px solid #e2e8f0;">
+                    <h6 class="modal-title mb-0" id="sampleBulkFillModalLabel">
+                        <i class="fa-solid fa-wand-magic-sparkles me-2" style="color:#7c3aed;"></i>Bulk Insert
+                    </h6>
+                    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3 px-3">
+                    <input type="hidden" id="bulkFillModal-id-fwo-boq">
+                    <p class="text-muted mb-3" style="font-size:12px;">
+                        <i class="fa-solid fa-circle-info me-1"></i>
+                        Field yang dikosongkan <b>tidak akan diubah</b>. Hanya field yang diisi yang akan di-apply ke semua sample.
+                    </p>
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Jenis Sample</label>
+                            <select class="form-select form-select-sm" id="bulkFill-jenis" data-no-disable>
+                                <option value="">— Tidak diubah —</option>
+                                <option value="env">ENV — Lingkungan Hidup</option>
+                                <option value="we">WE — Lingkungan Kerja</option>
+                                <option value="mp">MP — Makanan & Produk</option>
+                                <option value="product">Product — Produk Industri</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Pengambilan</label>
+                            <input type="text" class="form-control form-control-sm fp-date" id="bulkFill-tanggal" placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Status</label>
+                            <select class="form-select form-select-sm" id="bulkFill-status" data-no-disable>
+                                <option value="">— Tidak diubah —</option>
+                                <option value="belum_diambil">Belum Diambil</option>
+                                <option value="diambil">Diambil</option>
+                                <option value="dikirim">Dikirim ke Lab</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Kondisi Sample</label>
+                            <select class="form-select form-select-sm" id="bulkFill-kondisi" data-no-disable>
+                                <option value="">— Tidak diubah —</option>
+                                <option value="baik">Baik</option>
+                                <option value="rusak">Rusak</option>
+                                <option value="tidak_lengkap">Tidak Lengkap</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3" style="border-top:1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" data-no-disable>Batal</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="sampleBulkFillModal-btn-save" data-no-disable>
+                        <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Apply ke Semua Sample
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: TAMBAH/EDIT BUDGET PLAN -->
+    <div class="modal fade" id="budgetPlanModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width:92vw;">
+            <div class="modal-content">
+                <div class="modal-header py-2 px-3" style="border-bottom:1px solid #e2e8f0;">
+                    <h6 class="modal-title mb-0" id="budgetPlanModalLabel">
+                        <i class="fa-solid fa-wallet me-2" style="color:#0f766e;"></i>
+                        Tambah Budget Plan
+                    </h6>
+                    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3 px-3">
+                    <input type="hidden" id="budgetModal-id" value="">
+                    <input type="hidden" id="budgetModal-id-fwo" value="">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Label <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm" id="budgetModal-label"
+                                placeholder="cth: Minggu 1, Tahap 1, Hari Pertama..." data-no-disable>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Keterangan</label>
+                            <input type="text" class="form-control form-control-sm" id="budgetModal-keterangan"
+                                placeholder="Opsional" data-no-disable>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Tanggal Mulai</label>
+                            <input type="text" class="form-control form-control-sm fp-date" id="budgetModal-tgl-mulai"
+                                placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Tanggal Selesai</label>
+                            <input type="text" class="form-control form-control-sm fp-date" id="budgetModal-tgl-selesai"
+                                placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-semibold" style="font-size:13px;">
+                            <i class="fa-solid fa-list me-1" style="color:#0f766e;"></i> Item Anggaran
+                        </span>
+                        <button type="button" class="pm-btn-pill pm-btn-pill--teal" id="btnBudgetAddRow" data-no-disable>
+                            <i class="fa-solid fa-plus" style="font-size:10px;"></i> Tambah Item
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="pm-table" id="budgetItemsTable">
+                            <thead>
+                                <tr>
+                                    <th style="min-width:200px;">Account</th>
+                                    <th style="min-width:160px;">Nominal Budget (Rp)</th>
+                                    <th style="min-width:160px;">Keterangan</th>
+                                    <th style="width:100px;text-align:center;">Cash Advance</th>
+                                    <th style="width:50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="budgetItemsBody"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-end mt-2">
+                        <span class="fw-semibold" style="font-size:13px;color:#0f766e;">
+                            Total: <span id="budgetModalTotal" style="font-size:14px;">Rp 0</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3" style="border-top:1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" data-no-disable>Batal</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="budgetModal-btn-save" data-no-disable>
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Simpan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: INPUT ACTUAL -->
+    <div class="modal fade" id="actualModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:500px;">
+            <div class="modal-content">
+                <div class="modal-header py-2 px-3" style="border-bottom:1px solid #e2e8f0;">
+                    <h6 class="modal-title mb-0" id="actualModalLabel">
+                        <i class="fa-solid fa-receipt me-2" style="color:#1d4ed8;"></i>
+                        Catat Pengeluaran
+                    </h6>
+                    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3 px-3">
+                    <input type="hidden" id="actualModal-id" value="">
+                    <input type="hidden" id="actualModal-id-budget-item" value="">
+                    <input type="hidden" id="actualModal-id-fwo" value="">
+                    <div id="actualModal-budget-info" class="mb-3 px-3 py-2 rounded" style="background:#f0fdf4;border:1px solid #bbf7d0;display:none;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span style="font-size:12px;color:#374151;font-weight:600;" id="actualModal-account-name">-</span>
+                        </div>
+                        <div class="d-flex gap-3 mt-1">
+                            <span style="font-size:11px;color:#6b7280;">Anggaran: <b id="actualModal-budget-nominal" style="color:#0f766e;">-</b></span>
+                        </div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-12">
+                            <label class="form-label">Nominal Pengeluaran (Rp) <span class="text-danger">*</span></label>
+                            <input type="text" inputmode="numeric"
+                                class="form-control form-control-sm input-num-mask input-num-int"
+                                id="actualModal-nominal" placeholder="0" data-no-disable>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Keterangan</label>
+                            <input type="text" class="form-control form-control-sm"
+                                id="actualModal-keterangan" placeholder="Opsional" data-no-disable>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Upload Struk / Bukti</label>
+                            <input type="file" id="actualModal-files" multiple
+                                accept=".pdf,.jpg,.jpeg,.png" data-no-disable
+                                class="form-control form-control-sm">
+                            <div id="actualModal-existing-files" class="mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3" style="border-top:1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" data-no-disable>Batal</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="actualModal-btn-save" data-no-disable>
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Simpan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Selesaikan Plan (Upload Dokumen Realisasi) -->
+    <div class="modal fade" id="closePlanModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:500px;">
+            <div class="modal-content">
+                <div class="modal-header py-2 px-3" style="border-bottom:1px solid #e2e8f0;">
+                    <h6 class="modal-title mb-0" id="closePlanModalLabel">
+                        <i class="fa-solid fa-circle-check me-2" style="color:#15803d;"></i>Selesaikan Plan
+                    </h6>
+                    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3 px-3">
+                    <input type="hidden" id="closePlanModal-id">
+                    <input type="hidden" id="closePlanModal-id-fwo">
+                    <div id="closePlanModal-surplus-info" class="alert mb-3" style="font-size:12px;display:none;">
+                        <div style="font-weight:600;margin-bottom:6px;">
+                            <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                            Plan ini memiliki surplus anggaran
+                        </div>
+                        <div>Surplus sebesar <b id="closePlanModal-surplus-amount" style="color:#1d4ed8;"></b> harus dikembalikan ke perusahaan.</div>
+                        <div class="mt-2">
+                            Silakan <a id="closePlanModal-print-link" href="#" target="_blank" style="color:#1d4ed8;">
+                                <i class="fa-solid fa-file-invoice me-1"></i>cetak Laporan Realisasi
+                            </a>, tandatangani, lalu upload di bawah.
+                        </div>
+                    </div>
+                    <div id="closePlanModal-upload-section" style="display:none;">
+                        <label class="form-label fw-semibold" style="font-size:12px;">
+                            Upload Laporan Realisasi Anggaran <span class="text-danger">*</span>
+                        </label>
+                        <input type="file" id="closePlanModal-file" class="form-control form-control-sm"
+                            accept=".pdf,.jpg,.jpeg,.png" data-no-disable>
+                        <div class="form-text" style="font-size:11px;">Format: PDF, JPG, PNG. Maks 5MB.</div>
+                    </div>
+                    <div id="closePlanModal-noSurplus-info" class="text-muted" style="font-size:12px;display:none;">
+                        <i class="fa-solid fa-circle-info me-1"></i>
+                        Tidak ada surplus. Plan akan langsung diselesaikan.
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3" style="border-top:1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" data-no-disable>Batal</button>
+                    <button type="button" class="btn btn-sm" id="closePlanModal-btn-save"
+                        style="background:#15803d;color:#fff;border-color:#15803d;" data-no-disable>
+                        <i class="fa-solid fa-circle-check me-1"></i> Selesaikan Plan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Bulk Verifikasi per Budget Plan -->
+    <div class="modal fade" id="bulkVerifyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl" style="max-width:860px;">
+            <div class="modal-content">
+                <div class="modal-header py-2 px-3" style="border-bottom:1px solid #e2e8f0;">
+                    <h6 class="modal-title mb-0" id="bulkVerifyModalLabel">
+                        <i class="fa-solid fa-check-double me-2" style="color:#0f766e;"></i>
+                        Verifikasi Pengeluaran
+                    </h6>
+                    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-2 px-3">
+                    <input type="hidden" id="bulkVerifyModal-id-fwo">
+                    <div id="bulkVerifyModal-body"></div>
+                </div>
+                <div class="modal-footer py-2 px-3" style="border-top:1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" data-no-disable>Batal</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="bulkVerifyModal-btn-save" data-no-disable>
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Semua Verifikasi
+                    </button>
+                </div>
             </div>
         </div>
     </div>

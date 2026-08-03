@@ -13,6 +13,8 @@ $(document).ready(function () {
             });
             initSiteSwitcher();
             initSamplingTabEvents();
+            initMpTabEvents();
+            initProductTabEvents();
         },
         historyConfig: {
             masterLabel: "Business Relation",

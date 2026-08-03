@@ -32,7 +32,6 @@ return [
         'divider' => 'Main Menu',
         'items'   => [
             ['slug' => 'business-relations',               'label' => 'Business Relation',          'icon' => 'fa-handshake',       'section' => 'Business Relation'],
-            ['slug' => 'business-relation-contacts',       'label' => 'Business Relation Contacts', 'icon' => 'fa-address-book',    'section' => 'Business Relation'],
             ['slug' => 'business-estates',                 'label' => 'Business Estate',            'icon' => 'fa-map-location-dot', 'section' => 'Location'],
             ['slug' => 'commercial-buildings',             'label' => 'Commercial Buildings',       'icon' => 'fa-city',            'section' => 'Location'],
             ['slug' => 'contracts',                        'label' => 'Contracts',                  'icon' => 'fa-file-contract',   'section' => 'Product'],
@@ -52,7 +51,8 @@ return [
             ['slug' => 'sales-orders', 'label' => 'Sales Order', 'icon' => 'fa-file-invoice-dollar'],
             ['slug' => 'work-orders',  'label' => 'Work Order',  'icon' => 'fa-briefcase'],
             // ['slug' => 'boq',          'label' => 'BOQ',         'icon' => 'fa-layer-group'],
-            ['slug' => 'fieldworks',   'label' => 'Fieldworks',  'icon' => 'fa-helmet-safety'],
+            ['slug' => 'fieldworks',       'label' => 'Fieldworks',      'icon' => 'fa-helmet-safety'],
+            ['slug' => 'budget-accounts',  'label' => 'Budget Account',  'icon' => 'fa-layer-group'],
             ['slug' => 'termin',       'label' => 'Termin'],
             // ['slug' => 'output-pekerjaan',   'label' => 'output pekerjaan',  'icon' => 'fa-helmet-safety'],
         ],

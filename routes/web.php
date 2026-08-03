@@ -26,7 +26,17 @@ use App\Http\Controllers\WilayahController;
 use App\Http\Controllers\TerminController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\BrsSamplingPointController;
+use App\Http\Controllers\BrsMpController;
+use App\Http\Controllers\BrProductController;
+use App\Http\Controllers\BudgetAccountController;
+use App\Http\Controllers\FwoBudgetController;
+use App\Http\Controllers\FwoBudgetActualController;
+use App\Http\Controllers\LabSampleController;
 use Spatie\LaravelPdf\Facades\Pdf;
+
+Route::get('/ui-guideline', function () {
+    return view('ui-guideline');
+});
 
 Route::get('/test-pdf-header', function () {
     return view('pdf.layouts.sections.header');
@@ -384,6 +394,26 @@ Route::prefix('/business-estates')
     });
 
 
+Route::prefix('/br-products')
+    ->name('br-products.')
+    ->group(function () {
+        Route::get('/{id_br}/list', [BrProductController::class, 'listByBr'])->name('list')->whereNumber('id_br');
+        Route::post('/', [BrProductController::class, 'store'])->name('store');
+        Route::get('/{id}', [BrProductController::class, 'show'])->name('show')->whereNumber('id');
+        Route::put('/{id}', [BrProductController::class, 'update'])->name('update')->whereNumber('id');
+        Route::delete('/{id}', [BrProductController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    });
+
+Route::prefix('/brs-mp')
+    ->name('brs-mp.')
+    ->group(function () {
+        Route::get('/{id_site}/list', [BrsMpController::class, 'listBySite'])->name('list')->whereNumber('id_site');
+        Route::post('/', [BrsMpController::class, 'store'])->name('store');
+        Route::get('/{id}', [BrsMpController::class, 'show'])->name('show')->whereNumber('id');
+        Route::put('/{id}', [BrsMpController::class, 'update'])->name('update')->whereNumber('id');
+        Route::delete('/{id}', [BrsMpController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    });
+
 Route::prefix('/brs-sampling-points')
     ->name('brs-sampling-points.')
     ->group(function () {
@@ -524,6 +554,48 @@ Route::prefix('fieldworks')->name('fieldworks.')->group(function () {
     Route::post('/{id}/complete',    [FieldworkController::class, 'complete'])->name('complete')->whereNumber('id');
     Route::post('/{id}/attachments', [FieldworkController::class, 'updateAttachments'])->name('updateAttachments')->whereNumber('id');
     Route::get('/{id}/pdf',          [FieldworkController::class, 'generatePdf'])->name('pdf')->whereNumber('id');
+});
+
+Route::prefix('budget-accounts')->name('budget-accounts.')->group(function () {
+    Route::get('/select2',   [BudgetAccountController::class, 'select2'])->name('select2');
+    Route::get('/data',      [BudgetAccountController::class, 'index'])->name('data');
+    Route::get('/',          fn() => view('budget-accounts.index'))->name('index');
+    Route::get('/{id}/show', [BudgetAccountController::class, 'show'])->name('show')->whereNumber('id');
+    Route::post('/',         [BudgetAccountController::class, 'store'])->name('store');
+    Route::put('/{id}',      [BudgetAccountController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}',   [BudgetAccountController::class, 'destroy'])->name('destroy')->whereNumber('id');
+});
+
+Route::prefix('fwo-budgets')->name('fwo-budgets.')->group(function () {
+    Route::get('/{id_fwo}/list', [FwoBudgetController::class, 'listByFwo'])->name('list')->whereNumber('id_fwo');
+    Route::post('/',             [FwoBudgetController::class, 'store'])->name('store');
+    Route::get('/{id}',          [FwoBudgetController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}',          [FwoBudgetController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}',       [FwoBudgetController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/print',           [FwoBudgetController::class, 'printPdf'])->name('print')->whereNumber('id');
+    Route::get('/{id}/print-realisasi', [FwoBudgetController::class, 'printRealisasiPdf'])->name('print-realisasi')->whereNumber('id');
+    Route::post('/{id}/close',          [FwoBudgetController::class, 'closePlan'])->name('close')->whereNumber('id');
+});
+
+Route::prefix('fwo-budget-actuals')->name('fwo-budget-actuals.')->group(function () {
+    Route::post('/',              [FwoBudgetActualController::class, 'store'])->name('store');
+    Route::get('/{id}',           [FwoBudgetActualController::class, 'show'])->name('show')->whereNumber('id');
+    Route::post('/{id}',          [FwoBudgetActualController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}',        [FwoBudgetActualController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::post('/{id}/verify',   [FwoBudgetActualController::class, 'verify'])->name('verify')->whereNumber('id');
+    Route::post('/bulk-verify',   [FwoBudgetActualController::class, 'bulkVerify'])->name('bulk-verify');
+});
+
+Route::prefix('lab-samples')->name('lab-samples.')->group(function () {
+    Route::get('/sampling-points/{id_site}', [LabSampleController::class, 'samplingPointsBySite'])->name('sampling-points')->whereNumber('id_site');
+    Route::get('/{id_fwo}/list',            [LabSampleController::class, 'listByFwo'])->name('list')->whereNumber('id_fwo');
+    Route::get('/detail/{id}',              [LabSampleController::class, 'show'])->name('show')->whereNumber('id');
+    Route::post('/{id}',                    [LabSampleController::class, 'update'])->name('update')->whereNumber('id');
+    Route::post('/boq/{id_fwo_boq}/generate',  [LabSampleController::class, 'generateSlots'])->name('generate')->whereNumber('id_fwo_boq');
+    Route::post('/boq/{id_fwo_boq}/add-one',   [LabSampleController::class, 'addOne'])->name('add-one')->whereNumber('id_fwo_boq');
+    Route::post('/boq/{id_fwo_boq}/bulk-fill', [LabSampleController::class, 'bulkFill'])->name('bulk-fill')->whereNumber('id_fwo_boq');
+    Route::post('/{id}/field',                 [LabSampleController::class, 'updateField'])->name('update-field')->whereNumber('id');
+    Route::delete('/{id}',                     [LabSampleController::class, 'destroy'])->name('destroy')->whereNumber('id');
 });
 
 Route::prefix('calendar')->name('calendar.')->group(function () {

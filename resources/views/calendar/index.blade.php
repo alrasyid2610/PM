@@ -126,6 +126,6 @@
 @endsection
 
 @section('custom-script')
-<script src="https://cdn.jsdelivr.net/npm/@daypilot/daypilot-lite-javascript@5.9.0/daypilot-javascript.min.js"></script>
+<script src="{{ asset('assets/vendor/daypilot/daypilot-javascript.min.js') }}"></script>
 <script src="{{ asset('assets/js/calendar/index.js') }}"></script>
 @endsection

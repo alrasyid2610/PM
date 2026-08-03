@@ -463,7 +463,8 @@ table.dataTable.table-striped tbody tr:nth-child(odd):hover {
 }
 
 .sidebar-wrapper .menu .submenu.active {
-    overflow-y: scroll !important;
+    overflow-y: visible !important;
+    max-height: none !important;
 }
 
 .sidebar-wrapper .menu .submenu li.active > a {
@@ -1241,13 +1242,7 @@ section .card {
    RESPONSIVE
    ===================== */
 @media (max-width: 767.98px) {
-    /* Sidebar: hapus scroll ganda pada submenu, biar sidebar scroll sebagai 1 unit */
-    .sidebar-wrapper .menu .submenu.active {
-        overflow-y: visible !important;
-        max-height: none !important;
-    }
-
-    /* DataTable toolbar: baris 1 = excel+length, baris 2 = search full */
+/* DataTable toolbar: baris 1 = excel+length, baris 2 = search full */
     .dt-top {
         flex-wrap: wrap;
         gap: 6px !important;
@@ -2323,6 +2318,17 @@ tr.shown td.dt-control i {
     color: #374151;
 }
 
+/* ── Select2: opsi lokasi terpakai (sample tab) ───────────────────────────── */
+.select2-results__option:has(.sp-opt-used) {
+    background: #f0fdf4 !important;
+    cursor: not-allowed !important;
+}
+.select2-results__option:has(.sp-opt-used):hover,
+.select2-results__option--highlighted:has(.sp-opt-used) {
+    background: #dcfce7 !important;
+    color: inherit !important;
+}
+
 /* ── Table ────────────────────────────────────────────────────────────────── */
 .pm-table {
     width: 100%;
@@ -2345,13 +2351,46 @@ tr.shown td.dt-control i {
 .pm-table td {
     padding: 8px 12px;
     vertical-align: middle;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
 }
 .pm-table tbody tr:hover {
     background: #f8fafc;
 }
 .pm-table tbody tr:last-child td {
     border-bottom: 0;
+}
+
+/* ── Plan Header Buttons ──────────────────────────────────────────────────── */
+.btn-plan-icon {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
+    border-radius: 6px;
+    line-height: 1;
+    padding: 4px 8px;
+    font-size: 11px;
+    transition: background .15s, border-color .15s, color .15s;
+}
+.btn-plan-icon:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #1e293b;
+}
+.btn-plan-verify {
+    border: 1px solid #0f766e;
+    background: #f0fdfa;
+    color: #0f766e;
+    border-radius: 6px;
+    line-height: 1;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    transition: background .15s, border-color .15s;
+}
+.btn-plan-verify:hover {
+    background: #ccfbf1;
+    border-color: #0d9488;
+    color: #0d9488;
 }
 
 /* ── Badge ────────────────────────────────────────────────────────────────── */
@@ -2504,4 +2543,43 @@ tr.shown td.dt-control i {
 
 .boq-items-toggle {
     border-bottom: 1px solid #c3c3c3;
+}
+
+/* =====================
+   PERMISSION-BASED VISIBILITY
+   Tombol edit/delete disembunyikan via CSS body class agar berlaku
+   otomatis ke semua konten dinamis (tab, AJAX, panel detail).
+   ===================== */
+body.perm-no-update .btn-edit,
+body.perm-no-update .btn-edit-context,
+body.perm-no-update .btn-action-edit,
+body.perm-no-update .btn-sp-edit,
+body.perm-no-update .btn-mp-edit,
+body.perm-no-update .btn-product-edit,
+body.perm-no-update .btn-actual-edit,
+body.perm-no-update .btn-budget-edit,
+body.perm-no-update .btn-sample-edit,
+body.perm-no-update .btn-account-edit,
+body.perm-no-update .btn-edit-output {
+    display: none !important;
+}
+
+body.perm-no-delete .btn-delete,
+body.perm-no-delete .btn-action-danger,
+body.perm-no-delete .btn-delete-record,
+body.perm-no-delete .btn-sp-delete,
+body.perm-no-delete .btn-mp-delete,
+body.perm-no-delete .btn-product-delete,
+body.perm-no-delete .btn-actual-delete,
+body.perm-no-delete .btn-budget-delete,
+body.perm-no-delete .btn-sample-delete,
+body.perm-no-delete .btn-account-delete,
+body.perm-no-delete .btn-delete-output {
+    display: none !important;
+}
+
+body.perm-no-create .btn-add,
+body.perm-no-create .btn-create,
+body.perm-no-create [data-perm="can_create"] {
+    display: none !important;
 }

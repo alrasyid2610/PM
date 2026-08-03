@@ -11,20 +11,28 @@ class CheckMenuPermission
     private const PUBLIC_SEGMENTS = ['login', 'logout', 'up', 'test-pdf', 'test-pdf-view', 'test-pdf-download', 'test-so-pdf', 'test-fwo-view', 'wilayah', 'forgot-password', 'reset-password'];
 
     // Route yang tidak perlu cek permission (cukup auth)
-    private const OPEN_SEGMENTS = ['dashboard', 'api', 'calendar'];
+    private const OPEN_SEGMENTS = ['dashboard', 'api', 'calendar', 'ui-guideline'];
 
     // Endpoint supporting — tidak perlu cek permission spesifik
     private const OPEN_LAST_SEGMENTS = ['select2', 'select2byid', 'data', 'pdf'];
 
     // Sub-route supporting dari modul lain
-    private const OPEN_PATH_KEYWORDS = ['by-point', 'by-so', 'wo-progress', 'boq-progress'];
+    private const OPEN_PATH_KEYWORDS = ['by-point', 'by-so', 'wo-progress', 'boq-progress', 'by-fwo'];
 
     // Mapping route prefix → menu slug (jika berbeda)
     private const SLUG_MAP = [
-        'business-relation-sites'  => 'business-relations',
+        'business-relation-sites'    => 'business-relations',
         'business-relation-contacts' => 'business-relations',
-        'brs-sampling-points'      => 'business-relations',
-        'testing-items'            => 'testing-points',
+        'brs-sampling-points'        => 'business-relations',
+        'brs-mp'                     => 'business-relations',
+        'br-products'                => 'business-relations',
+        'testing-items'              => 'testing-points',
+        'fwo-budgets'                => 'fieldworks',
+        'fwo-budget-actuals'         => 'fieldworks',
+        'lab-samples'                => 'fieldworks',
+        'fieldwork-boq'              => 'fieldworks',
+        'output-pekerjaan'           => 'work-orders',
+        'boq'                        => 'work-orders',
     ];
 
     public function handle(Request $request, Closure $next): mixed

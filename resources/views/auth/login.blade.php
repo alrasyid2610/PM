@@ -35,22 +35,10 @@
             overflow: hidden;
         }
 
-        .login-left::before {
-            content: "";
+        #particles-js {
             position: absolute;
-            top: -80px; right: -80px;
-            width: 300px; height: 300px;
-            border-radius: 50%;
-            background: rgba(74, 158, 255, 0.08);
-        }
-
-        .login-left::after {
-            content: "";
-            position: absolute;
-            bottom: -60px; left: -60px;
-            width: 240px; height: 240px;
-            border-radius: 50%;
-            background: rgba(26, 95, 190, 0.12);
+            inset: 0;
+            z-index: 0;
         }
 
         .left-content {
@@ -154,7 +142,7 @@
 
         .input-wrap input {
             width: 100%;
-            padding: 11px 14px 11px 40px;
+            padding: 11px 40px 11px 40px;
             border: 1.5px solid #e5e7eb;
             border-radius: 8px;
             font-size: 14px;
@@ -172,6 +160,23 @@
         .input-wrap input::placeholder {
             color: #d1d5db;
         }
+
+        /* Eye toggle button */
+        .btn-eye {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #9ca3af;
+            font-size: 14px;
+            padding: 4px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        .btn-eye:hover { color: #1a5fbe; }
 
         .form-row {
             display: flex;
@@ -222,13 +227,8 @@
             letter-spacing: 0.3px;
         }
 
-        .btn-login:hover {
-            opacity: 0.92;
-        }
-
-        .btn-login:active {
-            transform: scale(0.99);
-        }
+        .btn-login:hover { opacity: 0.92; }
+        .btn-login:active { transform: scale(0.99); }
 
         .alert-error {
             background: #fef2f2;
@@ -289,6 +289,7 @@
 
         <!-- LEFT -->
         <div class="login-left">
+            <div id="particles-js"></div>
             <div class="left-content">
                 <img class="left-logo" src="{{ asset('assets/images/logo.png') }}" alt="Pramatek Logo">
                 <div class="left-badge">
@@ -355,6 +356,9 @@
                                 placeholder="••••••••"
                                 required
                             >
+                            <button type="button" class="btn-eye" id="btn-toggle-password" title="Tampilkan password">
+                                <i class="fa-regular fa-eye" id="eye-icon"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -366,45 +370,75 @@
                         <a href="{{ route('password.request') }}" class="forgot-link">Lupa password?</a>
                     </div>
 
-                                    <button type="submit" class="btn-login">
+                    <button type="submit" class="btn-login">
                         Masuk
                     </button>
 
                 </form>
-                {{-- <script>
-                    document.getElementById('email').addEventListener('input', function () {
-                        const val = this.value;
-                        const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-                        const wrap = this.closest('.input-wrap');
-                        let msg = document.getElementById('email-format-msg');
-                        if (val && !valid) {
-                            wrap.classList.add('is-error');
-                            if (!msg) {
-                                msg = document.createElement('small');
-                                msg.id = 'email-format-msg';
-                                msg.style.cssText = 'color:#dc2626;font-size:12px;margin-top:4px;display:block;';
-                                msg.textContent = 'Format email tidak valid';
-                                wrap.insertAdjacentElement('afterend', msg);
-                            }
-                        } else {
-                            wrap.classList.remove('is-error');
-                            if (msg) msg.remove();
-                        }
-                    });
-
-                    document.querySelector('form').addEventListener('submit', function (e) {
-                        const emailEl = document.getElementById('email');
-                        const val = emailEl.value;
-                        const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-                        if (!valid) {
-                            e.preventDefault();
-                            emailEl.focus();
-                        }
-                    });
-                </script> --}}
             </div>
         </div>
 
     </div>
+
+    <script src="{{ asset('assets/vendor/particles.min.js') }}"></script>
+    <script>
+        // Eye toggle
+        document.getElementById('btn-toggle-password').addEventListener('click', function () {
+            var input   = document.getElementById('password');
+            var icon    = document.getElementById('eye-icon');
+            var isHidden = input.type === 'password';
+            input.type  = isHidden ? 'text' : 'password';
+            icon.className = isHidden ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
+            this.title  = isHidden ? 'Sembunyikan password' : 'Tampilkan password';
+        });
+
+        // Particles
+        particlesJS('particles-js', {
+            particles: {
+                number: { value: 90, density: { enable: true, value_area: 700 } },
+                color:  { value: '#7ec8ff' },
+                shape:  { type: 'circle' },
+                opacity: {
+                    value: 0.7,
+                    random: true,
+                    anim: { enable: true, speed: 1, opacity_min: 0.3, sync: false }
+                },
+                size: {
+                    value: 3.5,
+                    random: true,
+                    anim: { enable: false }
+                },
+                line_linked: {
+                    enable: true,
+                    distance: 140,
+                    color: '#7ec8ff',
+                    opacity: 0.45,
+                    width: 1.2
+                },
+                move: {
+                    enable: true,
+                    speed: 1.4,
+                    direction: 'none',
+                    random: true,
+                    straight: false,
+                    out_mode: 'out',
+                    bounce: false
+                }
+            },
+            interactivity: {
+                detect_on: 'canvas',
+                events: {
+                    onhover: { enable: true, mode: 'grab' },
+                    onclick: { enable: true, mode: 'push' },
+                    resize: true
+                },
+                modes: {
+                    grab:   { distance: 160, line_linked: { opacity: 0.7 } },
+                    push:   { particles_nb: 4 }
+                }
+            },
+            retina_detect: true
+        });
+    </script>
 </body>
 </html>

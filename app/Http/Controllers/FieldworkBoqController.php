@@ -15,6 +15,7 @@ class FieldworkBoqController extends Controller
             ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
             ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->where('fb.id_fwo', $id_fwo)
+            ->whereNull('fb.deleted_at')
             ->select([
                 'fb.id_fwo_boq',
                 'fb.id_boq',
@@ -39,6 +40,7 @@ class FieldworkBoqController extends Controller
             ->whereIn('fb.id_boq', $boqIdsList)
             ->where('fb.id_fwo', '!=', $id_fwo)
             ->whereNull('fw.deleted_at')
+            ->whereNull('fb.deleted_at')
             ->selectRaw('fb.id_boq, SUM(COALESCE(fb.qty, 0)) as used_qty')
             ->groupBy('fb.id_boq')
             ->pluck('used_qty', 'id_boq');
@@ -127,6 +129,7 @@ class FieldworkBoqController extends Controller
             ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
             ->whereIn('fb.id_boq', $boqIds)
             ->whereNull('fw.deleted_at')
+            ->whereNull('fb.deleted_at')
             ->selectRaw('fb.id_boq, SUM(COALESCE(fb.qty, 0)) as used_qty')
             ->groupBy('fb.id_boq')
             ->pluck('used_qty', 'id_boq');
@@ -199,11 +202,34 @@ class FieldworkBoqController extends Controller
                 return response()->json(['message' => "BOQ #{$sec['id_boq']} tidak ditemukan"], 422);
             }
             if (!empty($sec['qty'])) {
+                // Cek apakah qty baru lebih kecil dari jumlah sample yang sudah ada
+                $existingFwoBoq = DB::table('fieldwork_boq')
+                    ->where('id_fwo', $id_fwo)
+                    ->where('id_boq', $sec['id_boq'])
+                    ->whereNull('deleted_at')
+                    ->first();
+
+                if ($existingFwoBoq) {
+                    $sampleCount = DB::table('lab_samples')
+                        ->where('id_fwo_boq', $existingFwoBoq->id_fwo_boq)
+                        ->count();
+
+                    if ($sampleCount > (int)$sec['qty']) {
+                        $ptName = DB::table('testing_points')
+                            ->where('id_testing_point', $boq->id_testing_point)
+                            ->value('nama') ?? "BOQ #{$sec['id_boq']}";
+                        return response()->json([
+                            'message' => "Qty \"{$ptName}\" tidak bisa dikurangi menjadi {$sec['qty']} karena sudah ada {$sampleCount} sample. Hapus sample yang berlebih terlebih dahulu.",
+                        ], 422);
+                    }
+                }
+
                 $usedByOthers = (int) DB::table('fieldwork_boq as fb')
                     ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
                     ->where('fb.id_boq', $sec['id_boq'])
                     ->where('fb.id_fwo', '!=', $id_fwo)
                     ->whereNull('fw.deleted_at')
+                    ->whereNull('fb.deleted_at')
                     ->sum('fb.qty');
                 $remaining = (int)($boq->qty ?? 0) - $usedByOthers;
                 if ($sec['qty'] > $remaining) {
@@ -217,23 +243,90 @@ class FieldworkBoqController extends Controller
             }
         }
 
-        $oldIds = DB::table('fieldwork_boq')->where('id_fwo', $id_fwo)->pluck('id_fwo_boq');
-        DB::table('fieldwork_boq_items')->whereIn('id_fwo_boq', $oldIds)->delete();
-        DB::table('fieldwork_boq')->where('id_fwo', $id_fwo)->delete();
+        // Mapping id_boq → row lama (aktif)
+        $existing = DB::table('fieldwork_boq')
+            ->where('id_fwo', $id_fwo)
+            ->whereNull('deleted_at')
+            ->get()
+            ->keyBy('id_boq'); // [id_boq => row]
+
+        $incomingBoqIds = collect($validated['sections'])->pluck('id_boq');
+
+        // Soft-delete baris yang tidak ada di list baru
+        $toDelete = $existing->keys()->diff($incomingBoqIds);
+        if ($toDelete->isNotEmpty()) {
+            // Kumpulkan id_fwo_boq yang akan dihapus
+            $fwoBoqIdsToDelete = $existing
+                ->whereIn('id_boq', $toDelete->values()->toArray())
+                ->pluck('id_fwo_boq');
+
+            // Blokir jika ada lab_samples dengan status diambil atau dikirim
+            $blockedSamples = DB::table('lab_samples')
+                ->whereIn('id_fwo_boq', $fwoBoqIdsToDelete)
+                ->whereIn('status', ['diambil', 'dikirim'])
+                ->count();
+
+            if ($blockedSamples > 0) {
+                $ptNames = $existing
+                    ->whereIn('id_boq', $toDelete->values()->toArray())
+                    ->map(function ($row) {
+                        return DB::table('testing_points')
+                            ->where('id_testing_point', $row->id_testing_point)
+                            ->value('nama') ?? "BOQ #{$row->id_boq}";
+                    })
+                    ->values()
+                    ->join(', ');
+
+                return response()->json([
+                    'message' => "BOQ [{$ptNames}] tidak bisa dihapus karena memiliki sample yang sudah diambil atau dikirim ke lab.",
+                ], 422);
+            }
+
+            // Hard delete lab_samples yang masih belum_diambil
+            DB::table('lab_samples')
+                ->whereIn('id_fwo_boq', $fwoBoqIdsToDelete)
+                ->where('status', 'belum_diambil')
+                ->delete();
+
+            // Hard delete fieldwork_boq_items
+            DB::table('fieldwork_boq_items')
+                ->whereIn('id_fwo_boq', $fwoBoqIdsToDelete)
+                ->delete();
+
+            // Soft-delete fieldwork_boq
+            DB::table('fieldwork_boq')
+                ->where('id_fwo', $id_fwo)
+                ->whereIn('id_boq', $toDelete)
+                ->whereNull('deleted_at')
+                ->update(['deleted_at' => now()]);
+        }
 
         foreach ($validated['sections'] as $sec) {
             $boq = DB::table('boq')->where('id_boq', $sec['id_boq'])->first();
 
-            $fwoBoqId = DB::table('fieldwork_boq')->insertGetId([
-                'id_fwo'           => $id_fwo,
-                'id_boq'           => $sec['id_boq'],
-                'id_testing_point' => $boq->id_testing_point,
-                'qty'              => $sec['qty'] ?? null,
-                'keterangan'       => $sec['keterangan'] ?? null,
-                'created_at'       => now(),
-                'updated_at'       => now(),
-            ]);
+            if (isset($existing[$sec['id_boq']])) {
+                // UPDATE — pakai id_fwo_boq yang sudah ada
+                $fwoBoqId = $existing[$sec['id_boq']]->id_fwo_boq;
+                DB::table('fieldwork_boq')->where('id_fwo_boq', $fwoBoqId)->update([
+                    'qty'        => $sec['qty'] ?? null,
+                    'keterangan' => $sec['keterangan'] ?? null,
+                    'updated_at' => now(),
+                ]);
+            } else {
+                // INSERT — BOQ baru yang belum ada di FWO ini
+                $fwoBoqId = DB::table('fieldwork_boq')->insertGetId([
+                    'id_fwo'           => $id_fwo,
+                    'id_boq'           => $sec['id_boq'],
+                    'id_testing_point' => $boq->id_testing_point,
+                    'qty'              => $sec['qty'] ?? null,
+                    'keterangan'       => $sec['keterangan'] ?? null,
+                    'created_at'       => now(),
+                    'updated_at'       => now(),
+                ]);
+            }
 
+            // Sync fieldwork_boq_items (selalu replace dari boq_items master)
+            DB::table('fieldwork_boq_items')->where('id_fwo_boq', $fwoBoqId)->delete();
             $boqItems = DB::table('boq_items')->where('id_boq', $sec['id_boq'])->get();
             if ($boqItems->isNotEmpty()) {
                 DB::table('fieldwork_boq_items')->insert(

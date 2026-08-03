@@ -133,12 +133,12 @@
 
     <script src="{{ asset('assets/vendor/datatables/dataTables.min.js') }}"></script>
     <script src="{{ asset('assets/vendor/datatables/dataTables.bootstrap5.min.js') }}"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="{{ asset('assets/vendor/jszip/jszip.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/datatables/dataTables.buttons.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/datatables/buttons.bootstrap5.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/datatables/buttons.html5.min.js') }}"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="{{ asset('assets/vendor/select2/select2.min.js') }}"></script>
 
     <script src="{{ asset('assets/js/notification.js') }}"></script>
 
@@ -159,7 +159,7 @@
 
         let baseUrl = '/' + resource;
     </script>
-    <script src="https://unpkg.com/filepond/dist/filepond.min.js"></script>
+    <script src="{{ asset('assets/vendor/filepond/filepond.min.js') }}"></script>
 
 
 
@@ -184,14 +184,11 @@
     @endauth
     <script src="{{ asset('assets/js/scientific-input.js') }}"></script>
     <script src="{{ asset('assets/js/tableForm.js') }}"></script>
-    <script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/cleave.js@1.6.0/dist/cleave.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/id.js"></script>
+    <script src="{{ asset('assets/vendor/datatables/dataTables.fixedHeader.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/chartjs4/chart.umd.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/cleave/cleave.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/flatpickr/flatpickr.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/flatpickr/l10n/id.js') }}"></script>
     <script>
         function initNumericMask(container) {
             $(container).find('.input-num-mask').each(function () {

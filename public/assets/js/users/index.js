@@ -12,13 +12,12 @@ $(document).ready(function () {
                 allowClear: true,
             });
         },
-        afterRender: function (res) {
-            initPermissionMatrix();
-        },
         onSave: function (id) {
             submitUserForm(id);
         },
     });
+
+    initPermissionMatrix();
 });
 
 function collectPermissions() {

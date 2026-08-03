@@ -610,6 +610,7 @@ class WorkOrderController extends Controller
             ->whereIn('fb.id_testing_point', $tpIds)
             ->where('fw.id_wo', $id)
             ->whereNull('fw.deleted_at')
+            ->whereNull('fb.deleted_at')
             ->selectRaw('fb.id_testing_point, SUM(COALESCE(fb.qty, 0)) as fwo_qty')
             ->groupBy('fb.id_testing_point')
             ->pluck('fwo_qty', 'id_testing_point')

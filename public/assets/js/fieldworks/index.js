@@ -17,11 +17,835 @@ let fwoAttGroupIdx        = 0;
 // ── Tab switch: show/hide action buttons ──────────────────────────────────────
 $(document).on('shown.bs.tab', '#fwoDetailTabs button[data-bs-toggle="tab"]', function (e) {
     const target = $(e.target).data('bs-target');
-    $('#fwoTabActionsInfo, #fwoTabActionsPersonel, #fwoTabActionsBoq').addClass('d-none');
+    $('#fwoTabActionsInfo, #fwoTabActionsPersonel, #fwoTabActionsBoq, #fwoTabActionsAttachment, #fwoTabActionsBudget, #fwoTabActionsSample')
+        .addClass('d-none').removeClass('d-flex');
     if (target === '#tabFwoInfo')       $('#fwoTabActionsInfo').removeClass('d-none');
     if (target === '#tabFwoPersonel')   $('#fwoTabActionsPersonel').removeClass('d-none');
     if (target === '#tabFwoBoq')        $('#fwoTabActionsBoq').removeClass('d-none');
     if (target === '#tabFwoAttachment') $('#fwoTabActionsAttachment').removeClass('d-none');
+    if (target === '#tabFwoBudget') {
+        $('#fwoTabActionsBudget').removeClass('d-none').addClass('d-flex');
+        const idFwo = $(e.target).data('id-fwo');
+        loadBudgetData(idFwo);
+    }
+    if (target === '#tabFwoSample') {
+        $('#fwoTabActionsSample').removeClass('d-none').addClass('d-flex');
+        const idFwo = $(e.target).data('id-fwo');
+        loadSampleData(idFwo);
+    }
+});
+
+// ── BUDGET ─────────────────────────────────────────────────────────────────────
+
+function loadBudgetData(idFwo) {
+    const $wrap = $('#fwoBudgetContent');
+    $wrap.html('<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>');
+
+    $.get(`/fwo-budgets/${idFwo}/list`)
+        .done(function (res) {
+            const plans     = res.data || [];
+            const fwoStatus = res.fwo_status || '';
+            const isLocked  = fwoStatus === 'completed';
+
+            if (!plans.length) {
+                $wrap.html(`<div class="text-center text-muted py-4" style="font-size:13px;">
+                    <i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>
+                    Belum ada Budget Plan untuk FWO ini
+                </div>`);
+                return;
+            }
+            window._budgetPlans = plans;
+            $wrap.html(renderBudgetList(plans, isLocked));
+        })
+        .fail(function () {
+            $wrap.html('<div class="text-center text-danger py-3">Gagal memuat data budget.</div>');
+        });
+}
+
+function fmtRp(val) {
+    return 'Rp ' + Number(val || 0).toLocaleString('id-ID');
+}
+
+function fmtTgl(val) {
+    if (!val) return '-';
+    const d = new Date(val);
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function renderBudgetList(plans, isLocked) {
+    const cards = plans.map(function (p) {
+        const selisih     = p.total_budget - p.total_actual;
+        const selisihColor = selisih >= 0 ? '#15803d' : '#dc2626';
+        const planLocked  = isLocked || p.status === 'completed';
+        const statusBadge = p.status === 'completed'
+            ? `<span class="badge ms-1" style="background:#dcfce7;color:#15803d;font-size:10px;font-weight:500;"><i class="fa-solid fa-lock me-1"></i>Completed</span>`
+            : `<span class="badge ms-1" style="background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:500;">Open</span>`;
+
+        const itemRows = p.items.map(function (item, itemIdx) {
+            const actualTotal = item.nominal_actual || 0;
+            const sel         = item.nominal_budget - actualTotal;
+            const struks      = item.actuals || [];
+            const struksHtml  = struks.map(function (a) {
+                const files = JSON.parse(a.attachments || '[]');
+                const fileLinks = files.map(function (f) {
+                    return `<a href="/storage/${f}" target="_blank" class="badge bg-light text-dark border me-1" style="font-size:10px;">
+                        <i class="fa-solid fa-file me-1"></i>${f.split('/').pop()}
+                    </a>`;
+                }).join('');
+                const verifBadge = {
+                    menunggu:  `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:500;">Menunggu</span>`,
+                    disetujui: `<span class="badge" style="background:#dcfce7;color:#15803d;font-size:10px;font-weight:500;">Disetujui</span>`,
+                    ditolak:   `<span class="badge" style="background:#fee2e2;color:#dc2626;font-size:10px;font-weight:500;">Ditolak</span>`,
+                }[a.status_verifikasi || 'menunggu'];
+
+                const catatanVerif = a.catatan_verifikasi
+                    ? `<span class="text-muted ms-1" style="font-size:10px;">— ${escHtml(a.catatan_verifikasi)}</span>` : '';
+
+                return `<div class="d-flex align-items-start gap-2 mb-1 p-1 rounded" style="background:#f8fafc;font-size:11px;">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="fw-semibold">${fmtRp(a.nominal_actual)}</span>
+                            ${a.keterangan ? `<span class="text-muted">— ${escHtml(a.keterangan)}</span>` : ''}
+                            ${verifBadge}${catatanVerif}
+                        </div>
+                        <div class="mt-1">${fileLinks}</div>
+                    </div>
+                    ${!planLocked ? `<div class="d-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 btn-actual-edit"
+                            data-id="${a.id_actual}" data-id-fwo="${p.id_fwo || ''}" style="font-size:10px;" data-no-disable title="Edit">
+                            <i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 btn-actual-delete"
+                            data-id="${a.id_actual}" style="font-size:10px;" data-no-disable title="Hapus">
+                            <i class="fa-solid fa-trash" style="color:#dc2626;"></i>
+                        </button>
+                    </div>` : ''}
+                </div>`;
+            }).join('');
+
+            const caBadge = item.is_cash_advance
+                ? `<span class="badge ms-1" style="background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:500;border:1px solid #bfdbfe;">CA</span>`
+                : '';
+
+            const categoryCell = item.nama_category
+                ? `<span style="font-size:11px;color:#6b7280;background:#f1f5f9;padding:1px 6px;border-radius:4px;">${escHtml(item.nama_category)}</span>`
+                : `<span class="text-muted" style="font-size:11px;">—</span>`;
+
+            return `<tr>
+                <td style="width:36px;text-align:center;color:#94a3b8;font-size:11px;">${itemIdx + 1}</td>
+                <td>${categoryCell}</td>
+                <td><span class="fw-semibold">${escHtml(item.nama_account)}</span>${caBadge}</td>
+                <td style="color:#1d4ed8;font-weight:600;">${fmtRp(item.nominal_budget)}</td>
+                <td>
+                    ${struksHtml || '<span class="text-muted" style="font-size:11px;">Belum ada realisasi</span>'}
+                </td>
+                <td style="color:${selisihColor};font-weight:600;">${fmtRp(actualTotal)}</td>
+                <td style="color:${sel >= 0 ? '#15803d' : '#dc2626'};font-weight:600;">${fmtRp(sel)}</td>
+                <td class="text-center">
+                    ${!planLocked ? `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-actual-add"
+                        data-id-budget-item="${item.id_budget_item}" data-id-fwo="${p.id_fwo || ''}"
+                        data-nominal-budget="${item.nominal_budget}"
+                        data-account-name="${escHtml(item.kode_account + ' – ' + item.nama_account)}"
+                        data-no-disable title="Catat Pengeluaran" style="font-size:11px;">
+                        <i class="fa-solid fa-plus" style="color:#0f766e;"></i>
+                    </button>` : ''}
+                </td>
+            </tr>`;
+        }).join('');
+
+        const collapseId = `budgetCollapse_${p.id_budget}`;
+        return `<div class="mb-3 border rounded">
+            <div class="d-flex justify-content-between align-items-center px-3 py-2"
+                style="background:#f8fafc;border-bottom:1px solid #e2e8f0;border-radius:calc(0.375rem - 1px) calc(0.375rem - 1px) 0 0;">
+                <div class="d-flex align-items-center flex-wrap gap-1">
+                    <span class="fw-bold" style="font-size:13px;">${escHtml(p.label)}</span>
+                    ${statusBadge}
+                    ${(p.tanggal_mulai || p.tanggal_selesai) ? `<span class="text-muted ms-1" style="font-size:11px;">
+                        <i class="fa-regular fa-calendar me-1"></i>${fmtTgl(p.tanggal_mulai)}${p.tanggal_selesai ? ' – ' + fmtTgl(p.tanggal_selesai) : ''}
+                    </span>` : ''}
+                    ${p.keterangan ? `<span class="text-muted ms-1" style="font-size:11px;">· ${escHtml(p.keterangan)}</span>` : ''}
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <span style="font-size:12px;">Budget: <b style="color:#1d4ed8;">${fmtRp(p.total_budget)}</b></span>
+                    <span style="font-size:12px;">Actual: <b>${fmtRp(p.total_actual)}</b></span>
+                    <span style="font-size:12px;">Selisih: <b style="color:${selisihColor};">${fmtRp(selisih)}</b></span>
+                    ${p.dokumen_realisasi ? `
+                    <a href="/storage/${p.dokumen_realisasi}" target="_blank"
+                        class="btn btn-sm py-0 px-2" data-no-disable
+                        style="font-size:11px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;"
+                        title="Download Dokumen Realisasi yang sudah ditandatangani">
+                        <i class="fa-solid fa-file-arrow-down me-1"></i>Dok. Realisasi
+                    </a>` : ''}
+                    ${!planLocked && p.items.some(i => (i.actuals || []).length > 0) ? `
+                    <button type="button" class="btn btn-sm btn-plan-verify btn-bulk-verify"
+                        data-id-budget="${p.id_budget}" data-label="${escHtml(p.label)}"
+                        data-no-disable>
+                        <i class="fa-solid fa-check-double me-1"></i>Verifikasi
+                    </button>` : ''}
+                    <div class="dropdown" data-no-disable>
+                        <button type="button" class="btn btn-sm btn-plan-icon"
+                            data-bs-toggle="dropdown" aria-expanded="false"
+                            data-no-disable>
+                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" style="font-size:12px;min-width:160px;">
+                            <li>
+                                <a class="dropdown-item" href="/fwo-budgets/${p.id_budget}/print" target="_blank">
+                                    <i class="fa-solid fa-print me-2 text-muted"></i>Print Serah Terima
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/fwo-budgets/${p.id_budget}/print-realisasi" target="_blank">
+                                    <i class="fa-solid fa-file-invoice me-2 text-muted"></i>Print Realisasi
+                                </a>
+                            </li>
+                            ${!planLocked ? `
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <button type="button" class="dropdown-item btn-budget-edit"
+                                    data-id="${p.id_budget}" data-no-disable>
+                                    <i class="fa-solid fa-pen-to-square me-2" style="color:#1e40af;"></i>Edit Plan
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="dropdown-item btn-budget-close"
+                                    data-id="${p.id_budget}" data-label="${escHtml(p.label)}" data-no-disable>
+                                    <i class="fa-solid fa-circle-check me-2" style="color:#15803d;"></i>Selesaikan Plan
+                                </button>
+                            </li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <button type="button" class="dropdown-item btn-budget-delete"
+                                    data-id="${p.id_budget}" data-label="${escHtml(p.label)}" data-no-disable>
+                                    <i class="fa-solid fa-trash me-2" style="color:#dc2626;"></i>Hapus Plan
+                                </button>
+                            </li>` : ''}
+                        </ul>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-plan-icon btn-budget-collapse"
+                        data-target="#${collapseId}"
+                        data-no-disable title="Sembunyikan / Tampilkan">
+                        <i class="fa-solid fa-chevron-up"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="${collapseId}">
+                <div class="table-responsive">
+                    <table class="pm-table">
+                        <thead>
+                            <tr>
+                                <th style="width:36px;">No</th>
+                                <th style="min-width:110px;">Category</th>
+                                <th>Account</th>
+                                <th style="min-width:130px;">Budget</th>
+                                <th style="min-width:200px;">Realisasi</th>
+                                <th style="min-width:130px;">Total Actual</th>
+                                <th style="min-width:110px;">Selisih</th>
+                                <th style="width:60px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>${itemRows}</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+
+    if (!plans.length) return cards;
+
+    const grandBudget  = plans.reduce(function (s, p) { return s + (p.total_budget || 0); }, 0);
+    const grandActual  = plans.reduce(function (s, p) { return s + (p.total_actual || 0); }, 0);
+    const grandSelisih = grandBudget - grandActual;
+    const selColor     = grandSelisih >= 0 ? '#15803d' : '#dc2626';
+    const selLabel     = grandSelisih >= 0 ? 'Surplus' : 'Defisit';
+
+    const summary = `
+    <div class="d-flex align-items-center gap-4 px-3 py-2 mb-3 rounded"
+        style="background:#f8fafc;border:1px solid #e2e8f0;font-size:12px;">
+        <span style="color:#64748b;font-weight:500;">Ringkasan ${plans.length} Plan:</span>
+        <span>Total Budget: <b style="color:#1d4ed8;">${fmtRp(grandBudget)}</b></span>
+        <span>Total Realisasi: <b>${fmtRp(grandActual)}</b></span>
+        <span>${selLabel}: <b style="color:${selColor};">${fmtRp(Math.abs(grandSelisih))}</b></span>
+    </div>`;
+
+    return summary + cards;
+}
+
+function buildBudgetItemRow(item) {
+    return `<tr class="budget-item-row">
+        <td>
+            <input type="hidden" class="bi-id" value="${item ? item.id_budget_item : ''}">
+            <select class="form-select form-select-sm bi-account" data-no-disable style="min-width:160px;">
+                ${item ? `<option value="${item.id_account}" selected>${escHtml(item.nama_account)}</option>` : '<option value="">Pilih Account</option>'}
+            </select>
+        </td>
+        <td>
+            <input type="text" inputmode="numeric"
+                class="form-control form-control-sm input-num-mask input-num-int bi-nominal"
+                value="${item ? Number(item.nominal_budget).toLocaleString('en-US') : ''}"
+                placeholder="0" data-no-disable>
+        </td>
+        <td>
+            <input type="text" class="form-control form-control-sm bi-keterangan"
+                value="${item ? escHtml(item.keterangan || '') : ''}"
+                placeholder="Opsional" data-no-disable>
+        </td>
+        <td class="text-center">
+            <div class="form-check d-flex justify-content-center mb-0">
+                <input type="checkbox" class="form-check-input bi-ca" data-no-disable
+                    ${item && item.is_cash_advance ? 'checked' : ''}
+                    title="Cash Advance" style="width:18px;height:18px;cursor:pointer;">
+            </div>
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 btn-remove-row"
+                data-no-disable title="Hapus baris" style="font-size:11px;">
+                <i class="fa-solid fa-trash" style="color:#dc2626;"></i>
+            </button>
+        </td>
+    </tr>`;
+}
+
+function initBudgetAccountSelect2() {
+    $('#budgetItemsBody .bi-account').each(function () {
+        if ($(this).hasClass('select2-hidden-accessible')) return;
+        $(this).select2({
+            dropdownParent: $('#budgetPlanModal'),
+            placeholder: 'Pilih Account',
+            allowClear: false,
+            width: '100%',
+            minimumInputLength: 0,
+            ajax: {
+                url: '/budget-accounts/select2',
+                dataType: 'json',
+                delay: 200,
+                data: function (params) { return { q: params.term }; },
+                // Response sudah grouped: [{text:'Kategori', children:[...]}]
+                processResults: function (data) { return { results: data }; },
+                cache: true,
+            },
+        });
+    });
+}
+
+function recalcBudgetTotal() {
+    let total = 0;
+    $('#budgetItemsBody .bi-nominal').each(function () {
+        total += parseInt($(this).val().replace(/,/g, ''), 10) || 0;
+    });
+    $('#budgetModalTotal').text(fmtRp(total));
+}
+
+function openBudgetModal(idFwo, budgetData) {
+    const isEdit = !!budgetData;
+    $('#budgetPlanModalLabel').html(
+        `<i class="fa-solid fa-wallet me-2" style="color:#0f766e;"></i>${isEdit ? 'Edit' : 'Tambah'} Budget Plan`
+    );
+    $('#budgetModal-id').val(isEdit ? budgetData.id_budget : '');
+    $('#budgetModal-id-fwo').val(idFwo);
+    $('#budgetModal-label').val(isEdit ? budgetData.label : '');
+    $('#budgetModal-keterangan').val(isEdit ? (budgetData.keterangan || '') : '');
+
+    const $body = $('#budgetItemsBody').empty();
+    const items = isEdit ? (budgetData.items || []) : [];
+    if (items.length) {
+        items.forEach(function (item) { $body.append(buildBudgetItemRow(item)); });
+    } else {
+        $body.append(buildBudgetItemRow(null));
+    }
+
+    initBudgetAccountSelect2();
+    initNumericMask(document.getElementById('budgetPlanModal'));
+    recalcBudgetTotal();
+
+    // Init Flatpickr tanggal setelah modal ada di DOM
+    const modal = new bootstrap.Modal(document.getElementById('budgetPlanModal'));
+    modal.show();
+
+    document.getElementById('budgetPlanModal').addEventListener('shown.bs.modal', function handler() {
+        // Destroy dulu jika sudah ada instance
+        const elMulai   = document.getElementById('budgetModal-tgl-mulai');
+        const elSelesai = document.getElementById('budgetModal-tgl-selesai');
+        if (elMulai._flatpickr)   elMulai._flatpickr.destroy();
+        if (elSelesai._flatpickr) elSelesai._flatpickr.destroy();
+
+        const fpMulai = flatpickr(elMulai, {
+            dateFormat: 'Y-m-d',
+            allowInput: false,
+            defaultDate: isEdit ? (budgetData.tanggal_mulai || null) : null,
+        });
+        const fpSelesai = flatpickr(elSelesai, {
+            dateFormat: 'Y-m-d',
+            allowInput: false,
+            defaultDate: isEdit ? (budgetData.tanggal_selesai || null) : null,
+            minDate: isEdit && budgetData.tanggal_mulai ? budgetData.tanggal_mulai : null,
+        });
+
+        // Saat tanggal mulai berubah → update minDate selesai
+        fpMulai.config.onChange.push(function (dates) {
+            fpSelesai.set('minDate', dates[0] || null);
+            if (fpSelesai.selectedDates[0] && fpSelesai.selectedDates[0] < dates[0]) {
+                fpSelesai.clear();
+            }
+        });
+
+        this.removeEventListener('shown.bs.modal', handler);
+    }, { once: true });
+}
+
+// ── Tombol Tambah Budget Plan ──
+$(document).off('click.budget', '.btn-budget-add').on('click.budget', '.btn-budget-add', function () {
+    const idFwo = $(this).data('id-fwo');
+    openBudgetModal(idFwo, null);
+});
+
+// ── Tambah baris item di modal ──
+$(document).off('click.budget', '#btnBudgetAddRow').on('click.budget', '#btnBudgetAddRow', function () {
+    $('#budgetItemsBody').append(buildBudgetItemRow(null));
+    initBudgetAccountSelect2();
+    initNumericMask(document.getElementById('budgetPlanModal'));
+});
+
+// ── Hapus baris item di modal ──
+$(document).off('click.budget', '.btn-remove-row').on('click.budget', '.btn-remove-row', function () {
+    $(this).closest('tr').remove();
+    recalcBudgetTotal();
+});
+
+// ── Recalc total saat nominal berubah ──
+$(document).off('input.budget', '#budgetItemsBody .bi-nominal').on('input.budget', '#budgetItemsBody .bi-nominal', function () {
+    recalcBudgetTotal();
+});
+
+// ── Simpan Budget Plan ──
+$(document).off('click.budget', '#budgetModal-btn-save').on('click.budget', '#budgetModal-btn-save', function () {
+    const id    = $('#budgetModal-id').val();
+    const idFwo = $('#budgetModal-id-fwo').val();
+    const label = $('#budgetModal-label').val().trim();
+
+    if (!label) return Swal.fire('Perhatian', 'Label wajib diisi.', 'warning');
+
+    const items = [];
+    let valid = true;
+    $('#budgetItemsBody .budget-item-row').each(function () {
+        const idAccount = $(this).find('.bi-account').val();
+        const nominal   = parseInt($(this).find('.bi-nominal').val().replace(/,/g, ''), 10) || 0;
+        const ket       = $(this).find('.bi-keterangan').val();
+        const biId      = $(this).find('.bi-id').val();
+        const isCa      = $(this).find('.bi-ca').is(':checked') ? 1 : 0;
+        if (!idAccount) { valid = false; return false; }
+        items.push({ id_budget_item: biId || null, id_account: idAccount, nominal_budget: nominal, keterangan: ket, is_cash_advance: isCa });
+    });
+
+    if (!valid) return Swal.fire('Perhatian', 'Semua baris harus memilih Account.', 'warning');
+    if (!items.length) return Swal.fire('Perhatian', 'Minimal 1 item anggaran.', 'warning');
+
+    const payload = {
+        _token:         window.route.csrf,
+        id_fwo:         idFwo,
+        label:          label,
+        keterangan:     $('#budgetModal-keterangan').val(),
+        tanggal_mulai:  $('#budgetModal-tgl-mulai').val() || null,
+        tanggal_selesai: $('#budgetModal-tgl-selesai').val() || null,
+        items:          items,
+    };
+
+    const isEdit = !!id;
+    const url    = isEdit ? `/fwo-budgets/${id}` : '/fwo-budgets';
+    if (isEdit) payload._method = 'PUT';
+
+    $('#budgetModal-btn-save').prop('disabled', true);
+    $.post(url, payload)
+        .done(function () {
+            bootstrap.Modal.getInstance(document.getElementById('budgetPlanModal'))?.hide();
+            loadBudgetData(idFwo);
+            Swal.fire({ icon: 'success', title: 'Tersimpan', timer: 1200, showConfirmButton: false });
+        })
+        .fail(function (xhr) {
+            const errs = xhr.responseJSON?.errors;
+            const msg  = errs ? Object.values(errs).flat().join('<br>') : (xhr.responseJSON?.message || 'Terjadi kesalahan.');
+            Swal.fire('Gagal', msg, 'error');
+        })
+        .always(function () { $('#budgetModal-btn-save').prop('disabled', false); });
+});
+
+// ── Edit Budget Plan ──
+$(document).off('click.budget', '.btn-budget-edit').on('click.budget', '.btn-budget-edit', function () {
+    const id    = $(this).data('id');
+    const idFwo = $('#fwoTabActionsBudget .btn-budget-add').data('id-fwo');
+    $.get(`/fwo-budgets/${id}`)
+        .done(function (data) { openBudgetModal(idFwo, data); });
+});
+
+// ── Hapus Budget Plan ──
+// ── Collapse / Expand panel item ──
+$(document).off('click.budget', '.btn-budget-collapse').on('click.budget', '.btn-budget-collapse', function () {
+    const $icon   = $(this).find('i');
+    const $target = $($(this).data('target'));
+    $target.slideToggle(180, function () {
+        const visible = $target.is(':visible');
+        $icon.toggleClass('fa-chevron-up', visible).toggleClass('fa-chevron-down', !visible);
+    });
+});
+
+$(document).off('click.sample', '.btn-sample-collapse').on('click.sample', '.btn-sample-collapse', function () {
+    const $icon   = $(this).find('i');
+    const $target = $($(this).data('target'));
+    $target.slideToggle(180, function () {
+        const visible = $target.is(':visible');
+        $icon.toggleClass('fa-chevron-up', visible).toggleClass('fa-chevron-down', !visible);
+    });
+});
+
+// ── Selesaikan Budget Plan ──
+$(document).off('click.budget', '.btn-budget-close').on('click.budget', '.btn-budget-close', function () {
+    const id    = $(this).data('id');
+    const label = $(this).data('label');
+    const idFwo = $('#fwoTabActionsBudget .btn-budget-add').data('id-fwo');
+
+    // Cari data plan dari cache
+    const plans   = window._budgetPlans || [];
+    const plan    = plans.find(function (p) { return p.id_budget == id; });
+    const surplus = plan ? (plan.total_budget - plan.total_actual) : 0;
+
+    // Set nilai modal
+    $('#closePlanModal-id').val(id);
+    $('#closePlanModal-id-fwo').val(idFwo);
+    $('#closePlanModal-file').val('');
+    $('#closePlanModalLabel').html(
+        `<i class="fa-solid fa-circle-check me-2" style="color:#15803d;"></i>Selesaikan Plan — ${escHtml(label)}`
+    );
+
+    if (surplus > 0) {
+        const fmt = 'Rp ' + surplus.toLocaleString('id-ID');
+        $('#closePlanModal-surplus-amount').text(fmt);
+        $('#closePlanModal-print-link').attr('href', `/fwo-budgets/${id}/print-realisasi`);
+        $('#closePlanModal-surplus-info').show();
+        $('#closePlanModal-upload-section').show();
+        $('#closePlanModal-noSurplus-info').hide();
+    } else {
+        $('#closePlanModal-surplus-info').hide();
+        $('#closePlanModal-upload-section').hide();
+        $('#closePlanModal-noSurplus-info').show();
+    }
+
+    $('#closePlanModal').modal('show');
+});
+
+// Submit Selesaikan Plan
+$(document).off('click.budget', '#closePlanModal-btn-save').on('click.budget', '#closePlanModal-btn-save', function () {
+    const id    = $('#closePlanModal-id').val();
+    const idFwo = $('#closePlanModal-id-fwo').val();
+    const plans  = window._budgetPlans || [];
+    const plan   = plans.find(function (p) { return p.id_budget == id; });
+    const surplus = plan ? (plan.total_budget - plan.total_actual) : 0;
+
+    if (surplus > 0) {
+        const file = $('#closePlanModal-file')[0].files[0];
+        if (!file) {
+            Swal.fire('Upload Diperlukan', 'Harap upload Laporan Realisasi Anggaran yang sudah ditandatangani.', 'warning');
+            return;
+        }
+        const fd = new FormData();
+        fd.append('_token', window.route.csrf);
+        fd.append('dokumen_realisasi', file);
+        $.ajax({
+            url: `/fwo-budgets/${id}/close`,
+            type: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+        }).done(function () {
+            $('#closePlanModal').modal('hide');
+            loadBudgetData(idFwo);
+        }).fail(function (xhr) {
+            Swal.fire('Gagal', xhr.responseJSON?.message || 'Terjadi kesalahan.', 'error');
+        });
+    } else {
+        $.post(`/fwo-budgets/${id}/close`, { _token: window.route.csrf })
+            .done(function () {
+                $('#closePlanModal').modal('hide');
+                loadBudgetData(idFwo);
+            })
+            .fail(function (xhr) {
+                Swal.fire('Gagal', xhr.responseJSON?.message || 'Terjadi kesalahan.', 'error');
+            });
+    }
+});
+
+$(document).off('click.budget', '.btn-budget-delete').on('click.budget', '.btn-budget-delete', function () {
+    const id    = $(this).data('id');
+    const label = $(this).data('label');
+    const idFwo = $('#fwoTabActionsBudget .btn-budget-add').data('id-fwo');
+    Swal.fire({
+        title: 'Hapus Budget Plan?',
+        html: `<b>${label}</b> akan dihapus.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Hapus',
+        cancelButtonText: 'Batal',
+    }).then(function (result) {
+        if (!result.isConfirmed) return;
+        $.ajax({ url: `/fwo-budgets/${id}`, type: 'DELETE', data: { _token: window.route.csrf } })
+            .done(function () {
+                loadBudgetData(idFwo);
+                Swal.fire({ icon: 'success', title: 'Dihapus', timer: 1200, showConfirmButton: false });
+            })
+            .fail(function () { Swal.fire('Gagal', 'Tidak dapat menghapus.', 'error'); });
+    });
+});
+
+// ── Tambah Actual ──
+$(document).off('click.budget', '.btn-actual-add').on('click.budget', '.btn-actual-add', function () {
+    const idBudgetItem   = $(this).data('id-budget-item');
+    const idFwo          = $(this).data('id-fwo') || $('#fwoTabActionsBudget .btn-budget-add').data('id-fwo');
+    const nominalBudget  = $(this).data('nominal-budget') || 0;
+    const accountName    = $(this).data('account-name') || '';
+    $('#actualModal-id').val('');
+    $('#actualModal-id-budget-item').val(idBudgetItem);
+    $('#actualModal-id-fwo').val(idFwo);
+    $('#actualModal-nominal').val('');
+    $('#actualModal-keterangan').val('');
+    $('#actualModal-files').val('');
+    $('#actualModal-existing-files').empty();
+    $('#actualModalLabel').html('<i class="fa-solid fa-receipt me-2" style="color:#1d4ed8;"></i>Catat Pengeluaran');
+    $('#actualModal-account-name').text(accountName);
+    $('#actualModal-budget-nominal').text(fmtRp(nominalBudget));
+    $('#actualModal-budget-info').show();
+    initNumericMask(document.getElementById('actualModal'));
+    new bootstrap.Modal(document.getElementById('actualModal')).show();
+});
+
+// ── Edit Actual ──
+$(document).off('click.budget', '.btn-actual-edit').on('click.budget', '.btn-actual-edit', function () {
+    const id    = $(this).data('id');
+    const idFwo = $(this).data('id-fwo') || $('#fwoTabActionsBudget .btn-budget-add').data('id-fwo');
+    $.get(`/fwo-budget-actuals/${id}`)
+        .done(function (r) {
+            $('#actualModal-id').val(r.id_actual);
+            $('#actualModal-id-budget-item').val(r.id_budget_item);
+            $('#actualModal-id-fwo').val(idFwo);
+            $('#actualModal-nominal').val(Number(r.nominal_actual).toLocaleString('en-US'));
+            $('#actualModal-keterangan').val(r.keterangan || '');
+            $('#actualModal-files').val('');
+            $('#actualModalLabel').html('<i class="fa-solid fa-receipt me-2" style="color:#1d4ed8;"></i>Edit Pengeluaran');
+            $('#actualModal-budget-info').hide();
+
+            const files = JSON.parse(r.attachments || '[]');
+            const $ex   = $('#actualModal-existing-files').empty();
+            files.forEach(function (f) {
+                $ex.append(`<div class="d-flex align-items-center gap-2 mb-1" style="font-size:11px;">
+                    <input type="checkbox" class="existing-file-check" value="${f}" checked data-no-disable>
+                    <a href="/storage/${f}" target="_blank">${f.split('/').pop()}</a>
+                </div>`);
+            });
+
+            initNumericMask(document.getElementById('actualModal'));
+            new bootstrap.Modal(document.getElementById('actualModal')).show();
+        });
+});
+
+// ── Hapus Actual ──
+// ── Buka Modal Verifikasi ──
+// ── Buka Modal Bulk Verifikasi per Plan ──
+$(document).off('click.budget', '.btn-bulk-verify').on('click.budget', '.btn-bulk-verify', function () {
+    const idBudget = $(this).data('id-budget');
+    const label    = $(this).data('label');
+    const idFwo    = $('#fwoTabActionsBudget .btn-budget-add').data('id-fwo') ||
+                     $('#fwoTabActionsBudget').find('[data-id-fwo]').data('id-fwo');
+
+    $('#bulkVerifyModal-id-fwo').val(idFwo);
+    $('#bulkVerifyModalLabel').html(
+        `<i class="fa-solid fa-check-double me-2" style="color:#0f766e;"></i>Verifikasi — ${escHtml(label)}`
+    );
+
+    // Kumpulkan semua aktual dari plan ini (dari DOM yang sudah dirender)
+    // Gunakan data dari plans yang tersimpan
+    const plan = window._budgetPlans && window._budgetPlans.find(p => p.id_budget == idBudget);
+    if (!plan) return;
+
+    const rows = [];
+    plan.items.forEach(function (item) {
+        (item.actuals || []).forEach(function (a) {
+            rows.push({ item, actual: a });
+        });
+    });
+
+    if (!rows.length) return;
+
+    const tableRows = rows.map(function (r, i) {
+        const a    = r.actual;
+        const item = r.item;
+        const st   = a.status_verifikasi || 'menunggu';
+        const styleSetujui = st === 'disetujui'
+            ? 'border-color:#15803d;background:#dcfce7;'
+            : 'border-color:#e2e8f0;';
+        const styleTolak = st === 'ditolak'
+            ? 'border-color:#dc2626;background:#fee2e2;'
+            : 'border-color:#e2e8f0;';
+
+        return `<tr data-id-actual="${a.id_actual}">
+            <td style="width:30px;text-align:center;color:#94a3b8;font-size:11px;">${i + 1}</td>
+            <td style="font-size:11px;">
+                <span class="fw-semibold">${escHtml(item.kode_account)}</span>
+                <span class="text-muted ms-1">${escHtml(item.nama_account)}</span>
+            </td>
+            <td style="font-size:11px;font-weight:600;color:#1d4ed8;">${fmtRp(a.nominal_actual)}</td>
+            <td style="font-size:11px;color:#64748b;">${escHtml(a.keterangan || '-')}</td>
+            <td style="min-width:160px;">
+                <div class="d-flex gap-1">
+                    <button type="button" class="btn btn-sm flex-fill bv-choice" data-value="disetujui"
+                        style="font-size:10px;padding:2px 6px;border:2px solid;${styleSetujui}" data-no-disable>
+                        &#10003; Setuju
+                    </button>
+                    <button type="button" class="btn btn-sm flex-fill bv-choice" data-value="ditolak"
+                        style="font-size:10px;padding:2px 6px;border:2px solid;${styleTolak}" data-no-disable>
+                        &#10007; Tolak
+                    </button>
+                </div>
+                <input type="hidden" class="bv-status" value="${st}">
+            </td>
+            <td style="min-width:160px;">
+                <input type="text" class="form-control form-control-sm bv-catatan"
+                    value="${escHtml(a.catatan_verifikasi || '')}"
+                    placeholder="${st === 'ditolak' ? 'Wajib diisi' : 'Opsional'}"
+                    style="font-size:11px;" data-no-disable>
+            </td>
+        </tr>`;
+    }).join('');
+
+    $('#bulkVerifyModal-body').html(`
+        <div class="table-responsive">
+            <table class="pm-table" id="bulkVerifyTable">
+                <thead>
+                    <tr>
+                        <th style="width:30px;">No</th>
+                        <th>Account</th>
+                        <th style="min-width:110px;">Nominal</th>
+                        <th style="min-width:120px;">Keterangan</th>
+                        <th style="min-width:160px;">Status</th>
+                        <th style="min-width:160px;">Catatan</th>
+                    </tr>
+                </thead>
+                <tbody>${tableRows}</tbody>
+            </table>
+        </div>
+    `);
+
+    new bootstrap.Modal(document.getElementById('bulkVerifyModal')).show();
+});
+
+// ── Toggle pilihan status per baris ──
+$(document).off('click.budget', '#bulkVerifyTable .bv-choice').on('click.budget', '#bulkVerifyTable .bv-choice', function () {
+    const val  = $(this).data('value');
+    const $row = $(this).closest('tr');
+    $row.find('.bv-status').val(val);
+    $row.find('.bv-choice').css({ 'border-color': '#e2e8f0', 'background': '' });
+    $(this).css({
+        'border-color': val === 'disetujui' ? '#15803d' : '#dc2626',
+        'background':   val === 'disetujui' ? '#dcfce7' : '#fee2e2',
+    });
+    $row.find('.bv-catatan').attr('placeholder', val === 'ditolak' ? 'Wajib diisi' : 'Opsional');
+});
+
+// ── Simpan Semua Verifikasi ──
+$(document).off('click.budget', '#bulkVerifyModal-btn-save').on('click.budget', '#bulkVerifyModal-btn-save', function () {
+    const idFwo = $('#bulkVerifyModal-id-fwo').val();
+    const items = [];
+    let valid = true;
+
+    $('#bulkVerifyTable tbody tr').each(function () {
+        const idActual = $(this).data('id-actual');
+        const status   = $(this).find('.bv-status').val();
+        const catatan  = $(this).find('.bv-catatan').val().trim();
+        if (status === 'ditolak' && !catatan) {
+            valid = false;
+            $(this).find('.bv-catatan').addClass('is-invalid');
+        } else {
+            $(this).find('.bv-catatan').removeClass('is-invalid');
+        }
+        items.push({ id_actual: idActual, status_verifikasi: status, catatan_verifikasi: catatan });
+    });
+
+    if (!valid) return Swal.fire('Perhatian', 'Catatan wajib diisi untuk semua baris yang Ditolak.', 'warning');
+
+    $('#bulkVerifyModal-btn-save').prop('disabled', true);
+    $.post('/fwo-budget-actuals/bulk-verify', {
+        _token: window.route.csrf,
+        items:  items,
+    })
+    .done(function () {
+        bootstrap.Modal.getInstance(document.getElementById('bulkVerifyModal'))?.hide();
+        loadBudgetData(idFwo);
+    })
+    .fail(function (xhr) {
+        Swal.fire('Gagal', xhr.responseJSON?.message || 'Terjadi kesalahan.', 'error');
+    })
+    .always(function () { $('#bulkVerifyModal-btn-save').prop('disabled', false); });
+});
+
+$(document).off('click.budget', '.btn-actual-delete').on('click.budget', '.btn-actual-delete', function () {
+    const id    = $(this).data('id');
+    const idFwo = $('#fwoTabActionsBudget .btn-budget-add').data('id-fwo');
+    Swal.fire({
+        title: 'Hapus Realisasi?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Hapus',
+        cancelButtonText: 'Batal',
+    }).then(function (result) {
+        if (!result.isConfirmed) return;
+        $.ajax({ url: `/fwo-budget-actuals/${id}`, type: 'DELETE', data: { _token: window.route.csrf } })
+            .done(function () {
+                loadBudgetData(idFwo);
+                Swal.fire({ icon: 'success', title: 'Dihapus', timer: 1200, showConfirmButton: false });
+            })
+            .fail(function () { Swal.fire('Gagal', 'Tidak dapat menghapus.', 'error'); });
+    });
+});
+
+// ── Simpan Actual ──
+$(document).off('click.budget', '#actualModal-btn-save').on('click.budget', '#actualModal-btn-save', function () {
+    const id           = $('#actualModal-id').val();
+    const idBudgetItem = $('#actualModal-id-budget-item').val();
+    const idFwo        = $('#actualModal-id-fwo').val();
+    const nominal      = parseInt($('#actualModal-nominal').val().replace(/,/g, ''), 10) || 0;
+
+    if (!nominal) return Swal.fire('Perhatian', 'Nominal wajib diisi.', 'warning');
+
+    const fd = new FormData();
+    fd.append('_token', window.route.csrf);
+    fd.append('id_budget_item', idBudgetItem);
+    fd.append('nominal_actual', nominal);
+    fd.append('keterangan', $('#actualModal-keterangan').val());
+
+    if (id) fd.append('_method', 'POST');
+
+    // File baru
+    const files = $('#actualModal-files')[0].files;
+    for (let i = 0; i < files.length; i++) fd.append('attachments[]', files[i]);
+
+    // File lama yang tetap disimpan
+    $('#actualModal-existing-files .existing-file-check:checked').each(function () {
+        fd.append('existing_attachments[]', $(this).val());
+    });
+
+    const url = id ? `/fwo-budget-actuals/${id}` : '/fwo-budget-actuals';
+    $('#actualModal-btn-save').prop('disabled', true);
+    $.ajax({ url, type: 'POST', data: fd, processData: false, contentType: false })
+        .done(function () {
+            bootstrap.Modal.getInstance(document.getElementById('actualModal'))?.hide();
+            loadBudgetData(idFwo);
+            Swal.fire({ icon: 'success', title: 'Tersimpan', timer: 1200, showConfirmButton: false });
+        })
+        .fail(function (xhr) {
+            const errs = xhr.responseJSON?.errors;
+            const msg  = errs ? Object.values(errs).flat().join('<br>') : (xhr.responseJSON?.message || 'Terjadi kesalahan.');
+            Swal.fire('Gagal', msg, 'error');
+        })
+        .always(function () { $('#actualModal-btn-save').prop('disabled', false); });
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────────
@@ -1007,3 +1831,562 @@ function saveAttachments(id_fwo, callback) {
         },
     });
 }
+
+// ── SAMPLE ─────────────────────────────────────────────────────────────────────
+
+function loadSampleData(idFwo) {
+    const $wrap = $('#fwoSampleContent');
+    $wrap.html('<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>');
+
+    $.get(`/lab-samples/${idFwo}/list`)
+        .done(function (res) {
+            const boqs      = res.data || [];
+            const fwoStatus = res.fwo_status || '';
+            const isLocked  = fwoStatus === 'completed';
+            const idSite    = res.id_site || null;
+
+            if (isLocked) {
+                $('#fwoTabActionsSample').html(
+                    '<span class="text-muted" style="font-size:12px;"><i class="fa-solid fa-lock me-1"></i>FWO selesai – tidak dapat mengubah sample</span>'
+                );
+            }
+
+            if (!boqs.length) {
+                $wrap.html('<div class="text-center text-muted py-4">Tidak ada BOQ pada FWO ini.</div>');
+                return;
+            }
+
+            // Load sampling points dari site FWO, lalu render
+            window._samplingPoints = [];
+            const renderAll = function () {
+                $wrap.html(renderSampleList(boqs, isLocked));
+                initSampleStatusSelect2($wrap[0]);
+                initSampleTitikSelect2($wrap[0]);
+                if (!isLocked) initSampleModalTitikSelect2();
+            };
+
+            if (idSite) {
+                $.get(`/lab-samples/sampling-points/${idSite}`)
+                    .done(function (data) { window._samplingPoints = data || []; })
+                    .always(renderAll);
+            } else {
+                renderAll();
+            }
+        })
+        .fail(function () {
+            $wrap.html('<div class="text-center text-danger py-4">Gagal memuat data sample.</div>');
+        });
+}
+
+function _spOptions(usedLocations, currentVal) {
+    // value = text label (bukan id_sp) agar tersimpan langsung ke kolom titik_lokasi
+    return [{ id: '', text: '' }].concat(
+        (window._samplingPoints || []).map(function (sp) {
+            const isUsed = usedLocations && usedLocations.includes(sp.text) && sp.text !== currentVal;
+            return { id: sp.text, text: sp.text, _used: isUsed };
+        })
+    );
+}
+
+function initSampleStatusSelect2(container) {
+    $(container).find('.sample-inline-status').each(function () {
+        const $sel = $(this);
+        if ($sel.data('select2')) $sel.select2('destroy');
+        $sel.select2({
+            width: 'resolve',
+            minimumResultsForSearch: Infinity,
+            dropdownParent: $sel.closest('td'),
+        });
+    });
+}
+
+function initSampleTitikSelect2(container) {
+    // Kumpulkan lokasi yang sudah terpakai per BOQ (per tbody)
+    $(container).find('table').each(function () {
+        const $table = $(this);
+        const usedLocations = [];
+        $table.find('.sample-inline-titik').each(function () {
+            const val = $(this).data('current') || '';
+            if (val) usedLocations.push(val);
+        });
+
+        $table.find('.sample-inline-titik').each(function () {
+            const $sel    = $(this);
+            const current = $sel.data('current') || '';
+            if ($sel.data('select2')) $sel.select2('destroy');
+            $sel.select2({
+                width: 'resolve',
+                placeholder: 'Pilih titik…',
+                allowClear: true,
+                dropdownParent: $sel.closest('td'),
+                data: _spOptions(usedLocations, current),
+                templateResult: function (opt) {
+                    if (!opt.id) return opt.text;
+                    if (opt._used) {
+                        return $('<span class="sp-opt-used" style="display:flex;align-items:center;gap:6px;color:#16a34a;pointer-events:none;cursor:not-allowed;">'
+                            + '<i class="fa-solid fa-circle-check" style="font-size:11px;flex-shrink:0;"></i>'
+                            + '<span>' + $('<span>').text(opt.text).html() + '</span>'
+                            + '</span>');
+                    }
+                    return $('<span>').text(opt.text);
+                },
+            })
+            // Blokir klik pada opsi yang sudah terpakai
+            .on('select2:selecting', function (e) {
+                if (e.params && e.params.args && e.params.args.data && e.params.args.data._used) {
+                    e.preventDefault();
+                }
+            })
+            .val(current).trigger('change.select2');
+        });
+    });
+}
+
+function initSampleModalTitikSelect2() {
+    const $sel = $('#sampleModal-titik');
+    if ($sel.data('select2')) $sel.select2('destroy');
+    $sel.select2({
+        width: '100%',
+        placeholder: 'Pilih titik lokasi…',
+        allowClear: true,
+        dropdownParent: $('#sampleModal'),
+        data: _spOptions(),
+    });
+}
+
+const SAMPLE_STATUS_LABEL = { belum_diambil: 'Belum Diambil', diambil: 'Diambil', dikirim: 'Dikirim' };
+const SAMPLE_STATUS_COLOR = { belum_diambil: '#64748b', diambil: '#0369a1', dikirim: '#15803d' };
+const JENIS_LABEL = { env: 'ENV', we: 'WE', mp: 'MP', product: 'Product' };
+
+function renderSampleList(boqs, isLocked) {
+    return boqs.map(function (boq) {
+        const total    = (boq.samples || []).length;
+        const diambil  = (boq.samples || []).filter(s => s.status === 'diambil' || s.status === 'dikirim').length;
+        const dikirim  = (boq.samples || []).filter(s => s.status === 'dikirim').length;
+        const pct      = total > 0 ? Math.round((diambil / total) * 100) : 0;
+        const barColor = pct === 100 ? '#15803d' : '#0369a1';
+        const sisa     = Math.max(0, (boq.qty || 0) - total);
+
+        const slotRows = total === 0
+            ? `<tr><td colspan="6" class="text-center text-muted py-3" style="font-size:12px;font-style:italic;">Belum ada sample — gunakan tombol "Tambah Sample" di atas</td></tr>`
+            : (boq.samples || []).map(function (s) {
+                const statusVal = s.status || 'belum_diambil';
+                const jenisTag    = s.jenis_sample
+                    ? `<span style="font-size:10px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:4px;padding:1px 6px;">${JENIS_LABEL[s.jenis_sample] || s.jenis_sample}</span>`
+                    : `<span style="font-size:10px;color:#94a3b8;font-style:italic;">–</span>`;
+                const noSample = s.no_sample
+                    ? `<span style="font-size:11px;font-weight:600;">${escHtml(s.no_sample)}</span>`
+                    : `<span class="text-muted" style="font-size:11px;font-style:italic;">–</span>`;
+
+                const titikVal  = s.titik_lokasi || '';
+                const titikCell = !isLocked
+                    ? `<select class="form-select form-select-sm sample-inline-titik"
+                            data-id="${s.id_lab_sample}"
+                            data-current="${escHtml(titikVal)}"
+                            style="font-size:11px;width:260px;"></select>`
+                    : (titikVal ? escHtml(titikVal) : '<span style="color:#94a3b8;font-style:italic;">–</span>');
+
+                return `
+                <tr data-id-sample="${s.id_lab_sample}" data-boq-name="${escHtml(boq.nama_boq)}">
+                    <td style="font-size:12px;color:#64748b;width:36px;">${s.no_urut}</td>
+                    <td style="font-size:12px;">${jenisTag} ${noSample}</td>
+                    <td style="font-size:12px;">${titikCell}</td>
+                    <td style="font-size:12px;width:150px;">
+                        ${!isLocked
+                            ? `<select class="form-select form-select-sm sample-inline-status"
+                                    data-id="${s.id_lab_sample}"
+                                    style="font-size:11px;width:140px;">
+                                    <option value="belum_diambil"${statusVal==='belum_diambil'?' selected':''}>Belum Diambil</option>
+                                    <option value="diambil"${statusVal==='diambil'?' selected':''}>Diambil</option>
+                                    <option value="dikirim"${statusVal==='dikirim'?' selected':''}>Dikirim ke Lab</option>
+                               </select>`
+                            : `<span style="font-size:11px;font-weight:600;color:${SAMPLE_STATUS_COLOR[statusVal]||'#64748b'};">${SAMPLE_STATUS_LABEL[statusVal]||statusVal}</span>`
+                        }
+                    </td>
+                    <td class="text-center" style="width:72px;white-space:nowrap;">
+                        ${!isLocked ? `
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-sample-edit"
+                            data-id="${s.id_lab_sample}" title="Edit" style="font-size:11px;">
+                            <i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-sample-delete"
+                            data-id="${s.id_lab_sample}" data-no="${escHtml(s.no_sample || 'Sample #' + s.no_urut)}"
+                            title="Hapus" style="font-size:11px;">
+                            <i class="fa-solid fa-trash" style="color:#dc2626;"></i>
+                        </button>` : ''}
+                    </td>
+                </tr>`;
+            }).join('');
+
+        const addBtn = !isLocked ? `
+            <div class="d-flex gap-2">
+                ${total > 0 ? `
+                <button type="button" class="btn btn-sm py-0 px-2 btn-sample-bulk-fill"
+                    data-id-fwo-boq="${boq.id_fwo_boq}"
+                    style="font-size:11px;border:1px solid #7c3aed;color:#7c3aed;background:#f5f3ff;">
+                    <i class="fa-solid fa-wand-magic-sparkles me-1"></i>Bulk Insert
+                </button>` : ''}
+                <div class="dropdown">
+                    <button type="button" class="btn btn-sm dropdown-toggle py-0 px-2"
+                        data-bs-toggle="dropdown"
+                        style="font-size:11px;border:1px solid #0369a1;color:#0369a1;background:#eff6ff;">
+                        <i class="fa-solid fa-plus me-1"></i>Tambah Sample
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" style="font-size:12px;min-width:200px;">
+                        <li>
+                            <button type="button" class="dropdown-item btn-sample-generate"
+                                data-id-fwo-boq="${boq.id_fwo_boq}"
+                                data-sisa="${sisa}">
+                                <i class="fa-solid fa-wand-magic-sparkles me-2 text-primary"></i>
+                                Buat Otomatis
+                                ${sisa > 0 ? `<span class="badge bg-primary ms-1">${sisa}</span>` : ''}
+                            </button>
+                        </li>
+                        <li>
+                            <button type="button" class="dropdown-item btn-sample-add-one"
+                                data-id-fwo-boq="${boq.id_fwo_boq}">
+                                <i class="fa-solid fa-plus me-2 text-success"></i>
+                                Tambah 1 Sample
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>` : '';
+
+        const collapseId = `sampleCollapse_${boq.id_fwo_boq}`;
+        return `
+        <div class="mb-3 border rounded" style="background:#fff;">
+            <div class="d-flex justify-content-between align-items-center px-3 py-2"
+                style="background:#f8fafc;border-bottom:1px solid #e2e8f0;border-radius:calc(0.375rem - 1px) calc(0.375rem - 1px) 0 0;">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span style="font-size:13px;font-weight:600;color:#1e293b;">${escHtml(boq.nama_boq)}</span>
+                    <span class="text-muted sample-progress-text" style="font-size:11px;">Target: ${boq.qty || 0} &nbsp;·&nbsp; ${diambil}/${total} diambil &nbsp;·&nbsp; ${dikirim} dikirim</span>
+                    ${sisa > 0 && !isLocked ? `<span style="font-size:11px;color:#b45309;background:#fef3c7;border:1px solid #fde68a;border-radius:4px;padding:1px 6px;">${sisa} slot belum dibuat</span>` : ''}
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    ${addBtn}
+                    <button type="button" class="btn btn-sm btn-plan-icon btn-sample-collapse"
+                        data-target="#${collapseId}" title="Sembunyikan / Tampilkan">
+                        <i class="fa-solid fa-chevron-up"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="${collapseId}">
+                <div style="padding:4px 12px 0;">
+                    <div class="progress" style="height:3px;border-radius:0;">
+                        <div class="progress-bar" style="width:${pct}%;background:${barColor};"></div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="pm-table">
+                        <thead>
+                            <tr>
+                                <th style="width:36px;">#</th>
+                                <th style="width:1%;white-space:nowrap;">Jenis / No. Sample</th>
+                                <th style="width:220px;">Titik Lokasi</th>
+                                <th>Status</th>
+                                <th style="width:48px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>${slotRows}</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ── Buka modal edit sample ──
+$(document).off('click.sample', '.btn-sample-edit').on('click.sample', '.btn-sample-edit', function (e) {
+    e.stopPropagation();
+    const idSample = $(this).data('id');
+    const $tr      = $(this).closest('tr');
+    const boqName  = $tr.data('boq-name') || '';
+
+    const $modal = $('#sampleDetailModal');
+    $modal.find('#sampleDetailModalLabel').text(`Sample – ${boqName}`);
+    $modal.find('#sampleModal-id').val(idSample);
+
+    // Reset form dulu
+    $modal.find('#sampleModal-jenis').val('');
+    $modal.find('#sampleModal-no').val('');
+    $modal.find('#sampleModal-tanggal').val('');
+    const $titikSel = $modal.find('#sampleModal-titik');
+    $titikSel.data('_pendingVal', '');
+    if ($titikSel.data('select2')) $titikSel.val(null).trigger('change');
+    $modal.find('#sampleModal-kondisi').val('');
+    $modal.find('#sampleModal-status').val('belum_diambil');
+    $modal.find('#sampleModal-keterangan').val('');
+
+    // Load data terkini dari server
+    $.get(`/lab-samples/detail/${idSample}`)
+        .done(function (res) {
+            if (res.data) {
+                const s = res.data;
+                $modal.find('#sampleModal-jenis').val(s.jenis_sample || '');
+                $modal.find('#sampleModal-no').val(s.no_sample || '');
+                $modal.find('#sampleModal-tanggal').val(s.tanggal_pengambilan || '');
+                $modal.find('#sampleModal-titik').data('_pendingVal', s.titik_lokasi || '');
+                $modal.find('#sampleModal-kondisi').val(s.kondisi_sample || '');
+                $modal.find('#sampleModal-status').val(s.status || 'belum_diambil');
+                $modal.find('#sampleModal-keterangan').val(s.keterangan || '');
+            }
+        })
+        .always(function () {
+            // Re-init flatpickr
+            initFpDate('#sampleDetailModal');
+
+            // Init Select2 untuk field enum
+            const s2Opts = { width: '100%', dropdownParent: $modal, allowClear: true };
+            ['#sampleModal-jenis', '#sampleModal-kondisi', '#sampleModal-status'].forEach(function (sel) {
+                const $el = $modal.find(sel);
+                if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
+                $el.select2({ ...s2Opts, placeholder: $el.find('option:first').text() || '-- Pilih --' });
+                $el.trigger('change');
+            });
+
+            // Re-init Select2 titik lokasi (supaya options ter-refresh & value bisa di-set)
+            initSampleModalTitikSelect2();
+            const curTitik = $modal.find('#sampleModal-titik').data('_pendingVal');
+            if (curTitik !== undefined) {
+                $modal.find('#sampleModal-titik').val(curTitik || null).trigger('change');
+                $modal.find('#sampleModal-titik').removeData('_pendingVal');
+            }
+
+            bootstrap.Modal.getOrCreateInstance($modal[0]).show();
+        });
+});
+
+// ── Simpan sample ──
+$(document).off('click.sample', '#sampleModal-btn-save').on('click.sample', '#sampleModal-btn-save', function () {
+    const $btn     = $(this);
+    const idSample = $('#sampleDetailModal #sampleModal-id').val();
+    if (!idSample) return;
+
+    const payload = {
+        _token:              window.route.csrf,
+        jenis_sample:        $('#sampleModal-jenis').val() || null,
+        no_sample:           $('#sampleModal-no').val().trim() || null,
+        tanggal_pengambilan: $('#sampleModal-tanggal').val() || null,
+        titik_lokasi:        ($('#sampleModal-titik').val() || '').trim() || null,
+        kondisi_sample:      $('#sampleModal-kondisi').val() || null,
+        status:              $('#sampleModal-status').val(),
+        keterangan:          $('#sampleModal-keterangan').val().trim() || null,
+    };
+
+    $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
+
+    $.post(`/lab-samples/${idSample}`, payload)
+        .done(function (res) {
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('sampleDetailModal'))?.hide();
+                Notify.success('Sample berhasil disimpan.');
+                // Reload sample list
+                const idFwo = $('#fwoDetailTabs button[data-bs-target="#tabFwoSample"]').data('id-fwo');
+                if (idFwo) loadSampleData(idFwo);
+            } else {
+                Notify.error(res.message || 'Gagal menyimpan.');
+            }
+        })
+        .fail(function (xhr) {
+            Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan sample.');
+        })
+        .always(function () {
+            $btn.prop('disabled', false).html('Simpan');
+        });
+});
+
+// ── Inline Select2 titik lokasi: set value setelah Select2 diinit ──
+// (dihandle di initSampleTitikSelect2 via data-current)
+$(document).off('change.sample-titik', '.sample-inline-titik').on('change.sample-titik', '.sample-inline-titik', function () {
+    const $sel   = $(this);
+    const id     = $sel.data('id');
+    const val    = $sel.val() || null;
+
+    // Update data-current lalu reinit semua titik dalam tabel yang sama
+    $sel.data('current', val || '');
+    const $table = $sel.closest('table');
+    initSampleTitikSelect2($table.closest('div')[0]);
+
+    $.post(`/lab-samples/${id}/field`, { _token: window.route.csrf, field: 'titik_lokasi', value: val })
+        .fail(function () { Swal.fire({ icon: 'error', title: 'Gagal menyimpan lokasi', timer: 1500, showConfirmButton: false }); });
+});
+
+// ── Inline Select2 status ──
+$(document).off('change.sample-status', '.sample-inline-status').on('change.sample-status', '.sample-inline-status', function () {
+    const $sel  = $(this);
+    const id    = $sel.data('id');
+    const val   = $sel.val();
+    const $card = $sel.closest('.mb-3.border.rounded');
+
+    $.post(`/lab-samples/${id}/field`, { _token: window.route.csrf, field: 'status', value: val })
+        .done(function (res) {
+            if (res.success) {
+                // Hitung ulang progress dari semua select status dalam card ini
+                const $allStatus = $card.find('.sample-inline-status');
+                const total    = $allStatus.length;
+                const diambil  = $allStatus.filter(function () { const v = $(this).val(); return v === 'diambil' || v === 'dikirim'; }).length;
+                const dikirim  = $allStatus.filter(function () { return $(this).val() === 'dikirim'; }).length;
+                const qty      = parseInt($card.find('.sample-progress-text').text().match(/Target:\s*(\d+)/)?.[1] || 0);
+                $card.find('.sample-progress-text').html(`Target: ${qty} &nbsp;·&nbsp; ${diambil}/${total} diambil &nbsp;·&nbsp; ${dikirim} dikirim`);
+
+                // Update progress bar
+                const pct      = total > 0 ? Math.round((diambil / total) * 100) : 0;
+                const barColor = pct === 100 ? '#15803d' : '#0369a1';
+                $card.find('.progress-bar').css({ width: pct + '%', background: barColor });
+            }
+        })
+        .fail(function () { Swal.fire({ icon: 'error', title: 'Gagal menyimpan status', timer: 1500, showConfirmButton: false }); });
+});
+
+// ── Buka modal Isi Bersama ──
+$(document).off('click.sample', '.btn-sample-bulk-fill').on('click.sample', '.btn-sample-bulk-fill', function (e) {
+    e.stopPropagation();
+    const idFwoBoq = $(this).data('id-fwo-boq');
+    const $modal   = $('#sampleBulkFillModal');
+
+    $modal.find('#bulkFillModal-id-fwo-boq').val(idFwoBoq);
+    $modal.find('#bulkFill-jenis').val('').trigger('change');
+    $modal.find('#bulkFill-tanggal').val('');
+    $modal.find('#bulkFill-status').val('').trigger('change');
+    $modal.find('#bulkFill-kondisi').val('').trigger('change');
+
+    // Init Select2
+    const s2Opts = { width: '100%', dropdownParent: $modal, allowClear: false };
+    ['#bulkFill-jenis', '#bulkFill-status', '#bulkFill-kondisi'].forEach(function (sel) {
+        const $el = $modal.find(sel);
+        if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
+        $el.select2(s2Opts);
+    });
+    initFpDate('#sampleBulkFillModal');
+
+    bootstrap.Modal.getOrCreateInstance($modal[0]).show();
+});
+
+// ── Simpan Isi Bersama ──
+$(document).off('click.sample', '#sampleBulkFillModal-btn-save').on('click.sample', '#sampleBulkFillModal-btn-save', function () {
+    const $btn     = $(this);
+    const idFwoBoq = $('#bulkFillModal-id-fwo-boq').val();
+    const payload  = {
+        _token:              window.route.csrf,
+        jenis_sample:        $('#bulkFill-jenis').val() || null,
+        tanggal_pengambilan: $('#bulkFill-tanggal').val() || null,
+        status:              $('#bulkFill-status').val() || null,
+        kondisi_sample:      $('#bulkFill-kondisi').val() || null,
+    };
+
+    const hasValue = Object.entries(payload).some(([k, v]) => k !== '_token' && v);
+    if (!hasValue) { Notify.warning('Isi minimal satu field terlebih dahulu.'); return; }
+
+    $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
+    $.post(`/lab-samples/boq/${idFwoBoq}/bulk-fill`, payload)
+        .done(function (res) {
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('sampleBulkFillModal'))?.hide();
+                Notify.success('Semua sample berhasil diperbarui.');
+                const idFwo = $('#fwoDetailTabs button[data-bs-target="#tabFwoSample"]').data('id-fwo');
+                if (idFwo) loadSampleData(idFwo);
+            } else {
+                Notify.error(res.message || 'Gagal.');
+            }
+        })
+        .fail(function (xhr) { Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan.'); })
+        .always(function () { $btn.prop('disabled', false).html('<i class="fa-solid fa-wand-magic-sparkles me-1"></i> Apply ke Semua Sample'); });
+});
+
+// ── Hapus sample ──
+$(document).off('click.sample', '.btn-sample-delete').on('click.sample', '.btn-sample-delete', function (e) {
+    e.stopPropagation();
+    const id  = $(this).data('id');
+    const no  = $(this).data('no');
+
+    Swal.fire({
+        title: 'Hapus Sample?',
+        text: `${no} akan dihapus permanen.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#dc2626',
+    }).then(function (result) {
+        if (!result.isConfirmed) return;
+        $.ajax({
+            url: `/lab-samples/${id}`,
+            type: 'DELETE',
+            data: { _token: window.route.csrf },
+        }).done(function (res) {
+            if (res.success) {
+                Notify.success('Sample berhasil dihapus.');
+                const idFwo = $('#fwoDetailTabs button[data-bs-target="#tabFwoSample"]').data('id-fwo');
+                if (idFwo) loadSampleData(idFwo);
+            } else {
+                Notify.error(res.message || 'Gagal menghapus.');
+            }
+        }).fail(function (xhr) {
+            Notify.error(xhr.responseJSON?.message || 'Gagal menghapus.');
+        });
+    });
+});
+
+// ── Buat otomatis semua slot yang belum ada ──
+$(document).off('click.sample', '.btn-sample-generate').on('click.sample', '.btn-sample-generate', function () {
+    const idFwoBoq = $(this).data('id-fwo-boq');
+    const sisa     = $(this).data('sisa');
+    if (!idFwoBoq) return;
+
+    if (sisa === 0) {
+        Notify.info('Semua slot sudah dibuat.');
+        return;
+    }
+
+    $(this).prop('disabled', true);
+    $.post(`/lab-samples/boq/${idFwoBoq}/generate`, { _token: window.route.csrf })
+        .done(function (res) {
+            if (res.success) {
+                Notify.success('Sample berhasil dibuat otomatis.');
+                const idFwo = $('#fwoDetailTabs button[data-bs-target="#tabFwoSample"]').data('id-fwo');
+                if (idFwo) loadSampleData(idFwo);
+            } else {
+                Notify.error(res.message || 'Gagal membuat sample.');
+            }
+        })
+        .fail(function (xhr) {
+            Notify.error(xhr.responseJSON?.message || 'Gagal membuat sample.');
+        });
+});
+
+// ── Tambah 1 slot manual ──
+$(document).off('click.sample', '.btn-sample-add-one').on('click.sample', '.btn-sample-add-one', function () {
+    const idFwoBoq = $(this).data('id-fwo-boq');
+    const sisa     = parseInt($(this).closest('.dropdown').siblings('.btn-sample-generate').data('sisa') ?? $(this).closest('[data-sisa]').data('sisa') ?? 999);
+    if (!idFwoBoq) return;
+
+    // Cek di frontend: ambil dari badge "X slot belum dibuat" atau data-sisa di generate button
+    const $card    = $(this).closest('.mb-3');
+    const $genBtn  = $card.find('.btn-sample-generate');
+    const sisaQty  = parseInt($genBtn.data('sisa') ?? 999);
+
+    if (sisaQty === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Batas Maksimum',
+            text: 'Jumlah sample sudah mencapai batas maksimum sesuai qty BOQ.',
+            confirmButtonText: 'OK',
+        });
+        return;
+    }
+
+    $(this).prop('disabled', true);
+    $.post(`/lab-samples/boq/${idFwoBoq}/add-one`, { _token: window.route.csrf })
+        .done(function (res) {
+            if (res.success) {
+                const idFwo = $('#fwoDetailTabs button[data-bs-target="#tabFwoSample"]').data('id-fwo');
+                if (idFwo) loadSampleData(idFwo);
+            } else {
+                Swal.fire({ icon: 'warning', title: 'Tidak Dapat Ditambahkan', text: res.message || 'Gagal menambah sample.', confirmButtonText: 'OK' });
+            }
+        })
+        .fail(function (xhr) {
+            Swal.fire({ icon: 'warning', title: 'Tidak Dapat Ditambahkan', text: xhr.responseJSON?.message || 'Gagal menambah sample.', confirmButtonText: 'OK' });
+        });
+});

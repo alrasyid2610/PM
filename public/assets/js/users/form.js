@@ -41,7 +41,7 @@ function renderPermissionMatrix(permissions) {
         group.items.forEach(item => {
             const p = perms[item.slug] || {};
             rows += `
-            <tr>
+            <tr data-search="${item.label.toLowerCase()} ${group.group.toLowerCase()}">
                 <td class="text-center">
                     <input type="checkbox" class="form-check-input select-all-row disabled" data-slug="${item.slug}" title="Pilih semua aksi">
                 </td>
@@ -63,6 +63,15 @@ function renderPermissionMatrix(permissions) {
     });
 
     return `
+    <div class="mb-3">
+        <div class="pm-search">
+            <span class="pm-search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input type="text" id="perm-search" placeholder="Cari menu..." data-no-disable>
+            <button type="button" id="perm-search-clear" class="pm-search-clear d-none" title="Hapus" data-no-disable>
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+    </div>
     <div class="table-responsive">
         <table class="table table-bordered table-sm permission-matrix mb-0">
             <thead class="table-dark">
@@ -164,4 +173,36 @@ function initPermissionMatrix() {
         const totalChecked = $(container).find('.perm-check:checked').length;
         $(container).find('.select-all-global').prop('checked', total === totalChecked);
     }
+
+    // Search permission matrix
+    $(container).on('input', '#perm-search', function () {
+        const q = $(this).val().toLowerCase().trim();
+        const $rows = $(container).find('.permission-matrix tbody tr');
+
+        $rows.filter('.table-secondary').each(function () {
+            const $group = $(this);
+            const $items = $group.nextUntil('tr.table-secondary');
+
+            if (!q) {
+                $group.show();
+                $items.show();
+                return;
+            }
+
+            const anyVisible = $items.filter(function () {
+                return ($(this).data('search') || '').includes(q);
+            }).length > 0;
+
+            $group.toggle(anyVisible);
+            $items.each(function () {
+                $(this).toggle(($(this).data('search') || '').includes(q));
+            });
+        });
+
+        $('#perm-search-clear').toggleClass('d-none', !q);
+    });
+
+    $(container).on('click', '#perm-search-clear', function () {
+        $('#perm-search').val('').trigger('input');
+    });
 }

@@ -33,10 +33,10 @@
 <script src="{{ asset('assets/vendor/perfect-scrollbar/perfect-scrollbar.min.js') }}"></script>
 <script src="{{ asset('assets/vendor/datatables/dataTables.min.js') }}"></script>
 <script src="{{ asset('assets/vendor/datatables/dataTables.bootstrap5.min.js') }}"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="{{ asset('assets/vendor/select2/select2.min.js') }}"></script>
 <script src="{{ asset('assets/js/notification.js') }}"></script>
 <script src="{{ asset('assets/js/main.js') }}"></script>
-<script src="https://unpkg.com/filepond/dist/filepond.min.js"></script>
+<script src="{{ asset('assets/vendor/filepond/filepond.min.js') }}"></script>
 <script src="{{ asset('assets/js/core/wilayahEngine.js') }}"></script>
 <script src="{{ asset('assets/js/core/formSubmitEngine.js') }}"></script>
 <script src="{{ asset('assets/js/core/createFormHandler.js') }}"></script>
@@ -51,9 +51,9 @@
 </script>
 @endauth
 <script src="{{ asset('assets/js/scientific-input.js') }}"></script>
-<script src="https://cdn.jsdelivr.net/npm/cleave.js@1.6.0/dist/cleave.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/id.js"></script>
+<script src="{{ asset('assets/vendor/cleave/cleave.min.js') }}"></script>
+<script src="{{ asset('assets/vendor/flatpickr/flatpickr.min.js') }}"></script>
+<script src="{{ asset('assets/vendor/flatpickr/l10n/id.js') }}"></script>
 <script>
     function initNumericMask(container) {
         $(container).find('.input-num-mask').each(function () {

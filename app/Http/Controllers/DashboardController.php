@@ -24,7 +24,7 @@ class DashboardController extends Controller
 
         $woOutstanding = DB::table('work_orders')
             ->whereNull('deleted_at')
-            ->where('status', 'on-progress')
+            ->where('status', 'onprogress')
             ->count();
 
         $terminOutstanding = DB::table('termin')
@@ -86,7 +86,7 @@ class DashboardController extends Controller
                 ->leftJoin('business_relations as br', 'br.id_br', '=', 'wo.id_pelanggan_pekerjaan')
                 ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'wo.id_pic_pelanggan_pekerjaan')
                 ->whereNull('wo.deleted_at')
-                ->where('wo.status', 'on-progress')
+                ->where('wo.status', 'onprogress')
                 ->select([
                     'wo.id_wo as id_rec',
                     'wo.no_wo as no',

@@ -42,6 +42,7 @@ function switchTab(type) {
         status: function (data) {
             var map = {
                 'on-progress': '<span class="badge bg-primary">On Progress</span>',
+                'onprogress':  '<span class="badge bg-primary">On Progress</span>',
                 completed:     '<span class="badge bg-success">Completed</span>',
                 cancel:        '<span class="badge bg-danger">Cancel</span>',
                 planned:       '<span class="badge bg-info text-dark">Planned</span>',

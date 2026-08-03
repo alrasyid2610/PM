@@ -4,9 +4,7 @@
     <title>Dashboard</title>
 
     {{-- Font Awesome --}}
-    <link rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-      {{-- <link rel="stylesheet" href="{{ asset('assets/vendor/fontawesome/all.min.css') }}"> --}}
+    <link rel="stylesheet" href="{{ asset('assets/vendor/fontawesome/all.min.css') }}">
 
     
     {{-- Bootstrap --}}
@@ -21,10 +19,9 @@
     {{-- Perfect Scrollbar --}}
     <link rel="stylesheet" href="{{ asset('assets/vendor/perfect-scrollbar/perfect-scrollbar.css') }}">
 
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
-    
-    <link href="https://unpkg.com/filepond/dist/filepond.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link href="{{ asset('assets/vendor/select2/select2.min.css') }}" rel="stylesheet"/>
+    <link href="{{ asset('assets/vendor/filepond/filepond.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/flatpickr/flatpickr.min.css') }}">
 
     
     {{-- App --}}
@@ -35,8 +32,8 @@
 
 
     <link rel="stylesheet" href="{{ asset('assets/vendor/datatables/dataTables.bootstrap5.min.css') }}">
-    <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.4.0/css/fixedHeader.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/datatables/fixedHeader.dataTables.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/datatables/buttons.bootstrap5.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/main.css') }}">
 
 
