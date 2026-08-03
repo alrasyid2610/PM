@@ -517,6 +517,7 @@ class FieldworkController extends Controller
             ->leftJoin('testing_items as ti', 'ti.id_testing_item', '=', 'fwbi.id_testing_item')
             ->leftJoin('testing_parameters as tpFw', 'tpFw.id_testing_parameter', '=', 'ti.id_testing_parameter')
             ->where('fwb.id_fwo', $id)
+            ->whereNull('fwb.deleted_at')
             ->select(
                 'tms.kode as kode_tms',
                 'tms.judul_indonesia as judul_indonesia_tms',
