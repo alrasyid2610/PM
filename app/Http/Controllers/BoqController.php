@@ -67,6 +67,13 @@ class BoqController extends Controller
 
         $boqIds = $boqRows->pluck('id_boq');
 
+        // Cek apakah tiap BOQ pernah direferensikan di fieldwork_boq
+        $boqWithFwo = DB::table('fieldwork_boq')
+            ->whereIn('id_boq', $boqIds)
+            ->pluck('id_boq')
+            ->unique()
+            ->flip(); // id_boq sebagai key untuk O(1) lookup
+
         $boqItemsGrouped = DB::table('boq_items as bi')
             ->leftJoin('testing_items as ti', 'bi.id_testing_item', '=', 'ti.id_testing_item')
             ->leftJoin('testing_units as tu', 'ti.id_testing_unit', '=', 'tu.id_testing_unit')
@@ -84,7 +91,7 @@ class BoqController extends Controller
             ->get()
             ->groupBy('id_boq');
 
-        $sections = $boqRows->map(function ($boq) use ($boqItemsGrouped) {
+        $sections = $boqRows->map(function ($boq) use ($boqItemsGrouped, $boqWithFwo) {
             $items = ($boqItemsGrouped->get($boq->id_boq) ?? collect())->map(function ($item) {
                 return [
                     'id_boq_items'    => $item->id_boq_items,
@@ -106,6 +113,7 @@ class BoqController extends Controller
                 'harga'                 => $boq->harga,
                 'keterangan'            => $boq->keterangan,
                 'items'                 => $items,
+                'has_fwo'               => $boqWithFwo->has($boq->id_boq),
             ];
         })->values()->toArray();
 
@@ -164,9 +172,38 @@ class BoqController extends Controller
             'sections.*.items.*'               => 'required|integer',
         ]);
 
+        $idWo       = $validated['id_wo'];
+        $incomingPtIds = collect($validated['sections'])->pluck('id_testing_point');
+
+        // Guard: duplikasi testing point dalam payload yang dikirim
+        if ($incomingPtIds->count() !== $incomingPtIds->unique()->count()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terdapat duplikasi item BOQ dalam data yang dikirim.',
+            ], 422);
+        }
+
+        // Guard: testing point sudah ada di DB untuk WO ini (active)
+        $alreadyExists = DB::table('boq')
+            ->where('id_wo', $idWo)
+            ->whereNull('deleted_at')
+            ->whereIn('id_testing_point', $incomingPtIds->toArray())
+            ->pluck('id_testing_point');
+
+        if ($alreadyExists->isNotEmpty()) {
+            $ptNames = DB::table('testing_points')
+                ->whereIn('id_testing_point', $alreadyExists->toArray())
+                ->pluck('nama')
+                ->join(', ');
+            return response()->json([
+                'success' => false,
+                'message' => "Item BOQ berikut sudah ada untuk WO ini: {$ptNames}.",
+            ], 422);
+        }
+
         foreach ($validated['sections'] as $section) {
             $boqId = DB::table('boq')->insertGetId([
-                'id_wo'                 => $validated['id_wo'],
+                'id_wo'                 => $idWo,
                 'id_testing_point'      => $section['id_testing_point'],
                 'item_produk_alternate' => $section['item_produk_alternate'] ?? null,
                 'qty'                   => $section['qty'] ?? null,
@@ -177,17 +214,15 @@ class BoqController extends Controller
                 'updated_at'            => now(),
             ]);
 
-            $boqItems = array_map(fn($itemId) => [
+            DB::table('boq_items')->insert(array_map(fn($itemId) => [
                 'id_boq'          => $boqId,
                 'id_testing_item' => $itemId,
                 'created_at'      => now(),
                 'updated_at'      => now(),
-            ], $section['items']);
-
-            DB::table('boq_items')->insert($boqItems);
+            ], $section['items']));
         }
 
-        saveAudit('boq', $validated['id_wo'], 'create', null, json_encode($validated['sections']));
+        saveAudit('boq', $idWo, 'create', null, json_encode($validated['sections']));
 
         return response()->json([
             'success' => true,
@@ -209,36 +244,139 @@ class BoqController extends Controller
             'sections.*.items.*'               => 'required|integer',
         ]);
 
-        $oldBoqIds = DB::table('boq')->where('id_wo', $id)->pluck('id_boq');
-        $oldData   = DB::table('boq')->where('id_wo', $id)->get();
+        // Existing active BOQ records for this WO, keyed by id_testing_point
+        $existingBoqs = DB::table('boq')
+            ->where('id_wo', $id)
+            ->whereNull('deleted_at')
+            ->get()
+            ->keyBy('id_testing_point');
 
-        DB::table('boq_items')->whereIn('id_boq', $oldBoqIds)->delete();
-        DB::table('boq')->where('id_wo', $id)->delete();
+        $incomingPointIds = collect($validated['sections'])->pluck('id_testing_point');
 
-        foreach ($validated['sections'] as $section) {
-            $boqId = DB::table('boq')->insertGetId([
-                'id_wo'                 => $id,
-                'id_testing_point'      => $section['id_testing_point'],
-                'item_produk_alternate' => $section['item_produk_alternate'] ?? null,
-                'qty'                   => $section['qty'] ?? null,
-                'satuan'                => $section['satuan'] ?? null,
-                'harga'                 => $section['harga'] ?? null,
-                'keterangan'            => $section['keterangan'] ?? null,
-                'created_at'            => now(),
-                'updated_at'            => now(),
-            ]);
+        // Testing points that exist in DB but not in payload → will be removed
+        $removedPointIds = $existingBoqs->keys()->diff($incomingPointIds);
 
-            $boqItems = array_map(fn($itemId) => [
-                'id_boq'          => $boqId,
-                'id_testing_item' => $itemId,
-                'created_at'      => now(),
-                'updated_at'      => now(),
-            ], $section['items']);
+        // Guard: reject if any removed BOQ is still referenced by an active FWO
+        foreach ($removedPointIds as $ptId) {
+            $boqId = $existingBoqs[$ptId]->id_boq;
+            $hasActiveFwo = DB::table('fieldwork_boq as fb')
+                ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
+                ->where('fb.id_boq', $boqId)
+                ->whereNull('fw.deleted_at')
+                ->whereNull('fb.deleted_at')
+                ->exists();
 
-            DB::table('boq_items')->insert($boqItems);
+            if ($hasActiveFwo) {
+                $ptName = DB::table('testing_points')
+                    ->where('id_testing_point', $ptId)
+                    ->value('nama') ?? "ID $ptId";
+                return response()->json([
+                    'success' => false,
+                    'message' => "Item BOQ \"{$ptName}\" tidak dapat dihapus karena sudah digunakan oleh Fieldwork Order yang aktif.",
+                ], 422);
+            }
         }
 
-        saveAudit('boq', $id, 'update', json_encode($oldData), json_encode($validated['sections']));
+        $oldData = DB::table('boq')->where('id_wo', $id)->whereNull('deleted_at')->get();
+
+        // Delete BOQ records that are no longer in payload.
+        // Hard delete jika tidak ada FWO yang pernah mereferensikan BOQ ini,
+        // soft delete jika ada (menjaga integritas data fieldwork_boq historis).
+        foreach ($removedPointIds as $ptId) {
+            $boqId = $existingBoqs[$ptId]->id_boq;
+            $hasFwoReference = DB::table('fieldwork_boq')
+                ->where('id_boq', $boqId)
+                ->exists();
+
+            if ($hasFwoReference) {
+                DB::table('boq')->where('id_boq', $boqId)->update(['deleted_at' => now()]);
+                DB::table('boq_items')->where('id_boq', $boqId)
+                    ->update(['deleted_at' => now()]);
+            } else {
+                DB::table('boq_items')->where('id_boq', $boqId)->delete();
+                DB::table('boq')->where('id_boq', $boqId)->delete();
+            }
+        }
+
+        // Process each incoming section
+        foreach ($validated['sections'] as $section) {
+            $ptId    = $section['id_testing_point'];
+            $newItemIds = $section['items'];
+
+            if ($existingBoqs->has($ptId)) {
+                // UPDATE — keep id_boq intact so fieldwork_boq references stay valid
+                $boqId = $existingBoqs[$ptId]->id_boq;
+
+                DB::table('boq')->where('id_boq', $boqId)->update([
+                    'item_produk_alternate' => $section['item_produk_alternate'] ?? null,
+                    'qty'                   => $section['qty'] ?? null,
+                    'satuan'                => $section['satuan'] ?? null,
+                    'harga'                 => $section['harga'] ?? null,
+                    'keterangan'            => $section['keterangan'] ?? null,
+                    'updated_at'            => now(),
+                ]);
+
+                // Diff boq_items: restore soft-deleted, insert new, soft-delete removed
+                $existingItems = DB::table('boq_items')
+                    ->where('id_boq', $boqId)
+                    ->get()
+                    ->keyBy('id_testing_item');
+
+                foreach ($newItemIds as $itemId) {
+                    if ($existingItems->has($itemId)) {
+                        // Restore if previously soft-deleted
+                        if ($existingItems[$itemId]->deleted_at !== null) {
+                            DB::table('boq_items')
+                                ->where('id_boq', $boqId)
+                                ->where('id_testing_item', $itemId)
+                                ->update(['deleted_at' => null, 'updated_at' => now()]);
+                        }
+                    } else {
+                        // Insert new item
+                        DB::table('boq_items')->insert([
+                            'id_boq'          => $boqId,
+                            'id_testing_item' => $itemId,
+                            'created_at'      => now(),
+                            'updated_at'      => now(),
+                        ]);
+                    }
+                }
+
+                // Soft-delete items removed from this section
+                $toRemove = $existingItems->keys()->diff($newItemIds);
+                if ($toRemove->isNotEmpty()) {
+                    DB::table('boq_items')
+                        ->where('id_boq', $boqId)
+                        ->whereIn('id_testing_item', $toRemove->toArray())
+                        ->whereNull('deleted_at')
+                        ->update(['deleted_at' => now()]);
+                }
+
+            } else {
+                // INSERT new BOQ record for a new testing point
+                $boqId = DB::table('boq')->insertGetId([
+                    'id_wo'                 => $id,
+                    'id_testing_point'      => $ptId,
+                    'item_produk_alternate' => $section['item_produk_alternate'] ?? null,
+                    'qty'                   => $section['qty'] ?? null,
+                    'satuan'                => $section['satuan'] ?? null,
+                    'harga'                 => $section['harga'] ?? null,
+                    'keterangan'            => $section['keterangan'] ?? null,
+                    'created_at'            => now(),
+                    'updated_at'            => now(),
+                ]);
+
+                DB::table('boq_items')->insert(array_map(fn($itemId) => [
+                    'id_boq'          => $boqId,
+                    'id_testing_item' => $itemId,
+                    'created_at'      => now(),
+                    'updated_at'      => now(),
+                ], $newItemIds));
+            }
+        }
+
+        $afterData = DB::table('boq')->where('id_wo', $id)->whereNull('deleted_at')->get();
+        saveAudit('boq', $id, 'update', json_encode($oldData), json_encode($afterData));
 
         return response()->json(['success' => true, 'message' => 'BOQ berhasil diperbarui']);
     }

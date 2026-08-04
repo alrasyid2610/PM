@@ -307,20 +307,20 @@ class WorkOrderController extends Controller
             return response()->json(['message' => 'Work Order sudah berstatus completed'], 422);
         }
 
-        $totalOutput = DB::table('output_pekerjaan')->where('id_wo', $id)->whereNull('deleted_at')->count();
-        if ($totalOutput === 0) {
-            return response()->json(['message' => 'Belum ada output pekerjaan. Tambahkan output terlebih dahulu sebelum menyelesaikan WO.'], 422);
+        $totalFwo = DB::table('fieldworks')->where('id_wo', $id)->whereNull('deleted_at')->count();
+        if ($totalFwo === 0) {
+            return response()->json(['message' => 'Belum ada Fieldwork Order pada WO ini. Tambahkan FWO terlebih dahulu sebelum menyelesaikan WO.'], 422);
         }
 
-        $belumSiap = DB::table('output_pekerjaan')
+        $fwoBelumSelesai = DB::table('fieldworks')
             ->where('id_wo', $id)
             ->whereNull('deleted_at')
-            ->where('status', '!=', 'siap')
+            ->where('status', '!=', 'completed')
             ->count();
 
-        if ($belumSiap > 0) {
+        if ($fwoBelumSelesai > 0) {
             return response()->json([
-                'message' => "Masih ada {$belumSiap} output yang belum berstatus siap. Semua output harus siap sebelum WO dapat diselesaikan.",
+                'message' => "Masih ada {$fwoBelumSelesai} FWO yang belum selesai. Semua FWO harus berstatus Completed sebelum WO dapat diselesaikan.",
             ], 422);
         }
 
@@ -559,7 +559,7 @@ class WorkOrderController extends Controller
 
         $boqIds = $boqSections->pluck('id_boq');
         $boqItemsByBoq = $boqIds->isNotEmpty()
-            ? DB::table('boq_items')->whereIn('id_boq', $boqIds)
+            ? DB::table('boq_items')->whereIn('id_boq', $boqIds)->whereNull('deleted_at')
                 ->select(['id_boq', 'id_testing_item'])->get()->groupBy('id_boq')
             : collect();
 
@@ -590,6 +590,7 @@ class WorkOrderController extends Controller
             ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
             ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->where('b.id_wo', $id)
+            ->whereNull('b.deleted_at')
             ->select([
                 'b.id_boq',
                 'b.id_testing_point',

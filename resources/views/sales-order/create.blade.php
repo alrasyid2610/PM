@@ -223,11 +223,7 @@
         <div class="col-12">
             <x-section-card icon="fa-circle-info" color="icon-purple" title="Status & Keterangan">
                 <div class="row g-3">
-                    <div class="col-md-3 col-12">
-                        <label class="form-label">Status</label>
-                        <input type="text" name="status" class="form-control" value="on-progress" readonly>
-                    </div>
-                    <div class="col-md-9 col-12">
+                    <div class="col-md-12 col-12">
                         <label class="form-label">Keterangan Status</label>
                         <textarea name="keterangan_status" class="form-control" rows="2"></textarea>
                     </div>

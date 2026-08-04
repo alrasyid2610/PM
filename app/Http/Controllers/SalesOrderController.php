@@ -46,7 +46,6 @@ class SalesOrderController extends Controller
         $request->validate([
             'tanggal_so' => 'required|date',
             'id_pelanggan' => 'required|integer',
-            'status' => 'required|string'
         ]);
 
         $soNumber = $this->generateSoNumber();
@@ -89,8 +88,8 @@ class SalesOrderController extends Controller
             'pic_marketing_internal' => $request->pic_marketing_internal,
             'pic_marketing_eksternal' => $request->pic_marketing_eksternal,
 
-            // STATUS
-            'status' => $request->status,
+            // STATUS — default on-progress saat pertama dibuat
+            'status' => 'on-progress',
             'keterangan_status' => $request->keterangan_status,
             'cara_pembayaran'   => $request->cara_pembayaran,
             'keterangan'        => $request->keterangan,
@@ -227,7 +226,7 @@ class SalesOrderController extends Controller
         $validated = $request->validate([
             'tanggal_so' => 'required|date',
             'judul_order' => 'nullable|string|max:255',
-            'tidak_ada_po' => 'required|boolean',
+            'tidak_ada_po' => 'nullable|boolean',
             'tanggal_po' => 'nullable|date',
             'no_po' => 'nullable|string|max:100',
             'tanggal_mulai' => 'nullable|date',
@@ -252,7 +251,6 @@ class SalesOrderController extends Controller
             'pic_marketing_eksternal' => 'nullable|string|max:100',
 
             'id_sc' => 'nullable|integer',
-            'status' => 'required|string|max:50',
             'keterangan_status' => 'nullable|string',
             'cara_pembayaran'   => 'nullable|string',
             'keterangan'        => 'nullable|string',
@@ -271,7 +269,7 @@ class SalesOrderController extends Controller
                     'id_sc'      => !empty($validated['id_sc']) ? (int)$validated['id_sc'] : null,
                     'tanggal_so' => $validated['tanggal_so'],
                     'judul_order' => $validated['judul_order'],
-                    'tidak_ada_po' => $validated['tidak_ada_po'],
+                    'tidak_ada_po' => $validated['tidak_ada_po'] ?? 0,
                     'tanggal_po' => $validated['tanggal_po'],
                     'no_po' => $validated['no_po'],
                     'tanggal_mulai' => $validated['tanggal_mulai'],
@@ -295,7 +293,6 @@ class SalesOrderController extends Controller
                     'pic_marketing_internal' => $validated['pic_marketing_internal'],
                     'pic_marketing_eksternal' => $validated['pic_marketing_eksternal'],
 
-                    'status' => $validated['status'],
                     'keterangan_status' => $validated['keterangan_status'],
                     'cara_pembayaran'   => $validated['cara_pembayaran'],
                     'keterangan'        => $validated['keterangan'],
@@ -341,6 +338,7 @@ class SalesOrderController extends Controller
         $boqSections = DB::table('boq as b')
             ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
             ->whereIn('b.id_wo', $woIds)
+            ->whereNull('b.deleted_at')
             ->select(['b.id_boq', 'b.id_wo', 'tp.nama as point_name', 'b.qty as boq_qty', 'b.satuan', 'b.harga'])
             ->get();
 

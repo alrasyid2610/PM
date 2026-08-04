@@ -942,6 +942,34 @@ $(document).ready(function () {
         saveBulkBoq($(this));
     });
 
+    // Validasi real-time qty bulk BOQ
+    $(document).on('input', '.bulk-boq-qty', function () {
+        const $input  = $(this);
+        const qty     = parseInt($input.val()) || 0;
+        const maxRaw  = $input.data('max');
+        const max     = (maxRaw !== '' && maxRaw !== undefined) ? parseInt(maxRaw) : null;
+        const isOver  = max !== null && qty > max;
+        const $hint   = $input.siblings('.bulk-qty-hint');
+
+        if (isOver) {
+            $input.css({ 'border-color': '#f87171', 'background': '#fef2f2' });
+            if (!$hint.length) {
+                $input.after(`<div class="bulk-qty-hint" style="color:#dc2626;font-size:11px;margin-top:2px;">Maks: ${max}</div>`);
+            }
+        } else {
+            $input.css({ 'border-color': '', 'background': '' });
+            $hint.remove();
+        }
+
+        const hasError = $('#bulkBoqList .bulk-boq-qty').toArray().some(function (el) {
+            const q   = parseInt($(el).val()) || 0;
+            const m   = $(el).data('max');
+            const max = (m !== '' && m !== undefined) ? parseInt(m) : null;
+            return max !== null && q > max;
+        });
+        $('#btnSaveBulkBoq').prop('disabled', hasError);
+    });
+
     // Hapus satu item BOQ dari view mode
     $(document).on('click', '.btn-fwo-boq-delete', function () {
         const boqId   = String($(this).data('boq-id'));
@@ -1354,7 +1382,8 @@ function loadFwoBoqList(id_fwo) {
 
     $.get(window.route.fwoBoqByFwo + id_fwo, function (data) {
         fwoBoqData = data ?? [];
-        $('#fwoBoqContent').html(renderFwoBoqView(fwoBoqData));
+        const isLocked = currentFwoData && (currentFwoData.status === 'completed' || !!currentFwoData.deleted_at);
+        $('#fwoBoqContent').html(renderFwoBoqView(fwoBoqData, isLocked));
     }).fail(function () {
         $('#fwoBoqContent').html(
             '<div class="text-center text-danger py-3"><i class="fa-solid fa-circle-exclamation me-1"></i> Gagal memuat data</div>'
@@ -1847,7 +1876,7 @@ function loadSampleData(idFwo) {
 
             if (isLocked) {
                 $('#fwoTabActionsSample').html(
-                    '<span class="text-muted" style="font-size:12px;"><i class="fa-solid fa-lock me-1"></i>FWO selesai – tidak dapat mengubah sample</span>'
+                    '<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;"><i class="fa-solid fa-lock" style="font-size:10px;"></i> FWO sudah selesai, data tidak dapat diubah</span>'
                 );
             }
 

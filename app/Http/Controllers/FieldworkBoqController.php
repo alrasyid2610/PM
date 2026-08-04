@@ -189,6 +189,11 @@ class FieldworkBoqController extends Controller
 
     public function update(Request $request, int $id_fwo)
     {
+        $fwo = DB::table('fieldworks')->where('id_fwo', $id_fwo)->first();
+        if ($fwo && $fwo->status === 'completed') {
+            return response()->json(['message' => 'FWO sudah selesai, data tidak dapat diubah.'], 403);
+        }
+
         $validated = $request->validate([
             'sections'                => 'present|array',
             'sections.*.id_boq'       => 'required|integer',

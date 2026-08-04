@@ -361,8 +361,10 @@ class FieldworkController extends Controller
         // Validasi qty semua sections SEBELUM insert apapun
         foreach ($validated['sections'] ?? [] as $sec) {
             if (empty($sec['qty'])) continue;
-            $boq = DB::table('boq')->where('id_boq', $sec['id_boq'])->first();
-            if (!$boq) continue;
+            $boq = DB::table('boq')->where('id_boq', $sec['id_boq'])->whereNull('deleted_at')->first();
+            if (!$boq) {
+                return response()->json(['message' => "BOQ #{$sec['id_boq']} tidak ditemukan atau sudah dihapus."], 422);
+            }
             $usedQty   = (int) DB::table('fieldwork_boq as fb')
                 ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
                 ->where('fb.id_boq', $sec['id_boq'])
@@ -409,7 +411,7 @@ class FieldworkController extends Controller
             }
 
             foreach ($validated['sections'] ?? [] as $sec) {
-                $boq = DB::table('boq')->where('id_boq', $sec['id_boq'])->first();
+                $boq = DB::table('boq')->where('id_boq', $sec['id_boq'])->whereNull('deleted_at')->first();
                 if (!$boq) continue;
 
                 $fwoBoqId = DB::table('fieldwork_boq')->insertGetId([
@@ -422,7 +424,7 @@ class FieldworkController extends Controller
                     'updated_at'       => now(),
                 ]);
 
-                $boqItems = DB::table('boq_items')->where('id_boq', $sec['id_boq'])->get();
+                $boqItems = DB::table('boq_items')->where('id_boq', $sec['id_boq'])->whereNull('deleted_at')->get();
                 if ($boqItems->isNotEmpty()) {
                     DB::table('fieldwork_boq_items')->insert(
                         $boqItems->map(fn($item) => [

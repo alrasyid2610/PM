@@ -176,8 +176,9 @@ $(document).ready(function () {
                 headers: { 'X-CSRF-TOKEN': window.route.csrf },
                 data: JSON.stringify({ sections: sections }),
                 success: function () {
+                    $btn.prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i> <span id="btnConfirmText">Simpan Perubahan</span>');
                     Notify.success('BOQ berhasil diperbarui');
-                    bootstrap.Modal.getInstance('#modalAddSection').hide();
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAddSection')).hide();
                     page.loadDetail(currentBoqData.id_wo);
                 },
                 error: function (xhr) {
@@ -187,10 +188,10 @@ $(document).ready(function () {
             });
         } else if (editingSectionId) {
             updateSection(editingSectionId, checkedItems);
-            bootstrap.Modal.getInstance('#modalAddSection').hide();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAddSection')).hide();
         } else {
             addSection(selectedPoint.id, selectedPoint.text, checkedItems);
-            bootstrap.Modal.getInstance('#modalAddSection').hide();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAddSection')).hide();
         }
     });
 
@@ -217,6 +218,7 @@ $(document).ready(function () {
 
     // Hapus section (delegasi)
     $(document).on('click', '.btn-remove-section', function () {
+        if ($(this).hasClass('disabled')) return;
         const ptId = String($(this).closest('.boq-section').data('point-id'));
         addedPointIds.delete(ptId);
         $(this).closest('.boq-section').remove();
@@ -398,7 +400,7 @@ function enterBoqEditMode(res) {
     const sections = res.sections ?? [];
     if (sections.length > 0) {
         sections.forEach(function (sec) {
-            addSection(sec.id_testing_point, sec.point_name, sec.items);
+            addSection(sec.id_testing_point, sec.point_name, sec.items, !!sec.has_fwo);
             const $sec = $(`.boq-section[data-point-id="${sec.id_testing_point}"]`);
             $sec.find('.input-item-produk').val(sec.item_produk_alternate || '');
             const qtyEl   = $sec.find('.input-qty')[0];
@@ -491,9 +493,9 @@ $(document).on('input', '.input-qty, .input-harga', function () {
 });
 
 // ── Section management ─────────────────────────────────────────────────────────
-function addSection(pointId, pointText, items) {
+function addSection(pointId, pointText, items, hasFwo) {
     $('#boqEmpty').hide();
-    const $el = $(renderSectionCard(pointId, pointText, items));
+    const $el = $(renderSectionCard(pointId, pointText, items, !!hasFwo));
     $('#boqSections').append($el);
     initNumericMask($el);
     addedPointIds.add(String(pointId));

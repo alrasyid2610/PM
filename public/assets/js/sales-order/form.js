@@ -477,25 +477,13 @@ function renderForm(res) {
             subtitle: "Kete",
         },
         `<div class="row g-3 form-1">
-                    ${formGroup.select(
-                        "status",
-                        "Status SO",
-                        res.status,
-                        [
-                            { value: "Close", label: "Close" },
-                            { value: "Complete", label: "Complete" },
-                            { value: "Cancel", label: "Cancel" },
-                            { value: "Draft", label: "Draft" },
-                        ],
-                        { className: "col-md-3" },
-                    )}
                     ${formGroup.text(
                         "keterangan_status",
                         "Keterangan Status",
                         res.keterangan_status,
                         false,
                         {
-                            className: "col-md-9",
+                            className: "col-md-12",
                         },
                     )}
                     ${formGroup.textarea(

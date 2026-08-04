@@ -652,7 +652,7 @@ function renderFwoForm(res) {
 }
 
 // ── View mode ──────────────────────────────────────────────────────────────────
-function renderFwoBoqView(sections) {
+function renderFwoBoqView(sections, isLocked) {
     if (!sections || sections.length === 0) {
         return `<div class="text-center text-muted py-4">
             <i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>
@@ -677,10 +677,10 @@ function renderFwoBoqView(sections) {
             <td ${TD} style="padding:8px 12px;color:#374151;font-weight:500;">${escHtml(sec.point_name ?? "—")}</td>
             <td ${TD} style="padding:8px 12px;color:#374151;white-space:nowrap;">${qtyLabel}</td>
             <td ${TD} style="padding:8px 8px;text-align:center;width:40px;">
-                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-fwo-boq-delete" data-boq-id="${sec.id_boq}"
+                ${isLocked ? '' : `<button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-fwo-boq-delete" data-boq-id="${sec.id_boq}"
                     title="Hapus item ini" style="font-size:11px;">
                     <i class="fa-solid fa-trash"></i>
-                </button>
+                </button>`}
             </td>
         </tr>`;
         })
@@ -693,7 +693,7 @@ function renderFwoBoqView(sections) {
                     <th ${TH} style="width:40px;text-align:center;">No</th>
                     <th ${TH}>Item BOQ</th>
                     <th ${TH} style="min-width:120px;">Qty</th>
-                    <th ${TH} style="width:40px;">Aksi</th>
+                    ${isLocked ? '' : `<th ${TH} style="width:40px;">Aksi</th>`}
                 </tr>
             </thead>
             <tbody>${rows}</tbody>

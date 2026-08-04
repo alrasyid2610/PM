@@ -256,12 +256,20 @@ function renderBoqEditContent() {
 }
 
 // ── Single editable section card ───────────────────────────────────────────────
-function renderSectionCard(pointId, pointText, items) {
+function renderSectionCard(pointId, pointText, items, hasFwo) {
     const itemsHtml = items
         .map((item, i) => renderItem(pointId, item, i + 1))
         .join("");
+    const deleteBtnHtml = hasFwo
+        ? `<button type="button" class="btn btn-sm btn-outline-danger btn-remove-section py-1 px-2 disabled" style="font-size:12px;opacity:.45;cursor:not-allowed;"
+                title="Tidak dapat dihapus — sudah digunakan oleh FWO">
+                <i class="fa-solid fa-trash me-1"></i> Sudah Ada FWO
+           </button>`
+        : `<button type="button" class="btn btn-sm btn-outline-danger btn-remove-section py-1 px-2" style="font-size:12px;">
+                <i class="fa-solid fa-trash me-1"></i> Hapus
+           </button>`;
     return `
-        <div class="card mb-4 boq-section" data-point-id="${pointId}">
+        <div class="card mb-4 boq-section" data-point-id="${pointId}" data-has-fwo="${hasFwo ? '1' : '0'}">
             <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <i class="fa-solid fa-layer-group" style="color:#2563eb;"></i>
@@ -273,9 +281,7 @@ function renderSectionCard(pointId, pointText, items) {
                     <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-section py-1 px-2" style="font-size:12px;">
                         <i class="fa-solid fa-pen me-1"></i> Edit
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-section py-1 px-2" style="font-size:12px;">
-                        <i class="fa-solid fa-trash me-1"></i> Hapus
-                    </button>
+                    ${deleteBtnHtml}
                 </div>
             </div>
             <div class="card-body px-3 py-3">

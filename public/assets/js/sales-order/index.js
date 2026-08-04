@@ -28,7 +28,7 @@ function fmtDate(str) {
 window.datatableColumnRenderers = {
     status: function (data) {
         var map = {
-            'on-progress': { bg: '#fefce8', color: '#854d0e', border: '#fde68a', icon: 'fa-spinner',      label: 'On Progress' },
+            'on-progress': { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-spinner',      label: 'On Progress' },
             completed:     { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-circle-check', label: 'Completed' },
             cancel:        { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa', icon: 'fa-ban',          label: 'Cancel' },
             deleted:       { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: 'fa-trash',        label: 'Deleted' },
@@ -251,7 +251,7 @@ function renderWoProgressTable(wos) {
         return `<tr>
             <td ${TD} style="text-align:center;color:#94a3b8;font-size:12px;">${idx}</td>
             <td ${TD}>
-                <a href="/work-orders?open=${wo.id_wo}" class="pm-link-record" style="white-space:nowrap;">
+                <a href="/work-orders?open=${wo.id_wo}" class="pm-link-record" style="white-space:nowrap;font-weight:normal;">
                     ${escHtml(wo.no_wo ?? "—")}
                 </a>
             </td>
