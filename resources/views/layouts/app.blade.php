@@ -15,7 +15,49 @@
         .table-responsive {
             overflow-x: auto;
         }
+
+        .env-badge {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 99999;
+            width: 160px;
+            height: 160px;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .env-badge span {
+            position: absolute;
+            top: 28px;
+            left: -42px;
+            width: 180px;
+            display: block;
+            text-align: center;
+            transform: rotate(-45deg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            color: #fff;
+            padding: 6px 0;
+            box-shadow: 0 3px 8px rgba(0,0,0,.35);
+        }
+
+        .env-badge--local span {
+            background: linear-gradient(135deg, #ef4444, #b91c1c);
+        }
+
+        .env-badge--staging span {
+            background: linear-gradient(135deg, #f59e0b, #b45309);
+        }
     </style>
+    @if(in_array(app()->environment(), ['local', 'staging']))
+        <div id="env-badge" class="env-badge env-badge--{{ app()->environment() }}">
+            <span>{{ strtoupper(app()->environment()) }}</span>
+        </div>
+    @endif
+
     <div id="app">
         @include('layouts.sidebar')
 
