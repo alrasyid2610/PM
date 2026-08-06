@@ -42,6 +42,7 @@ return [
             ['slug' => 'testing-matriks-samples',          'label' => 'Matriks Sample',             'icon' => 'fa-table-cells',     'section' => 'Product'],
             ['slug' => 'testing-standards',                'label' => 'Testing Standards',          'icon' => 'fa-certificate',     'section' => 'Product'],
             ['slug' => 'testing-points',                   'label' => 'Testing Points',             'icon' => 'fa-location-dot',    'section' => 'Product'],
+            ['slug' => 'budget-accounts',                  'label' => 'Budget Account',             'icon' => 'fa-layer-group',     'section' => 'Product'],
         ],
     ],
     [
@@ -53,7 +54,6 @@ return [
             ['slug' => 'work-orders',  'label' => 'Work Order',  'icon' => 'fa-briefcase'],
             // ['slug' => 'boq',          'label' => 'BOQ',         'icon' => 'fa-layer-group'],
             ['slug' => 'fieldworks',       'label' => 'Fieldworks',      'icon' => 'fa-helmet-safety'],
-            ['slug' => 'budget-accounts',  'label' => 'Budget Account',  'icon' => 'fa-layer-group'],
             ['slug' => 'termin',       'label' => 'Termin'],
             // ['slug' => 'output-pekerjaan',   'label' => 'output pekerjaan',  'icon' => 'fa-helmet-safety'],
         ],
