@@ -83,7 +83,7 @@ function renderAccountTable(parents) {
             </td>
             <td><code style="font-size:11px;background:#dcfce7;color:#166534;padding:2px 6px;border-radius:4px;">${escHtml(p.kode)}</code></td>
             <td>${statusBadge}</td>
-            <td class="text-center" style="white-space:nowrap;" onclick="event.stopPropagation()">
+            <td class="text-center account-actions-cell" style="white-space:nowrap;">
                 ${can('budget-accounts', 'can_create') ? `<button type="button" class="btn btn-sm py-0 px-2 me-1 btn-add-item"
                     data-id-parent="${p.id_account}" data-parent-nama="${escHtml(p.nama)}"
                     style="font-size:11px;border:1px solid #0f766e;color:#0f766e;background:transparent;" title="Tambah sub kategori">
@@ -146,7 +146,8 @@ function openAccountModal({ id, idParent, parentNama, isEdit, data }) {
 
 function initEvents() {
     // Expand / Collapse parent row
-    $(document).on('click', '.account-parent-row', function () {
+    $(document).on('click', '.account-parent-row', function (e) {
+        if ($(e.target).closest('.account-actions-cell').length) return;
         const id    = $(this).data('id');
         const $rows = $(`.account-child-row[data-parent="${id}"]`);
         const $chev = $(this).find('.account-chevron');
