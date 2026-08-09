@@ -45,6 +45,10 @@ function renderForm(res) {
                                     placeholder: "Pilih Business Relation", label: res.nama_br,
                                     className: "col-md-12", createUrl: "/business-relations/create",
                                 })}
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">Site</label>
+                                    <select name="id_site" id="detail_id_site" class="form-select disabled"></select>
+                                </div>
                                 ${formGroup.text("nama_pic", "Nama PIC", res.nama_pic, true, { className: "col-md-12" })}
                                 <div class="col-md-3 mb-3">
                                     <label class="form-label form-label-sm text-muted mb-1 required">No. Telp PIC</label>

@@ -14,6 +14,7 @@ $(document).ready(function () {
             initSiteSwitcher();
             initSamplingTabEvents();
             initMpTabEvents();
+            initContactTabEvents();
             initProductTabEvents();
         },
         historyConfig: {

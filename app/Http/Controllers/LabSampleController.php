@@ -60,12 +60,14 @@ class LabSampleController extends Controller
         $boqs = DB::table('fieldwork_boq as fb')
             ->join('boq as b', 'b.id_boq', '=', 'fb.id_boq')
             ->leftJoin('testing_points as tp', 'tp.id_testing_point', '=', 'b.id_testing_point')
+            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->where('fb.id_fwo', $id_fwo)
             ->whereNull('fb.deleted_at')
             ->get([
                 'fb.id_fwo_boq',
                 'fb.qty',
-                DB::raw("COALESCE(tp.nama, b.item_produk_alternate) as nama_boq"),
+                DB::raw("COALESCE(TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))), b.item_produk_alternate) as nama_boq"),
             ]);
 
         foreach ($boqs as $boq) {

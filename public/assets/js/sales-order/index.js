@@ -2,6 +2,120 @@ let page;
 let currentWosData = null;
 let currentSoId = null;
 
+// PIC yang muncul = union dari semua Perusahaan yang sudah dipilih di ketiga
+// kategori (Pemesan, Pengiriman, Pembayaran) — dibaca ulang tiap select2
+// dibuka/diketik, jadi otomatis update tanpa perlu reinit manual.
+function _soSelectedCompanyIds() {
+    return [
+        $('#detail_id_pelanggan').val(),
+        $('#detail_id_pelanggan_delivery').val(),
+        $('#detail_id_pelanggan_payment').val(),
+    ].filter(function (v) { return !!v; });
+}
+
+// Ambil {id, text} dari select2 yang sedang terpilih. null kalau belum diisi.
+function _soGetSelect2Data(selector) {
+    const $el = $(selector);
+    if (!$el.length || !$el.val()) return null;
+    const data = $el.select2('data');
+    if (!data || !data.length) return null;
+    return { id: $el.val(), text: data[0].text };
+}
+
+// Begitu Perusahaan & Site Pemesan sudah lengkap, salin ke Pengiriman &
+// Pembayaran yang masih kosong (Perusahaan, Site, dan PIC kalau sudah ada).
+function _syncSoPemesanToOthers() {
+    const company = _soGetSelect2Data('#detail_id_pelanggan');
+    const site    = _soGetSelect2Data('#detail_id_site_pelanggan');
+    if (!company || !site) return;
+
+    const pic = _soGetSelect2Data('#detail_id_pic_pelanggan');
+
+    const targets = [
+        { company: '#detail_id_pelanggan_delivery', site: '#detail_id_site_pelanggan_delivery', pic: '#detail_id_pic_pelanggan_delivery' },
+        { company: '#detail_id_pelanggan_payment',  site: '#detail_id_site_pelanggan_payment',  pic: '#detail_id_pic_pelanggan_payment' },
+    ];
+
+    targets.forEach(function (t) {
+        const $c = $(t.company);
+        if ($c.length && !$c.val()) {
+            $c.append(new Option(company.text, company.id, true, true)).trigger('change');
+        }
+        const $s = $(t.site);
+        if ($s.length && !$s.val()) {
+            $s.append(new Option(site.text, site.id, true, true)).trigger('change');
+        }
+        if (pic) {
+            const $p = $(t.pic);
+            if ($p.length && !$p.val()) {
+                $p.append(new Option(pic.text, pic.id, true, true)).trigger('change');
+            }
+        }
+    });
+}
+
+function initSoPicFields() {
+    const selectors = [
+        '#detail_id_pic_pelanggan',
+        '#detail_id_pic_pelanggan_delivery',
+        '#detail_id_pic_pelanggan_payment',
+    ];
+
+    selectors.forEach(function (sel) {
+        const $el = $(sel);
+        if (!$el.length) return;
+        if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
+
+        $el.select2({
+            width: '100%',
+            dropdownParent: $('#detailContent'),
+            placeholder: 'Pilih Data',
+            allowClear: true,
+            minimumInputLength: 0,
+            ajax: {
+                url: 'business-relation-contacts/select2',
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return { q: params.term || '', id_br: _soSelectedCompanyIds(), with_site: 1 };
+                },
+                processResults: function (data) { return { results: data }; },
+                cache: false,
+            },
+            language: {
+                noResults: function () {
+                    return '<span>Tidak ditemukan. <a href="/business-relation-contacts/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>';
+                },
+            },
+            escapeMarkup: function (m) { return m; },
+        });
+    });
+
+    // Begitu Perusahaan & Site Pemesan sudah lengkap → salin ke Pengiriman &
+    // Pembayaran (PIC ikut kalau sudah dipilih juga). Hanya mengisi field yang
+    // MASIH KOSONG di kategori tujuan, tidak menimpa yang sudah diisi manual.
+    ['#detail_id_pelanggan', '#detail_id_site_pelanggan', '#detail_id_pic_pelanggan'].forEach(function (sel) {
+        $(sel)
+            .off('select2:select.soPemesanSync')
+            .on('select2:select.soPemesanSync', _syncSoPemesanToOthers);
+    });
+
+    // Ganti Perusahaan di suatu kategori → kosongkan PIC kategori itu
+    // (PIC lama sudah tentu tidak valid lagi untuk Perusahaan yang baru)
+    const companyPicPairs = [
+        ['#detail_id_pelanggan', '#detail_id_pic_pelanggan'],
+        ['#detail_id_pelanggan_delivery', '#detail_id_pic_pelanggan_delivery'],
+        ['#detail_id_pelanggan_payment', '#detail_id_pic_pelanggan_payment'],
+    ];
+    companyPicPairs.forEach(function (pair) {
+        $(pair[0])
+            .off('select2:select.soCompanyClear select2:clear.soCompanyClear')
+            .on('select2:select.soCompanyClear select2:clear.soCompanyClear', function () {
+                $(pair[1]).val(null).trigger('change');
+            });
+    });
+}
+
 const MONTH_SHORT = [
     "Jan",
     "Feb",
@@ -739,6 +853,9 @@ $(document).ready(function () {
     page = new CrudPageController({
         primaryKey: "id_so",
         renderForm: renderForm,
+        initSelect: function () {
+            initSoPicFields();
+        },
         afterLoad: function (res) {
             loadWoProgress(res.id_so);
             loadTerminList(res.id_so);
@@ -936,7 +1053,7 @@ function fillCopyWoModal(wo) {
         allowClear: true,
         dropdownParent: $("#modalCopyWo"),
         ajax: {
-            url: "/business-relation-contacts/select2",
+            url: "/users/select2",
             dataType: "json",
             delay: 250,
             data: (params) => ({ q: params.term }),

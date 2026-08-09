@@ -354,48 +354,27 @@ function renderForm(res) {
 
                 <!-- PIC -->
                 <div class="row g-3 form-1">
-                    ${formGroup.select(
-                        "id_pic_pelanggan",
-                        "PIC",
-                        res.id_pic_pelanggan,
-                        [],
-                        {
-                            mode: "ajax",
-                            url: "business-relation-contacts/select2",
-                            placeholder: "Pilih Data",
-                            label: res.pic_pelanggan,
-                            className: "col-md-4",
-                            createUrl: "/business-relation-contacts/create",
-                        },
-                    )}
-                    ${formGroup.select(
-                        "id_pic_pelanggan_delivery",
-                        "PIC",
-                        res.id_pic_pelanggan_delivery,
-                        [],
-                        {
-                            mode: "ajax",
-                            url: "business-relation-contacts/select2",
-                            placeholder: "Pilih Data",
-                            label: res.pic_pelanggan_del,
-                            className: "col-md-4",
-                            createUrl: "/business-relation-contacts/create",
-                        },
-                    )}
-                    ${formGroup.select(
-                        "id_pic_pelanggan_payment",
-                        "PIC",
-                        res.id_pic_pelanggan_payment,
-                        [],
-                        {
-                            mode: "ajax",
-                            url: "business-relation-contacts/select2",
-                            placeholder: "Pilih Data",
-                            label: res.pic_pelanggan_pay,
-                            className: "col-md-4",
-                            createUrl: "/business-relation-contacts/create",
-                        },
-                    )}
+                    <div class="mb-3 col-md-4">
+                        <label class="form-label">PIC</label>
+                        <select name="id_pic_pelanggan" id="detail_id_pic_pelanggan" class="form-select disabled">
+                            <option value=""></option>
+                            ${res.id_pic_pelanggan ? `<option value="${res.id_pic_pelanggan}" selected>${escHtml(res.pic_pelanggan ?? '')}</option>` : ''}
+                        </select>
+                    </div>
+                    <div class="mb-3 col-md-4">
+                        <label class="form-label">PIC</label>
+                        <select name="id_pic_pelanggan_delivery" id="detail_id_pic_pelanggan_delivery" class="form-select disabled">
+                            <option value=""></option>
+                            ${res.id_pic_pelanggan_delivery ? `<option value="${res.id_pic_pelanggan_delivery}" selected>${escHtml(res.pic_pelanggan_del ?? '')}</option>` : ''}
+                        </select>
+                    </div>
+                    <div class="mb-3 col-md-4">
+                        <label class="form-label">PIC</label>
+                        <select name="id_pic_pelanggan_payment" id="detail_id_pic_pelanggan_payment" class="form-select disabled">
+                            <option value=""></option>
+                            ${res.id_pic_pelanggan_payment ? `<option value="${res.id_pic_pelanggan_payment}" selected>${escHtml(res.pic_pelanggan_pay ?? '')}</option>` : ''}
+                        </select>
+                    </div>
                 </div>
             `,
     )}
@@ -416,11 +395,10 @@ function renderForm(res) {
                         [],
                         {
                             mode: "ajax",
-                            url: "business-relation-contacts/select2",
+                            url: "users/select2",
                             placeholder: "Pilih Data",
                             label: res.pic_input_name,
                             className: "col-md-3",
-                            createUrl: "/business-relation-contacts/create",
                         },
                     )}
                     ${formGroup.select(
@@ -430,11 +408,10 @@ function renderForm(res) {
                         [],
                         {
                             mode: "ajax",
-                            url: "business-relation-contacts/select2",
+                            url: "users/select2",
                             placeholder: "Pilih Data",
                             label: res.pic_ordername,
                             className: "col-md-3",
-                            createUrl: "/business-relation-contacts/create",
                         },
                     )}
                     ${formGroup.select(
@@ -444,11 +421,10 @@ function renderForm(res) {
                         [],
                         {
                             mode: "ajax",
-                            url: "business-relation-contacts/select2",
+                            url: "users/select2",
                             placeholder: "Pilih Data",
                             label: res.marketing_internal_name,
                             className: "col-md-3",
-                            createUrl: "/business-relation-contacts/create",
                         },
                     )}
                     ${formGroup.select(
@@ -458,11 +434,10 @@ function renderForm(res) {
                         [],
                         {
                             mode: "ajax",
-                            url: "business-relation-contacts/select2",
+                            url: "users/select2",
                             placeholder: "Pilih Data",
                             label: res.marketing_eksternal_name,
                             className: "col-md-3",
-                            createUrl: "/business-relation-contacts/create",
                         },
                     )}
                 </div>`,

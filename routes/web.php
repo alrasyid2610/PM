@@ -446,8 +446,11 @@ Route::prefix('/business-relation-contacts')
 
         Route::get('/select2', [BusinessRelationContactController::class, 'select2'])->name('select2');
 
+        Route::get('/by-site/{id_site}', [BusinessRelationContactController::class, 'listBySite'])
+            ->name('by-site')
+            ->whereNumber('id_site');
 
-        Route::get('/{id}', [BusinessRelationContactController::class, 'show'])->name('show');
+        Route::get('/{id}', [BusinessRelationContactController::class, 'show'])->name('show')->whereNumber('id');
 
 
         Route::get('/{id}/detail', [BusinessRelationContactController::class, 'detail'])

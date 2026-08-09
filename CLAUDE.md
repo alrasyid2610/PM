@@ -18,7 +18,8 @@ C:\Users\5891\Documents\Obsidian Vault\PM\Project Reference.md
 
 ### Aturan lainnya:
 - Selalu gunakan **Bahasa Indonesia** dalam semua respons
-- Perubahan struktur database → berikan **query SQL** saja, jangan jalankan sendiri
+- Perubahan struktur database (kolom/tabel baru ke depannya) → buat **file migration Laravel**, jangan tulis query SQL manual. Skema lama yang sudah ada dibiarkan seperti sekarang (tidak perlu dibuatkan migration retroaktif).
+- Migration dijalankan sendiri oleh user baik di local maupun live (`php artisan migrate`) — jangan jalankan `artisan migrate` sendiri di kedua environment tersebut
 - Jangan lanjutkan task tanpa arahan yang jelas dari user
 
 ## graphify

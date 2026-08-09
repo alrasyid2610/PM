@@ -76,6 +76,9 @@
         <!-- SECTION 2: OUTPUT PEKERJAAN -->
         <div class="col-12" id="outputSelectionWrap" style="display:none;">
             <x-section-card icon="fa-file-circle-check" color="icon-teal" title="Output Pekerjaan" subtitle="Pilih output yang akan ditagihkan pada termin ini">
+                <div id="dpOutputBlockInfo" style="display:none;font-size:12px;padding:8px 12px;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:6px;margin-bottom:10px;">
+                    <i class="fa-solid fa-circle-info me-1"></i>Termin Down Payment (DP) tidak dapat memilih Output Pekerjaan.
+                </div>
                 <div id="outputSelectionContent">
                     <div class="text-center text-muted py-3">Pilih Sales Order terlebih dahulu</div>
                 </div>
@@ -164,6 +167,7 @@
                 $('#status').prop('disabled', false).val('pending').trigger('change');
                 $('#status_hidden').remove();
             }
+            filterOutputByTanggal();
         });
 
         $('#id_so').on('change', function () {
@@ -332,9 +336,11 @@
 
     function filterOutputByTanggal() {
         var tglTermin = $('#tanggal').val();
+        var isDp      = $('#is_dp').is(':checked');
+        $('#dpOutputBlockInfo').toggle(isDp);
         $('.output-check').each(function () {
             var tglOutput = $(this).data('tgl-selesai');
-            var shouldDisable = tglTermin && tglOutput && tglOutput > tglTermin;
+            var shouldDisable = isDp || (tglTermin && tglOutput && tglOutput > tglTermin);
             if (shouldDisable) {
                 $(this).prop('checked', false).prop('disabled', true)
                     .closest('tr').css('opacity', '0.45');
@@ -343,6 +349,7 @@
                     .closest('tr').css('opacity', '');
             }
         });
+        $('#checkAllOutputs').prop('disabled', isDp);
         // sinkronkan counter & checkAll
         $('.output-check:checked').trigger('change');
         if (!$('.output-check:checked').length) {

@@ -348,7 +348,7 @@ class BusinessRelationController extends Controller
             'website' => 'nullable|string|max:255',
             'nomor_telepon' => 'nullable|string|max:50',
             'nama_lokasi' => 'required_if:id_site,null|string|max:255',
-            'alamat_lengkap' => 'required_if:id_site,null|string',
+            'alamat_lengkap' => 'nullable|string',
         ]);
 
         // Capture BEFORE state

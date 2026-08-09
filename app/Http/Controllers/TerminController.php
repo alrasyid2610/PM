@@ -99,6 +99,12 @@ class TerminController extends Controller
             'attachments.*' => 'nullable|file|max:5120',
         ]);
 
+        if ($request->boolean('is_dp') && !empty($request->input('selected_outputs', []))) {
+            return response()->json([
+                'message' => 'Termin Down Payment (DP) tidak dapat memilih Output Pekerjaan.',
+            ], 422);
+        }
+
         $upload = uploadAttachment($request->file('attachments'), 'termin');
         $files  = $upload['files'];
 
@@ -183,6 +189,13 @@ class TerminController extends Controller
 
     public function addOutput(Request $request, $id)
     {
+        $termin = DB::table('termin')->where('id_termin', $id)->first();
+        if ($termin && $termin->is_dp) {
+            return response()->json([
+                'message' => 'Termin Down Payment (DP) tidak dapat memilih Output Pekerjaan.',
+            ], 422);
+        }
+
         $ids = array_map('intval', $request->input('ids', []));
         foreach ($ids as $idOutput) {
             DB::table('output_pekerjaan')
@@ -264,6 +277,12 @@ class TerminController extends Controller
             'keterangan' => 'nullable|string',
             'id_so'      => 'nullable|integer',
         ]);
+
+        if ($request->boolean('is_dp') && !empty($request->input('selected_outputs', []))) {
+            return response()->json([
+                'message' => 'Termin Down Payment (DP) tidak dapat memilih Output Pekerjaan.',
+            ], 422);
+        }
 
         $before = DB::table('termin')->where('id_termin', $id)->get()->toJson();
 

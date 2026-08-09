@@ -171,6 +171,8 @@
                 $('#soBannerNoSo').text(so.no_so ?? '—');
                 $('#soBannerJudul').text(so.judul_order ?? '—');
                 $('#soInfoBanner').show();
+
+                applySoPemesanToWoForm(so);
             });
         }
 
@@ -190,13 +192,13 @@
                     $("select[name='tidak_ada_po']").val(dataSO.tidak_ada_po);
                     $("input[name='tanggal_po']").val(dataSO.tanggal_po);
                     $("input[name='no_po']").val(dataSO.no_po);
-                    $("select[name='id_pelanggan']").val(dataSO.id_pelanggan).trigger('change');
-                    $("select[name='id_site_pelanggan']").val(dataSO.id_site_pelanggan).trigger('change');
+
+                    applySoPemesanToWoForm(dataSO);
                 }
             });
         });
 
-        loadAllContacts();
+        loadAllUsers();
 
         $("#id_sales_order").on('select2:clear', function (e) {
             clearForm();
@@ -204,9 +206,36 @@
 
     });
 
-     function loadAllContacts() {
+    // Set value select2 dengan aman: kalau optionnya belum ada di DOM (misal
+    // select masih ajax-mode kosong / full-list belum selesai load), tambahkan
+    // dulu baru pilih — supaya tidak silent-fail seperti `.val(id)` biasa.
+    function setSelect2Value(selector, id, text) {
+        var $el = $(selector);
+        if (!$el.length || !id) return;
+        if ($el.find('option[value="' + id + '"]').length === 0) {
+            $el.append(new Option(text || String(id), id));
+        }
+        $el.val(id).trigger('change');
+    }
+
+    // Pelanggan dan Pelanggan Site WO mengikuti data kategori Pemesan dari SO
+    // asalnya. Site di-set SETELAH Pelanggan karena ganti Pelanggan akan
+    // me-reinit select2 Site (initSiteSelect2).
+    // PIC Pekerjaan TIDAK ikut auto-fill — user pilih manual (bukan dari
+    // kontak Pemesan SO, karena PIC Pekerjaan WO adalah user Pramatek).
+    function applySoPemesanToWoForm(so) {
+        if (!so) return;
+        if (so.id_pelanggan) {
+            setSelect2Value("select[name='id_pelanggan']", so.id_pelanggan, so.nama_pelanggan);
+        }
+        if (so.id_site_pelanggan) {
+            setSelect2Value("select[name='id_site_pelanggan']", so.id_site_pelanggan, so.nama_site_pelanggan);
+        }
+    }
+
+     function loadAllUsers() {
         $.ajax({
-            url: "{{ route('business-relation-contacts.select2') }}",
+            url: "{{ route('users.select2') }}",
             method: "GET",
             data: { q: "" },
             success: function (response) {

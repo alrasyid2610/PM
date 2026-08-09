@@ -148,10 +148,10 @@ class SalesOrderController extends Controller
             ->leftJoin('business_relations as pay', 'so.id_pelanggan_payment', '=', 'pay.id_br')
             ->leftJoin('business_relation_sites as site_pay', 'so.id_site_pelanggan_payment', '=', 'site_pay.id_site')
             ->leftJoin('business_relation_contacts as brc_pay', 'brc_pay.id_contact', '=', 'so.id_pic_pelanggan_payment')
-            ->leftJoin('business_relation_contacts as pic_i', 'pic_i.id_contact', '=', 'so.pic_input')
-            ->leftJoin('business_relation_contacts as pic_o', 'pic_o.id_contact', '=', 'so.pic_order')
-            ->leftJoin('business_relation_contacts as marketing_internal', 'marketing_internal.id_contact', '=', 'so.pic_marketing_internal')
-            ->leftJoin('business_relation_contacts as marketing_eksternal', 'marketing_eksternal.id_contact', '=', 'so.pic_marketing_eksternal')
+            ->leftJoin('users as pic_i', 'pic_i.id', '=', 'so.pic_input')
+            ->leftJoin('users as pic_o', 'pic_o.id', '=', 'so.pic_order')
+            ->leftJoin('users as marketing_internal', 'marketing_internal.id', '=', 'so.pic_marketing_internal')
+            ->leftJoin('users as marketing_eksternal', 'marketing_eksternal.id', '=', 'so.pic_marketing_eksternal')
             ->leftJoin('contracts as ct', 'ct.id_contract', '=', 'so.id_sc')
             ->select(
                 'so.*',
@@ -169,12 +169,12 @@ class SalesOrderController extends Controller
                 'site_pay.nama_lokasi as pelanggan_site_pay',
                 'brc_pay.id_contact as id_pic_pelanggan_payment',
                 'brc_pay.nama_pic as pic_pelanggan_pay',
-                'pic_i.nama_pic as pic_input_name',
-                'pic_o.nama_pic as pic_ordername',
-                'marketing_internal.nama_pic as marketing_internal_name',
-                'marketing_internal.id_contact as marketing_internal_id',
-                'marketing_eksternal.nama_pic as marketing_eksternal_name',
-                'marketing_eksternal.id_contact as marketing_eksternal_id',
+                'pic_i.name as pic_input_name',
+                'pic_o.name as pic_ordername',
+                'marketing_internal.name as marketing_internal_name',
+                'marketing_internal.id as marketing_internal_id',
+                'marketing_eksternal.name as marketing_eksternal_name',
+                'marketing_eksternal.id as marketing_eksternal_id',
             )
             ->where('so.id_so', $id)
             ->first();
@@ -245,10 +245,10 @@ class SalesOrderController extends Controller
             'id_site_pelanggan_payment' => 'nullable|integer',
             'id_pic_pelanggan_payment' => 'nullable|integer',
 
-            'pic_input' => 'nullable|string|max:100',
-            'pic_order' => 'nullable|string|max:100',
-            'pic_marketing_internal' => 'nullable|string|max:100',
-            'pic_marketing_eksternal' => 'nullable|string|max:100',
+            'pic_input' => 'nullable|integer',
+            'pic_order' => 'nullable|integer',
+            'pic_marketing_internal' => 'nullable|integer',
+            'pic_marketing_eksternal' => 'nullable|integer',
 
             'id_sc' => 'nullable|integer',
             'keterangan_status' => 'nullable|string',
@@ -268,34 +268,34 @@ class SalesOrderController extends Controller
                 ->update([
                     'id_sc'      => !empty($validated['id_sc']) ? (int)$validated['id_sc'] : null,
                     'tanggal_so' => $validated['tanggal_so'],
-                    'judul_order' => $validated['judul_order'],
+                    'judul_order' => $validated['judul_order'] ?? null,
                     'tidak_ada_po' => $validated['tidak_ada_po'] ?? 0,
-                    'tanggal_po' => $validated['tanggal_po'],
-                    'no_po' => $validated['no_po'],
-                    'tanggal_mulai' => $validated['tanggal_mulai'],
-                    'tanggal_selesai' => $validated['tanggal_selesai'],
-                    'id_office' => $validated['id_office'],
+                    'tanggal_po' => $validated['tanggal_po'] ?? null,
+                    'no_po' => $validated['no_po'] ?? null,
+                    'tanggal_mulai' => $validated['tanggal_mulai'] ?? null,
+                    'tanggal_selesai' => $validated['tanggal_selesai'] ?? null,
+                    'id_office' => $validated['id_office'] ?? null,
 
                     'id_pelanggan' => $validated['id_pelanggan'],
-                    'id_site_pelanggan' => $validated['id_site_pelanggan'],
-                    'id_pic_pelanggan' => $validated['id_pic_pelanggan'],
+                    'id_site_pelanggan' => $validated['id_site_pelanggan'] ?? null,
+                    'id_pic_pelanggan' => $validated['id_pic_pelanggan'] ?? null,
 
                     'id_pelanggan_delivery' => $validated['id_pelanggan_delivery'],
-                    'id_site_pelanggan_delivery' => $validated['id_site_pelanggan_delivery'],
-                    'id_pic_pelanggan_delivery' => $validated['id_pic_pelanggan_delivery'],
+                    'id_site_pelanggan_delivery' => $validated['id_site_pelanggan_delivery'] ?? null,
+                    'id_pic_pelanggan_delivery' => $validated['id_pic_pelanggan_delivery'] ?? null,
 
                     'id_pelanggan_payment' => $validated['id_pelanggan_payment'],
-                    'id_site_pelanggan_payment' => $validated['id_site_pelanggan_payment'],
-                    'id_pic_pelanggan_payment' => $validated['id_pic_pelanggan_payment'],
+                    'id_site_pelanggan_payment' => $validated['id_site_pelanggan_payment'] ?? null,
+                    'id_pic_pelanggan_payment' => $validated['id_pic_pelanggan_payment'] ?? null,
 
-                    'pic_input' => $validated['pic_input'],
-                    'pic_order' => $validated['pic_order'],
-                    'pic_marketing_internal' => $validated['pic_marketing_internal'],
-                    'pic_marketing_eksternal' => $validated['pic_marketing_eksternal'],
+                    'pic_input' => $validated['pic_input'] ?? null,
+                    'pic_order' => $validated['pic_order'] ?? null,
+                    'pic_marketing_internal' => $validated['pic_marketing_internal'] ?? null,
+                    'pic_marketing_eksternal' => $validated['pic_marketing_eksternal'] ?? null,
 
-                    'keterangan_status' => $validated['keterangan_status'],
-                    'cara_pembayaran'   => $validated['cara_pembayaran'],
-                    'keterangan'        => $validated['keterangan'],
+                    'keterangan_status' => $validated['keterangan_status'] ?? null,
+                    'cara_pembayaran'   => $validated['cara_pembayaran'] ?? null,
+                    'keterangan'        => $validated['keterangan'] ?? null,
 
                     'updated_at' => now(),
                 ]);

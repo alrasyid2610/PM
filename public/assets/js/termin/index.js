@@ -37,9 +37,11 @@ $(document).ready(function () {
         },
         afterLoad: function (res) {
             initFpDate('#detailContent');
-            // Kondisi DP: jika termin ini adalah DP, disable field status
+            // Kondisi DP: jika termin ini adalah DP, disable field status & tombol tambah output
             if (res.is_dp) {
                 $('#detail_status').prop('disabled', true);
+                $('#btnAddOutputTermin').prop('disabled', true)
+                    .attr('title', 'Termin DP tidak dapat menambah Output Pekerjaan');
             }
             // Cek apakah SO sudah punya DP termin lain → disable checkbox DP
             if (res.id_so) {
@@ -64,13 +66,15 @@ $(document).ready(function () {
         useAttachment: true,
     });
 
-    // DP checkbox: set status selesai & disable field status
+    // DP checkbox: set status selesai & disable field status + tombol tambah output
     $(document).on('change', '#detail_is_dp', function () {
         if (this.checked) {
             $('#detail_status').val('selesai').trigger('change').prop('disabled', true);
         } else {
             $('#detail_status').prop('disabled', false).val('pending').trigger('change');
         }
+        $('#btnAddOutputTermin').prop('disabled', this.checked)
+            .attr('title', this.checked ? 'Termin DP tidak dapat menambah Output Pekerjaan' : '');
     });
 
     // Filter output picker by tanggal termin

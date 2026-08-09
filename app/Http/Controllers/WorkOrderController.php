@@ -181,7 +181,7 @@ class WorkOrderController extends Controller
         $data = DB::table('work_orders as wo')
             ->leftJoin('business_relations as br', 'br.id_br', '=', 'wo.id_pelanggan_pekerjaan')
             ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
-            ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'wo.id_pic_pelanggan_pekerjaan')
+            ->leftJoin('users as pic', 'pic.id', '=', 'wo.id_pic_pelanggan_pekerjaan')
             ->where('wo.id_so', $id_so)
             ->whereNull('wo.deleted_at')
             ->select([
@@ -193,7 +193,7 @@ class WorkOrderController extends Controller
                 'wo.no_urut_period',
                 'br.nama as nama_pelanggan',
                 'brs.nama_lokasi as nama_site',
-                'brc.nama_pic as nama_pic_pekerjaan',
+                'pic.name as nama_pic_pekerjaan',
                 'wo.keterangan',
                 'wo.tanggal_mulai',
                 'wo.tanggal_selesai',
@@ -321,6 +321,17 @@ class WorkOrderController extends Controller
         if ($fwoBelumSelesai > 0) {
             return response()->json([
                 'message' => "Masih ada {$fwoBelumSelesai} FWO yang belum selesai. Semua FWO harus berstatus Completed sebelum WO dapat diselesaikan.",
+            ], 422);
+        }
+
+        $outputBelumSiap = DB::table('output_pekerjaan')
+            ->where('id_wo', $id)
+            ->where('status', 'belum_siap')
+            ->count();
+
+        if ($outputBelumSiap > 0) {
+            return response()->json([
+                'message' => "Masih ada {$outputBelumSiap} Output Pekerjaan yang belum siap. Semua Output Pekerjaan harus berstatus Siap atau Terkirim sebelum WO dapat diselesaikan.",
             ], 422);
         }
 
@@ -481,7 +492,7 @@ class WorkOrderController extends Controller
             ->leftJoin('sales_orders as s', 'wo.id_so', '=', 's.id_so')
             ->leftJoin('business_relations as br', 'wo.id_pelanggan_pekerjaan', '=', 'br.id_br')
             ->leftJoin('business_relation_sites as brs', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
-            ->leftJoin('business_relation_contacts as pic', 'wo.id_pic_pelanggan_pekerjaan', '=', 'pic.id_contact')
+            ->leftJoin('users as pic', 'wo.id_pic_pelanggan_pekerjaan', '=', 'pic.id')
             ->select([
                 'wo.id_wo',
                 's.id_so',
@@ -491,7 +502,7 @@ class WorkOrderController extends Controller
                 'wo.id_pelanggan_pekerjaan',
                 'wo.id_site_pelanggan_pekerjaan',
                 'wo.id_pic_pelanggan_pekerjaan',
-                'pic.nama_pic as nama_pic_pelanggan_pekerjaan',
+                'pic.name as nama_pic_pelanggan_pekerjaan',
                 's.no_po',
                 's.tanggal_po',
                 'wo.no_wo',
@@ -521,7 +532,7 @@ class WorkOrderController extends Controller
 
         $siteWos = $wo->id_site_pelanggan_pekerjaan
             ? DB::table('work_orders as w2')
-                ->leftJoin('business_relation_contacts as p2', 'w2.id_pic_pelanggan_pekerjaan', '=', 'p2.id_contact')
+                ->leftJoin('users as p2', 'w2.id_pic_pelanggan_pekerjaan', '=', 'p2.id')
                 ->where('w2.id_so', $wo->id_so)
                 ->where('w2.id_site_pelanggan_pekerjaan', $wo->id_site_pelanggan_pekerjaan)
                 ->whereNull('w2.deleted_at')
@@ -533,7 +544,7 @@ class WorkOrderController extends Controller
                     'w2.interval_bulan',
                     'w2.tanggal_mulai',
                     'w2.tanggal_selesai',
-                    'p2.nama_pic as nama_pic',
+                    'p2.name as nama_pic',
                 ])
                 ->orderBy('w2.no_urut_period')
                 ->orderBy('w2.id_wo')
@@ -691,7 +702,7 @@ class WorkOrderController extends Controller
             ->leftJoin('sales_orders as so', 'so.id_so', '=', 'wo.id_so')
             ->leftJoin('business_relations as br', 'br.id_br', '=', 'wo.id_pelanggan_pekerjaan')
             ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
-            ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'wo.id_pic_pelanggan_pekerjaan')
+            ->leftJoin('users as pic', 'pic.id', '=', 'wo.id_pic_pelanggan_pekerjaan')
             ->where('wo.id_wo', $id)
             ->select([
                 'wo.id_wo',
@@ -705,7 +716,7 @@ class WorkOrderController extends Controller
                 'wo.id_site_pelanggan_pekerjaan',
                 'brs.nama_lokasi as nama_site_pelanggan_pekerjaan',
                 'wo.id_pic_pelanggan_pekerjaan',
-                'brc.nama_pic as nama_pic_pelanggan_pekerjaan',
+                'pic.name as nama_pic_pelanggan_pekerjaan',
                 'wo.interval_bulan',
                 'wo.no_urut_period',
                 'wo.tanggal_mulai',

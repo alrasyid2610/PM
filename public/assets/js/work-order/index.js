@@ -1584,7 +1584,7 @@ function fillCopyWoModal(wo) {
         allowClear: true,
         dropdownParent: $("#modalCopyWo"),
         ajax: {
-            url: '/business-relation-contacts/select2',
+            url: '/users/select2',
             dataType: 'json',
             delay: 250,
             data: (params) => ({ q: params.term }),

@@ -28,10 +28,13 @@
         <div class="col-12">
             <x-section-card icon="fa-address-card" color="icon-green" title="Business Relation Contacts" subtitle="Data kontak PIC pelanggan">
                 <div class="row g-3">
-                    <div class="col-md-12">
-                        <label class="form-label required">Bussines Relation Site</label>
-                        <select id="select_site" class="form-select" required></select>
-                        <input type="hidden" name="id_br" id="hidden_id_br">
+                    <div class="col-md-8">
+                        <label class="form-label required">Business Relation</label>
+                        <select id="select_br" name="id_br" class="form-select" required></select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Site</label>
+                        <select id="select_site" name="id_site" class="form-select"></select>
                     </div>
                     <div class="col-md-12">
                         <label class="form-label required">Nama PIC</label>
@@ -47,8 +50,8 @@
                         <div class="invalid-feedback" id="email_pic_error"></div>
                     </div>
                     <div class="col-md-3 col-12">
-                        <label class="form-label required">Lokasi PIC</label>
-                        <input type="text" class="form-control" id="lokasi_pic" name="lokasi_pic" required>
+                        <label class="form-label">Lokasi PIC</label>
+                        <input type="text" class="form-control" id="lokasi_pic" name="lokasi_pic" placeholder="Opsional">
                     </div>
                     <div class="col-md-3 col-12">
                         <label for="is_aktif" class="form-label required">Status</label>
@@ -73,10 +76,10 @@
     $(document).ready(function () {
         $('#is_aktif').select2({ placeholder: 'Pilih Status', width: '100%' });
 
-        $("#select_site").select2({
-            placeholder: "Pilih Business Relation Site...",
+        $("#select_br").select2({
+            placeholder: "Pilih Business Relation...",
             ajax: {
-                url: "{{ route('business-relation-sites.select2') }}",
+                url: "{{ route('business-relations.select2') }}",
                 dataType: "json",
                 delay: 250,
                 data: (params) => ({ q: params.term }),
@@ -91,13 +94,31 @@
             escapeMarkup: function (m) { return m; },
         });
 
-        // Ambil id_br dari data site yang dipilih, bukan id_site
-        $("#select_site").on("select2:select", function (e) {
-            $("#hidden_id_br").val(e.params.data.id_br ?? '');
+        $("#select_site").select2({
+            placeholder: "— Umum (semua site) —",
+            allowClear: true,
         });
 
-        $("#select_site").on("select2:clear", function () {
-            $("#hidden_id_br").val('');
+        // Site mengikuti Business Relation yang dipilih
+        function reloadSiteOptions(idBr) {
+            const $site = $("#select_site");
+            $site.empty();
+            if (!idBr) { $site.trigger("change"); return; }
+            $.get(`/business-relations/${idBr}/sites`, function (data) {
+                $site.empty();
+                (data || []).forEach(function (s) {
+                    $site.append(new Option(s.text, s.id, false, false));
+                });
+                $site.trigger("change");
+            });
+        }
+
+        $("#select_br").on("select2:select", function (e) {
+            reloadSiteOptions(e.params.data.id);
+        });
+
+        $("#select_br").on("select2:clear", function () {
+            reloadSiteOptions(null);
         });
     });
 

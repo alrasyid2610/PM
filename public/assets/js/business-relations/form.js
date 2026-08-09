@@ -198,13 +198,13 @@ function initSamplingTabEvents() {
         loadSamplingData(jenis, idSite);
 
         // Tampilkan action button yang sesuai
-        $('#brTabActionsEnv, #brTabActionsWe, #brTabActionsMp, #brTabActionsProduct').addClass('d-none').removeClass('d-flex');
+        $('#brTabActionsEnv, #brTabActionsWe, #brTabActionsMp, #brTabActionsProduct, #brTabActionsContact').addClass('d-none').removeClass('d-flex');
         $(`#brTabActions${jenis === 'env' ? 'Env' : 'We'}`).removeClass('d-none').addClass('d-flex');
     });
 
     // Sembunyikan action sampling saat tab Informasi aktif
     $panel.on('shown.bs.tab', '[data-bs-target="#tabBrInfo"]', function () {
-        $('#brTabActionsEnv, #brTabActionsWe, #brTabActionsMp, #brTabActionsProduct').addClass('d-none').removeClass('d-flex');
+        $('#brTabActionsEnv, #brTabActionsWe, #brTabActionsMp, #brTabActionsProduct, #brTabActionsContact').addClass('d-none').removeClass('d-flex');
     });
 
     // Tombol Tambah (di tab-actions area)
@@ -501,16 +501,16 @@ function initMpTabEvents() {
     $panel.on('shown.bs.tab', '[data-bs-target="#tabBrsMp"]', function () {
         const idSite = $(this).data('id-site');
         loadMpData(idSite);
-        $('#brTabActionsEnv, #brTabActionsWe, #brTabActionsProduct').addClass('d-none').removeClass('d-flex');
+        $('#brTabActionsEnv, #brTabActionsWe, #brTabActionsProduct, #brTabActionsContact').addClass('d-none').removeClass('d-flex');
         $('#brTabActionsMp').removeClass('d-none').addClass('d-flex');
     });
 
     // Sembunyikan tombol MP saat pindah tab lain
     $panel.on('shown.bs.tab', '[data-bs-target="#tabBrInfo"]', function () {
-        $('#brTabActionsMp, #brTabActionsProduct').addClass('d-none').removeClass('d-flex');
+        $('#brTabActionsMp, #brTabActionsProduct, #brTabActionsContact').addClass('d-none').removeClass('d-flex');
     });
     $panel.on('shown.bs.tab', '[data-bs-target^="#tabSampling"]', function () {
-        $('#brTabActionsMp, #brTabActionsProduct').addClass('d-none').removeClass('d-flex');
+        $('#brTabActionsMp, #brTabActionsProduct, #brTabActionsContact').addClass('d-none').removeClass('d-flex');
     });
 
     // Tombol Tambah MP
@@ -621,6 +621,294 @@ function _openMpModal({ idSite, isEdit, data }) {
     $('#mpModal-is_aktif').val(isEdit ? String(data.is_aktif) : '1');
 
     new bootstrap.Modal(document.getElementById('mpModal')).show();
+}
+
+// ─── CONTACT (PIC) ────────────────────────────────────────────────────────
+
+function renderContactModal() {
+    return `
+<div class="modal fade" id="contactModal" tabindex="-1" aria-labelledby="contactModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable" style="max-width:480px;">
+        <div class="modal-content">
+            <div class="modal-header py-2 px-3" style="border-bottom:1px solid #e2e8f0;">
+                <h6 class="modal-title mb-0" id="contactModalLabel">
+                    <i class="fa-solid fa-address-book me-2" style="color:#db2777;"></i>
+                    Tambah Contact
+                </h6>
+                <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3 px-3">
+                <div class="row g-2">
+                    <input type="hidden" id="contactModal-id" value="" data-no-disable>
+                    <input type="hidden" id="contactModal-id-br" value="" data-no-disable>
+                    <input type="hidden" id="contactModal-id-site" value="" data-no-disable>
+                    <div class="col-md-12">
+                        <label class="form-label">Nama PIC <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" id="contactModal-nama_pic"
+                            placeholder="Nama kontak" data-no-disable>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">No. Telepon <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" id="contactModal-nomor_telepon_pic"
+                            placeholder="cth: 081234567890" data-no-disable>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control form-control-sm" id="contactModal-email_pic"
+                            placeholder="Opsional" data-no-disable>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Keterangan Lokasi</label>
+                        <input type="text" class="form-control form-control-sm" id="contactModal-lokasi_pic"
+                            placeholder="cth: Lantai 2, dekat lobby (opsional)" data-no-disable>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="contactModal-is-umum" data-no-disable>
+                            <label class="form-check-label" for="contactModal-is-umum">
+                                Kontak umum (semua site)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Status</label>
+                        <select class="form-select form-select-sm" id="contactModal-is_aktif" data-no-disable>
+                            <option value="1">Aktif</option>
+                            <option value="0">Tidak Aktif</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer py-2 px-3" style="border-top:1px solid #e2e8f0;">
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" data-no-disable>Batal</button>
+                <button type="button" class="btn btn-sm btn-primary" id="contactModal-btn-save" data-no-disable
+                    style="background:#db2777;border-color:#db2777;">
+                    <i class="fa-solid fa-floppy-disk me-1"></i> Simpan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>`;
+}
+
+function renderContactList(rows, idSite) {
+    if (!rows.length) {
+        return `<div class="text-center text-muted py-4" style="font-size:13px;">
+            <i class="fa-solid fa-address-book me-1"></i> Belum ada Contact terdaftar.
+        </div>`;
+    }
+
+    const badgeAktif = `<span class="badge" style="background:#dcfce7;color:#166534;font-size:10px;font-weight:600;padding:2px 7px;">Aktif</span>`;
+    const badgeNon   = `<span class="badge" style="background:#f1f5f9;color:#64748b;font-size:10px;font-weight:600;padding:2px 7px;">Non-Aktif</span>`;
+    const badgeUmum  = `<span class="badge" style="background:#fce7f3;color:#9d174d;font-size:10px;font-weight:600;padding:2px 7px;margin-left:4px;">Umum</span>`;
+
+    const rows_html = rows.map((r, i) => {
+        const searchVal = [r.nama_pic, r.nomor_telepon_pic, r.email_pic].filter(Boolean).join(' ').toLowerCase();
+        const isUmum = r.id_site === null;
+        return `
+        <tr data-search="${escHtml(searchVal)}">
+            <td style="color:#94a3b8;text-align:center;">${i + 1}</td>
+            <td class="fw-semibold">${escHtml(r.nama_pic)}${isUmum ? badgeUmum : ''}</td>
+            <td>${escHtml(r.nomor_telepon_pic ?? '—')}</td>
+            <td>${r.email_pic ? escHtml(r.email_pic) : '<span class="text-muted">—</span>'}</td>
+            <td>${r.lokasi_pic ? escHtml(r.lokasi_pic) : '<span class="text-muted">—</span>'}</td>
+            <td>${r.is_aktif ? badgeAktif : badgeNon}</td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-contact-edit"
+                    data-id="${r.id_contact}" title="Edit" style="font-size:11px;" data-no-disable>
+                    <i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-contact-delete"
+                    data-id="${r.id_contact}" data-nama="${escHtml(r.nama_pic)}" title="Hapus" style="font-size:11px;" data-no-disable>
+                    <i class="fa-solid fa-trash" style="color:#dc2626;"></i>
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+
+    return `<div class="table-responsive">
+        <table class="pm-table">
+            <thead>
+                <tr>
+                    <th style="width:40px;text-align:center;">No</th>
+                    <th style="min-width:160px;">Nama PIC</th>
+                    <th style="min-width:130px;">No. Telepon</th>
+                    <th style="min-width:160px;">Email</th>
+                    <th style="min-width:160px;">Lokasi</th>
+                    <th style="min-width:90px;">Status</th>
+                    <th style="min-width:80px;">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>${rows_html}</tbody>
+        </table>
+    </div>`;
+}
+
+function loadContactData(idSite) {
+    // Reset search saat reload
+    $('#contact-search').val('');
+    $('#contact-search-clear').addClass('d-none');
+
+    $('#contact-table-wrap').html(
+        `<div class="text-center text-muted py-3"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>`
+    );
+    $.get(`/business-relation-contacts/by-site/${idSite}`)
+        .done(function (r) {
+            $('#contact-table-wrap').html(renderContactList(r.data ?? [], idSite));
+        })
+        .fail(function () {
+            $('#contact-table-wrap').html(
+                `<div class="text-center text-danger py-3">Gagal memuat data Contact.</div>`
+            );
+        });
+}
+
+function initContactTabEvents() {
+    const $panel = $('#detailContent');
+
+    // Load data saat tab diklik
+    $panel.on('shown.bs.tab', '[data-bs-target="#tabBrsContact"]', function () {
+        const idSite = $(this).data('id-site');
+        loadContactData(idSite);
+        $('#brTabActionsEnv, #brTabActionsWe, #brTabActionsMp, #brTabActionsProduct').addClass('d-none').removeClass('d-flex');
+        $('#brTabActionsContact').removeClass('d-none').addClass('d-flex');
+    });
+
+    // Sembunyikan tombol Contact saat pindah tab lain
+    $panel.on('shown.bs.tab', '[data-bs-target="#tabBrInfo"]', function () {
+        $('#brTabActionsContact').addClass('d-none').removeClass('d-flex');
+    });
+    $panel.on('shown.bs.tab', '[data-bs-target^="#tabSampling"], [data-bs-target="#tabBrsMp"], [data-bs-target="#tabBrsProduct"]', function () {
+        $('#brTabActionsContact').addClass('d-none').removeClass('d-flex');
+    });
+
+    // Tombol Tambah Contact
+    $panel.on('click', '.btn-contact-add', function () {
+        const idSite = $(this).data('id-site');
+        const idBr   = $(this).data('id-br');
+        _openContactModal({ idSite, idBr, isEdit: false });
+    });
+
+    // Toggle field id_site saat checkbox "Kontak umum" diubah
+    $(document).off('change.contact', '#contactModal-is-umum').on('change.contact', '#contactModal-is-umum', function () {
+        // id_site tetap disimpan di hidden field; hanya dipakai/tidak saat submit
+    });
+
+    // Tombol Simpan modal Contact
+    $(document).off('click.contact', '#contactModal-btn-save').on('click.contact', '#contactModal-btn-save', function () {
+        const id     = $('#contactModal-id').val();
+        const idBr   = $('#contactModal-id-br').val();
+        const idSite = $('#contactModal-id-site').val();
+        const isUmum = $('#contactModal-is-umum').is(':checked');
+        const namaPic = $('#contactModal-nama_pic').val().trim();
+        const noTelp  = $('#contactModal-nomor_telepon_pic').val().trim();
+
+        if (!namaPic) return Swal.fire('Perhatian', 'Nama PIC wajib diisi.', 'warning');
+        if (!noTelp)  return Swal.fire('Perhatian', 'No. Telepon wajib diisi.', 'warning');
+
+        const data = {
+            _token:             window.route.csrf,
+            id_br:              idBr,
+            id_site:            isUmum ? '' : idSite,
+            nama_pic:           namaPic,
+            nomor_telepon_pic:  noTelp,
+            email_pic:          $('#contactModal-email_pic').val().trim() || null,
+            lokasi_pic:         $('#contactModal-lokasi_pic').val().trim() || null,
+            is_aktif:           $('#contactModal-is_aktif').val(),
+        };
+
+        const isEdit = !!id;
+        const url    = isEdit ? `/business-relation-contacts/${id}` : '/business-relation-contacts/store';
+        if (isEdit) data._method = 'PUT';
+
+        $('#contactModal-btn-save').prop('disabled', true);
+        $.post(url, data)
+            .done(function () {
+                bootstrap.Modal.getInstance(document.getElementById('contactModal'))?.hide();
+                loadContactData(idSite);
+                Swal.fire({ icon: 'success', title: 'Tersimpan', timer: 1200, showConfirmButton: false });
+            })
+            .fail(function (xhr) {
+                const errs = xhr.responseJSON?.errors;
+                const msg  = errs ? Object.values(errs).flat().join('<br>') : (xhr.responseJSON?.message || 'Terjadi kesalahan.');
+                Swal.fire('Gagal', msg, 'error');
+            })
+            .always(function () {
+                $('#contactModal-btn-save').prop('disabled', false);
+            });
+    });
+
+    // Tombol Edit baris
+    $panel.on('click', '.btn-contact-edit', function () {
+        const id     = $(this).data('id');
+        const idSite = $('#contact-wrap').data('id-site');
+        const idBr   = $('#contact-wrap').data('id-br');
+        $.get(`/business-relation-contacts/${id}`)
+            .done(function (r) {
+                _openContactModal({ idSite, idBr, isEdit: true, data: r });
+            });
+    });
+
+    // Search Contact
+    $panel.on('input', '#contact-search', function () {
+        const q     = $(this).val().toLowerCase().trim();
+        const $rows = $('#contact-table-wrap tbody tr');
+        $rows.each(function () {
+            const val = $(this).data('search') || '';
+            $(this).toggle(!q || val.includes(q));
+        });
+        $('#contact-search-clear').toggleClass('d-none', !q);
+    });
+
+    $panel.on('click', '#contact-search-clear', function () {
+        $('#contact-search').val('').trigger('input');
+    });
+
+    // Tombol Hapus baris
+    $panel.on('click', '.btn-contact-delete', function () {
+        const id     = $(this).data('id');
+        const nama   = $(this).data('nama');
+        const idSite = $('#contact-wrap').data('id-site');
+
+        Swal.fire({
+            title: 'Hapus Contact?',
+            html: `<b>${escHtml(nama)}</b> akan dihapus.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            confirmButtonText: 'Hapus',
+            cancelButtonText: 'Batal',
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+            $.ajax({ url: `/business-relation-contacts/${id}`, type: 'DELETE', data: { _token: window.route.csrf } })
+                .done(function () {
+                    loadContactData(idSite);
+                    Swal.fire({ icon: 'success', title: 'Dihapus', timer: 1200, showConfirmButton: false });
+                })
+                .fail(function () { Swal.fire('Gagal', 'Tidak dapat menghapus data.', 'error'); });
+        });
+    });
+}
+
+function _openContactModal({ idSite, idBr, isEdit, data }) {
+    $('#contactModalLabel').html(
+        `<i class="fa-solid fa-address-book me-2" style="color:#db2777;"></i>`
+        + (isEdit ? 'Edit' : 'Tambah') + ' Contact'
+    );
+
+    const isUmum = isEdit ? (data.id_site === null) : false;
+
+    $('#contactModal-id').val(isEdit ? data.id_contact : '');
+    $('#contactModal-id-br').val(idBr);
+    $('#contactModal-id-site').val(idSite);
+    $('#contactModal-nama_pic').val(isEdit ? (data.nama_pic ?? '') : '');
+    $('#contactModal-nomor_telepon_pic').val(isEdit ? (data.nomor_telepon_pic ?? '') : '');
+    $('#contactModal-email_pic').val(isEdit ? (data.email_pic ?? '') : '');
+    $('#contactModal-lokasi_pic').val(isEdit ? (data.lokasi_pic ?? '') : '');
+    $('#contactModal-is-umum').prop('checked', isUmum);
+    $('#contactModal-is_aktif').val(isEdit ? String(data.is_aktif) : '1');
+
+    new bootstrap.Modal(document.getElementById('contactModal')).show();
 }
 
 // ─── PRODUCT ──────────────────────────────────────────────────────────────
@@ -735,7 +1023,7 @@ function initProductTabEvents() {
     $panel.on('shown.bs.tab', '[data-bs-target="#tabBrsProduct"]', function () {
         const idBr = $(this).data('id-br');
         loadProductData(idBr);
-        $('#brTabActionsEnv, #brTabActionsWe, #brTabActionsMp, #brTabActionsProduct').addClass('d-none').removeClass('d-flex');
+        $('#brTabActionsEnv, #brTabActionsWe, #brTabActionsMp, #brTabActionsProduct, #brTabActionsContact').addClass('d-none').removeClass('d-flex');
         $('#brTabActionsProduct').removeClass('d-none').addClass('d-flex');
     });
 
@@ -918,6 +1206,14 @@ function renderForm(res) {
                 </li>
                 <li role="presentation">
                     <button class="pm-tab-btn" type="button" role="tab"
+                        data-bs-toggle="tab" data-bs-target="#tabBrsContact"
+                        data-id-site="${res.id_site}" data-id-br="${res.id_br}">
+                        <i class="fa-solid fa-address-book me-1" style="color:#db2777;font-size:11px;"></i>
+                        Contact
+                    </button>
+                </li>
+                <li role="presentation">
+                    <button class="pm-tab-btn" type="button" role="tab"
                         data-bs-toggle="tab" data-bs-target="#tabBrsProduct"
                         data-id-br="${res.id_br}">
                         <i class="fa-solid fa-box-open me-1" style="color:#0f766e;font-size:11px;"></i>
@@ -949,6 +1245,14 @@ function renderForm(res) {
                         style="border-color:#7c3aed;color:#7c3aed;">
                         <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                         <i class="fa-solid fa-user-plus" style="font-size:11px;"></i> Tambah
+                    </button>
+                </div>
+                <div id="brTabActionsContact" class="d-none align-items-center gap-2">
+                    <button type="button" class="pm-btn-pill btn-contact-add"
+                        data-id-site="${res.id_site}" data-id-br="${res.id_br}" data-no-disable
+                        style="border-color:#db2777;color:#db2777;">
+                        <i class="fa-solid fa-plus" style="font-size:10px;"></i>
+                        <i class="fa-solid fa-address-book" style="font-size:11px;"></i> Tambah
                     </button>
                 </div>
                 <div id="brTabActionsProduct" class="d-none align-items-center gap-2">
@@ -1157,12 +1461,33 @@ function renderForm(res) {
                     </div>
                 </div>
 
+                <!-- TAB: CONTACT -->
+                <div class="tab-pane fade" id="tabBrsContact" role="tabpanel">
+                    <div class="card card-body" id="contact-wrap" data-id-site="${res.id_site}" data-id-br="${res.id_br}">
+                        <div class="mb-3">
+                            <div class="pm-search">
+                                <span class="pm-search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                <input type="text" id="contact-search" placeholder="Cari nama atau no. telepon..." data-no-disable>
+                                <button type="button" id="contact-search-clear" class="pm-search-clear d-none" title="Hapus" data-no-disable>
+                                    <i class="fa-solid fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="contact-table-wrap">
+                            <div class="text-center text-muted py-4">
+                                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
 
     ${renderSpModal()}
     ${renderMpModal()}
+    ${renderContactModal()}
     ${renderProductModal()}
 
 </form>

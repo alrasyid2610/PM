@@ -221,9 +221,9 @@ function renderForm(res) {
                     min="1" placeholder="Auto" value="${res.no_urut_period ?? ''}">
             </div>
             ${formGroup.select("pic_pekerjaan", "PIC Pekerjaan", res.id_pic_pelanggan_pekerjaan, [], {
-                mode: "ajax", url: "/business-relation-contacts/select2",
+                mode: "ajax", url: "/users/select2",
                 placeholder: "Pilih PIC", label: res.nama_pic_pelanggan_pekerjaan,
-                className: "col-md-7", createUrl: "/business-relation-contacts/create",
+                className: "col-md-7",
             })}
             ${formGroup.date("tanggal_mulai", "Tanggal Mulai", res.tanggal_mulai ? res.tanggal_mulai.substring(0,10) : '', false, { className: "col-md-3" })}
             ${formGroup.date("tanggal_selesai", "Tanggal Selesai", res.tanggal_selesai ? res.tanggal_selesai.substring(0,10) : '', false, { className: "col-md-3" })}

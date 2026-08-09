@@ -276,37 +276,91 @@
         loadPelangganDetails();
         initPicInternal();
 
-        // Ketika perusahaan billing berubah → reload PIC billing
-        $('#id_pelanggan').on('select2:select select2:clear', function () {
-            const id_br = $(this).val() || null;
-            initPicSelect('#id_pic_pelanggan', id_br, 'Pilih PIC');
+        // Daftar PIC selalu ikut union Perusahaan yang sedang dipilih di ketiga
+        // kategori — dibaca ulang tiap select2 dibuka/diketik, jadi tidak perlu
+        // di-reinit manual saat salah satu Perusahaan berubah.
+        initPicSelect('#id_pic_pelanggan', 'Pilih PIC');
+        initPicSelect('#id_pic_pelanggan_delivery', 'Pilih PIC');
+        initPicSelect('#id_pic_pelanggan_payment', 'Pilih PIC');
+
+        // Begitu Perusahaan & Site Pemesan sudah lengkap → salin ke Pengiriman
+        // & Pembayaran (PIC ikut kalau sudah dipilih juga). Hanya mengisi field
+        // yang MASIH KOSONG di kategori tujuan, tidak menimpa yang sudah diisi manual.
+        ['#id_pelanggan', 'select[name="id_site_pelanggan"]', '#id_pic_pelanggan'].forEach(function (sel) {
+            $(sel).on('select2:select', syncPemesanToOthers);
         });
 
-        // Ketika perusahaan delivery berubah → reload PIC delivery
-        $('select[name="id_pelanggan_delivery"]').on('select2:select select2:clear', function () {
-            const id_br = $(this).val() || null;
-            initPicSelect('#id_pic_pelanggan_delivery', id_br, 'Pilih PIC');
+        // Ganti Perusahaan di suatu kategori → kosongkan PIC kategori itu
+        // (PIC lama sudah tentu tidak valid lagi untuk Perusahaan yang baru)
+        const companyPicPairs = [
+            ['#id_pelanggan', '#id_pic_pelanggan'],
+            ['select[name="id_pelanggan_delivery"]', '#id_pic_pelanggan_delivery'],
+            ['select[name="id_pelanggan_payment"]', '#id_pic_pelanggan_payment'],
+        ];
+        companyPicPairs.forEach(function (pair) {
+            $(pair[0]).on('select2:select select2:clear', function () {
+                $(pair[1]).val(null).trigger('change');
+            });
         });
-
-        // Ketika perusahaan payment berubah → reload PIC payment
-        $('select[name="id_pelanggan_payment"]').on('select2:select select2:clear', function () {
-            const id_br = $(this).val() || null;
-            initPicSelect('#id_pic_pelanggan_payment', id_br, 'Pilih PIC');
-        });
-
-        // Init PIC pelanggan tanpa filter (sebelum perusahaan dipilih)
-        initPicSelect('#id_pic_pelanggan', null, 'Pilih PIC');
-        initPicSelect('#id_pic_pelanggan_delivery', null, 'Pilih PIC');
-        initPicSelect('#id_pic_pelanggan_payment', null, 'Pilih PIC');
     });
 
-    function initPicSelect(selector, id_br, placeholder) {
+    // Ambil {id, text} dari select2 yang sedang terpilih. null kalau belum diisi.
+    function getSelect2SelectedData(selector) {
+        const $el = $(selector);
+        if (!$el.length || !$el.val()) return null;
+        const data = $el.select2('data');
+        if (!data || !data.length) return null;
+        return { id: $el.val(), text: data[0].text };
+    }
+
+    // Begitu Perusahaan & Site Pemesan sudah lengkap, salin ke Pengiriman &
+    // Pembayaran yang masih kosong (Perusahaan, Site, dan PIC kalau sudah ada).
+    function syncPemesanToOthers() {
+        const company = getSelect2SelectedData('#id_pelanggan');
+        const site    = getSelect2SelectedData('select[name="id_site_pelanggan"]');
+        if (!company || !site) return;
+
+        const pic = getSelect2SelectedData('#id_pic_pelanggan');
+
+        const targets = [
+            { company: 'select[name="id_pelanggan_delivery"]', site: 'select[name="id_site_pelanggan_delivery"]', pic: '#id_pic_pelanggan_delivery' },
+            { company: 'select[name="id_pelanggan_payment"]',  site: 'select[name="id_site_pelanggan_payment"]',  pic: '#id_pic_pelanggan_payment' },
+        ];
+
+        targets.forEach(function (t) {
+            const $c = $(t.company);
+            if ($c.length && !$c.val()) {
+                $c.append(new Option(company.text, company.id, true, true)).trigger('change');
+            }
+            const $s = $(t.site);
+            if ($s.length && !$s.val()) {
+                $s.append(new Option(site.text, site.id, true, true)).trigger('change');
+            }
+            if (pic) {
+                const $p = $(t.pic);
+                if ($p.length && !$p.val()) {
+                    $p.append(new Option(pic.text, pic.id, true, true)).trigger('change');
+                }
+            }
+        });
+    }
+
+    // PIC yang muncul = union dari semua Perusahaan yang sudah dipilih
+    // di ketiga kategori (Pemesan, Pengiriman, Pembayaran) — bukan cuma
+    // perusahaan di kategorinya sendiri.
+    function getSelectedCompanyIds() {
+        return [
+            $('#id_pelanggan').val(),
+            $('select[name="id_pelanggan_delivery"]').val(),
+            $('select[name="id_pelanggan_payment"]').val(),
+        ].filter(function (v) { return !!v; });
+    }
+
+    function initPicSelect(selector, placeholder) {
         const $el = $(selector);
         if ($el.hasClass('select2-hidden-accessible')) {
-            $el.val(null).trigger('change');
             $el.select2('destroy');
         }
-        $el.empty();
 
         $el.select2({
             placeholder: placeholder,
@@ -317,7 +371,7 @@
                 dataType: 'json',
                 delay: 200,
                 data: function (params) {
-                    return { q: params.term || '', id_br: id_br || '' };
+                    return { q: params.term || '', id_br: getSelectedCompanyIds(), with_site: 1 };
                 },
                 processResults: function (data) {
                     return { results: data };
@@ -395,7 +449,7 @@
                 allowClear: true,
                 minimumInputLength: 0,
                 ajax: {
-                    url: "{{ route('business-relation-contacts.select2') }}",
+                    url: "{{ route('users.select2') }}",
                     dataType: 'json',
                     delay: 200,
                     data: function (params) { return { q: params.term || '' }; },

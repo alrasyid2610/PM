@@ -15,6 +15,7 @@ class BusinessRelationSiteController extends Controller
         $query = DB::table('business_relation_sites as s')
             ->leftJoin('business_estates as be', 'be.id_bestate', '=', 's.kawasan_bisnis')
             ->leftJoin('commercial_buildings as cb', 'cb.id_building', '=', 's.gedung')
+            ->whereNull('s.deleted_at')
             ->select([
                 's.id_site',
                 's.id_br',

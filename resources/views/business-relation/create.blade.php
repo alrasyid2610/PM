@@ -180,7 +180,7 @@
                     </div>
                     
                     <div class="col-md-12">
-                        <label class="form-label required">Alamat Lengkap</label>
+                        <label class="form-label">Alamat Lengkap</label>
                         <textarea name="alamat_lengkap" class="form-control" rows="3"></textarea>
                     </div>
                     <div class="col-md-12">
