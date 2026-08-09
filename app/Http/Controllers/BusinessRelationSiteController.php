@@ -44,11 +44,17 @@ class BusinessRelationSiteController extends Controller
             $query->where('s.nama_lokasi', 'like', "%{$search}%");
         }
 
-        $sites = $query
+        $query
             ->orderByDesc('s.is_kantor_pusat')
-            ->orderBy('s.nama_lokasi')
-            ->limit(10)
-            ->get();
+            ->orderBy('s.nama_lokasi');
+
+        // Scope per-BR (dipakai site-switcher) → load semua, tidak dibatasi.
+        // Search umum tanpa id_br (dipakai ajax select2 di form SO/WO) → batasi hasil.
+        if (empty($id)) {
+            $query->limit(10);
+        }
+
+        $sites = $query->get();
 
         return response()->json(
             $sites->map(function ($site) {
