@@ -156,9 +156,14 @@
         $('#id_pic_pelanggan').select2({
             width: '100%', placeholder: '-- Pilih PIC Pelanggan --', allowClear: true, minimumInputLength: 0,
             ajax: { url: window.route.select2Contact, delay: 250, dataType: 'json',
-                    data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }) },
+                    data: (p) => ({ q: p.term, id_br: $('#id_business_relation').val() }), processResults: (d) => ({ results: d }) },
             language: { noResults: () => `<span>Tidak ditemukan. <a href="{{ route('business-relation-contacts.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>` },
             escapeMarkup: (m) => m,
+        });
+
+        // Ganti Pelanggan → PIC lama sudah tentu tidak valid lagi untuk Pelanggan baru
+        $('#id_business_relation').on('select2:select select2:clear', function () {
+            $('#id_pic_pelanggan').val(null).trigger('change');
         });
 
         $('#id_pic_pramatek').select2({

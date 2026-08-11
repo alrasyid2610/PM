@@ -24,6 +24,7 @@ use App\Http\Controllers\TestingMatriksSampleController;
 use App\Http\Controllers\TestingPointController;
 use App\Http\Controllers\WilayahController;
 use App\Http\Controllers\TerminController;
+use App\Http\Controllers\WoSampleController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\BrsSamplingPointController;
 use App\Http\Controllers\BrsMpController;
@@ -31,6 +32,8 @@ use App\Http\Controllers\BrProductController;
 use App\Http\Controllers\BudgetAccountController;
 use App\Http\Controllers\FwoBudgetController;
 use App\Http\Controllers\FwoBudgetActualController;
+use App\Http\Controllers\WoBudgetController;
+use App\Http\Controllers\WoBudgetActualController;
 use App\Http\Controllers\LabSampleController;
 use Spatie\LaravelPdf\Facades\Pdf;
 
@@ -589,6 +592,26 @@ Route::prefix('fwo-budget-actuals')->name('fwo-budget-actuals.')->group(function
     Route::post('/bulk-verify',   [FwoBudgetActualController::class, 'bulkVerify'])->name('bulk-verify');
 });
 
+Route::prefix('wo-budgets')->name('wo-budgets.')->group(function () {
+    Route::get('/{id_wo}/list', [WoBudgetController::class, 'listByWo'])->name('list')->whereNumber('id_wo');
+    Route::post('/',             [WoBudgetController::class, 'store'])->name('store');
+    Route::get('/{id}',          [WoBudgetController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}',          [WoBudgetController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}',       [WoBudgetController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/print',           [WoBudgetController::class, 'printPdf'])->name('print')->whereNumber('id');
+    Route::get('/{id}/print-realisasi', [WoBudgetController::class, 'printRealisasiPdf'])->name('print-realisasi')->whereNumber('id');
+    Route::post('/{id}/close',          [WoBudgetController::class, 'closePlan'])->name('close')->whereNumber('id');
+});
+
+Route::prefix('wo-budget-actuals')->name('wo-budget-actuals.')->group(function () {
+    Route::post('/',              [WoBudgetActualController::class, 'store'])->name('store');
+    Route::get('/{id}',           [WoBudgetActualController::class, 'show'])->name('show')->whereNumber('id');
+    Route::post('/{id}',          [WoBudgetActualController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}',        [WoBudgetActualController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::post('/{id}/verify',   [WoBudgetActualController::class, 'verify'])->name('verify')->whereNumber('id');
+    Route::post('/bulk-verify',   [WoBudgetActualController::class, 'bulkVerify'])->name('bulk-verify');
+});
+
 Route::prefix('lab-samples')->name('lab-samples.')->group(function () {
     Route::get('/sampling-points/{id_site}', [LabSampleController::class, 'samplingPointsBySite'])->name('sampling-points')->whereNumber('id_site');
     Route::get('/{id_fwo}/list',            [LabSampleController::class, 'listByFwo'])->name('list')->whereNumber('id_fwo');
@@ -625,6 +648,17 @@ Route::prefix('termin')->name('termin.')->group(function () {
     Route::post('/{id}/selesai',       [TerminController::class, 'selesai'])->name('selesai')->whereNumber('id');
     Route::put('/{id}',               [TerminController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}',            [TerminController::class, 'destroy'])->name('destroy')->whereNumber('id');
+});
+
+Route::prefix('wo-samples')->name('wo-samples.')->group(function () {
+    Route::get('/by-wo/{id_wo}',                [WoSampleController::class, 'boqByWo'])->name('by-wo')->whereNumber('id_wo');
+    Route::post('/by-wo/{id_wo}/boq/{id_boq}/generate',  [WoSampleController::class, 'generateSlots'])->name('generate')->whereNumber(['id_wo', 'id_boq']);
+    Route::post('/by-wo/{id_wo}/boq/{id_boq}/add-one',   [WoSampleController::class, 'addOne'])->name('add-one')->whereNumber(['id_wo', 'id_boq']);
+    Route::post('/by-wo/{id_wo}/boq/{id_boq}/bulk-fill', [WoSampleController::class, 'bulkFill'])->name('bulk-fill')->whereNumber(['id_wo', 'id_boq']);
+    Route::get('/{id}',                 [WoSampleController::class, 'show'])->name('show')->whereNumber('id');
+    Route::post('/{id}/field',          [WoSampleController::class, 'updateField'])->name('update-field')->whereNumber('id');
+    Route::post('/{id}',                [WoSampleController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}',              [WoSampleController::class, 'destroy'])->name('destroy')->whereNumber('id');
 });
 
 Route::prefix('boq')->name('boq.')->group(function () {

@@ -59,13 +59,398 @@ $(document).on(
     '#woDetailTabs button[data-bs-toggle="tab"]',
     function (e) {
         const target = $(e.target).data("bs-target");
-        $("#woTabActionsInfo, #woTabActionsBoq, #woTabActionsFwo, #woTabActionsOutput").addClass("d-none");
+        $("#woTabActionsInfo, #woTabActionsBoq, #woTabActionsFwo, #woTabActionsOutput, #woTabActionsBudget, #woTabActionsSample").addClass("d-none").removeClass("d-flex");
         if (target === "#tabInfo")   $("#woTabActionsInfo").removeClass("d-none");
         if (target === "#tabBoq")    $("#woTabActionsBoq").removeClass("d-none");
         if (target === "#tabFwo")    $("#woTabActionsFwo").removeClass("d-none");
         if (target === "#tabOutput") $("#woTabActionsOutput").removeClass("d-none");
+        if (target === "#tabWoBudget") {
+            $("#woTabActionsBudget").removeClass("d-none").addClass("d-flex");
+            const idWo = $(e.target).data("wo-id");
+            loadWoBudgetData(idWo);
+        }
+        if (target === "#tabSample") {
+            $("#woTabActionsSample").removeClass("d-none").addClass("d-flex");
+            const idWo = $(e.target).data("wo-id");
+            loadWoSampleData(idWo);
+        }
     },
 );
+
+$(document).on("click", "#btnRefreshWoSample", function () {
+    const idWo = $(this).data("wo-id");
+    loadWoSampleData(idWo);
+});
+
+// ── SAMPLE (langsung di level WO, tanpa FWO) ───────────────────────────────────
+
+const JENIS_LABEL_WO_SAMPLE = { env: 'ENV', we: 'WE', mp: 'MP', product: 'Product' };
+const SAMPLE_STATUS_LABEL_WO = { belum_diambil: 'Belum Diambil', diambil: 'Diambil', dikirim: 'Dikirim' };
+const SAMPLE_STATUS_COLOR_WO = { belum_diambil: '#64748b', diambil: '#0369a1', dikirim: '#15803d' };
+
+function loadWoSampleData(idWo) {
+    const $wrap = $('#woSampleContent');
+    $wrap.html('<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>');
+
+    $.get(`/wo-samples/by-wo/${idWo}`)
+        .done(function (res) {
+            const boqs     = res.data || [];
+            const isLocked = res.wo_status === 'completed';
+
+            if (!boqs.length) {
+                $wrap.html('<div class="text-center text-muted py-4">Tidak ada BOQ pada WO ini.</div>');
+                return;
+            }
+
+            $wrap.html(renderWoSampleList(boqs, isLocked));
+        })
+        .fail(function () {
+            $wrap.html('<div class="text-center text-danger py-4">Gagal memuat data sample.</div>');
+        });
+}
+
+function renderWoSampleList(boqs, isLocked) {
+    return boqs.map(function (boq) {
+        const total    = (boq.samples || []).length;
+        const diambil  = (boq.samples || []).filter(s => s.status === 'diambil' || s.status === 'dikirim').length;
+        const dikirim  = (boq.samples || []).filter(s => s.status === 'dikirim').length;
+        const pct      = total > 0 ? Math.round((diambil / total) * 100) : 0;
+        const barColor = pct === 100 ? '#15803d' : '#0369a1';
+        const sisa     = boq.sisa ?? 0;
+
+        const slotRows = total === 0
+            ? `<tr><td colspan="5" class="text-center text-muted py-3" style="font-size:12px;font-style:italic;">Belum ada sample — gunakan tombol "Tambah Sample" di atas</td></tr>`
+            : (boq.samples || []).map(function (s) {
+                const statusVal = s.status || 'belum_diambil';
+                const jenisTag  = s.jenis_sample
+                    ? `<span style="font-size:10px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:4px;padding:1px 6px;">${JENIS_LABEL_WO_SAMPLE[s.jenis_sample] || s.jenis_sample}</span>`
+                    : `<span style="font-size:10px;color:#94a3b8;font-style:italic;">–</span>`;
+                const noSample = s.no_sample
+                    ? `<span style="font-size:11px;font-weight:600;">${escHtml(s.no_sample)}</span>`
+                    : `<span class="text-muted" style="font-size:11px;font-style:italic;">–</span>`;
+
+                const titikVal  = s.titik_lokasi || '';
+                const titikCell = !isLocked
+                    ? `<input type="text" class="form-control form-control-sm wo-sample-inline-titik"
+                            data-id="${s.id_lab_sample}" value="${escHtml(titikVal)}"
+                            placeholder="Titik lokasi…" style="font-size:11px;">`
+                    : (titikVal ? escHtml(titikVal) : '<span style="color:#94a3b8;font-style:italic;">–</span>');
+
+                return `
+                <tr data-id-sample="${s.id_lab_sample}" data-boq-name="${escHtml(boq.nama_boq)}">
+                    <td style="font-size:12px;color:#64748b;width:36px;">${s.no_urut}</td>
+                    <td style="font-size:12px;">${jenisTag} ${noSample}</td>
+                    <td style="font-size:12px;">${titikCell}</td>
+                    <td style="font-size:12px;width:150px;">
+                        ${!isLocked
+                            ? `<select class="form-select form-select-sm wo-sample-inline-status"
+                                    data-id="${s.id_lab_sample}"
+                                    style="font-size:11px;width:140px;">
+                                    <option value="belum_diambil"${statusVal==='belum_diambil'?' selected':''}>Belum Diambil</option>
+                                    <option value="diambil"${statusVal==='diambil'?' selected':''}>Diambil</option>
+                                    <option value="dikirim"${statusVal==='dikirim'?' selected':''}>Dikirim ke Lab</option>
+                               </select>`
+                            : `<span style="font-size:11px;font-weight:600;color:${SAMPLE_STATUS_COLOR_WO[statusVal]||'#64748b'};">${SAMPLE_STATUS_LABEL_WO[statusVal]||statusVal}</span>`
+                        }
+                    </td>
+                    <td class="text-center" style="width:72px;white-space:nowrap;">
+                        ${!isLocked ? `
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-wo-sample-edit"
+                            data-id="${s.id_lab_sample}" title="Edit" style="font-size:11px;">
+                            <i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-wo-sample-delete"
+                            data-id="${s.id_lab_sample}" data-no="${escHtml(s.no_sample || 'Sample #' + s.no_urut)}"
+                            title="Hapus" style="font-size:11px;">
+                            <i class="fa-solid fa-trash" style="color:#dc2626;"></i>
+                        </button>` : ''}
+                    </td>
+                </tr>`;
+            }).join('');
+
+        const addBtn = !isLocked ? `
+            <div class="d-flex gap-2">
+                ${total > 0 ? `
+                <button type="button" class="btn btn-sm py-0 px-2 btn-wo-sample-bulk-fill"
+                    data-id-boq="${boq.id_boq}"
+                    style="font-size:11px;border:1px solid #7c3aed;color:#7c3aed;background:#f5f3ff;">
+                    <i class="fa-solid fa-wand-magic-sparkles me-1"></i>Bulk Insert
+                </button>` : ''}
+                <div class="dropdown">
+                    <button type="button" class="btn btn-sm dropdown-toggle py-0 px-2"
+                        data-bs-toggle="dropdown"
+                        style="font-size:11px;border:1px solid #0369a1;color:#0369a1;background:#eff6ff;">
+                        <i class="fa-solid fa-plus me-1"></i>Tambah Sample
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" style="font-size:12px;min-width:200px;">
+                        <li>
+                            <button type="button" class="dropdown-item btn-wo-sample-generate"
+                                data-id-boq="${boq.id_boq}" data-sisa="${sisa}">
+                                <i class="fa-solid fa-wand-magic-sparkles me-2 text-primary"></i>
+                                Buat Otomatis
+                                ${sisa > 0 ? `<span class="badge bg-primary ms-1">${sisa}</span>` : ''}
+                            </button>
+                        </li>
+                        <li>
+                            <button type="button" class="dropdown-item btn-wo-sample-add-one"
+                                data-id-boq="${boq.id_boq}">
+                                <i class="fa-solid fa-plus me-2 text-success"></i>
+                                Tambah 1 Sample
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>` : '';
+
+        const collapseId = `woSampleCollapse_${boq.id_boq}`;
+        return `
+        <div class="mb-3 border rounded" style="background:#fff;">
+            <div class="d-flex justify-content-between align-items-center px-3 py-2"
+                style="background:#f8fafc;border-bottom:1px solid #e2e8f0;border-radius:calc(0.375rem - 1px) calc(0.375rem - 1px) 0 0;">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span style="font-size:13px;font-weight:600;color:#1e293b;">${escHtml(boq.nama_boq)}</span>
+                    <span class="text-muted wo-sample-progress-text" style="font-size:11px;">Target: ${boq.qty || 0} &nbsp;·&nbsp; ${diambil}/${total} diambil &nbsp;·&nbsp; ${dikirim} dikirim</span>
+                    ${sisa > 0 && !isLocked ? `<span style="font-size:11px;color:#b45309;background:#fef3c7;border:1px solid #fde68a;border-radius:4px;padding:1px 6px;">${sisa} sisa qty BOQ</span>` : ''}
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    ${addBtn}
+                    <button type="button" class="btn btn-sm btn-plan-icon btn-wo-sample-collapse"
+                        data-target="#${collapseId}" title="Sembunyikan / Tampilkan">
+                        <i class="fa-solid fa-chevron-up"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="${collapseId}">
+                <div style="padding:4px 12px 0;">
+                    <div class="progress" style="height:3px;border-radius:0;">
+                        <div class="progress-bar" style="width:${pct}%;background:${barColor};"></div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="pm-table">
+                        <thead>
+                            <tr>
+                                <th style="width:36px;">#</th>
+                                <th style="width:1%;white-space:nowrap;">Jenis / No. Sample</th>
+                                <th style="width:220px;">Titik Lokasi</th>
+                                <th>Status</th>
+                                <th style="width:48px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>${slotRows}</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+$(document).on('click', '.btn-wo-sample-collapse', function () {
+    const target = $(this).data('target');
+    const $icon  = $(this).find('i');
+    $(target).slideToggle(150);
+    $icon.toggleClass('fa-chevron-up fa-chevron-down');
+});
+
+$(document).on('click', '.btn-wo-sample-generate', function () {
+    const idBoq = $(this).data('id-boq');
+    const sisa  = parseInt($(this).data('sisa') ?? 0);
+    const idWo  = currentWoData.id_wo;
+
+    if (sisa <= 0) {
+        Swal.fire({ icon: 'warning', title: 'Sisa Qty Habis', text: 'Qty BOQ sudah terpenuhi.', confirmButtonText: 'OK' });
+        return;
+    }
+
+    $.post(`/wo-samples/by-wo/${idWo}/boq/${idBoq}/generate`, { _token: window.route.csrf })
+        .done(function (res) {
+            if (res.success) {
+                Notify.success('Sample berhasil dibuat otomatis.');
+                loadWoSampleData(idWo);
+            } else {
+                Notify.error(res.message || 'Gagal membuat sample.');
+            }
+        })
+        .fail(function (xhr) {
+            Notify.error(xhr.responseJSON?.message || 'Gagal membuat sample.');
+        });
+});
+
+$(document).on('click', '.btn-wo-sample-add-one', function () {
+    const idBoq = $(this).data('id-boq');
+    const idWo  = currentWoData.id_wo;
+
+    $.post(`/wo-samples/by-wo/${idWo}/boq/${idBoq}/add-one`, { _token: window.route.csrf })
+        .done(function (res) {
+            if (res.success) {
+                loadWoSampleData(idWo);
+            } else {
+                Swal.fire({ icon: 'warning', title: 'Tidak Dapat Ditambahkan', text: res.message || 'Gagal menambah sample.', confirmButtonText: 'OK' });
+            }
+        })
+        .fail(function (xhr) {
+            Swal.fire({ icon: 'warning', title: 'Tidak Dapat Ditambahkan', text: xhr.responseJSON?.message || 'Gagal menambah sample.', confirmButtonText: 'OK' });
+        });
+});
+
+$(document).on('change', '.wo-sample-inline-titik', function () {
+    const id  = $(this).data('id');
+    const val = $(this).val().trim();
+    $.post(`/wo-samples/${id}/field`, { _token: window.route.csrf, field: 'titik_lokasi', value: val })
+        .fail(function (xhr) {
+            Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan titik lokasi.');
+        });
+});
+
+$(document).on('change', '.wo-sample-inline-status', function () {
+    const id   = $(this).data('id');
+    const val  = $(this).val();
+    const idWo = currentWoData.id_wo;
+    $.post(`/wo-samples/${id}/field`, { _token: window.route.csrf, field: 'status', value: val })
+        .done(function () { loadWoSampleData(idWo); })
+        .fail(function (xhr) {
+            Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan status.');
+        });
+});
+
+$(document).on('click', '.btn-wo-sample-bulk-fill', function (e) {
+    e.stopPropagation();
+    const idBoq  = $(this).data('id-boq');
+    const $modal = $('#woSampleBulkFillModal');
+    $modal.find('#woBulkFillModal-id-boq').val(idBoq);
+    $modal.find('#woBulkFill-jenis, #woBulkFill-status, #woBulkFill-kondisi').val('');
+    $modal.find('#woBulkFill-tanggal').val('');
+    new bootstrap.Modal($modal[0]).show();
+    initFpDate('#woSampleBulkFillModal');
+});
+
+$(document).on('click', '#woSampleBulkFillModal-btn-save', function () {
+    const idBoq = $('#woBulkFillModal-id-boq').val();
+    const idWo  = currentWoData.id_wo;
+    const $btn  = $(this);
+
+    const payload = {
+        _token:              window.route.csrf,
+        jenis_sample:        $('#woBulkFill-jenis').val() || null,
+        tanggal_pengambilan: $('#woBulkFill-tanggal').val() || null,
+        status:              $('#woBulkFill-status').val() || null,
+        kondisi_sample:      $('#woBulkFill-kondisi').val() || null,
+    };
+
+    $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...');
+    $.post(`/wo-samples/by-wo/${idWo}/boq/${idBoq}/bulk-fill`, payload)
+        .done(function (res) {
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('woSampleBulkFillModal'))?.hide();
+                Notify.success('Semua sample berhasil diperbarui.');
+                loadWoSampleData(idWo);
+            } else {
+                Notify.error(res.message || 'Gagal memperbarui sample.');
+            }
+        })
+        .fail(function (xhr) {
+            Notify.error(xhr.responseJSON?.message || 'Gagal memperbarui sample.');
+        })
+        .always(function () { $btn.prop('disabled', false).html('<i class="fa-solid fa-wand-magic-sparkles me-1"></i> Apply ke Semua Sample'); });
+});
+
+$(document).on('click', '.btn-wo-sample-edit', function (e) {
+    e.stopPropagation();
+    const idSample = $(this).data('id');
+    const $tr      = $(this).closest('tr');
+    const boqName  = $tr.data('boq-name') || '';
+
+    const $modal = $('#woSampleDetailModal');
+    $modal.find('#woSampleDetailModalLabel').html(`<i class="fa-solid fa-flask me-2" style="color:#0369a1;"></i>Detail Sample – ${escHtml(boqName)}`);
+    $modal.find('#woSampleModal-id').val(idSample);
+    $modal.find('#woSampleModal-jenis').val('');
+    $modal.find('#woSampleModal-no').val('');
+    $modal.find('#woSampleModal-tanggal').val('');
+    $modal.find('#woSampleModal-titik').val('');
+    $modal.find('#woSampleModal-kondisi').val('');
+    $modal.find('#woSampleModal-status').val('belum_diambil');
+    $modal.find('#woSampleModal-keterangan').val('');
+
+    $.get(`/wo-samples/${idSample}`)
+        .done(function (res) {
+            const s = res.data || {};
+            $modal.find('#woSampleModal-jenis').val(s.jenis_sample || '');
+            $modal.find('#woSampleModal-no').val(s.no_sample || '');
+            $modal.find('#woSampleModal-tanggal').val(s.tanggal_pengambilan || '');
+            $modal.find('#woSampleModal-titik').val(s.titik_lokasi || '');
+            $modal.find('#woSampleModal-kondisi').val(s.kondisi_sample || '');
+            $modal.find('#woSampleModal-status').val(s.status || 'belum_diambil');
+            $modal.find('#woSampleModal-keterangan').val(s.keterangan || '');
+        })
+        .always(function () {
+            new bootstrap.Modal($modal[0]).show();
+            initFpDate('#woSampleDetailModal');
+        });
+});
+
+$(document).on('click', '#woSampleModal-btn-save', function () {
+    const idSample = $('#woSampleDetailModal #woSampleModal-id').val();
+    if (!idSample) return;
+
+    const $btn  = $(this);
+    const idWo  = currentWoData.id_wo;
+    const payload = {
+        _token:              window.route.csrf,
+        jenis_sample:        $('#woSampleModal-jenis').val() || null,
+        no_sample:           $('#woSampleModal-no').val().trim() || null,
+        tanggal_pengambilan: $('#woSampleModal-tanggal').val() || null,
+        titik_lokasi:        $('#woSampleModal-titik').val().trim() || null,
+        kondisi_sample:      $('#woSampleModal-kondisi').val() || null,
+        status:              $('#woSampleModal-status').val(),
+        keterangan:          $('#woSampleModal-keterangan').val().trim() || null,
+    };
+
+    $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...');
+    $.post(`/wo-samples/${idSample}`, payload)
+        .done(function (res) {
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('woSampleDetailModal'))?.hide();
+                Notify.success('Sample berhasil disimpan.');
+                loadWoSampleData(idWo);
+            }
+        })
+        .fail(function (xhr) {
+            Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan sample.');
+        })
+        .always(function () { $btn.prop('disabled', false).html('<i class="fa-solid fa-floppy-disk me-1"></i> Simpan'); });
+});
+
+$(document).on('click', '.btn-wo-sample-delete', function (e) {
+    e.stopPropagation();
+    const id   = $(this).data('id');
+    const no   = $(this).data('no');
+    const idWo = currentWoData.id_wo;
+
+    Swal.fire({
+        title: 'Hapus Sample?',
+        html: `Sample <strong>${escHtml(no)}</strong> akan dihapus permanen.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#dc2626',
+        reverseButtons: true,
+    }).then(function (result) {
+        if (!result.isConfirmed) return;
+        $.ajax({
+            url: `/wo-samples/${id}`,
+            method: 'DELETE',
+            headers: { 'X-CSRF-TOKEN': window.route.csrf },
+            success: function () {
+                Notify.success('Sample berhasil dihapus.');
+                loadWoSampleData(idWo);
+            },
+            error: function (xhr) {
+                Notify.error(xhr.responseJSON?.message || 'Gagal menghapus sample.');
+            },
+        });
+    });
+});
 
 $(document).on("click", ".btn-add-fwo-modal", function () {
     var woId = $(this).data("wo-id");
@@ -1861,3 +2246,798 @@ function fillCopyFwoModal(fwo, boqs) {
         });
     return allFull;
 }
+
+// ── BUDGET (WO level) ───────────────────────────────────────────────────────────
+// Sistem terpisah dari FWO Budget (fwo_budgets/fwo_budget_items/fwo_budget_actuals)
+// — WO bisa punya Budget Plan sendiri tanpa perlu FWO. Lock pakai work_orders.status,
+// bukan fieldworks.status. Lihat Project Reference bagian "Budget WO".
+
+function woFmtRp(val) {
+    return 'Rp ' + Number(val || 0).toLocaleString('id-ID');
+}
+
+function woFmtTgl(val) {
+    if (!val) return '-';
+    const d = new Date(val);
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function loadWoBudgetData(idWo) {
+    const $wrap = $('#woBudgetWrap');
+    $wrap.html('<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>');
+
+    $.get(`/wo-budgets/${idWo}/list`)
+        .done(function (res) {
+            const plans    = res.data || [];
+            const woStatus = res.wo_status || '';
+            const isLocked = woStatus === 'completed';
+
+            if (!plans.length) {
+                $wrap.html(`<div class="text-center text-muted py-4" style="font-size:13px;">
+                    <i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>
+                    Belum ada Budget Plan untuk WO ini
+                </div>`);
+                return;
+            }
+            window._woBudgetPlans = plans;
+            $wrap.html(renderWoBudgetList(plans, isLocked));
+        })
+        .fail(function () {
+            $wrap.html('<div class="text-center text-danger py-3">Gagal memuat data budget.</div>');
+        });
+}
+
+function renderWoBudgetList(plans, isLocked) {
+    const cards = plans.map(function (p) {
+        const selisih      = p.total_budget - p.total_actual;
+        const selisihColor = selisih >= 0 ? '#15803d' : '#dc2626';
+        const planLocked   = isLocked || p.status === 'completed';
+        const statusBadge  = p.status === 'completed'
+            ? `<span class="badge ms-1" style="background:#dcfce7;color:#15803d;font-size:10px;font-weight:500;"><i class="fa-solid fa-lock me-1"></i>Completed</span>`
+            : `<span class="badge ms-1" style="background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:500;">Open</span>`;
+
+        const itemRows = p.items.map(function (item, itemIdx) {
+            const actualTotal = item.nominal_actual || 0;
+            const sel         = item.nominal_budget - actualTotal;
+            const struks      = item.actuals || [];
+            const struksHtml  = struks.map(function (a) {
+                const files = JSON.parse(a.attachments || '[]');
+                const fileLinks = files.map(function (f) {
+                    return `<a href="/storage/${f}" target="_blank" class="badge bg-light text-dark border me-1" style="font-size:10px;">
+                        <i class="fa-solid fa-file me-1"></i>${f.split('/').pop()}
+                    </a>`;
+                }).join('');
+                const verifBadge = {
+                    menunggu:  `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:500;">Menunggu</span>`,
+                    disetujui: `<span class="badge" style="background:#dcfce7;color:#15803d;font-size:10px;font-weight:500;">Disetujui</span>`,
+                    ditolak:   `<span class="badge" style="background:#fee2e2;color:#dc2626;font-size:10px;font-weight:500;">Ditolak</span>`,
+                }[a.status_verifikasi || 'menunggu'];
+
+                const catatanVerif = a.catatan_verifikasi
+                    ? `<span class="text-muted ms-1" style="font-size:10px;">— ${escHtml(a.catatan_verifikasi)}</span>` : '';
+
+                return `<div class="d-flex align-items-start gap-2 mb-1 p-1 rounded" style="background:#f8fafc;font-size:11px;">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="fw-semibold">${woFmtRp(a.nominal_actual)}</span>
+                            ${a.keterangan ? `<span class="text-muted">— ${escHtml(a.keterangan)}</span>` : ''}
+                            ${verifBadge}${catatanVerif}
+                        </div>
+                        <div class="mt-1">${fileLinks}</div>
+                    </div>
+                    ${!planLocked ? `<div class="d-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 btn-wo-actual-edit"
+                            data-id="${a.id_actual}" data-wo-id="${p.id_wo || ''}" style="font-size:10px;" data-no-disable title="Edit">
+                            <i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 btn-wo-actual-delete"
+                            data-id="${a.id_actual}" style="font-size:10px;" data-no-disable title="Hapus">
+                            <i class="fa-solid fa-trash" style="color:#dc2626;"></i>
+                        </button>
+                    </div>` : ''}
+                </div>`;
+            }).join('');
+
+            const caBadge = item.is_cash_advance
+                ? `<span class="badge ms-1" style="background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:500;border:1px solid #bfdbfe;">CA</span>`
+                : '';
+
+            const categoryCell = item.nama_category
+                ? `<span style="font-size:11px;color:#6b7280;background:#f1f5f9;padding:1px 6px;border-radius:4px;">${escHtml(item.nama_category)}</span>`
+                : `<span class="text-muted" style="font-size:11px;">—</span>`;
+
+            return `<tr>
+                <td style="width:36px;text-align:center;color:#94a3b8;font-size:11px;">${itemIdx + 1}</td>
+                <td>${categoryCell}</td>
+                <td><span class="fw-semibold">${escHtml(item.nama_account)}</span>${caBadge}</td>
+                <td style="color:#1d4ed8;font-weight:600;">${woFmtRp(item.nominal_budget)}</td>
+                <td>
+                    ${struksHtml || '<span class="text-muted" style="font-size:11px;">Belum ada realisasi</span>'}
+                </td>
+                <td style="color:${selisihColor};font-weight:600;">${woFmtRp(actualTotal)}</td>
+                <td style="color:${sel >= 0 ? '#15803d' : '#dc2626'};font-weight:600;">${woFmtRp(sel)}</td>
+                <td class="text-center">
+                    ${!planLocked ? `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-wo-actual-add"
+                        data-id-budget-item="${item.id_budget_item}" data-wo-id="${p.id_wo || ''}"
+                        data-nominal-budget="${item.nominal_budget}"
+                        data-account-name="${escHtml(item.kode_account + ' – ' + item.nama_account)}"
+                        data-no-disable title="Catat Pengeluaran" style="font-size:11px;">
+                        <i class="fa-solid fa-plus" style="color:#0f766e;"></i>
+                    </button>` : ''}
+                </td>
+            </tr>`;
+        }).join('');
+
+        const collapseId = `woBudgetCollapse_${p.id_budget}`;
+        return `<div class="mb-3 border rounded">
+            <div class="d-flex justify-content-between align-items-center px-3 py-2"
+                style="background:#f8fafc;border-bottom:1px solid #e2e8f0;border-radius:calc(0.375rem - 1px) calc(0.375rem - 1px) 0 0;">
+                <div class="d-flex align-items-center flex-wrap gap-1">
+                    <span class="fw-bold" style="font-size:13px;">${escHtml(p.label)}</span>
+                    ${statusBadge}
+                    ${(p.tanggal_mulai || p.tanggal_selesai) ? `<span class="text-muted ms-1" style="font-size:11px;">
+                        <i class="fa-regular fa-calendar me-1"></i>${woFmtTgl(p.tanggal_mulai)}${p.tanggal_selesai ? ' – ' + woFmtTgl(p.tanggal_selesai) : ''}
+                    </span>` : ''}
+                    ${p.keterangan ? `<span class="text-muted ms-1" style="font-size:11px;">· ${escHtml(p.keterangan)}</span>` : ''}
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <span style="font-size:12px;">Budget: <b style="color:#1d4ed8;">${woFmtRp(p.total_budget)}</b></span>
+                    <span style="font-size:12px;">Actual: <b>${woFmtRp(p.total_actual)}</b></span>
+                    <span style="font-size:12px;">Selisih: <b style="color:${selisihColor};">${woFmtRp(selisih)}</b></span>
+                    ${p.dokumen_realisasi ? `
+                    <a href="/storage/${p.dokumen_realisasi}" target="_blank"
+                        class="btn btn-sm py-0 px-2" data-no-disable
+                        style="font-size:11px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;"
+                        title="Download Dokumen Realisasi yang sudah ditandatangani">
+                        <i class="fa-solid fa-file-arrow-down me-1"></i>Dok. Realisasi
+                    </a>` : ''}
+                    ${!planLocked && p.items.some(i => (i.actuals || []).length > 0) ? `
+                    <button type="button" class="btn btn-sm btn-plan-verify btn-wo-bulk-verify"
+                        data-id-budget="${p.id_budget}" data-label="${escHtml(p.label)}"
+                        data-no-disable>
+                        <i class="fa-solid fa-check-double me-1"></i>Verifikasi
+                    </button>` : ''}
+                    <div class="dropdown" data-no-disable>
+                        <button type="button" class="btn btn-sm btn-plan-icon"
+                            data-bs-toggle="dropdown" aria-expanded="false"
+                            data-no-disable>
+                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" style="font-size:12px;min-width:160px;">
+                            <li>
+                                <a class="dropdown-item" href="/wo-budgets/${p.id_budget}/print" target="_blank">
+                                    <i class="fa-solid fa-print me-2 text-muted"></i>Print Serah Terima
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/wo-budgets/${p.id_budget}/print-realisasi" target="_blank">
+                                    <i class="fa-solid fa-file-invoice me-2 text-muted"></i>Print Realisasi
+                                </a>
+                            </li>
+                            ${!planLocked ? `
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <button type="button" class="dropdown-item btn-wo-budget-edit"
+                                    data-id="${p.id_budget}" data-no-disable>
+                                    <i class="fa-solid fa-pen-to-square me-2" style="color:#1e40af;"></i>Edit Plan
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="dropdown-item btn-wo-budget-close"
+                                    data-id="${p.id_budget}" data-label="${escHtml(p.label)}" data-no-disable>
+                                    <i class="fa-solid fa-circle-check me-2" style="color:#15803d;"></i>Selesaikan Plan
+                                </button>
+                            </li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <button type="button" class="dropdown-item btn-wo-budget-delete"
+                                    data-id="${p.id_budget}" data-label="${escHtml(p.label)}" data-no-disable>
+                                    <i class="fa-solid fa-trash me-2" style="color:#dc2626;"></i>Hapus Plan
+                                </button>
+                            </li>` : ''}
+                        </ul>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-plan-icon btn-wo-budget-collapse"
+                        data-target="#${collapseId}"
+                        data-no-disable title="Sembunyikan / Tampilkan">
+                        <i class="fa-solid fa-chevron-up"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="${collapseId}">
+                <div class="table-responsive">
+                    <table class="pm-table">
+                        <thead>
+                            <tr>
+                                <th style="width:36px;">No</th>
+                                <th style="min-width:110px;">Category</th>
+                                <th>Account</th>
+                                <th style="min-width:130px;">Budget</th>
+                                <th style="min-width:200px;">Realisasi</th>
+                                <th style="min-width:130px;">Total Actual</th>
+                                <th style="min-width:110px;">Selisih</th>
+                                <th style="width:60px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>${itemRows}</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+
+    if (!plans.length) return cards;
+
+    const grandBudget  = plans.reduce(function (s, p) { return s + (p.total_budget || 0); }, 0);
+    const grandActual  = plans.reduce(function (s, p) { return s + (p.total_actual || 0); }, 0);
+    const grandSelisih = grandBudget - grandActual;
+    const selColor     = grandSelisih >= 0 ? '#15803d' : '#dc2626';
+    const selLabel     = grandSelisih >= 0 ? 'Surplus' : 'Defisit';
+
+    const summary = `
+    <div class="d-flex align-items-center gap-4 px-3 py-2 mb-3 rounded"
+        style="background:#f8fafc;border:1px solid #e2e8f0;font-size:12px;">
+        <span style="color:#64748b;font-weight:500;">Ringkasan ${plans.length} Plan:</span>
+        <span>Total Budget: <b style="color:#1d4ed8;">${woFmtRp(grandBudget)}</b></span>
+        <span>Total Realisasi: <b>${woFmtRp(grandActual)}</b></span>
+        <span>${selLabel}: <b style="color:${selColor};">${woFmtRp(Math.abs(grandSelisih))}</b></span>
+    </div>`;
+
+    return summary + cards;
+}
+
+function buildWoBudgetItemRow(item) {
+    return `<tr class="wo-budget-item-row">
+        <td>
+            <input type="hidden" class="bi-id" value="${item ? item.id_budget_item : ''}">
+            <select class="form-select form-select-sm bi-account" data-no-disable style="min-width:160px;">
+                ${item ? `<option value="${item.id_account}" selected>${escHtml(item.nama_account)}</option>` : '<option value="">Pilih Account</option>'}
+            </select>
+        </td>
+        <td>
+            <input type="text" inputmode="numeric"
+                class="form-control form-control-sm input-num-mask input-num-int bi-nominal"
+                value="${item ? Number(item.nominal_budget).toLocaleString('en-US') : ''}"
+                placeholder="0" data-no-disable>
+        </td>
+        <td>
+            <input type="text" class="form-control form-control-sm bi-keterangan"
+                value="${item ? escHtml(item.keterangan || '') : ''}"
+                placeholder="Opsional" data-no-disable>
+        </td>
+        <td class="text-center">
+            <div class="form-check d-flex justify-content-center mb-0">
+                <input type="checkbox" class="form-check-input bi-ca" data-no-disable
+                    ${item && item.is_cash_advance ? 'checked' : ''}
+                    title="Cash Advance" style="width:18px;height:18px;cursor:pointer;">
+            </div>
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 btn-wo-remove-row"
+                data-no-disable title="Hapus baris" style="font-size:11px;">
+                <i class="fa-solid fa-trash" style="color:#dc2626;"></i>
+            </button>
+        </td>
+    </tr>`;
+}
+
+function initWoBudgetAccountSelect2() {
+    $('#woBudgetItemsBody .bi-account').each(function () {
+        if ($(this).hasClass('select2-hidden-accessible')) return;
+        $(this).select2({
+            dropdownParent: $('#woBudgetPlanModal'),
+            placeholder: 'Pilih Account',
+            allowClear: false,
+            width: '100%',
+            minimumInputLength: 0,
+            ajax: {
+                url: '/budget-accounts/select2',
+                dataType: 'json',
+                delay: 200,
+                data: function (params) { return { q: params.term }; },
+                processResults: function (data) { return { results: data }; },
+                cache: true,
+            },
+        });
+    });
+}
+
+function recalcWoBudgetTotal() {
+    let total = 0;
+    $('#woBudgetItemsBody .bi-nominal').each(function () {
+        total += parseInt($(this).val().replace(/,/g, ''), 10) || 0;
+    });
+    $('#woBudgetModalTotal').text(woFmtRp(total));
+}
+
+function openWoBudgetModal(idWo, budgetData) {
+    const isEdit = !!budgetData;
+    $('#woBudgetPlanModalLabel').html(
+        `<i class="fa-solid fa-wallet me-2" style="color:#0f766e;"></i>${isEdit ? 'Edit' : 'Tambah'} Budget Plan`
+    );
+    $('#woBudgetModal-id').val(isEdit ? budgetData.id_budget : '');
+    $('#woBudgetModal-id-wo').val(idWo);
+    $('#woBudgetModal-label').val(isEdit ? budgetData.label : '');
+    $('#woBudgetModal-keterangan').val(isEdit ? (budgetData.keterangan || '') : '');
+
+    const $body = $('#woBudgetItemsBody').empty();
+    const items = isEdit ? (budgetData.items || []) : [];
+    if (items.length) {
+        items.forEach(function (item) { $body.append(buildWoBudgetItemRow(item)); });
+    } else {
+        $body.append(buildWoBudgetItemRow(null));
+    }
+
+    initWoBudgetAccountSelect2();
+    initNumericMask(document.getElementById('woBudgetPlanModal'));
+    recalcWoBudgetTotal();
+
+    const modal = new bootstrap.Modal(document.getElementById('woBudgetPlanModal'));
+    modal.show();
+
+    document.getElementById('woBudgetPlanModal').addEventListener('shown.bs.modal', function handler() {
+        const elMulai   = document.getElementById('woBudgetModal-tgl-mulai');
+        const elSelesai = document.getElementById('woBudgetModal-tgl-selesai');
+        if (elMulai._flatpickr)   elMulai._flatpickr.destroy();
+        if (elSelesai._flatpickr) elSelesai._flatpickr.destroy();
+
+        const fpMulai = flatpickr(elMulai, {
+            dateFormat: 'Y-m-d',
+            allowInput: false,
+            defaultDate: isEdit ? (budgetData.tanggal_mulai || null) : null,
+        });
+        const fpSelesai = flatpickr(elSelesai, {
+            dateFormat: 'Y-m-d',
+            allowInput: false,
+            defaultDate: isEdit ? (budgetData.tanggal_selesai || null) : null,
+            minDate: isEdit && budgetData.tanggal_mulai ? budgetData.tanggal_mulai : null,
+        });
+
+        fpMulai.config.onChange.push(function (dates) {
+            fpSelesai.set('minDate', dates[0] || null);
+            if (fpSelesai.selectedDates[0] && fpSelesai.selectedDates[0] < dates[0]) {
+                fpSelesai.clear();
+            }
+        });
+
+        this.removeEventListener('shown.bs.modal', handler);
+    }, { once: true });
+}
+
+// ── Tombol Tambah Budget Plan ──
+$(document).off('click.wobudget', '.btn-wo-budget-add').on('click.wobudget', '.btn-wo-budget-add', function () {
+    const idWo = $(this).data('wo-id');
+    openWoBudgetModal(idWo, null);
+});
+
+// ── Tambah baris item di modal ──
+$(document).off('click.wobudget', '#btnWoBudgetAddRow').on('click.wobudget', '#btnWoBudgetAddRow', function () {
+    $('#woBudgetItemsBody').append(buildWoBudgetItemRow(null));
+    initWoBudgetAccountSelect2();
+    initNumericMask(document.getElementById('woBudgetPlanModal'));
+});
+
+// ── Hapus baris item di modal ──
+$(document).off('click.wobudget', '.btn-wo-remove-row').on('click.wobudget', '.btn-wo-remove-row', function () {
+    $(this).closest('tr').remove();
+    recalcWoBudgetTotal();
+});
+
+// ── Recalc total saat nominal berubah ──
+$(document).off('input.wobudget', '#woBudgetItemsBody .bi-nominal').on('input.wobudget', '#woBudgetItemsBody .bi-nominal', function () {
+    recalcWoBudgetTotal();
+});
+
+// ── Simpan Budget Plan ──
+$(document).off('click.wobudget', '#woBudgetModal-btn-save').on('click.wobudget', '#woBudgetModal-btn-save', function () {
+    const id    = $('#woBudgetModal-id').val();
+    const idWo  = $('#woBudgetModal-id-wo').val();
+    const label = $('#woBudgetModal-label').val().trim();
+
+    if (!label) return Swal.fire('Perhatian', 'Label wajib diisi.', 'warning');
+
+    const items = [];
+    let valid = true;
+    $('#woBudgetItemsBody .wo-budget-item-row').each(function () {
+        const idAccount = $(this).find('.bi-account').val();
+        const nominal   = parseInt($(this).find('.bi-nominal').val().replace(/,/g, ''), 10) || 0;
+        const ket       = $(this).find('.bi-keterangan').val();
+        const biId      = $(this).find('.bi-id').val();
+        const isCa      = $(this).find('.bi-ca').is(':checked') ? 1 : 0;
+        if (!idAccount) { valid = false; return false; }
+        items.push({ id_budget_item: biId || null, id_account: idAccount, nominal_budget: nominal, keterangan: ket, is_cash_advance: isCa });
+    });
+
+    if (!valid) return Swal.fire('Perhatian', 'Semua baris harus memilih Account.', 'warning');
+    if (!items.length) return Swal.fire('Perhatian', 'Minimal 1 item anggaran.', 'warning');
+
+    const payload = {
+        _token:          window.route.csrf,
+        id_wo:           idWo,
+        label:           label,
+        keterangan:      $('#woBudgetModal-keterangan').val(),
+        tanggal_mulai:   $('#woBudgetModal-tgl-mulai').val() || null,
+        tanggal_selesai: $('#woBudgetModal-tgl-selesai').val() || null,
+        items:           items,
+    };
+
+    const isEdit = !!id;
+    const url    = isEdit ? `/wo-budgets/${id}` : '/wo-budgets';
+    if (isEdit) payload._method = 'PUT';
+
+    $('#woBudgetModal-btn-save').prop('disabled', true);
+    $.post(url, payload)
+        .done(function () {
+            bootstrap.Modal.getInstance(document.getElementById('woBudgetPlanModal'))?.hide();
+            loadWoBudgetData(idWo);
+            Swal.fire({ icon: 'success', title: 'Tersimpan', timer: 1200, showConfirmButton: false });
+        })
+        .fail(function (xhr) {
+            const errs = xhr.responseJSON?.errors;
+            const msg  = errs ? Object.values(errs).flat().join('<br>') : (xhr.responseJSON?.message || 'Terjadi kesalahan.');
+            Swal.fire('Gagal', msg, 'error');
+        })
+        .always(function () { $('#woBudgetModal-btn-save').prop('disabled', false); });
+});
+
+// ── Edit Budget Plan ──
+$(document).off('click.wobudget', '.btn-wo-budget-edit').on('click.wobudget', '.btn-wo-budget-edit', function () {
+    const id   = $(this).data('id');
+    const idWo = $('#woTabActionsBudget .btn-wo-budget-add').data('wo-id');
+    $.get(`/wo-budgets/${id}`)
+        .done(function (data) { openWoBudgetModal(idWo, data); });
+});
+
+// ── Collapse / Expand panel item ──
+$(document).off('click.wobudget', '.btn-wo-budget-collapse').on('click.wobudget', '.btn-wo-budget-collapse', function () {
+    const $icon   = $(this).find('i');
+    const $target = $($(this).data('target'));
+    $target.slideToggle(180, function () {
+        const visible = $target.is(':visible');
+        $icon.toggleClass('fa-chevron-up', visible).toggleClass('fa-chevron-down', !visible);
+    });
+});
+
+// ── Selesaikan Budget Plan ──
+$(document).off('click.wobudget', '.btn-wo-budget-close').on('click.wobudget', '.btn-wo-budget-close', function () {
+    const id    = $(this).data('id');
+    const label = $(this).data('label');
+    const idWo  = $('#woTabActionsBudget .btn-wo-budget-add').data('wo-id');
+
+    const plans   = window._woBudgetPlans || [];
+    const plan    = plans.find(function (p) { return p.id_budget == id; });
+    const surplus = plan ? (plan.total_budget - plan.total_actual) : 0;
+
+    $('#woClosePlanModal-id').val(id);
+    $('#woClosePlanModal-id-wo').val(idWo);
+    $('#woClosePlanModal-file').val('');
+    $('#woClosePlanModalLabel').html(
+        `<i class="fa-solid fa-circle-check me-2" style="color:#15803d;"></i>Selesaikan Plan — ${escHtml(label)}`
+    );
+
+    if (surplus > 0) {
+        const fmt = 'Rp ' + surplus.toLocaleString('id-ID');
+        $('#woClosePlanModal-surplus-amount').text(fmt);
+        $('#woClosePlanModal-print-link').attr('href', `/wo-budgets/${id}/print-realisasi`);
+        $('#woClosePlanModal-surplus-info').show();
+        $('#woClosePlanModal-upload-section').show();
+        $('#woClosePlanModal-noSurplus-info').hide();
+    } else {
+        $('#woClosePlanModal-surplus-info').hide();
+        $('#woClosePlanModal-upload-section').hide();
+        $('#woClosePlanModal-noSurplus-info').show();
+    }
+
+    $('#woClosePlanModal').modal('show');
+});
+
+// Submit Selesaikan Plan
+$(document).off('click.wobudget', '#woClosePlanModal-btn-save').on('click.wobudget', '#woClosePlanModal-btn-save', function () {
+    const id   = $('#woClosePlanModal-id').val();
+    const idWo = $('#woClosePlanModal-id-wo').val();
+    const plans  = window._woBudgetPlans || [];
+    const plan   = plans.find(function (p) { return p.id_budget == id; });
+    const surplus = plan ? (plan.total_budget - plan.total_actual) : 0;
+
+    if (surplus > 0) {
+        const file = $('#woClosePlanModal-file')[0].files[0];
+        if (!file) {
+            Swal.fire('Upload Diperlukan', 'Harap upload Laporan Realisasi Anggaran yang sudah ditandatangani.', 'warning');
+            return;
+        }
+        const fd = new FormData();
+        fd.append('_token', window.route.csrf);
+        fd.append('dokumen_realisasi', file);
+        $.ajax({
+            url: `/wo-budgets/${id}/close`,
+            type: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+        }).done(function () {
+            $('#woClosePlanModal').modal('hide');
+            loadWoBudgetData(idWo);
+        }).fail(function (xhr) {
+            Swal.fire('Gagal', xhr.responseJSON?.message || 'Terjadi kesalahan.', 'error');
+        });
+    } else {
+        $.post(`/wo-budgets/${id}/close`, { _token: window.route.csrf })
+            .done(function () {
+                $('#woClosePlanModal').modal('hide');
+                loadWoBudgetData(idWo);
+            })
+            .fail(function (xhr) {
+                Swal.fire('Gagal', xhr.responseJSON?.message || 'Terjadi kesalahan.', 'error');
+            });
+    }
+});
+
+$(document).off('click.wobudget', '.btn-wo-budget-delete').on('click.wobudget', '.btn-wo-budget-delete', function () {
+    const id    = $(this).data('id');
+    const label = $(this).data('label');
+    const idWo  = $('#woTabActionsBudget .btn-wo-budget-add').data('wo-id');
+    Swal.fire({
+        title: 'Hapus Budget Plan?',
+        html: `<b>${label}</b> akan dihapus.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Hapus',
+        cancelButtonText: 'Batal',
+    }).then(function (result) {
+        if (!result.isConfirmed) return;
+        $.ajax({ url: `/wo-budgets/${id}`, type: 'DELETE', data: { _token: window.route.csrf } })
+            .done(function () {
+                loadWoBudgetData(idWo);
+                Swal.fire({ icon: 'success', title: 'Dihapus', timer: 1200, showConfirmButton: false });
+            })
+            .fail(function () { Swal.fire('Gagal', 'Tidak dapat menghapus.', 'error'); });
+    });
+});
+
+// ── Tambah Actual ──
+$(document).off('click.wobudget', '.btn-wo-actual-add').on('click.wobudget', '.btn-wo-actual-add', function () {
+    const idBudgetItem  = $(this).data('id-budget-item');
+    const idWo          = $(this).data('wo-id') || $('#woTabActionsBudget .btn-wo-budget-add').data('wo-id');
+    const nominalBudget = $(this).data('nominal-budget') || 0;
+    const accountName   = $(this).data('account-name') || '';
+    $('#woActualModal-id').val('');
+    $('#woActualModal-id-budget-item').val(idBudgetItem);
+    $('#woActualModal-id-wo').val(idWo);
+    $('#woActualModal-nominal').val('');
+    $('#woActualModal-keterangan').val('');
+    $('#woActualModal-files').val('');
+    $('#woActualModal-existing-files').empty();
+    $('#woActualModalLabel').html('<i class="fa-solid fa-receipt me-2" style="color:#1d4ed8;"></i>Catat Pengeluaran');
+    $('#woActualModal-account-name').text(accountName);
+    $('#woActualModal-budget-nominal').text(woFmtRp(nominalBudget));
+    $('#woActualModal-budget-info').show();
+    initNumericMask(document.getElementById('woActualModal'));
+    new bootstrap.Modal(document.getElementById('woActualModal')).show();
+});
+
+// ── Edit Actual ──
+$(document).off('click.wobudget', '.btn-wo-actual-edit').on('click.wobudget', '.btn-wo-actual-edit', function () {
+    const id   = $(this).data('id');
+    const idWo = $(this).data('wo-id') || $('#woTabActionsBudget .btn-wo-budget-add').data('wo-id');
+    $.get(`/wo-budget-actuals/${id}`)
+        .done(function (r) {
+            $('#woActualModal-id').val(r.id_actual);
+            $('#woActualModal-id-budget-item').val(r.id_budget_item);
+            $('#woActualModal-id-wo').val(idWo);
+            $('#woActualModal-nominal').val(Number(r.nominal_actual).toLocaleString('en-US'));
+            $('#woActualModal-keterangan').val(r.keterangan || '');
+            $('#woActualModal-files').val('');
+            $('#woActualModalLabel').html('<i class="fa-solid fa-receipt me-2" style="color:#1d4ed8;"></i>Edit Pengeluaran');
+            $('#woActualModal-budget-info').hide();
+
+            const files = JSON.parse(r.attachments || '[]');
+            const $ex   = $('#woActualModal-existing-files').empty();
+            files.forEach(function (f) {
+                $ex.append(`<div class="d-flex align-items-center gap-2 mb-1" style="font-size:11px;">
+                    <input type="checkbox" class="existing-file-check" value="${f}" checked data-no-disable>
+                    <a href="/storage/${f}" target="_blank">${f.split('/').pop()}</a>
+                </div>`);
+            });
+
+            initNumericMask(document.getElementById('woActualModal'));
+            new bootstrap.Modal(document.getElementById('woActualModal')).show();
+        });
+});
+
+// ── Hapus Actual ──
+$(document).off('click.wobudget', '.btn-wo-actual-delete').on('click.wobudget', '.btn-wo-actual-delete', function () {
+    const id   = $(this).data('id');
+    const idWo = $('#woTabActionsBudget .btn-wo-budget-add').data('wo-id');
+    Swal.fire({
+        title: 'Hapus Realisasi?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Hapus',
+        cancelButtonText: 'Batal',
+    }).then(function (result) {
+        if (!result.isConfirmed) return;
+        $.ajax({ url: `/wo-budget-actuals/${id}`, type: 'DELETE', data: { _token: window.route.csrf } })
+            .done(function () {
+                loadWoBudgetData(idWo);
+                Swal.fire({ icon: 'success', title: 'Dihapus', timer: 1200, showConfirmButton: false });
+            })
+            .fail(function () { Swal.fire('Gagal', 'Tidak dapat menghapus.', 'error'); });
+    });
+});
+
+// ── Simpan Actual ──
+$(document).off('click.wobudget', '#woActualModal-btn-save').on('click.wobudget', '#woActualModal-btn-save', function () {
+    const id           = $('#woActualModal-id').val();
+    const idBudgetItem = $('#woActualModal-id-budget-item').val();
+    const idWo         = $('#woActualModal-id-wo').val();
+    const nominal      = parseInt($('#woActualModal-nominal').val().replace(/,/g, ''), 10) || 0;
+
+    if (!nominal) return Swal.fire('Perhatian', 'Nominal wajib diisi.', 'warning');
+
+    const fd = new FormData();
+    fd.append('_token', window.route.csrf);
+    fd.append('id_budget_item', idBudgetItem);
+    fd.append('nominal_actual', nominal);
+    fd.append('keterangan', $('#woActualModal-keterangan').val());
+
+    if (id) fd.append('_method', 'POST');
+
+    const files = $('#woActualModal-files')[0].files;
+    for (let i = 0; i < files.length; i++) fd.append('attachments[]', files[i]);
+
+    $('#woActualModal-existing-files .existing-file-check:checked').each(function () {
+        fd.append('existing_attachments[]', $(this).val());
+    });
+
+    const url = id ? `/wo-budget-actuals/${id}` : '/wo-budget-actuals';
+    $('#woActualModal-btn-save').prop('disabled', true);
+    $.ajax({ url, type: 'POST', data: fd, processData: false, contentType: false })
+        .done(function () {
+            bootstrap.Modal.getInstance(document.getElementById('woActualModal'))?.hide();
+            loadWoBudgetData(idWo);
+            Swal.fire({ icon: 'success', title: 'Tersimpan', timer: 1200, showConfirmButton: false });
+        })
+        .fail(function (xhr) {
+            const errs = xhr.responseJSON?.errors;
+            const msg  = errs ? Object.values(errs).flat().join('<br>') : (xhr.responseJSON?.message || 'Terjadi kesalahan.');
+            Swal.fire('Gagal', msg, 'error');
+        })
+        .always(function () { $('#woActualModal-btn-save').prop('disabled', false); });
+});
+
+// ── Buka Modal Bulk Verifikasi per Plan ──
+$(document).off('click.wobudget', '.btn-wo-bulk-verify').on('click.wobudget', '.btn-wo-bulk-verify', function () {
+    const idBudget = $(this).data('id-budget');
+    const label    = $(this).data('label');
+    const idWo     = $('#woTabActionsBudget .btn-wo-budget-add').data('wo-id') ||
+                     $('#woTabActionsBudget').find('[data-wo-id]').data('wo-id');
+
+    $('#woBulkVerifyModal-id-wo').val(idWo);
+    $('#woBulkVerifyModalLabel').html(
+        `<i class="fa-solid fa-check-double me-2" style="color:#0f766e;"></i>Verifikasi — ${escHtml(label)}`
+    );
+
+    const plan = window._woBudgetPlans && window._woBudgetPlans.find(p => p.id_budget == idBudget);
+    if (!plan) return;
+
+    const rows = [];
+    plan.items.forEach(function (item) {
+        (item.actuals || []).forEach(function (a) {
+            rows.push({ item, actual: a });
+        });
+    });
+
+    if (!rows.length) return;
+
+    const tableRows = rows.map(function (r, i) {
+        const a    = r.actual;
+        const item = r.item;
+        const st   = a.status_verifikasi || 'menunggu';
+        const styleSetujui = st === 'disetujui'
+            ? 'border-color:#15803d;background:#dcfce7;'
+            : 'border-color:#e2e8f0;';
+        const styleTolak = st === 'ditolak'
+            ? 'border-color:#dc2626;background:#fee2e2;'
+            : 'border-color:#e2e8f0;';
+
+        return `<tr data-id-actual="${a.id_actual}">
+            <td style="width:30px;text-align:center;color:#94a3b8;font-size:11px;">${i + 1}</td>
+            <td style="font-size:11px;">
+                <span class="fw-semibold">${escHtml(item.kode_account)}</span>
+                <span class="text-muted ms-1">${escHtml(item.nama_account)}</span>
+            </td>
+            <td style="font-size:11px;font-weight:600;color:#1d4ed8;">${woFmtRp(a.nominal_actual)}</td>
+            <td style="font-size:11px;color:#64748b;">${escHtml(a.keterangan || '-')}</td>
+            <td style="min-width:160px;">
+                <div class="d-flex gap-1">
+                    <button type="button" class="btn btn-sm flex-fill bv-choice" data-value="disetujui"
+                        style="font-size:10px;padding:2px 6px;border:2px solid;${styleSetujui}" data-no-disable>
+                        &#10003; Setuju
+                    </button>
+                    <button type="button" class="btn btn-sm flex-fill bv-choice" data-value="ditolak"
+                        style="font-size:10px;padding:2px 6px;border:2px solid;${styleTolak}" data-no-disable>
+                        &#10007; Tolak
+                    </button>
+                </div>
+                <input type="hidden" class="bv-status" value="${st}">
+            </td>
+            <td style="min-width:160px;">
+                <input type="text" class="form-control form-control-sm bv-catatan"
+                    value="${escHtml(a.catatan_verifikasi || '')}"
+                    placeholder="${st === 'ditolak' ? 'Wajib diisi' : 'Opsional'}"
+                    style="font-size:11px;" data-no-disable>
+            </td>
+        </tr>`;
+    }).join('');
+
+    $('#woBulkVerifyModal-body').html(`
+        <div class="table-responsive">
+            <table class="pm-table" id="woBulkVerifyTable">
+                <thead>
+                    <tr>
+                        <th style="width:30px;">No</th>
+                        <th>Account</th>
+                        <th style="min-width:110px;">Nominal</th>
+                        <th style="min-width:120px;">Keterangan</th>
+                        <th style="min-width:160px;">Status</th>
+                        <th style="min-width:160px;">Catatan</th>
+                    </tr>
+                </thead>
+                <tbody>${tableRows}</tbody>
+            </table>
+        </div>
+    `);
+
+    new bootstrap.Modal(document.getElementById('woBulkVerifyModal')).show();
+});
+
+// ── Toggle pilihan status per baris ──
+$(document).off('click.wobudget', '#woBulkVerifyTable .bv-choice').on('click.wobudget', '#woBulkVerifyTable .bv-choice', function () {
+    const val  = $(this).data('value');
+    const $row = $(this).closest('tr');
+    $row.find('.bv-status').val(val);
+    $row.find('.bv-choice').css({ 'border-color': '#e2e8f0', 'background': '' });
+    $(this).css({
+        'border-color': val === 'disetujui' ? '#15803d' : '#dc2626',
+        'background':   val === 'disetujui' ? '#dcfce7' : '#fee2e2',
+    });
+    $row.find('.bv-catatan').attr('placeholder', val === 'ditolak' ? 'Wajib diisi' : 'Opsional');
+});
+
+// ── Simpan Semua Verifikasi ──
+$(document).off('click.wobudget', '#woBulkVerifyModal-btn-save').on('click.wobudget', '#woBulkVerifyModal-btn-save', function () {
+    const idWo  = $('#woBulkVerifyModal-id-wo').val();
+    const items = [];
+    let valid = true;
+
+    $('#woBulkVerifyTable tbody tr').each(function () {
+        const idActual = $(this).data('id-actual');
+        const status    = $(this).find('.bv-status').val();
+        const catatan   = $(this).find('.bv-catatan').val().trim();
+        if (status === 'ditolak' && !catatan) {
+            valid = false;
+            $(this).find('.bv-catatan').addClass('is-invalid');
+        } else {
+            $(this).find('.bv-catatan').removeClass('is-invalid');
+        }
+        items.push({ id_actual: idActual, status_verifikasi: status, catatan_verifikasi: catatan });
+    });
+
+    if (!valid) return Swal.fire('Perhatian', 'Catatan wajib diisi untuk semua baris yang Ditolak.', 'warning');
+
+    $('#woBulkVerifyModal-btn-save').prop('disabled', true);
+    $.post('/wo-budget-actuals/bulk-verify', {
+        _token: window.route.csrf,
+        items:  items,
+    })
+    .done(function () {
+        bootstrap.Modal.getInstance(document.getElementById('woBulkVerifyModal'))?.hide();
+        loadWoBudgetData(idWo);
+    })
+    .fail(function (xhr) {
+        Swal.fire('Gagal', xhr.responseJSON?.message || 'Terjadi kesalahan.', 'error');
+    })
+    .always(function () { $('#woBulkVerifyModal-btn-save').prop('disabled', false); });
+});
