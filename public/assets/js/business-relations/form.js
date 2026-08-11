@@ -1281,44 +1281,27 @@ function renderForm(res) {
                             },
                             `<div class="row g-3 form-1">
                                 ${formGroup.text("nama_br", "Nama Business Relation", res.nama_br, true, { className: "col-md-12" })}
-                                ${formGroup.select("entitas", "Entitas", res.entitas,
-                                    [
-                                        { value: "Perseroan Terbatas",        label: "Perseroan Terbatas" },
-                                        { value: "Commanditaire Vennootschap", label: "Commanditaire Vennootschap" },
-                                        { value: "Firma",                     label: "Firma" },
-                                        { value: "Koperasi",                  label: "Koperasi" },
-                                    ],
-                                    { className: "col-md-4" }
-                                )}
-                                ${formGroup.select("kepemilikan", "Kepemilikan", res.kepemilikan,
-                                    [
-                                        { value: "Swasta",      label: "Swasta" },
-                                        { value: "BUMN/BUMD",   label: "BUMN/BUMD" },
-                                        { value: "Pemerintah",  label: "Pemerintah" },
-                                    ],
-                                    { className: "col-md-4" }
-                                )}
+                                ${formGroup.select("id_entitas", "Entitas", res.id_entitas, [], {
+                                    mode: "ajax", url: "/entitas/select2",
+                                    placeholder: "Pilih Entitas", label: res.nama_entitas,
+                                    className: "col-md-4", createUrl: "/entitas/create",
+                                })}
+                                ${formGroup.select("id_kepemilikan", "Kepemilikan", res.id_kepemilikan, [], {
+                                    mode: "ajax", url: "/kepemilikan/select2",
+                                    placeholder: "Pilih Kepemilikan", label: res.nama_kepemilikan,
+                                    className: "col-md-4", createUrl: "/kepemilikan/create",
+                                })}
                                 ${formGroup.text("npwp", "NPWP", res.npwp, false, { className: "col-md-4" })}
-                                ${formGroup.select("kategori_bisnis", "Kategori Bisnis", res.kategori_bisnis,
-                                    [
-                                        { value: "Manufaktur",       label: "Manufaktur" },
-                                        { value: "Makanan & Minuman", label: "Makanan & Minuman" },
-                                        { value: "Otomotif",         label: "Otomotif" },
-                                        { value: "Industri",         label: "Industri" },
-                                        { value: "Perdagangan",      label: "Perdagangan" },
-                                        { value: "Jasa",             label: "Jasa" },
-                                        { value: "Konstruksi",       label: "Konstruksi" },
-                                    ],
-                                    { className: "col-md-4" }
-                                )}
-                                ${formGroup.select("sub_kategori_bisnis", "Sub Kategori Bisnis", res.sub_kategori_bisnis,
-                                    [
-                                        { value: "Otomotif",  label: "Otomotif" },
-                                        { value: "Food",      label: "Food" },
-                                        { value: "Industry",  label: "Industry" },
-                                    ],
-                                    { className: "col-md-4" }
-                                )}
+                                ${formGroup.select("id_kategori_bisnis", "Kategori Bisnis", res.id_kategori_bisnis, [], {
+                                    mode: "ajax", url: "/kategori-bisnis/select2",
+                                    placeholder: "Pilih Kategori Bisnis", label: res.nama_kategori_bisnis,
+                                    className: "col-md-4", createUrl: "/kategori-bisnis/create",
+                                })}
+                                ${formGroup.select("id_sub_kategori_bisnis", "Sub Kategori Bisnis", res.id_sub_kategori_bisnis, [], {
+                                    mode: "ajax", url: "/sub-kategori-bisnis/select2",
+                                    placeholder: "Pilih Sub Kategori Bisnis", label: res.nama_sub_kategori_bisnis,
+                                    className: "col-md-4", createUrl: "/sub-kategori-bisnis/create",
+                                })}
                                 ${formGroup.text("website", "Website", res.website, false, { className: "col-md-4" })}
                                 ${formGroup.text("nomor_telepon", "Nomor Telepon", res.nomor_telepon, false, { className: "col-md-4" })}
                                 ${formGroup.select("br_is_aktif", "Status", res.br_is_aktif,

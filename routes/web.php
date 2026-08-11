@@ -17,6 +17,10 @@ use App\Http\Controllers\WorkOrderController;
 use App\Http\Controllers\OutputPekerjaanController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\TestingUnitController;
+use App\Http\Controllers\EntitasController;
+use App\Http\Controllers\KepemilikanController;
+use App\Http\Controllers\KategoriBisnisController;
+use App\Http\Controllers\SubKategoriBisnisController;
 use App\Http\Controllers\TestingParameterController;
 use App\Http\Controllers\TestingKelompokMatriksSampleController;
 use App\Http\Controllers\TestingStandardController;
@@ -86,6 +90,59 @@ Route::prefix('testing-units')->name('testing-units.')->group(function () {
     Route::get('/{id}/history', [TestingUnitController::class, 'history'])
         ->name('history')
         ->whereNumber('id');
+});
+
+// Master data Business Relation: Entitas, Kepemilikan, Kategori Bisnis, Sub Kategori Bisnis
+Route::prefix('entitas')->name('entitas.')->group(function () {
+    Route::get('/select2', [EntitasController::class, 'select2'])->name('select2');
+    Route::get('/', [EntitasController::class, 'index'])->name('index');
+    Route::get('/data', [EntitasController::class, 'data'])->name('data');
+    Route::get('/create', [EntitasController::class, 'create'])->name('create');
+    Route::post('/', [EntitasController::class, 'store'])->name('store');
+    Route::get('/{id}', [EntitasController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [EntitasController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [EntitasController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/detail', [EntitasController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::get('/{id}/history', [EntitasController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('kepemilikan')->name('kepemilikan.')->group(function () {
+    Route::get('/select2', [KepemilikanController::class, 'select2'])->name('select2');
+    Route::get('/', [KepemilikanController::class, 'index'])->name('index');
+    Route::get('/data', [KepemilikanController::class, 'data'])->name('data');
+    Route::get('/create', [KepemilikanController::class, 'create'])->name('create');
+    Route::post('/', [KepemilikanController::class, 'store'])->name('store');
+    Route::get('/{id}', [KepemilikanController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [KepemilikanController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [KepemilikanController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/detail', [KepemilikanController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::get('/{id}/history', [KepemilikanController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('kategori-bisnis')->name('kategori-bisnis.')->group(function () {
+    Route::get('/select2', [KategoriBisnisController::class, 'select2'])->name('select2');
+    Route::get('/', [KategoriBisnisController::class, 'index'])->name('index');
+    Route::get('/data', [KategoriBisnisController::class, 'data'])->name('data');
+    Route::get('/create', [KategoriBisnisController::class, 'create'])->name('create');
+    Route::post('/', [KategoriBisnisController::class, 'store'])->name('store');
+    Route::get('/{id}', [KategoriBisnisController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [KategoriBisnisController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [KategoriBisnisController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/detail', [KategoriBisnisController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::get('/{id}/history', [KategoriBisnisController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('sub-kategori-bisnis')->name('sub-kategori-bisnis.')->group(function () {
+    Route::get('/select2', [SubKategoriBisnisController::class, 'select2'])->name('select2');
+    Route::get('/', [SubKategoriBisnisController::class, 'index'])->name('index');
+    Route::get('/data', [SubKategoriBisnisController::class, 'data'])->name('data');
+    Route::get('/create', [SubKategoriBisnisController::class, 'create'])->name('create');
+    Route::post('/', [SubKategoriBisnisController::class, 'store'])->name('store');
+    Route::get('/{id}', [SubKategoriBisnisController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [SubKategoriBisnisController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [SubKategoriBisnisController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/detail', [SubKategoriBisnisController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::get('/{id}/history', [SubKategoriBisnisController::class, 'history'])->name('history')->whereNumber('id');
 });
 
 //testing nana

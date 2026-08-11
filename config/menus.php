@@ -33,6 +33,10 @@ return [
         'items'   => [
             ['slug' => 'business-relations',               'label' => 'Business Relation',          'icon' => 'fa-handshake',       'section' => 'Business Relation'],
             ['slug' => 'business-relation-contacts',       'label' => 'Business Relation Contact',  'icon' => 'fa-address-book',    'section' => 'Business Relation'],
+            ['slug' => 'entitas',                          'label' => 'Entitas',                    'icon' => 'fa-sitemap',         'section' => 'Business Relation'],
+            ['slug' => 'kepemilikan',                      'label' => 'Kepemilikan',                'icon' => 'fa-landmark',        'section' => 'Business Relation'],
+            ['slug' => 'kategori-bisnis',                  'label' => 'Kategori Bisnis',            'icon' => 'fa-tags',            'section' => 'Business Relation'],
+            ['slug' => 'sub-kategori-bisnis',              'label' => 'Sub Kategori Bisnis',        'icon' => 'fa-tag',             'section' => 'Business Relation'],
             ['slug' => 'business-estates',                 'label' => 'Business Estate',            'icon' => 'fa-map-location-dot', 'section' => 'Location'],
             ['slug' => 'commercial-buildings',             'label' => 'Commercial Buildings',       'icon' => 'fa-city',            'section' => 'Location'],
             ['slug' => 'contracts',                        'label' => 'Contracts',                  'icon' => 'fa-file-contract',   'section' => 'Product'],

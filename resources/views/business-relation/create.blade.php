@@ -38,22 +38,11 @@
                     </div>
                     <div class="col-md-4 col-12">
                         <label class="form-label">Entitas</label>
-                        <select name="entitas" id="entitas" class="form-select">
-                            <option value="">Pilih Entitas</option>
-                            <option value="Perseroan Terbatas">Perseroan Terbatas</option>
-                            <option value="Commanditaire Vennootschap">Commanditaire Vennootschap</option>
-                            <option value="Firma">Firma</option>
-                            <option value="Koperasi">Koperasi</option>
-                        </select>
+                        <select name="id_entitas" id="entitas" class="form-select"></select>
                     </div>
                     <div class="col-md-4 col-12">
                         <label class="form-label">Kepemilikan</label>
-                        <select name="kepemilikan" id="kepemilikan" class="form-select">
-                            <option value="">Pilih Kepemilikan</option>
-                            <option value="Swasta">Swasta</option>
-                            <option value="BUMN/BUMD">BUMN/BUMD</option>
-                            <option value="Pemerintah">Pemerintah</option>
-                        </select>
+                        <select name="id_kepemilikan" id="kepemilikan" class="form-select"></select>
                     </div>
                     <div class="col-md-4 col-12">
                         <label class="form-label">NPWP</label>
@@ -61,25 +50,11 @@
                     </div>
                     <div class="col-md-4 col-12">
                         <label class="form-label">Kategori Bisnis</label>
-                        <select name="kategori_bisnis" id="kategori_bisnis" class="form-select">
-                            <option value="">Pilih Kategori Bisnis</option>
-                            <option value="Manufaktur">Manufaktur</option>
-                            <option value="Makanan & Minuman">Makanan &amp; Minuman</option>
-                            <option value="Otomotif">Otomotif</option>
-                            <option value="Industri">Industri</option>
-                            <option value="Perdagangan">Perdagangan</option>
-                            <option value="Jasa">Jasa</option>
-                            <option value="Konstruksi">Konstruksi</option>
-                        </select>
+                        <select name="id_kategori_bisnis" id="kategori_bisnis" class="form-select"></select>
                     </div>
                     <div class="col-md-4 col-12">
                         <label class="form-label">Sub Kategori Bisnis</label>
-                        <select name="sub_kategori_bisnis" id="sub_kategori_bisnis" class="form-select">
-                            <option value="">Pilih Sub Kategori Bisnis</option>
-                            <option value="Otomotif">Otomotif</option>
-                            <option value="Food">Food</option>
-                            <option value="Industry">Industry</option>
-                        </select>
+                        <select name="id_sub_kategori_bisnis" id="sub_kategori_bisnis" class="form-select"></select>
                     </div>
                     <div class="col-md-4 col-12">
                         <label class="form-label">Website</label>
@@ -220,10 +195,16 @@
             WilayahEngine.init('body');
         }
 
-        $("#entitas").select2({ placeholder: 'Pilih Entitas', allowClear: true, width: '100%' });
-        $("#kepemilikan").select2({ placeholder: 'Pilih Kepemilikan', allowClear: true, width: '100%' });
-        $("#kategori_bisnis").select2({ placeholder: 'Pilih Kategori Bisnis', allowClear: true, width: '100%' });
-        $("#sub_kategori_bisnis").select2({ placeholder: 'Pilih Sub Kategori Bisnis', allowClear: true, width: '100%' });
+        initLookupSelect2("#entitas", "{{ route('entitas.select2') }}", "Pilih Entitas", "{{ route('entitas.create') }}");
+        initLookupSelect2("#kepemilikan", "{{ route('kepemilikan.select2') }}", "Pilih Kepemilikan", "{{ route('kepemilikan.create') }}");
+        initLookupSelect2("#kategori_bisnis", "{{ route('kategori-bisnis.select2') }}", "Pilih Kategori Bisnis", "{{ route('kategori-bisnis.create') }}");
+        initSubKategoriSelect2();
+
+        // Ganti Kategori Bisnis → Sub Kategori Bisnis lama sudah tentu tidak valid lagi
+        $("#kategori_bisnis").on('select2:select select2:clear', function () {
+            $("#sub_kategori_bisnis").val(null).trigger('change');
+        });
+
         $("#br_is_aktif").select2({ placeholder: 'Pilih Status', allowClear: true, width: '100%' });
         $("#site_is_aktif").select2({ placeholder: 'Pilih Status', allowClear: true, width: '100%' });
 
@@ -278,18 +259,74 @@
         });
     }
 
+    // Select2 ajax untuk master data lookup (Entitas/Kepemilikan/Kategori Bisnis)
+    function initLookupSelect2(selector, url, placeholder, createUrl) {
+        $(selector).select2({
+            placeholder: placeholder,
+            allowClear: true,
+            width: '100%',
+            minimumInputLength: 0,
+            ajax: {
+                url: url,
+                dataType: 'json',
+                delay: 200,
+                data: params => ({ q: params.term ?? '' }),
+                processResults: data => ({ results: data }),
+                cache: true,
+            },
+            language: {
+                noResults: () => `<span>Tidak ditemukan. <a href="${createUrl}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`,
+            },
+            escapeMarkup: (m) => m,
+        });
+    }
+
+    // Sub Kategori Bisnis: opsional di-filter oleh Kategori Bisnis yang sedang dipilih
+    function initSubKategoriSelect2() {
+        if ($('#sub_kategori_bisnis').hasClass('select2-hidden-accessible')) {
+            $('#sub_kategori_bisnis').select2('destroy');
+        }
+        $('#sub_kategori_bisnis').select2({
+            placeholder: 'Pilih Sub Kategori Bisnis',
+            allowClear: true,
+            width: '100%',
+            minimumInputLength: 0,
+            ajax: {
+                url: "{{ route('sub-kategori-bisnis.select2') }}",
+                dataType: 'json',
+                delay: 200,
+                data: params => ({ q: params.term ?? '', id_kategori_bisnis: $('#kategori_bisnis').val() }),
+                processResults: data => ({ results: data }),
+                cache: false,
+            },
+            language: {
+                noResults: () => `<span>Tidak ditemukan. <a href="{{ route('sub-kategori-bisnis.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`,
+            },
+            escapeMarkup: (m) => m,
+        });
+    }
+
+    // Isi ulang select2 lookup dengan 1 opsi terpilih (dari data id+nama hasil AJAX/autofill)
+    function setLookupValue(selector, id, nama) {
+        $(selector).empty();
+        if (id && nama) {
+            $(selector).append(new Option(nama, id, true, true));
+        }
+        $(selector).trigger('change');
+    }
+
     function initEditBr(br) {
         $('#id_br').val(br.id_br);
 
         const brOption = new Option(br.nama, br.id_br, true, true);
         $('#nama_br').append(brOption).trigger('change');
 
-        $('select[name="entitas"]').val(br.entitas).trigger('change');
-        $('select[name="kepemilikan"]').val(br.kepemilikan).trigger('change');
+        setLookupValue('#entitas', br.id_entitas, br.nama_entitas);
+        setLookupValue('#kepemilikan', br.id_kepemilikan, br.nama_kepemilikan);
         $('input[name="npwp"]').val(br.npwp);
         $('textarea[name="npwp_alamat"]').val(br.npwp_alamat);
-        $('select[name="kategori_bisnis"]').val(br.kategori_bisnis).trigger('change');
-        $('select[name="sub_kategori_bisnis"]').val(br.sub_kategori_bisnis).trigger('change');
+        setLookupValue('#kategori_bisnis', br.id_kategori_bisnis, br.nama_kategori_bisnis);
+        setLookupValue('#sub_kategori_bisnis', br.id_sub_kategori_bisnis, br.nama_sub_kategori_bisnis);
         $('input[name="website"]').val(br.website);
         $('input[name="nomor_telepon"]').val(br.nomor_telepon);
         $('select[name="is_aktif"]').val(br.is_aktif ?? 1).trigger('change');
@@ -331,13 +368,13 @@
 
             $('input[name="npwp"]').val(d.npwp ?? '');
             $('textarea[name="npwp_alamat"]').val(d.npwp_alamat ?? '');
-            $('select[name="kategori_bisnis"]').val(d.kategori_bisnis ?? '').trigger('change');
-            $('select[name="sub_kategori_bisnis"]').val(d.sub_kategori_bisnis ?? '').trigger('change');
+            setLookupValue('#kategori_bisnis', d.id_kategori_bisnis, d.nama_kategori_bisnis);
+            setLookupValue('#sub_kategori_bisnis', d.id_sub_kategori_bisnis, d.nama_sub_kategori_bisnis);
             $('input[name="website"]').val(d.website ?? '');
             $('input[name="nomor_telepon"]').val(d.nomor_telepon ?? '');
 
-            $('select[name="entitas"]').val(d.entitas ?? '').trigger('change');
-            $('select[name="kepemilikan"]').val(d.kepemilikan ?? '').trigger('change');
+            setLookupValue('#entitas', d.id_entitas, d.nama_entitas);
+            setLookupValue('#kepemilikan', d.id_kepemilikan, d.nama_kepemilikan);
             $('select[name="is_aktif"]').val(d.is_aktif ?? 1).trigger('change');
 
             destroySiteSelect2();
@@ -470,10 +507,10 @@
         ['npwp', 'npwp_alamat', 'website', 'nomor_telepon'].forEach(name => {
             $(`[name="${name}"]`).val('');
         });
-        $('select[name="entitas"]').val('').trigger('change');
-        $('select[name="kepemilikan"]').val('').trigger('change');
-        $('select[name="kategori_bisnis"]').val('').trigger('change');
-        $('select[name="sub_kategori_bisnis"]').val('').trigger('change');
+        setLookupValue('#entitas', null, null);
+        setLookupValue('#kepemilikan', null, null);
+        setLookupValue('#kategori_bisnis', null, null);
+        setLookupValue('#sub_kategori_bisnis', null, null);
         $('#br_is_aktif').val('').trigger('change');
     }
 

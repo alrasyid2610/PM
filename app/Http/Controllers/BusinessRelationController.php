@@ -96,12 +96,13 @@ class BusinessRelationController extends Controller
         // =========================
         $query = DB::table('business_relation_sites as s')
             ->join('business_relations as br', 'br.id_br', '=', 's.id_br')
+            ->leftJoin('entitas as e', 'e.id_entitas', '=', 'br.id_entitas')
             ->whereNull('s.deleted_at')
             ->select([
                 's.id_site',
                 'br.id_br',
                 'br.nama',
-                'br.entitas',
+                'e.nama as entitas',
                 's.nama_lokasi',
                 's.alamat_lengkap',
                 's.is_kantor_pusat',
@@ -189,13 +190,13 @@ class BusinessRelationController extends Controller
 
             'nama_br' => 'required|string|max:255',
 
-            'entitas' => 'nullable|string|max:100',
-            'kepemilikan' => 'nullable|string|max:100',
+            'id_entitas' => 'nullable|integer|exists:entitas,id_entitas',
+            'id_kepemilikan' => 'nullable|integer|exists:kepemilikan,id_kepemilikan',
             'npwp' => 'nullable|string|max:50',
             'npwp_alamat' => 'nullable|string',
 
-            'kategori_bisnis' => 'nullable|string|max:150',
-            'sub_kategori_bisnis' => 'nullable|string|max:150',
+            'id_kategori_bisnis' => 'nullable|integer|exists:kategori_bisnis,id_kategori_bisnis',
+            'id_sub_kategori_bisnis' => 'nullable|integer|exists:sub_kategori_bisnis,id_sub_kategori_bisnis',
             'website' => 'nullable|string|max:255',
             'nomor_telepon' => 'nullable|string|max:50',
 
@@ -222,12 +223,12 @@ class BusinessRelationController extends Controller
             if ($isNewBr) {
                 $idBr = DB::table('business_relations')->insertGetId([
                     'nama' => $request->nama_br,
-                    'entitas' => $request->entitas,
-                    'kepemilikan' => $request->kepemilikan,
+                    'id_entitas' => $request->id_entitas ?: null,
+                    'id_kepemilikan' => $request->id_kepemilikan ?: null,
                     'npwp' => $request->npwp,
                     'npwp_alamat' => $request->npwp_alamat,
-                    'kategori_bisnis' => $request->kategori_bisnis,
-                    'sub_kategori_bisnis' => $request->sub_kategori_bisnis,
+                    'id_kategori_bisnis' => $request->id_kategori_bisnis ?: null,
+                    'id_sub_kategori_bisnis' => $request->id_sub_kategori_bisnis ?: null,
                     'website' => $request->website,
                     'nomor_telepon' => $request->nomor_telepon,
                     'is_aktif' => $request->is_aktif ?? 1,
@@ -239,17 +240,17 @@ class BusinessRelationController extends Controller
                 DB::table('business_relations')
                     ->where('id_br', $request->id_br)
                     ->update([
-                        'nama'                => $request->nama_br,
-                        'entitas'             => $request->entitas,
-                        'kepemilikan'         => $request->kepemilikan,
-                        'npwp'                => $request->npwp,
-                        'npwp_alamat'         => $request->npwp_alamat,
-                        'kategori_bisnis'     => $request->kategori_bisnis,
-                        'sub_kategori_bisnis' => $request->sub_kategori_bisnis,
-                        'website'             => $request->website,
-                        'nomor_telepon'       => $request->nomor_telepon,
-                        'is_aktif'            => $request->is_aktif ?? 1,
-                        'updated_at'          => now(),
+                        'nama'                   => $request->nama_br,
+                        'id_entitas'             => $request->id_entitas ?: null,
+                        'id_kepemilikan'         => $request->id_kepemilikan ?: null,
+                        'npwp'                   => $request->npwp,
+                        'npwp_alamat'            => $request->npwp_alamat,
+                        'id_kategori_bisnis'     => $request->id_kategori_bisnis ?: null,
+                        'id_sub_kategori_bisnis' => $request->id_sub_kategori_bisnis ?: null,
+                        'website'                => $request->website,
+                        'nomor_telepon'          => $request->nomor_telepon,
+                        'is_aktif'               => $request->is_aktif ?? 1,
+                        'updated_at'             => now(),
                     ]);
 
                 $idBr = $request->id_br;
@@ -339,12 +340,12 @@ class BusinessRelationController extends Controller
         $validated = $request->validate([
             'id_br'   => 'nullable|exists:business_relations,id_br',
             'nama_br' => 'required|string|max:255',
-            'entitas' => 'nullable|string|max:100',
-            'kepemilikan' => 'nullable|string|max:100',
+            'id_entitas' => 'nullable|integer|exists:entitas,id_entitas',
+            'id_kepemilikan' => 'nullable|integer|exists:kepemilikan,id_kepemilikan',
             'npwp' => 'nullable|string|max:50',
             'npwp_alamat' => 'nullable|string',
-            'kategori_bisnis' => 'nullable|string|max:150',
-            'sub_kategori_bisnis' => 'nullable|string|max:150',
+            'id_kategori_bisnis' => 'nullable|integer|exists:kategori_bisnis,id_kategori_bisnis',
+            'id_sub_kategori_bisnis' => 'nullable|integer|exists:sub_kategori_bisnis,id_sub_kategori_bisnis',
             'website' => 'nullable|string|max:255',
             'nomor_telepon' => 'nullable|string|max:50',
             'nama_lokasi' => 'required_if:id_site,null|string|max:255',
@@ -363,17 +364,17 @@ class BusinessRelationController extends Controller
             DB::table('business_relations')
                 ->where('id_br', $id_br)
                 ->update([
-                    'nama'                => $request->nama_br,
-                    'entitas'             => $request->entitas,
-                    'kepemilikan'         => $request->kepemilikan,
-                    'npwp'                => $request->npwp,
-                    'npwp_alamat'         => $request->npwp_alamat,
-                    'kategori_bisnis'     => $request->kategori_bisnis,
-                    'sub_kategori_bisnis' => $request->sub_kategori_bisnis,
-                    'website'             => $request->website,
-                    'nomor_telepon'       => $request->nomor_telepon,
-                    'is_aktif'            => $request->br_is_aktif ?? 1,
-                    'updated_at'          => now(),
+                    'nama'                   => $request->nama_br,
+                    'id_entitas'             => $request->id_entitas ?: null,
+                    'id_kepemilikan'         => $request->id_kepemilikan ?: null,
+                    'npwp'                   => $request->npwp,
+                    'npwp_alamat'            => $request->npwp_alamat,
+                    'id_kategori_bisnis'     => $request->id_kategori_bisnis ?: null,
+                    'id_sub_kategori_bisnis' => $request->id_sub_kategori_bisnis ?: null,
+                    'website'                => $request->website,
+                    'nomor_telepon'          => $request->nomor_telepon,
+                    'is_aktif'               => $request->br_is_aktif ?? 1,
+                    'updated_at'             => now(),
                 ]);
 
 
@@ -445,25 +446,40 @@ class BusinessRelationController extends Controller
 
         $search = $request->q;
 
-        $data = DB::table('business_relations')
-            ->where('nama', 'like', "%{$search}%")
+        $data = DB::table('business_relations as br')
+            ->leftJoin('entitas as e', 'e.id_entitas', '=', 'br.id_entitas')
+            ->leftJoin('kepemilikan as k', 'k.id_kepemilikan', '=', 'br.id_kepemilikan')
+            ->leftJoin('kategori_bisnis as kb', 'kb.id_kategori_bisnis', '=', 'br.id_kategori_bisnis')
+            ->leftJoin('sub_kategori_bisnis as skb', 'skb.id_sub_kategori_bisnis', '=', 'br.id_sub_kategori_bisnis')
+            ->where('br.nama', 'like', "%{$search}%")
+            ->select([
+                'br.*',
+                'e.nama as nama_entitas',
+                'k.nama as nama_kepemilikan',
+                'kb.nama as nama_kategori_bisnis',
+                'skb.nama as nama_sub_kategori_bisnis',
+            ])
             ->limit(10)
             ->get();
 
         return response()->json(
             $data->map(function ($item) {
                 return [
-                    'id'                   => $item->id_br,
-                    'text'                 => $item->nama,
-                    'entitas'              => $item->entitas,
-                    'kepemilikan'          => $item->kepemilikan,
-                    'npwp'                 => $item->npwp,
-                    'npwp_alamat'          => $item->npwp_alamat,
-                    'kategori_bisnis'      => $item->kategori_bisnis,
-                    'sub_kategori_bisnis'  => $item->sub_kategori_bisnis,
-                    'website'              => $item->website,
-                    'nomor_telepon'        => $item->nomor_telepon,
-                    'is_aktif'             => $item->is_aktif,
+                    'id'                       => $item->id_br,
+                    'text'                     => $item->nama,
+                    'id_entitas'               => $item->id_entitas,
+                    'nama_entitas'             => $item->nama_entitas,
+                    'id_kepemilikan'           => $item->id_kepemilikan,
+                    'nama_kepemilikan'         => $item->nama_kepemilikan,
+                    'npwp'                     => $item->npwp,
+                    'npwp_alamat'              => $item->npwp_alamat,
+                    'id_kategori_bisnis'       => $item->id_kategori_bisnis,
+                    'nama_kategori_bisnis'     => $item->nama_kategori_bisnis,
+                    'id_sub_kategori_bisnis'   => $item->id_sub_kategori_bisnis,
+                    'nama_sub_kategori_bisnis' => $item->nama_sub_kategori_bisnis,
+                    'website'                  => $item->website,
+                    'nomor_telepon'            => $item->nomor_telepon,
+                    'is_aktif'                 => $item->is_aktif,
                 ];
             })
         );
@@ -507,17 +523,25 @@ class BusinessRelationController extends Controller
             ->join('business_relations as br', 'br.id_br', '=', 's.id_br')
             ->leftJoin('commercial_buildings as cb', 'cb.id_building', '=', 's.gedung')
             ->leftJoin('business_estates as be', 'be.id_bestate', '=', 's.kawasan_bisnis')
+            ->leftJoin('entitas as e', 'e.id_entitas', '=', 'br.id_entitas')
+            ->leftJoin('kepemilikan as k', 'k.id_kepemilikan', '=', 'br.id_kepemilikan')
+            ->leftJoin('kategori_bisnis as kb', 'kb.id_kategori_bisnis', '=', 'br.id_kategori_bisnis')
+            ->leftJoin('sub_kategori_bisnis as skb', 'skb.id_sub_kategori_bisnis', '=', 'br.id_sub_kategori_bisnis')
             ->where('s.id_site', $id)
             ->whereNull('s.deleted_at')
             ->select([
                 'br.id_br',
                 'br.nama as nama_br',
-                'br.entitas',
-                'br.kepemilikan',
+                'br.id_entitas',
+                'e.nama as nama_entitas',
+                'br.id_kepemilikan',
+                'k.nama as nama_kepemilikan',
                 'br.npwp',
                 'br.npwp_alamat',
-                'br.kategori_bisnis',
-                'br.sub_kategori_bisnis',
+                'br.id_kategori_bisnis',
+                'kb.nama as nama_kategori_bisnis',
+                'br.id_sub_kategori_bisnis',
+                'skb.nama as nama_sub_kategori_bisnis',
                 'br.website',
                 'br.nomor_telepon',
                 'br.is_aktif as br_is_aktif',
@@ -565,11 +589,21 @@ class BusinessRelationController extends Controller
     {
         $id_br = $request->query('id_br');
 
-
-        $data = DB::table('business_relations');
+        $data = DB::table('business_relations as br')
+            ->leftJoin('entitas as e', 'e.id_entitas', '=', 'br.id_entitas')
+            ->leftJoin('kepemilikan as k', 'k.id_kepemilikan', '=', 'br.id_kepemilikan')
+            ->leftJoin('kategori_bisnis as kb', 'kb.id_kategori_bisnis', '=', 'br.id_kategori_bisnis')
+            ->leftJoin('sub_kategori_bisnis as skb', 'skb.id_sub_kategori_bisnis', '=', 'br.id_sub_kategori_bisnis')
+            ->select([
+                'br.*',
+                'e.nama as nama_entitas',
+                'k.nama as nama_kepemilikan',
+                'kb.nama as nama_kategori_bisnis',
+                'skb.nama as nama_sub_kategori_bisnis',
+            ]);
 
         if (!empty($id_br)) {
-            $data->where('id_br', $id_br);
+            $data->where('br.id_br', $id_br);
         }
 
         $br = $data->get();
@@ -581,17 +615,21 @@ class BusinessRelationController extends Controller
         return response()->json(
             $br->map(function ($item) {
                 return [
-                    'id'                   => $item->id_br,
-                    'text'                 => $item->nama,
-                    'entitas'              => $item->entitas,
-                    'kepemilikan'          => $item->kepemilikan,
-                    'npwp'                 => $item->npwp,
-                    'npwp_alamat'          => $item->npwp_alamat,
-                    'kategori_bisnis'      => $item->kategori_bisnis,
-                    'sub_kategori_bisnis'  => $item->sub_kategori_bisnis,
-                    'website'              => $item->website,
-                    'nomor_telepon'        => $item->nomor_telepon,
-                    'is_aktif'             => $item->is_aktif,
+                    'id'                       => $item->id_br,
+                    'text'                     => $item->nama,
+                    'id_entitas'               => $item->id_entitas,
+                    'nama_entitas'             => $item->nama_entitas,
+                    'id_kepemilikan'           => $item->id_kepemilikan,
+                    'nama_kepemilikan'         => $item->nama_kepemilikan,
+                    'npwp'                     => $item->npwp,
+                    'npwp_alamat'              => $item->npwp_alamat,
+                    'id_kategori_bisnis'       => $item->id_kategori_bisnis,
+                    'nama_kategori_bisnis'     => $item->nama_kategori_bisnis,
+                    'id_sub_kategori_bisnis'   => $item->id_sub_kategori_bisnis,
+                    'nama_sub_kategori_bisnis' => $item->nama_sub_kategori_bisnis,
+                    'website'                  => $item->website,
+                    'nomor_telepon'            => $item->nomor_telepon,
+                    'is_aktif'                 => $item->is_aktif,
                 ];
             })
         );
