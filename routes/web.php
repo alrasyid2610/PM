@@ -21,6 +21,7 @@ use App\Http\Controllers\EntitasController;
 use App\Http\Controllers\KepemilikanController;
 use App\Http\Controllers\KategoriBisnisController;
 use App\Http\Controllers\SubKategoriBisnisController;
+use App\Http\Controllers\SatuanController;
 use App\Http\Controllers\TestingParameterController;
 use App\Http\Controllers\TestingKelompokMatriksSampleController;
 use App\Http\Controllers\TestingStandardController;
@@ -143,6 +144,19 @@ Route::prefix('sub-kategori-bisnis')->name('sub-kategori-bisnis.')->group(functi
     Route::delete('/{id}', [SubKategoriBisnisController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/detail', [SubKategoriBisnisController::class, 'detail'])->name('detail')->whereNumber('id');
     Route::get('/{id}/history', [SubKategoriBisnisController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('satuan')->name('satuan.')->group(function () {
+    Route::get('/select2', [SatuanController::class, 'select2'])->name('select2');
+    Route::get('/', [SatuanController::class, 'index'])->name('index');
+    Route::get('/data', [SatuanController::class, 'data'])->name('data');
+    Route::get('/create', [SatuanController::class, 'create'])->name('create');
+    Route::post('/', [SatuanController::class, 'store'])->name('store');
+    Route::get('/{id}', [SatuanController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [SatuanController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [SatuanController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/detail', [SatuanController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::get('/{id}/history', [SatuanController::class, 'history'])->name('history')->whereNumber('id');
 });
 
 //testing nana

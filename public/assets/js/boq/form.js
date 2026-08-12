@@ -297,12 +297,7 @@ function renderSectionCard(pointId, pointText, items, hasFwo) {
                         </div>
                         <div class="col-md-2">
                             <label class="form-label form-label-sm text-muted mb-1">Satuan</label>
-                            <select class="form-select form-select-sm input-satuan">
-                                <option value="">— Pilih —</option>
-                                <option value="PCS">PCS</option>
-                                <option value="Titik">Titik</option>
-                                <option value="Set">Set</option>
-                            </select>
+                            <select class="form-select form-select-sm input-satuan"></select>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>

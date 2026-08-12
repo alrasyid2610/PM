@@ -45,6 +45,7 @@ return [
             ['slug' => 'testing-kelompok-matriks-samples', 'label' => 'Kelompok Matriks Sample',    'icon' => 'fa-object-group',    'section' => 'Product'],
             ['slug' => 'testing-matriks-samples',          'label' => 'Matriks Sample',             'icon' => 'fa-table-cells',     'section' => 'Product'],
             ['slug' => 'testing-standards',                'label' => 'Testing Standards',          'icon' => 'fa-certificate',     'section' => 'Product'],
+            ['slug' => 'satuan',                           'label' => 'Satuan',                     'icon' => 'fa-ruler-combined',  'section' => 'Product'],
             ['slug' => 'testing-points',                   'label' => 'Testing Points',             'icon' => 'fa-location-dot',    'section' => 'Product'],
             ['slug' => 'budget-accounts',                  'label' => 'Budget Account',             'icon' => 'fa-layer-group',     'section' => 'Product'],
         ],

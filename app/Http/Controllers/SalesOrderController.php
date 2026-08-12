@@ -337,9 +337,10 @@ class SalesOrderController extends Controller
 
         $boqSections = DB::table('boq as b')
             ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+            ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'b.id_satuan')
             ->whereIn('b.id_wo', $woIds)
             ->whereNull('b.deleted_at')
-            ->select(['b.id_boq', 'b.id_wo', 'tp.nama as point_name', 'b.qty as boq_qty', 'b.satuan', 'b.harga'])
+            ->select(['b.id_boq', 'b.id_wo', 'tp.nama as point_name', 'b.qty as boq_qty', 'sat.nama as satuan', 'b.harga'])
             ->get();
 
         $boqIds = $boqSections->pluck('id_boq');

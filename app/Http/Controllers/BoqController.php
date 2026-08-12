@@ -51,6 +51,7 @@ class BoqController extends Controller
             ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
             ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
             ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
+            ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'b.id_satuan')
             ->where('b.id_wo', $id)
             ->whereNull('b.deleted_at')
             ->select([
@@ -58,7 +59,8 @@ class BoqController extends Controller
                 'b.id_testing_point',
                 'b.item_produk_alternate',
                 'b.qty',
-                'b.satuan',
+                'b.id_satuan',
+                'sat.nama as satuan',
                 'b.harga',
                 'b.keterangan',
                 DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
@@ -109,6 +111,7 @@ class BoqController extends Controller
                 'point_name'            => $boq->point_name,
                 'item_produk_alternate' => $boq->item_produk_alternate,
                 'qty'                   => $boq->qty,
+                'id_satuan'             => $boq->id_satuan,
                 'satuan'                => $boq->satuan,
                 'harga'                 => $boq->harga,
                 'keterangan'            => $boq->keterangan,
@@ -165,7 +168,7 @@ class BoqController extends Controller
             'sections.*.id_testing_point'      => 'required|integer',
             'sections.*.item_produk_alternate' => 'nullable|string',
             'sections.*.qty'                   => 'nullable|integer',
-            'sections.*.satuan'                => 'nullable|string|max:255',
+            'sections.*.id_satuan'             => 'nullable|integer|exists:satuan,id_satuan',
             'sections.*.harga'                 => 'nullable|numeric',
             'sections.*.keterangan'            => 'nullable|string',
             'sections.*.items'                 => 'required|array|min:1',
@@ -207,7 +210,7 @@ class BoqController extends Controller
                 'id_testing_point'      => $section['id_testing_point'],
                 'item_produk_alternate' => $section['item_produk_alternate'] ?? null,
                 'qty'                   => $section['qty'] ?? null,
-                'satuan'                => $section['satuan'] ?? null,
+                'id_satuan'             => $section['id_satuan'] ?? null,
                 'harga'                 => $section['harga'] ?? null,
                 'keterangan'            => $section['keterangan'] ?? null,
                 'created_at'            => now(),
@@ -237,7 +240,7 @@ class BoqController extends Controller
             'sections.*.id_testing_point'      => 'required|integer',
             'sections.*.item_produk_alternate' => 'nullable|string',
             'sections.*.qty'                   => 'nullable|integer',
-            'sections.*.satuan'                => 'nullable|string|max:255',
+            'sections.*.id_satuan'             => 'nullable|integer|exists:satuan,id_satuan',
             'sections.*.harga'                 => 'nullable|numeric',
             'sections.*.keterangan'            => 'nullable|string',
             'sections.*.items'                 => 'required|array|min:1',
@@ -310,7 +313,7 @@ class BoqController extends Controller
                 DB::table('boq')->where('id_boq', $boqId)->update([
                     'item_produk_alternate' => $section['item_produk_alternate'] ?? null,
                     'qty'                   => $section['qty'] ?? null,
-                    'satuan'                => $section['satuan'] ?? null,
+                    'id_satuan'             => $section['id_satuan'] ?? null,
                     'harga'                 => $section['harga'] ?? null,
                     'keterangan'            => $section['keterangan'] ?? null,
                     'updated_at'            => now(),
@@ -359,7 +362,7 @@ class BoqController extends Controller
                     'id_testing_point'      => $ptId,
                     'item_produk_alternate' => $section['item_produk_alternate'] ?? null,
                     'qty'                   => $section['qty'] ?? null,
-                    'satuan'                => $section['satuan'] ?? null,
+                    'id_satuan'             => $section['id_satuan'] ?? null,
                     'harga'                 => $section['harga'] ?? null,
                     'keterangan'            => $section['keterangan'] ?? null,
                     'created_at'            => now(),
@@ -450,7 +453,7 @@ class BoqController extends Controller
                     ];
                 }
 
-                foreach (['item_produk_alternate', 'qty', 'satuan', 'harga', 'keterangan'] as $field) {
+                foreach (['item_produk_alternate', 'qty', 'id_satuan', 'harga', 'keterangan'] as $field) {
                     $oldVal = $oldSec[$field] ?? null;
                     $newVal = $newSec[$field] ?? null;
                     if ((string)$oldVal !== (string)$newVal) {
@@ -483,6 +486,7 @@ class BoqController extends Controller
             ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
             ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
             ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
+            ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'b.id_satuan')
             ->where('b.id_wo', $id_wo)
             ->when($search, fn($q) => $q
                 ->where('tp.nama', 'like', "%$search%")
@@ -493,7 +497,7 @@ class BoqController extends Controller
                 'b.id_boq',
                 'b.id_testing_point',
                 'b.qty',
-                'b.satuan',
+                'sat.nama as satuan',
                 DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
             ])
             ->get();
@@ -529,12 +533,13 @@ class BoqController extends Controller
             ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
             ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
             ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
+            ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'b.id_satuan')
             ->where('b.id_boq', $id_boq)
             ->select([
                 'b.id_boq',
                 'b.id_testing_point',
                 'b.qty',
-                'b.satuan',
+                'sat.nama as satuan',
                 DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
             ])
             ->first();

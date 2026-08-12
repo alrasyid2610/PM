@@ -23,12 +23,7 @@ function renderBoqEditBody(sec) {
             </div>
             <div class="col-md-2">
                 <label class="form-label form-label-sm text-muted mb-1">Satuan</label>
-                <select class="form-select form-select-sm boq-edit-satuan">
-                    <option value="">— Pilih —</option>
-                    <option value="PCS" ${sec.satuan === 'PCS' ? 'selected' : ''}>PCS</option>
-                    <option value="Titik" ${sec.satuan === 'Titik' ? 'selected' : ''}>Titik</option>
-                    <option value="Set" ${sec.satuan === 'Set' ? 'selected' : ''}>Set</option>
-                </select>
+                <select class="form-select form-select-sm boq-edit-satuan"></select>
             </div>
             <div class="col-md-2">
                 <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
@@ -48,6 +43,32 @@ function renderBoqEditBody(sec) {
             <i class="fa-solid fa-list-check me-1"></i> Items (${(sec.items ?? []).length})
         </div>
         <div>${renderBoqSubItems(sec.items ?? [])}</div>`;
+}
+
+// Select2 ajax untuk master data Satuan — dipakai di section-card "Tambah Item"
+function initSatuanSelect2($select, idVal, labelVal) {
+    if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
+    $select.empty();
+    if (idVal && labelVal) {
+        $select.append(new Option(labelVal, idVal, true, true));
+    }
+    $select.select2({
+        width: '100%',
+        placeholder: '— Pilih —',
+        allowClear: true,
+        minimumInputLength: 0,
+        ajax: {
+            url: '/satuan/select2',
+            delay: 200,
+            dataType: 'json',
+            data: (p) => ({ q: p.term ?? '' }),
+            processResults: (d) => ({ results: d }),
+        },
+        language: {
+            noResults: () => `<span>Tidak ditemukan. <a href="/satuan/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`,
+        },
+        escapeMarkup: (m) => m,
+    });
 }
 
 function updateBoqItemTotal($container) {
@@ -162,7 +183,7 @@ $(document).ready(function () {
                     id_testing_point:      s.id_testing_point,
                     item_produk_alternate: s.item_produk_alternate ?? null,
                     qty:                   s.qty ?? null,
-                    satuan:                s.satuan ?? null,
+                    id_satuan:             s.id_satuan ?? null,
                     harga:                 s.harga ?? null,
                     keterangan:            s.keterangan ?? null,
                     items:                 itemIds,
@@ -290,7 +311,7 @@ $(document).ready(function () {
         const sec = currentBoqData.sections[idx];
         sec.item_produk_alternate = $body.find('.boq-edit-item-produk').val() || null;
         sec.qty     = rawNumVal(qtyEl) || null;
-        sec.satuan  = $body.find('.boq-edit-satuan').val() || null;
+        sec.id_satuan = $body.find('.boq-edit-satuan').val() || null;
         sec.harga   = rawNumVal(hargaEl) || null;
         sec.keterangan = $body.find('.boq-edit-ket').val() || null;
 
@@ -299,7 +320,7 @@ $(document).ready(function () {
                 id_testing_point:      s.id_testing_point,
                 item_produk_alternate: s.item_produk_alternate,
                 qty:                   s.qty,
-                satuan:                s.satuan,
+                id_satuan:             s.id_satuan,
                 harga:                 s.harga,
                 keterangan:            s.keterangan,
                 items:                 (s.items ?? []).map(it => it.id_testing_item),
@@ -409,7 +430,7 @@ function enterBoqEditMode(res) {
             else $sec.find('.input-qty').val(sec.qty || '');
             if (hargaEl && hargaEl._cleave) hargaEl._cleave.setRawValue(sec.harga || '');
             else $sec.find('.input-harga').val(sec.harga || '');
-            $sec.find('.input-satuan').val(sec.satuan || '');
+            initSatuanSelect2($sec.find('.input-satuan'), sec.id_satuan, sec.satuan);
             $sec.find('.input-ket').val(sec.keterangan || '');
             updateSectionTotal($sec);
         });
@@ -498,6 +519,7 @@ function addSection(pointId, pointText, items, hasFwo) {
     const $el = $(renderSectionCard(pointId, pointText, items, !!hasFwo));
     $('#boqSections').append($el);
     initNumericMask($el);
+    initSatuanSelect2($el.find('.input-satuan'));
     addedPointIds.add(String(pointId));
 }
 
@@ -527,7 +549,7 @@ function collectSections() {
             id_testing_point:      parseInt($sec.data('point-id')),
             item_produk_alternate: $sec.find('.input-item-produk').val() || null,
             qty:                   rawNumVal($sec.find('.input-qty')[0]),
-            satuan:                $sec.find('.input-satuan').val() || null,
+            id_satuan:             $sec.find('.input-satuan').val() || null,
             harga:                 rawNumVal($sec.find('.input-harga')[0]),
             keterangan:            $sec.find('.input-ket').val() || null,
             items:                 items,

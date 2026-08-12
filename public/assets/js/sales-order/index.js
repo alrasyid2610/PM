@@ -676,16 +676,11 @@ $(document).ready(function () {
         if (!$row.attr("data-edit-loaded")) {
             $row.attr("data-edit-loaded", "1");
             const satuan = $row.attr("data-satuan") || "";
+            const idSatuan = $row.attr("data-id-satuan") || "";
             const harga = $row.attr("data-harga") || "";
             const ket = $row.attr("data-keterangan") || "";
             const itemProduk = $row.attr("data-item-produk-alternate") || "";
             const tpId = $row.attr("data-id-testing-point");
-            const opts = ["PCS", "Titik", "Set"]
-                .map(
-                    (v) =>
-                        `<option value="${v}" ${satuan === v ? "selected" : ""}>${v}</option>`,
-                )
-                .join("");
 
             $panel.html(`
                 <div class="row g-2 mb-3">
@@ -696,9 +691,7 @@ $(document).ready(function () {
                     </div>
                     <div class="col-md-2">
                         <label class="form-label form-label-sm text-muted mb-1">Satuan</label>
-                        <select class="form-select form-select-sm copy-wo-boq-satuan">
-                            <option value="">— Pilih —</option>${opts}
-                        </select>
+                        <select class="form-select form-select-sm copy-wo-boq-satuan"></select>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
@@ -716,6 +709,8 @@ $(document).ready(function () {
                         <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat item...
                     </div>
                 </div>`);
+
+            initCopyWoSatuanSelect2($panel.find(".copy-wo-boq-satuan"), idSatuan, satuan);
 
             let preCheckedIds;
             try {
@@ -784,9 +779,9 @@ $(document).ready(function () {
             boq.push({
                 id_testing_point: parseInt(idTp),
                 qty: qty ? parseInt(qty) : null,
-                satuan: useInputs
+                id_satuan: useInputs
                     ? $row.find(".copy-wo-boq-satuan").val() || ""
-                    : $row.attr("data-satuan") || "",
+                    : $row.attr("data-id-satuan") || "",
                 harga: useInputs
                     ? (rawNumVal($row.find(".copy-wo-boq-harga")[0]) ?? null)
                     : $row.attr("data-harga") || null,
@@ -1078,6 +1073,33 @@ function fillCopyWoModal(wo) {
     initFpDate('#modalCopyWoBody');
 }
 
+// Select2 ajax untuk master data Satuan di modal Copy WO
+function initCopyWoSatuanSelect2($select, idVal, labelVal) {
+    if ($select.hasClass("select2-hidden-accessible")) $select.select2("destroy");
+    $select.empty();
+    if (idVal && labelVal) {
+        $select.append(new Option(labelVal, idVal, true, true));
+    }
+    $select.select2({
+        width: "100%",
+        placeholder: "— Pilih —",
+        allowClear: true,
+        minimumInputLength: 0,
+        dropdownParent: $("#modalCopyWo"),
+        ajax: {
+            url: "/satuan/select2",
+            dataType: "json",
+            delay: 200,
+            data: (p) => ({ q: p.term ?? "" }),
+            processResults: (d) => ({ results: d }),
+        },
+        language: {
+            noResults: () => `<span>Tidak ditemukan. <a href="/satuan/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`,
+        },
+        escapeMarkup: (m) => m,
+    });
+}
+
 let copyWoBoqIdx = 0;
 
 function renderCopyWoBoq(sourceItems) {
@@ -1091,6 +1113,7 @@ function renderCopyWoBoq(sourceItems) {
                 data-id-testing-point="${item.id_testing_point}"
                 data-testing-item-ids="${escHtml(JSON.stringify(item.testing_item_ids || []))}"
                 data-satuan="${escHtml(item.satuan || "")}"
+                data-id-satuan="${item.id_satuan || ""}"
                 data-harga="${item.harga || ""}"
                 data-keterangan="${escHtml(item.keterangan || "")}"
                 data-item-produk-alternate="${escHtml(item.item_produk_alternate || "")}"
@@ -1163,12 +1186,7 @@ function addCopyWoBoqRow() {
                 </div>
                 <div class="col-md-2">
                     <label class="form-label form-label-sm text-muted mb-1">Satuan</label>
-                    <select class="form-select form-select-sm copy-wo-boq-satuan">
-                        <option value="">— Pilih —</option>
-                        <option value="PCS">PCS</option>
-                        <option value="Titik">Titik</option>
-                        <option value="Set">Set</option>
-                    </select>
+                    <select class="form-select form-select-sm copy-wo-boq-satuan"></select>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
@@ -1189,6 +1207,7 @@ function addCopyWoBoqRow() {
 
     $("#copyWoBoqContainer").append(row);
     initNumericMask(row[0]);
+    initCopyWoSatuanSelect2(row.find(".copy-wo-boq-satuan"));
 
     const $sel = row.find(".copy-wo-boq-tp-select");
     $sel.select2({

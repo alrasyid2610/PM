@@ -412,7 +412,7 @@ $(document).ready(function () {
                 Swal.fire({ icon: 'warning', title: 'Field wajib diisi', text: 'Qty pada item "' + pointName + '" harus diisi.' });
                 return;
             }
-            if (!s.satuan) {
+            if (!s.id_satuan) {
                 Swal.fire({ icon: 'warning', title: 'Field wajib diisi', text: 'Satuan pada item "' + pointName + '" harus diisi.' });
                 return;
             }
@@ -559,12 +559,7 @@ function addSection(pointId, pointText, items) {
                         </div>
                         <div class="col-md-2">
                             <label class="form-label form-label-sm text-muted mb-1">Satuan</label>
-                            <select class="form-select form-select-sm input-satuan">
-                                <option value="">— Pilih —</option>
-                                <option value="PCS">PCS</option>
-                                <option value="Titik">Titik</option>
-                                <option value="Set">Set</option>
-                            </select>
+                            <select class="form-select form-select-sm input-satuan"></select>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
@@ -595,8 +590,35 @@ function addSection(pointId, pointText, items) {
     const $el = $(html);
     $("#boqSections").append($el);
     initNumericMask($el);
+    initSatuanSelect2($el.find(".input-satuan"));
     addedPointIds.add(String(pointId));
     $("#btnSave").prop("disabled", false);
+}
+
+// Select2 ajax untuk master data Satuan
+function initSatuanSelect2($select, idVal, labelVal) {
+    if ($select.hasClass("select2-hidden-accessible")) $select.select2("destroy");
+    $select.empty();
+    if (idVal && labelVal) {
+        $select.append(new Option(labelVal, idVal, true, true));
+    }
+    $select.select2({
+        width: "100%",
+        placeholder: "— Pilih —",
+        allowClear: true,
+        minimumInputLength: 0,
+        ajax: {
+            url: "{{ route('satuan.select2') }}",
+            dataType: "json",
+            delay: 200,
+            data: p => ({ q: p.term ?? "" }),
+            processResults: d => ({ results: d }),
+        },
+        language: {
+            noResults: () => `<span>Tidak ditemukan. <a href="{{ route('satuan.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`,
+        },
+        escapeMarkup: m => m,
+    });
 }
 
 // ── Section dari DB — hanya tampilan, tidak bisa diedit atau disimpan ulang ────
@@ -736,7 +758,7 @@ function collectSections() {
             id_testing_point:      parseInt($sec.data("point-id")),
             item_produk_alternate: $sec.find(".input-item-produk").val() || null,
             qty:                   rawNumVal($sec.find(".input-qty")[0]),
-            satuan:                $sec.find(".input-satuan").val() || null,
+            id_satuan:             $sec.find(".input-satuan").val() || null,
             harga:                 rawNumVal($sec.find(".input-harga")[0]),
             keterangan:            $sec.find(".input-ket").val() || null,
             items:                 items,

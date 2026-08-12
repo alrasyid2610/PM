@@ -518,6 +518,7 @@ class FieldworkController extends Controller
             ->leftJoin('testing_matriks_samples as tms', 'tms.id_testing_matriks_sample', '=', 'tp.id_testing_matriks_sample')
             ->leftJoin('testing_items as ti', 'ti.id_testing_item', '=', 'fwbi.id_testing_item')
             ->leftJoin('testing_parameters as tpFw', 'tpFw.id_testing_parameter', '=', 'ti.id_testing_parameter')
+            ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'boq.id_satuan')
             ->where('fwb.id_fwo', $id)
             ->whereNull('fwb.deleted_at')
             ->select(
@@ -528,7 +529,7 @@ class FieldworkController extends Controller
                 'tp.nama as nama_tp',
                 'tp.nomor_halaman as nomor_halaman_tp',
                 'fwb.qty',
-                'boq.satuan',
+                'sat.nama as satuan',
                 'tpFw.kode as kode_tpfw',
                 'tpFw.judul_indonesia as judul_indonesia_tpfw',
                 'tpFw.judul_inggris as judul_inggris_tpfw',

@@ -425,7 +425,7 @@ class WorkOrderController extends Controller
                 if (!isset($item['qty']) || $item['qty'] === '' || $item['qty'] === null) {
                     abort(response()->json(['success' => false, 'message' => "Qty wajib diisi pada item BOQ ke-{$no}"], 422));
                 }
-                if (!isset($item['satuan']) || $item['satuan'] === '' || $item['satuan'] === null) {
+                if (!isset($item['id_satuan']) || $item['id_satuan'] === '' || $item['id_satuan'] === null) {
                     abort(response()->json(['success' => false, 'message' => "Satuan wajib diisi pada item BOQ ke-{$no}"], 422));
                 }
                 if (!isset($item['harga']) || $item['harga'] === '' || $item['harga'] === null) {
@@ -439,7 +439,7 @@ class WorkOrderController extends Controller
                     'id_testing_point'      => $item['id_testing_point'],
                     'item_produk_alternate' => $item['item_produk_alternate'] ?? null,
                     'qty'                   => $qty,
-                    'satuan'                => $item['satuan'] !== '' ? $item['satuan'] : null,
+                    'id_satuan'             => $item['id_satuan'] !== '' ? $item['id_satuan'] : null,
                     'harga'                 => $item['harga'],
                     'keterangan'            => $item['keterangan'] ?? null,
                     'created_at'            => now(),
@@ -555,12 +555,14 @@ class WorkOrderController extends Controller
             ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
             ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
             ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
+            ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'b.id_satuan')
             ->where('b.id_wo', $id)
             ->select([
                 'b.id_boq',
                 'b.id_testing_point',
                 'b.qty',
-                'b.satuan',
+                'b.id_satuan',
+                'sat.nama as satuan',
                 'b.harga',
                 'b.keterangan',
                 'b.item_produk_alternate',
@@ -580,6 +582,7 @@ class WorkOrderController extends Controller
                 'id_testing_point'      => $b->id_testing_point,
                 'point_name'            => $b->point_name ?? '—',
                 'qty'                   => $b->qty,
+                'id_satuan'             => $b->id_satuan,
                 'satuan'                => $b->satuan,
                 'harga'                 => $b->harga,
                 'keterangan'            => $b->keterangan,
@@ -600,6 +603,7 @@ class WorkOrderController extends Controller
             ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
             ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
             ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
+            ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'b.id_satuan')
             ->where('b.id_wo', $id)
             ->whereNull('b.deleted_at')
             ->select([
@@ -607,7 +611,7 @@ class WorkOrderController extends Controller
                 'b.id_testing_point',
                 DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
                 'b.qty as boq_qty',
-                'b.satuan',
+                'sat.nama as satuan',
                 'b.harga',
             ])
             ->get();
