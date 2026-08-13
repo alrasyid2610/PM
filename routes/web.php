@@ -22,6 +22,10 @@ use App\Http\Controllers\KepemilikanController;
 use App\Http\Controllers\KategoriBisnisController;
 use App\Http\Controllers\SubKategoriBisnisController;
 use App\Http\Controllers\SatuanController;
+use App\Http\Controllers\FwoBoqOtherController;
+use App\Http\Controllers\FwoBoqSamplingController;
+use App\Http\Controllers\BoqOtherController;
+use App\Http\Controllers\BoqSamplingController;
 use App\Http\Controllers\TestingParameterController;
 use App\Http\Controllers\TestingKelompokMatriksSampleController;
 use App\Http\Controllers\TestingStandardController;
@@ -144,6 +148,42 @@ Route::prefix('sub-kategori-bisnis')->name('sub-kategori-bisnis.')->group(functi
     Route::delete('/{id}', [SubKategoriBisnisController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/detail', [SubKategoriBisnisController::class, 'detail'])->name('detail')->whereNumber('id');
     Route::get('/{id}/history', [SubKategoriBisnisController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('fwo-boq-other')->name('fwo-boq-other.')->group(function () {
+    Route::get('/{id_fwo}/list', [FwoBoqOtherController::class, 'listByFwo'])->name('list')->whereNumber('id_fwo');
+    Route::post('/', [FwoBoqOtherController::class, 'store'])->name('store');
+    Route::get('/{id}', [FwoBoqOtherController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [FwoBoqOtherController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [FwoBoqOtherController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/history', [FwoBoqOtherController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('fwo-boq-sampling')->name('fwo-boq-sampling.')->group(function () {
+    Route::get('/{id_fwo}/list', [FwoBoqSamplingController::class, 'listByFwo'])->name('list')->whereNumber('id_fwo');
+    Route::post('/', [FwoBoqSamplingController::class, 'store'])->name('store');
+    Route::get('/{id}', [FwoBoqSamplingController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [FwoBoqSamplingController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [FwoBoqSamplingController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/history', [FwoBoqSamplingController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('wo-boq-other')->name('wo-boq-other.')->group(function () {
+    Route::get('/{id_wo}/list', [BoqOtherController::class, 'listByWo'])->name('list')->whereNumber('id_wo');
+    Route::post('/', [BoqOtherController::class, 'store'])->name('store');
+    Route::get('/{id}', [BoqOtherController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [BoqOtherController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [BoqOtherController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/history', [BoqOtherController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('wo-boq-sampling')->name('wo-boq-sampling.')->group(function () {
+    Route::get('/{id_wo}/list', [BoqSamplingController::class, 'listByWo'])->name('list')->whereNumber('id_wo');
+    Route::post('/', [BoqSamplingController::class, 'store'])->name('store');
+    Route::get('/{id}', [BoqSamplingController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [BoqSamplingController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [BoqSamplingController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/history', [BoqSamplingController::class, 'history'])->name('history')->whereNumber('id');
 });
 
 Route::prefix('satuan')->name('satuan.')->group(function () {

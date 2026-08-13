@@ -129,6 +129,24 @@ function renderForm(res) {
                             Sample
                         </button>
                     </li>
+                    ${can('wo-boq-other', 'can_read') ? `
+                    <li role="presentation">
+                        <button class="pm-tab-btn" id="tab-boq-other-btn" type="button" role="tab"
+                            data-bs-toggle="tab" data-bs-target="#tabBoqOther"
+                            data-wo-id="${res.id_wo}">
+                            <i class="fa-solid fa-file-invoice me-1" style="color:#b45309;font-size:11px;"></i>
+                            BOQ Other
+                        </button>
+                    </li>` : ''}
+                    ${can('wo-boq-sampling', 'can_read') ? `
+                    <li role="presentation">
+                        <button class="pm-tab-btn" id="tab-boq-sampling-btn" type="button" role="tab"
+                            data-bs-toggle="tab" data-bs-target="#tabBoqSampling"
+                            data-wo-id="${res.id_wo}">
+                            <i class="fa-solid fa-vial-virus me-1" style="color:#be185d;font-size:11px;"></i>
+                            BOQ Sampling
+                        </button>
+                    </li>` : ''}
                 </ul>
 
                 <div class="pm-tab-actions">
@@ -180,6 +198,28 @@ function renderForm(res) {
                             <i class="fa-solid fa-rotate-right"></i>
                         </button>
                         ${res.status === 'completed' ? woLockedLabel() : ''}
+                    </div>
+                    <div id="woTabActionsBoqOther" class="d-none align-items-center gap-2">
+                        ${res.status !== 'completed'
+                            ? (can('wo-boq-other', 'can_create') ? `
+                            <button type="button" class="pm-btn-pill pm-btn-pill--amber btn-boq-tambahan-add"
+                                data-jenis="other" data-wo-id="${res.id_wo}" data-no-disable>
+                                <i class="fa-solid fa-plus" style="font-size:10px;"></i>
+                                <i class="fa-solid fa-file-invoice" style="font-size:11px;"></i> Tambah Item
+                            </button>` : '')
+                            : woLockedLabel()
+                        }
+                    </div>
+                    <div id="woTabActionsBoqSampling" class="d-none align-items-center gap-2">
+                        ${res.status !== 'completed'
+                            ? (can('wo-boq-sampling', 'can_create') ? `
+                            <button type="button" class="pm-btn-pill pm-btn-pill--purple btn-boq-tambahan-add"
+                                data-jenis="sampling" data-wo-id="${res.id_wo}" data-no-disable>
+                                <i class="fa-solid fa-plus" style="font-size:10px;"></i>
+                                <i class="fa-solid fa-vial-virus" style="font-size:11px;"></i> Tambah Item
+                            </button>` : '')
+                            : woLockedLabel()
+                        }
                     </div>
                 </div>
             </div>
@@ -318,9 +358,75 @@ function renderForm(res) {
                             </div>
                         </div>
                     </div>
+                    <!-- TAB: BOQ OTHER -->
+                    <div class="tab-pane fade" id="tabBoqOther" role="tabpanel">
+                        <div class="card card-body" id="woBoqOtherContent">
+                            <div class="text-center text-muted py-4">
+                                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
+                            </div>
+                        </div>
+                    </div>
+                    <!-- TAB: BOQ SAMPLING -->
+                    <div class="tab-pane fade" id="tabBoqSampling" role="tabpanel">
+                        <div class="card card-body" id="woBoqSamplingContent">
+                            <div class="text-center text-muted py-4">
+                                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
+    <!-- MODAL: TAMBAH/EDIT BOQ TAMBAHAN (Other / Sampling) -->
+    <div class="modal fade" id="boqTambahanModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:480px;">
+            <div class="modal-content">
+                <div class="modal-header py-2 px-3" style="border-bottom:1px solid #e2e8f0;">
+                    <h6 class="modal-title mb-0" id="boqTambahanModalLabel">
+                        <i class="fa-solid fa-file-invoice me-2" style="color:#b45309;"></i>Tambah Item
+                    </h6>
+                    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3 px-3">
+                    <input type="hidden" id="boqTambahanModal-id">
+                    <input type="hidden" id="boqTambahanModal-jenis">
+                    <input type="hidden" id="boqTambahanModal-id-wo">
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Nama Item <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm" id="boqTambahanModal-nama"
+                                placeholder="cth: Penyusunan Dokumen" data-no-disable>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Qty <span class="text-danger">*</span></label>
+                            <input type="text" inputmode="numeric" class="form-control form-control-sm input-num-mask input-num-int"
+                                id="boqTambahanModal-qty" placeholder="0" data-no-disable>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Satuan</label>
+                            <select class="form-select form-select-sm" id="boqTambahanModal-satuan" data-no-disable></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Harga (Rp) <span class="text-danger">*</span></label>
+                            <input type="text" inputmode="numeric" class="form-control form-control-sm input-num-mask"
+                                id="boqTambahanModal-harga" placeholder="0" data-no-disable>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Keterangan</label>
+                            <textarea class="form-control form-control-sm" id="boqTambahanModal-keterangan" rows="2" placeholder="Opsional" data-no-disable></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3" style="border-top:1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" data-no-disable>Batal</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="boqTambahanModal-btn-save" data-no-disable>
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Simpan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL: TAMBAH/EDIT BUDGET PLAN -->
     <div class="modal fade" id="woBudgetPlanModal" tabindex="-1" aria-hidden="true">

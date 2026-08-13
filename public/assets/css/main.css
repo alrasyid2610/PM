@@ -2158,6 +2158,21 @@ tr.shown td.dt-control i {
     gap: 2px;
     border: 0;
     flex-wrap: nowrap;
+    /* Banyak tab (mis. banyak tab tambahan di FWO/WO) bisa melebihi lebar
+       header — nav ini yang scroll horizontal, bukan seluruh header, supaya
+       tombol aksi (mis. "+ Tambah") di kanan selalu tetap terlihat. */
+    flex-shrink: 1;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    mask-image: linear-gradient(to right, black 92%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 92%, transparent 100%);
+}
+
+.pm-tab-nav::-webkit-scrollbar {
+    display: none;
 }
 
 .pm-tab-btn {

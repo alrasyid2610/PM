@@ -59,7 +59,7 @@ $(document).on(
     '#woDetailTabs button[data-bs-toggle="tab"]',
     function (e) {
         const target = $(e.target).data("bs-target");
-        $("#woTabActionsInfo, #woTabActionsBoq, #woTabActionsFwo, #woTabActionsOutput, #woTabActionsBudget, #woTabActionsSample").addClass("d-none").removeClass("d-flex");
+        $("#woTabActionsInfo, #woTabActionsBoq, #woTabActionsFwo, #woTabActionsOutput, #woTabActionsBudget, #woTabActionsSample, #woTabActionsBoqOther, #woTabActionsBoqSampling").addClass("d-none").removeClass("d-flex");
         if (target === "#tabInfo")   $("#woTabActionsInfo").removeClass("d-none");
         if (target === "#tabBoq")    $("#woTabActionsBoq").removeClass("d-none");
         if (target === "#tabFwo")    $("#woTabActionsFwo").removeClass("d-none");
@@ -74,12 +74,248 @@ $(document).on(
             const idWo = $(e.target).data("wo-id");
             loadWoSampleData(idWo);
         }
+        if (target === "#tabBoqOther") {
+            $("#woTabActionsBoqOther").removeClass("d-none").addClass("d-flex");
+            const idWo = $(e.target).data("wo-id");
+            loadWoBoqTambahanData("other", idWo);
+        }
+        if (target === "#tabBoqSampling") {
+            $("#woTabActionsBoqSampling").removeClass("d-none").addClass("d-flex");
+            const idWo = $(e.target).data("wo-id");
+            loadWoBoqTambahanData("sampling", idWo);
+        }
     },
 );
 
 $(document).on("click", "#btnRefreshWoSample", function () {
     const idWo = $(this).data("wo-id");
     loadWoSampleData(idWo);
+});
+
+// ── BOQ TAMBAHAN (BOQ Other / BOQ Sampling) ─────────────────────────────────────
+
+const WO_BOQ_TAMBAHAN_ROUTE = { other: 'wo-boq-other', sampling: 'wo-boq-sampling' };
+const WO_BOQ_TAMBAHAN_LABEL = { other: 'BOQ Other', sampling: 'BOQ Sampling' };
+const WO_BOQ_TAMBAHAN_ICON  = { other: 'fa-file-invoice', sampling: 'fa-vial-virus' };
+
+function loadWoBoqTambahanData(jenis, idWo) {
+    const $wrap = $(jenis === 'other' ? '#woBoqOtherContent' : '#woBoqSamplingContent');
+    $wrap.html('<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>');
+
+    $.get(`/${WO_BOQ_TAMBAHAN_ROUTE[jenis]}/${idWo}/list`)
+        .done(function (res) {
+            const rows     = res.data || [];
+            const isLocked = res.wo_status === 'completed';
+            $wrap.html(renderWoBoqTambahanList(jenis, rows, res.total || 0, isLocked));
+        })
+        .fail(function () {
+            $wrap.html('<div class="text-center text-danger py-4">Gagal memuat data.</div>');
+        });
+}
+
+function renderWoBoqTambahanList(jenis, rows, total, isLocked) {
+    if (!rows.length) {
+        return `<div class="text-center text-muted py-4">
+            <i class="fa-solid ${WO_BOQ_TAMBAHAN_ICON[jenis]} fa-2x d-block mb-2 opacity-25"></i>
+            Belum ada item ${WO_BOQ_TAMBAHAN_LABEL[jenis]}
+        </div>`;
+    }
+
+    const rowsHtml = rows.map(function (r, i) {
+        const subtotal = (r.qty || 0) * (r.harga || 0);
+        return `<tr data-id="${r.id_boq_tambahan}">
+            <td style="font-size:12px;color:#94a3b8;width:36px;">${i + 1}</td>
+            <td style="font-size:12px;">${escHtml(r.nama_item)}</td>
+            <td style="font-size:12px;text-align:right;white-space:nowrap;">${r.qty ?? 0} ${escHtml(r.satuan || '')}</td>
+            <td style="font-size:12px;text-align:right;white-space:nowrap;">Rp ${Number(r.harga || 0).toLocaleString('id-ID')}</td>
+            <td style="font-size:12px;text-align:right;white-space:nowrap;font-weight:600;">Rp ${Number(subtotal).toLocaleString('id-ID')}</td>
+            <td style="font-size:12px;">${escHtml(r.keterangan || '—')}</td>
+            <td class="text-center" style="width:72px;white-space:nowrap;">
+                ${!isLocked ? `
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-wo-boq-tambahan-edit"
+                    data-id="${r.id_boq_tambahan}" data-jenis="${jenis}" title="Edit" style="font-size:11px;">
+                    <i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-wo-boq-tambahan-delete"
+                    data-id="${r.id_boq_tambahan}" data-jenis="${jenis}" data-nama="${escHtml(r.nama_item)}"
+                    title="Hapus" style="font-size:11px;">
+                    <i class="fa-solid fa-trash" style="color:#dc2626;"></i>
+                </button>` : ''}
+            </td>
+        </tr>`;
+    }).join('');
+
+    return `<div class="table-responsive">
+        <table class="pm-table">
+            <thead>
+                <tr>
+                    <th style="width:36px;">No</th>
+                    <th>Nama Item</th>
+                    <th style="width:110px;text-align:right;">Qty</th>
+                    <th style="width:130px;text-align:right;">Harga</th>
+                    <th style="width:140px;text-align:right;">Subtotal</th>
+                    <th>Keterangan</th>
+                    <th style="width:72px;"></th>
+                </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="4" style="font-size:12px;font-weight:600;text-align:right;">Total</td>
+                    <td style="font-size:12px;font-weight:700;text-align:right;color:#1d4ed8;">Rp ${Number(total).toLocaleString('id-ID')}</td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>`;
+}
+
+function initWoBoqTambahanSatuanSelect2(idVal, labelVal) {
+    const $sel = $('#boqTambahanModal-satuan');
+    if ($sel.hasClass('select2-hidden-accessible')) $sel.select2('destroy');
+    $sel.empty();
+    if (idVal && labelVal) {
+        $sel.append(new Option(labelVal, idVal, true, true));
+    }
+    $sel.select2({
+        width: '100%',
+        placeholder: '— Pilih —',
+        allowClear: true,
+        minimumInputLength: 0,
+        dropdownParent: $('#boqTambahanModal'),
+        ajax: {
+            url: '/satuan/select2',
+            delay: 200,
+            dataType: 'json',
+            data: (p) => ({ q: p.term ?? '' }),
+            processResults: (d) => ({ results: d }),
+        },
+        language: {
+            noResults: () => `<span>Tidak ditemukan. <a href="/satuan/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`,
+        },
+        escapeMarkup: (m) => m,
+    });
+}
+
+$(document).on('click', '.btn-boq-tambahan-add', function () {
+    const jenis  = $(this).data('jenis');
+    const idWo   = $(this).data('wo-id');
+    const $modal = $('#boqTambahanModal');
+
+    $modal.find('#boqTambahanModalLabel').html(`<i class="fa-solid ${WO_BOQ_TAMBAHAN_ICON[jenis]} me-2" style="color:#b45309;"></i>Tambah Item ${WO_BOQ_TAMBAHAN_LABEL[jenis]}`);
+    $modal.find('#boqTambahanModal-id').val('');
+    $modal.find('#boqTambahanModal-jenis').val(jenis);
+    $modal.find('#boqTambahanModal-id-wo').val(idWo);
+    $modal.find('#boqTambahanModal-nama').val('');
+    $modal.find('#boqTambahanModal-qty').val('');
+    $modal.find('#boqTambahanModal-harga').val('');
+    $modal.find('#boqTambahanModal-keterangan').val('');
+    initWoBoqTambahanSatuanSelect2();
+
+    new bootstrap.Modal($modal[0]).show();
+    initNumericMask($modal[0]);
+});
+
+$(document).on('click', '.btn-wo-boq-tambahan-edit', function (e) {
+    e.stopPropagation();
+    const id     = $(this).data('id');
+    const jenis  = $(this).data('jenis');
+    const $modal = $('#boqTambahanModal');
+
+    $modal.find('#boqTambahanModalLabel').html(`<i class="fa-solid ${WO_BOQ_TAMBAHAN_ICON[jenis]} me-2" style="color:#b45309;"></i>Edit Item ${WO_BOQ_TAMBAHAN_LABEL[jenis]}`);
+    $modal.find('#boqTambahanModal-id').val(id);
+    $modal.find('#boqTambahanModal-jenis').val(jenis);
+
+    $.get(`/${WO_BOQ_TAMBAHAN_ROUTE[jenis]}/${id}`)
+        .done(function (r) {
+            $modal.find('#boqTambahanModal-id-wo').val(r.id_wo);
+            $modal.find('#boqTambahanModal-nama').val(r.nama_item || '');
+            const qtyEl = $modal.find('#boqTambahanModal-qty')[0];
+            if (qtyEl && qtyEl._cleave) qtyEl._cleave.setRawValue(r.qty || ''); else $modal.find('#boqTambahanModal-qty').val(r.qty || '');
+            const hargaEl = $modal.find('#boqTambahanModal-harga')[0];
+            if (hargaEl && hargaEl._cleave) hargaEl._cleave.setRawValue(r.harga || ''); else $modal.find('#boqTambahanModal-harga').val(r.harga || '');
+            $modal.find('#boqTambahanModal-keterangan').val(r.keterangan || '');
+            initWoBoqTambahanSatuanSelect2(r.id_satuan, r.satuan);
+        })
+        .always(function () {
+            new bootstrap.Modal($modal[0]).show();
+            initNumericMask($modal[0]);
+        });
+});
+
+$(document).on('click', '#boqTambahanModal-btn-save', function () {
+    const $modal = $('#boqTambahanModal');
+    const id     = $modal.find('#boqTambahanModal-id').val();
+    const jenis  = $modal.find('#boqTambahanModal-jenis').val();
+    const idWo   = $modal.find('#boqTambahanModal-id-wo').val();
+    const $btn   = $(this);
+
+    const payload = {
+        _token:      window.route.csrf,
+        id_wo:       idWo,
+        nama_item:   $modal.find('#boqTambahanModal-nama').val().trim(),
+        qty:         rawNumVal($modal.find('#boqTambahanModal-qty')[0]),
+        id_satuan:   $modal.find('#boqTambahanModal-satuan').val() || null,
+        harga:       rawNumVal($modal.find('#boqTambahanModal-harga')[0]),
+        keterangan:  $modal.find('#boqTambahanModal-keterangan').val().trim() || null,
+    };
+
+    if (!payload.nama_item) { Notify.warning('Nama item wajib diisi.'); return; }
+    if (!payload.qty)       { Notify.warning('Qty wajib diisi.'); return; }
+
+    const isEdit = !!id;
+    const url    = isEdit ? `/${WO_BOQ_TAMBAHAN_ROUTE[jenis]}/${id}` : `/${WO_BOQ_TAMBAHAN_ROUTE[jenis]}`;
+    if (isEdit) payload._method = 'PUT';
+
+    $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...');
+    $.post(url, payload)
+        .done(function (res) {
+            if (res.success) {
+                bootstrap.Modal.getInstance($modal[0])?.hide();
+                Notify.success('Item berhasil disimpan.');
+                loadWoBoqTambahanData(jenis, idWo);
+            } else {
+                Notify.error(res.message || 'Gagal menyimpan item.');
+            }
+        })
+        .fail(function (xhr) {
+            Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan item.');
+        })
+        .always(function () { $btn.prop('disabled', false).html('<i class="fa-solid fa-floppy-disk me-1"></i> Simpan'); });
+});
+
+$(document).on('click', '.btn-wo-boq-tambahan-delete', function () {
+    const id    = $(this).data('id');
+    const jenis = $(this).data('jenis');
+    const nama  = $(this).data('nama');
+    const idWo  = $(this).closest('.card-body').attr('id') === 'woBoqOtherContent'
+        ? $('#woDetailTabs button[data-bs-target="#tabBoqOther"]').data('wo-id')
+        : $('#woDetailTabs button[data-bs-target="#tabBoqSampling"]').data('wo-id');
+
+    Swal.fire({
+        title: 'Hapus Item?',
+        html: `Item <strong>${escHtml(nama)}</strong> akan dihapus.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#dc2626',
+        reverseButtons: true,
+    }).then(function (result) {
+        if (!result.isConfirmed) return;
+        $.ajax({
+            url: `/${WO_BOQ_TAMBAHAN_ROUTE[jenis]}/${id}`,
+            method: 'DELETE',
+            headers: { 'X-CSRF-TOKEN': window.route.csrf },
+            success: function () {
+                Notify.success('Item berhasil dihapus.');
+                loadWoBoqTambahanData(jenis, idWo);
+            },
+            error: function (xhr) {
+                Notify.error(xhr.responseJSON?.message || 'Gagal menghapus item.');
+            },
+        });
+    });
 });
 
 // ── SAMPLE (langsung di level WO, tanpa FWO) ───────────────────────────────────
