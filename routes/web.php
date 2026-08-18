@@ -26,6 +26,7 @@ use App\Http\Controllers\FwoBoqOtherController;
 use App\Http\Controllers\FwoBoqSamplingController;
 use App\Http\Controllers\BoqOtherController;
 use App\Http\Controllers\BoqSamplingController;
+use App\Http\Controllers\OutputTambahanController;
 use App\Http\Controllers\TestingParameterController;
 use App\Http\Controllers\TestingKelompokMatriksSampleController;
 use App\Http\Controllers\TestingStandardController;
@@ -184,6 +185,15 @@ Route::prefix('wo-boq-sampling')->name('wo-boq-sampling.')->group(function () {
     Route::put('/{id}', [BoqSamplingController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}', [BoqSamplingController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/history', [BoqSamplingController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('wo-output-other')->name('wo-output-other.')->group(function () {
+    Route::get('/{id_wo}/list', [OutputTambahanController::class, 'listByWo'])->name('list')->whereNumber('id_wo');
+    Route::post('/', [OutputTambahanController::class, 'store'])->name('store');
+    Route::get('/{id}', [OutputTambahanController::class, 'show'])->name('show')->whereNumber('id');
+    Route::post('/{id}', [OutputTambahanController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [OutputTambahanController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/history', [OutputTambahanController::class, 'history'])->name('history')->whereNumber('id');
 });
 
 Route::prefix('satuan')->name('satuan.')->group(function () {
@@ -762,6 +772,7 @@ Route::prefix('termin')->name('termin.')->group(function () {
 });
 
 Route::prefix('wo-samples')->name('wo-samples.')->group(function () {
+    Route::get('/sampling-points/{id_site}',    [WoSampleController::class, 'samplingPointsBySite'])->name('sampling-points')->whereNumber('id_site');
     Route::get('/by-wo/{id_wo}',                [WoSampleController::class, 'boqByWo'])->name('by-wo')->whereNumber('id_wo');
     Route::post('/by-wo/{id_wo}/boq/{id_boq}/generate',  [WoSampleController::class, 'generateSlots'])->name('generate')->whereNumber(['id_wo', 'id_boq']);
     Route::post('/by-wo/{id_wo}/boq/{id_boq}/add-one',   [WoSampleController::class, 'addOne'])->name('add-one')->whereNumber(['id_wo', 'id_boq']);

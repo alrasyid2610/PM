@@ -77,11 +77,13 @@
                     <div class="col-md-4">
                         <label class="form-label">Tanggal Mulai</label>
                         <input type="text" name="tanggal_mulai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
+                        <small class="text-muted d-block mt-1" id="hintTanggalMulaiWo" style="display:none;font-size:11px;"></small>
                     </div>
 
                     <div class="col-md-4">
                         <label class="form-label">Tanggal Selesai</label>
                         <input type="text" name="tanggal_selesai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
+                        <small class="text-muted d-block mt-1" id="hintTanggalSelesaiWo" style="display:none;font-size:11px;"></small>
                     </div>
 
                     <div class="col-md-4">
@@ -124,6 +126,43 @@
 <script>
     var preselectWoId = new URLSearchParams(window.location.search).get('id_wo');
 
+    const MONTH_FULL_FWO = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    function fmtDateFullFwo(str) {
+        if (!str) return null;
+        const d = new Date(str);
+        if (isNaN(d)) return null;
+        return d.getDate() + ' ' + MONTH_FULL_FWO[d.getMonth()] + ' ' + d.getFullYear();
+    }
+
+    // Batasi (disable) tanggal FWO di luar rentang tanggal WO + tampilkan sebagai info di bawah field
+    function applyWoDateRange(woMulai, woSelesai) {
+        const $mulai   = $('input[name="tanggal_mulai"]');
+        const $selesai = $('input[name="tanggal_selesai"]');
+        const woMulaiFmt   = fmtDateFullFwo(woMulai);
+        const woSelesaiFmt = fmtDateFullFwo(woSelesai);
+
+        if (woMulai && $mulai[0] && $mulai[0]._fp) {
+            $mulai[0]._fp.set('minDate', woMulai);
+        }
+        if (woSelesai && $selesai[0] && $selesai[0]._fp) {
+            $selesai[0]._fp.set('maxDate', woSelesai);
+        }
+        // Tanggal mulai FWO juga tidak boleh melewati tanggal selesai WO, begitu juga sebaliknya
+        if (woSelesai && $mulai[0] && $mulai[0]._fp) {
+            $mulai[0]._fp.set('maxDate', woSelesai);
+        }
+        if (woMulai && $selesai[0] && $selesai[0]._fp) {
+            $selesai[0]._fp.set('minDate', woMulai);
+        }
+
+        if (woMulaiFmt) {
+            $('#hintTanggalMulaiWo').text('Tanggal mulai WO: ' + woMulaiFmt).show();
+        }
+        if (woSelesaiFmt) {
+            $('#hintTanggalSelesaiWo').text('Tanggal selesai WO: ' + woSelesaiFmt).show();
+        }
+    }
+
     function noResultsAdd(createUrl) {
         return {
             language: {
@@ -137,6 +176,21 @@
 
     $(document).ready(function () {
         initFpDate(document);
+
+        // Waktu Kedatangan tidak boleh melewati Tanggal Selesai FWO (batas bawah/mulai
+        // sudah ditangani oleh initFpDate bawaan)
+        const $tanggalSelesaiFwo = $('input[name="tanggal_selesai"]');
+        if ($tanggalSelesaiFwo[0] && $tanggalSelesaiFwo[0]._fp) {
+            $tanggalSelesaiFwo[0]._fp.set('onChange', function (selectedDates, dateStr) {
+                const $tiba = $('input[name="waktu_kedatangan"]');
+                if (!$tiba[0] || !$tiba[0]._fp) return;
+                $tiba[0]._fp.set('maxDate', dateStr ? dateStr + ' 23:59' : null);
+                const tibaVal = $tiba.val();
+                if (dateStr && tibaVal && tibaVal.substring(0, 10) > dateStr) {
+                    $tiba[0]._fp.clear();
+                }
+            });
+        }
 
         // WO Select2 (hanya jika tidak preselect)
         if (!preselectWoId) {
@@ -203,6 +257,9 @@
                 $('#woBannerJudul').text(res.judul_pekerjaan ?? '—');
                 $('#woBannerSite').text(siteNama);
                 $('#woInfoBanner').show();
+
+                // Batasi tanggal mulai/selesai FWO sesuai rentang tanggal WO
+                applyWoDateRange(res.tanggal_mulai, res.tanggal_selesai);
             });
         }
 
@@ -334,6 +391,12 @@
             e.stopImmediatePropagation();
             e.preventDefault();
             Swal.fire({ icon: 'warning', title: 'Periksa Waktu Kedatangan', text: 'Waktu kedatangan tidak boleh lebih kecil dari tanggal mulai' });
+            return;
+        }
+        if (selesai && tiba && tiba.substring(0, 10) > selesai) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            Swal.fire({ icon: 'warning', title: 'Periksa Waktu Kedatangan', text: 'Waktu kedatangan tidak boleh lebih besar dari tanggal selesai' });
         }
     });
 

@@ -452,7 +452,7 @@ function renderFwoForm(res) {
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold" style="font-size:12px;">No. Sample</label>
-                            <input type="text" class="form-control form-control-sm" id="sampleModal-no" placeholder="Kode/nomor sample" data-no-disable>
+                            <input type="text" class="form-control form-control-sm" id="sampleModal-no" placeholder="Kode/nomor sample" readonly style="background:#f8fafc;color:#64748b;" data-no-disable>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Pengambilan</label>
@@ -482,6 +482,11 @@ function renderFwoForm(res) {
                         <div class="col-12">
                             <label class="form-label fw-semibold" style="font-size:12px;">Keterangan</label>
                             <textarea class="form-control form-control-sm" id="sampleModal-keterangan" rows="2" placeholder="Opsional" data-no-disable></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Lampiran</label>
+                            <div id="sampleModal-existing-files" class="mb-2"></div>
+                            <input type="file" id="sampleModal-attachments" multiple data-no-disable>
                         </div>
                     </div>
                 </div>

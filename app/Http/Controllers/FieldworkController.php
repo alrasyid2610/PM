@@ -175,9 +175,13 @@ class FieldworkController extends Controller
         }
 
         $fwoMulai         = !empty($validated['tanggal_mulai'])   ? substr($validated['tanggal_mulai'], 0, 10) : null;
+        $fwoSelesaiCheck  = !empty($validated['tanggal_selesai']) ? substr($validated['tanggal_selesai'], 0, 10) : null;
         $waktuKedatangan  = !empty($validated['waktu_kedatangan']) ? substr($validated['waktu_kedatangan'], 0, 10) : null;
         if ($fwoMulai && $waktuKedatangan && $waktuKedatangan < $fwoMulai) {
             return response()->json(['message' => 'Waktu kedatangan tidak boleh lebih kecil dari tanggal mulai FWO (' . $fwoMulai . ')'], 422);
+        }
+        if ($fwoSelesaiCheck && $waktuKedatangan && $waktuKedatangan > $fwoSelesaiCheck) {
+            return response()->json(['message' => 'Waktu kedatangan tidak boleh lebih besar dari tanggal selesai FWO (' . $fwoSelesaiCheck . ')'], 422);
         }
 
         $id = DB::table('fieldworks')->insertGetId([
@@ -227,9 +231,13 @@ class FieldworkController extends Controller
         ]);
 
         $fwoMulai        = !empty($validated['tanggal_mulai'])   ? substr($validated['tanggal_mulai'], 0, 10) : null;
+        $fwoSelesaiCheck = !empty($validated['tanggal_selesai']) ? substr($validated['tanggal_selesai'], 0, 10) : null;
         $waktuKedatangan = !empty($validated['waktu_kedatangan']) ? substr($validated['waktu_kedatangan'], 0, 10) : null;
         if ($fwoMulai && $waktuKedatangan && $waktuKedatangan < $fwoMulai) {
             return response()->json(['message' => 'Waktu kedatangan tidak boleh lebih kecil dari tanggal mulai FWO (' . $fwoMulai . ')'], 422);
+        }
+        if ($fwoSelesaiCheck && $waktuKedatangan && $waktuKedatangan > $fwoSelesaiCheck) {
+            return response()->json(['message' => 'Waktu kedatangan tidak boleh lebih besar dari tanggal selesai FWO (' . $fwoSelesaiCheck . ')'], 422);
         }
 
         $before = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();

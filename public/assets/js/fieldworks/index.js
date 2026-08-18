@@ -13,6 +13,7 @@ let fwoAttachmentData     = [];
 let fwoAttachmentViewHtml = null;
 let fwoAttPondInstances   = [];
 let fwoAttGroupIdx        = 0;
+let sampleFilePond        = null;
 
 // ── Tab switch: show/hide action buttons ──────────────────────────────────────
 $(document).on('shown.bs.tab', '#fwoDetailTabs button[data-bs-toggle="tab"]', function (e) {
@@ -1456,6 +1457,20 @@ $(document).ready(function () {
             $('#fwoAttachmentContent').html(renderFwoAttachmentView(fwoAttachmentData));
             loadFwoBoqList(res.id_fwo);
             initFpDate('#detailContent');
+
+            // Waktu Kedatangan tidak boleh melewati Tanggal Selesai FWO
+            const $tanggalSelesaiFwo = $('#detailContent input[name="tanggal_selesai"]');
+            if ($tanggalSelesaiFwo[0] && $tanggalSelesaiFwo[0]._fp) {
+                $tanggalSelesaiFwo[0]._fp.set('onChange', function (selectedDates, dateStr) {
+                    const $tiba = $('#detailContent input[name="waktu_kedatangan"]');
+                    if (!$tiba[0] || !$tiba[0]._fp) return;
+                    $tiba[0]._fp.set('maxDate', dateStr ? dateStr + ' 23:59' : null);
+                    const tibaVal = $tiba.val();
+                    if (dateStr && tibaVal && tibaVal.substring(0, 10) > dateStr) {
+                        $tiba[0]._fp.clear();
+                    }
+                });
+            }
         },
     });
 
@@ -1690,6 +1705,7 @@ function saveAll(id_fwo) {
     }
 
     const tanggalMulai     = $('[name="tanggal_mulai"]').val();
+    const tanggalSelesai   = $('[name="tanggal_selesai"]').val();
     const waktuKedatangan  = $('[name="waktu_kedatangan"]').val();
     if (tanggalMulai && waktuKedatangan) {
         const tglMulai = new Date(tanggalMulai);
@@ -1698,6 +1714,10 @@ function saveAll(id_fwo) {
             Notify.warning('Waktu kedatangan tidak boleh lebih kecil dari tanggal mulai');
             return;
         }
+    }
+    if (tanggalSelesai && waktuKedatangan && waktuKedatangan.substring(0, 10) > tanggalSelesai) {
+        Notify.warning('Waktu kedatangan tidak boleh lebih besar dari tanggal selesai');
+        return;
     }
 
     Notify.confirm('Simpan semua perubahan?', function () {
@@ -2222,6 +2242,16 @@ function initSampleModalTitikSelect2() {
 const SAMPLE_STATUS_LABEL = { belum_diambil: 'Belum Diambil', diambil: 'Diambil', dikirim: 'Dikirim' };
 const SAMPLE_STATUS_COLOR = { belum_diambil: '#64748b', diambil: '#0369a1', dikirim: '#15803d' };
 const JENIS_LABEL = { env: 'ENV', we: 'WE', mp: 'MP', product: 'Product' };
+const KONDISI_LABEL = { baik: 'Baik', rusak: 'Rusak', tidak_lengkap: 'Tidak Lengkap' };
+const KONDISI_COLOR = { baik: '#15803d', rusak: '#dc2626', tidak_lengkap: '#b45309' };
+
+const SAMPLE_MONTH_SHORT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
+function fmtSampleDate(str) {
+    if (!str) return null;
+    const d = new Date(str);
+    if (isNaN(d)) return null;
+    return d.getDate() + '-' + SAMPLE_MONTH_SHORT[d.getMonth()] + '-' + d.getFullYear();
+}
 
 function renderSampleList(boqs, isLocked) {
     return boqs.map(function (boq) {
@@ -2233,7 +2263,7 @@ function renderSampleList(boqs, isLocked) {
         const sisa     = Math.max(0, (boq.qty || 0) - total);
 
         const slotRows = total === 0
-            ? `<tr><td colspan="6" class="text-center text-muted py-3" style="font-size:12px;font-style:italic;">Belum ada sample — gunakan tombol "Tambah Sample" di atas</td></tr>`
+            ? `<tr><td colspan="9" class="text-center text-muted py-3" style="font-size:12px;font-style:italic;">Belum ada sample — gunakan tombol "Tambah Sample" di atas</td></tr>`
             : (boq.samples || []).map(function (s) {
                 const statusVal = s.status || 'belum_diambil';
                 const jenisTag    = s.jenis_sample
@@ -2243,6 +2273,14 @@ function renderSampleList(boqs, isLocked) {
                     ? `<span style="font-size:11px;font-weight:600;">${escHtml(s.no_sample)}</span>`
                     : `<span class="text-muted" style="font-size:11px;font-style:italic;">–</span>`;
 
+                const attCount = (s.attachments || []).length;
+                const attBadge = attCount > 0
+                    ? `<span class="btn-sample-edit" data-id="${s.id_lab_sample}"
+                            title="${attCount} lampiran" style="font-size:11px;color:#0369a1;cursor:pointer;white-space:nowrap;">
+                            <i class="fa-solid fa-paperclip"></i> ${attCount}
+                       </span>`
+                    : `<span style="color:#94a3b8;font-style:italic;font-size:11px;">–</span>`;
+
                 const titikVal  = s.titik_lokasi || '';
                 const titikCell = !isLocked
                     ? `<select class="form-select form-select-sm sample-inline-titik"
@@ -2251,11 +2289,25 @@ function renderSampleList(boqs, isLocked) {
                             style="font-size:11px;width:260px;"></select>`
                     : (titikVal ? escHtml(titikVal) : '<span style="color:#94a3b8;font-style:italic;">–</span>');
 
+                const tglCell = fmtSampleDate(s.tanggal_pengambilan)
+                    ? `<span style="font-size:11px;white-space:nowrap;">${fmtSampleDate(s.tanggal_pengambilan)}</span>`
+                    : `<span style="color:#94a3b8;font-style:italic;font-size:11px;">–</span>`;
+
+                const kondisiCell = s.kondisi_sample
+                    ? `<span style="font-size:11px;font-weight:600;color:${KONDISI_COLOR[s.kondisi_sample]||'#64748b'};">${KONDISI_LABEL[s.kondisi_sample]||s.kondisi_sample}</span>`
+                    : `<span style="color:#94a3b8;font-style:italic;font-size:11px;">–</span>`;
+
+                const keteranganCell = s.keterangan
+                    ? `<span style="font-size:11px;" title="${escHtml(s.keterangan)}">${escHtml(s.keterangan)}</span>`
+                    : `<span style="color:#94a3b8;font-style:italic;font-size:11px;">–</span>`;
+
                 return `
                 <tr data-id-sample="${s.id_lab_sample}" data-boq-name="${escHtml(boq.nama_boq)}">
                     <td style="font-size:12px;color:#64748b;width:36px;">${s.no_urut}</td>
-                    <td style="font-size:12px;">${jenisTag} ${noSample}</td>
+                    <td style="font-size:12px;white-space:nowrap;">${jenisTag} ${noSample}</td>
                     <td style="font-size:12px;">${titikCell}</td>
+                    <td style="width:100px;">${tglCell}</td>
+                    <td style="width:100px;">${kondisiCell}</td>
                     <td style="font-size:12px;width:150px;">
                         ${!isLocked
                             ? `<select class="form-select form-select-sm sample-inline-status"
@@ -2268,6 +2320,8 @@ function renderSampleList(boqs, isLocked) {
                             : `<span style="font-size:11px;font-weight:600;color:${SAMPLE_STATUS_COLOR[statusVal]||'#64748b'};">${SAMPLE_STATUS_LABEL[statusVal]||statusVal}</span>`
                         }
                     </td>
+                    <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${keteranganCell}</td>
+                    <td style="width:80px;text-align:center;">${attBadge}</td>
                     <td class="text-center" style="width:72px;white-space:nowrap;">
                         ${!isLocked ? `
                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-sample-edit"
@@ -2349,7 +2403,11 @@ function renderSampleList(boqs, isLocked) {
                                 <th style="width:36px;">#</th>
                                 <th style="width:1%;white-space:nowrap;">Jenis / No. Sample</th>
                                 <th style="width:220px;">Titik Lokasi</th>
+                                <th style="width:100px;">Tgl Pengambilan</th>
+                                <th style="width:100px;">Kondisi</th>
                                 <th>Status</th>
+                                <th>Keterangan</th>
+                                <th style="width:80px;">Lampiran</th>
                                 <th style="width:48px;"></th>
                             </tr>
                         </thead>
@@ -2382,6 +2440,8 @@ $(document).off('click.sample', '.btn-sample-edit').on('click.sample', '.btn-sam
     $modal.find('#sampleModal-kondisi').val('');
     $modal.find('#sampleModal-status').val('belum_diambil');
     $modal.find('#sampleModal-keterangan').val('');
+    $modal.find('#sampleModal-existing-files').empty();
+    if (sampleFilePond) { sampleFilePond.destroy(); sampleFilePond = null; }
 
     // Load data terkini dari server
     $.get(`/lab-samples/detail/${idSample}`)
@@ -2395,9 +2455,23 @@ $(document).off('click.sample', '.btn-sample-edit').on('click.sample', '.btn-sam
                 $modal.find('#sampleModal-kondisi').val(s.kondisi_sample || '');
                 $modal.find('#sampleModal-status').val(s.status || 'belum_diambil');
                 $modal.find('#sampleModal-keterangan').val(s.keterangan || '');
+
+                const files = s.attachments || [];
+                const filesHtml = files.length
+                    ? files.map(f => `<div class="d-flex align-items-center gap-2 mb-1" style="font-size:12px;">
+                            <i class="fa-solid fa-paperclip"></i>
+                            <a href="/storage/${f}" target="_blank">${escHtml(f.split('/').pop())}</a>
+                            <a href="#" class="btn-remove-existing-sample-file" style="font-size:11px;color:#dc2626;cursor:pointer;">Hapus</a>
+                            <input type="hidden" class="existing-sample-file-path" value="${escHtml(f)}">
+                        </div>`).join('')
+                    : '';
+                $modal.find('#sampleModal-existing-files').html(filesHtml);
             }
         })
         .always(function () {
+            if (sampleFilePond) { sampleFilePond.destroy(); sampleFilePond = null; }
+            sampleFilePond = createFileUploader('#sampleModal-attachments');
+
             // Re-init flatpickr
             initFpDate('#sampleDetailModal');
 
@@ -2428,20 +2502,33 @@ $(document).off('click.sample', '#sampleModal-btn-save').on('click.sample', '#sa
     const idSample = $('#sampleDetailModal #sampleModal-id').val();
     if (!idSample) return;
 
-    const payload = {
-        _token:              window.route.csrf,
-        jenis_sample:        $('#sampleModal-jenis').val() || null,
-        no_sample:           $('#sampleModal-no').val().trim() || null,
-        tanggal_pengambilan: $('#sampleModal-tanggal').val() || null,
-        titik_lokasi:        ($('#sampleModal-titik').val() || '').trim() || null,
-        kondisi_sample:      $('#sampleModal-kondisi').val() || null,
-        status:              $('#sampleModal-status').val(),
-        keterangan:          $('#sampleModal-keterangan').val().trim() || null,
-    };
+    const fd = new FormData();
+    fd.append('_token', window.route.csrf);
+    fd.append('jenis_sample', $('#sampleModal-jenis').val() || '');
+    fd.append('tanggal_pengambilan', $('#sampleModal-tanggal').val() || '');
+    fd.append('titik_lokasi', ($('#sampleModal-titik').val() || '').trim());
+    fd.append('kondisi_sample', $('#sampleModal-kondisi').val() || '');
+    fd.append('status', $('#sampleModal-status').val());
+    fd.append('keterangan', $('#sampleModal-keterangan').val().trim());
+
+    $('#sampleModal-existing-files .existing-sample-file-path').each(function () {
+        fd.append('existing_attachments[]', $(this).val());
+    });
+    if (sampleFilePond) {
+        sampleFilePond.getFiles().forEach(function (f) {
+            fd.append('attachments[]', f.file);
+        });
+    }
 
     $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
 
-    $.post(`/lab-samples/${idSample}`, payload)
+    $.ajax({
+        url: `/lab-samples/${idSample}`,
+        method: 'POST',
+        data: fd,
+        processData: false,
+        contentType: false,
+    })
         .done(function (res) {
             if (res.success) {
                 bootstrap.Modal.getInstance(document.getElementById('sampleDetailModal'))?.hide();
@@ -2459,6 +2546,15 @@ $(document).off('click.sample', '#sampleModal-btn-save').on('click.sample', '#sa
         .always(function () {
             $btn.prop('disabled', false).html('Simpan');
         });
+});
+
+$(document).off('click.sample', '.btn-remove-existing-sample-file').on('click.sample', '.btn-remove-existing-sample-file', function (e) {
+    e.preventDefault();
+    $(this).closest('div').remove();
+});
+
+$('#sampleDetailModal').on('hidden.bs.modal', function () {
+    if (sampleFilePond) { sampleFilePond.destroy(); sampleFilePond = null; }
 });
 
 // ── Inline Select2 titik lokasi: set value setelah Select2 diinit ──

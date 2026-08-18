@@ -75,6 +75,9 @@ class LabSampleController extends Controller
                 ->where('id_fwo_boq', $boq->id_fwo_boq)
                 ->orderBy('no_urut')
                 ->get();
+            foreach ($boq->samples as $sample) {
+                $sample->attachments = $sample->attachments ? json_decode($sample->attachments) : [];
+            }
         }
 
         $fwo = DB::table('fieldworks')->where('id_fwo', $id_fwo)->first(['status', 'id_site_pelanggan_pekerjaan']);
@@ -90,6 +93,7 @@ class LabSampleController extends Controller
     {
         $sample = DB::table('lab_samples')->where('id_lab_sample', $id)->first();
         if (!$sample) return response()->json(['message' => 'Tidak ditemukan'], 404);
+        $sample->attachments = $sample->attachments ? json_decode($sample->attachments) : [];
         return response()->json(['data' => $sample]);
     }
 
@@ -221,7 +225,7 @@ class LabSampleController extends Controller
             return response()->json(['success' => false, 'message' => 'FWO sudah selesai.'], 403);
         }
 
-        $allowed = ['titik_lokasi', 'no_sample', 'jenis_sample', 'kondisi_sample', 'status', 'tanggal_pengambilan', 'keterangan'];
+        $allowed = ['titik_lokasi', 'jenis_sample', 'kondisi_sample', 'status', 'tanggal_pengambilan', 'keterangan'];
         $field   = $request->input('field');
 
         if (!in_array($field, $allowed)) {
@@ -247,24 +251,32 @@ class LabSampleController extends Controller
 
         $request->validate([
             'jenis_sample'        => 'nullable|in:env,we,mp,product',
-            'no_sample'           => 'nullable|string|max:100',
             'tanggal_pengambilan' => 'nullable|date',
             'titik_lokasi'        => 'nullable|string|max:255',
             'kondisi_sample'      => 'nullable|in:baik,rusak,tidak_lengkap',
             'status'              => 'required|in:belum_diambil,diambil,dikirim',
             'keterangan'          => 'nullable|string',
+            'attachments.*'       => 'nullable|file|max:10240',
         ]);
+
+        $existing = $request->input('existing_attachments', []);
+        $newFiles = [];
+        if ($request->hasFile('attachments')) {
+            $upload   = uploadAttachment($request->file('attachments'), 'lab_samples');
+            $newFiles = $upload['files'];
+        }
+        $allFiles = array_merge($existing, $newFiles);
 
         $before = DB::table('lab_samples')->where('id_lab_sample', $id)->get()->toJson();
 
         DB::table('lab_samples')->where('id_lab_sample', $id)->update([
             'jenis_sample'        => $request->jenis_sample ?: null,
-            'no_sample'           => $request->no_sample ?: null,
             'tanggal_pengambilan' => $request->tanggal_pengambilan ?: null,
             'titik_lokasi'        => $request->titik_lokasi ?: null,
             'kondisi_sample'      => $request->kondisi_sample ?: null,
             'status'              => $request->status,
             'keterangan'          => $request->keterangan ?: null,
+            'attachments'         => $allFiles ? json_encode($allFiles) : null,
             'updated_at'          => now(),
         ]);
 

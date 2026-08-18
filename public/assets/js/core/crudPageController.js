@@ -47,8 +47,12 @@ class CrudPageController {
         if (openId) {
             const id = parseInt(openId);
             if (!isNaN(id)) {
-                // replaceState agar state object ter-set tanpa menambah history entry
-                history.replaceState({ open: id }, '', '?open=' + id);
+                // replaceState agar state object ter-set tanpa menambah history entry.
+                // Pertahankan param lain yang sudah ada di URL (mis. ?tab=... dari
+                // refresh) — jangan ditulis ulang jadi cuma "?open=id" saja.
+                const url = new URL(window.location.href);
+                url.searchParams.set('open', id);
+                history.replaceState({ open: id }, '', url.toString());
                 // Tunggu DataTable selesai render baru buka detail
                 setTimeout(function () {
                     self.selectedRow.id = id;
@@ -62,6 +66,19 @@ class CrudPageController {
                 }, 400);
             }
         }
+
+        // Simpan tab aktif di dalam panel detail (mis. Informasi/Work Order/Termin
+        // di SO, atau BOQ/Budget/Sample di WO) ke URL, supaya tidak reset ke tab
+        // pertama saat halaman di-refresh. Berlaku generik untuk semua modul yang
+        // pakai CrudPageController — cukup tab yang ada di dalam #detailContent
+        // (bukan tab luar Data/Detail/History).
+        $(document).on('shown.bs.tab', '#detailContent .pm-tab-nav button[data-bs-toggle="tab"]', function (e) {
+            const target = $(e.target).data('bs-target');
+            if (!target) return;
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', target.replace('#', ''));
+            history.replaceState(history.state, '', url.toString());
+        });
 
         // Tangani tombol Back/Forward browser
         window.addEventListener('popstate', function (e) {
@@ -86,9 +103,20 @@ class CrudPageController {
     loadDetail(id, skipPushState = false) {
         const self = this;
 
-        // Update URL agar tombol Back browser bisa kembali ke panel ini
+        // Update URL agar tombol Back browser bisa kembali ke panel ini.
+        // Kalau record yang dibuka SAMA (mis. klik tombol refresh di halaman),
+        // pertahankan param ?tab= supaya tetap di tab yang sama. Kalau ganti ke
+        // record lain, param tab dibuang — mulai lagi dari tab default (Informasi).
         if (!skipPushState) {
-            history.pushState({ open: id }, '', '?open=' + id);
+            const currentUrl = new URL(window.location.href);
+            const currentOpenId = currentUrl.searchParams.get('open');
+            const isSameRecord = currentOpenId !== null && parseInt(currentOpenId) === parseInt(id);
+            const url = new URL(window.location.href);
+            url.searchParams.set('open', id);
+            if (!isSameRecord) {
+                url.searchParams.delete('tab');
+            }
+            history.pushState({ open: id }, '', url.toString());
         }
 
         // Enable history tab setelah row diklik
@@ -116,6 +144,25 @@ class CrudPageController {
                     .find("input, select, textarea")
                     .not("[data-no-disable]")
                     .prop("disabled", true);
+
+                // Pulihkan tab aktif dari URL (?tab=...) kalau ada, supaya tetap di
+                // tab yang sama setelah refresh — pakai bootstrap.Tab().show() (bukan
+                // toggle class manual) supaya handler shown.bs.tab tiap modul (load
+                // data BOQ/Budget/Sample, dst.) tetap terpicu seperti klik biasa.
+                // Ditunda 1 tick (setTimeout 0) — kalau dipanggil langsung di sini,
+                // DOM baru saja disuntikkan (belum sempat "settle"/reflow), jadi
+                // transisi fade Bootstrap yang jadi syarat event shown.bs.tab bisa
+                // gagal ke-trigger, dan loader data tab tujuan tidak pernah jalan
+                // (spinner "Memuat..." macet selamanya kalau datanya kosong).
+                const tabParam = new URLSearchParams(window.location.search).get('tab');
+                if (tabParam) {
+                    setTimeout(function () {
+                        const $tabBtn = $('#detailContent .pm-tab-nav button[data-bs-target="#' + tabParam + '"]');
+                        if ($tabBtn.length) {
+                            new bootstrap.Tab($tabBtn[0]).show();
+                        }
+                    }, 0);
+                }
 
                 // Inject refresh button — sebelum tombol Edit di manapun letaknya
                 $("#detailContent").find('.btn-refresh-detail').remove();

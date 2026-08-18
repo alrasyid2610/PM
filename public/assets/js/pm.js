@@ -225,6 +225,66 @@ $(window).on('load', function () {
     measure();
 }());
 
+// Tombol panah kiri/kanan untuk scroll horizontal pada pm-tab-nav yang overflow
+(function () {
+    var PREV_HTML = '<button type="button" class="pm-tab-scroll-btn pm-tab-scroll-prev" aria-label="Scroll kiri"><i class="fa-solid fa-chevron-left"></i></button>';
+    var NEXT_HTML = '<button type="button" class="pm-tab-scroll-btn pm-tab-scroll-next" aria-label="Scroll kanan"><i class="fa-solid fa-chevron-right"></i></button>';
+
+    function updateState(nav) {
+        var header = nav.closest('.pm-tab-header');
+        if (!header) return;
+        var prevBtn = header.querySelector(':scope > .pm-tab-scroll-prev');
+        var nextBtn = header.querySelector(':scope > .pm-tab-scroll-next');
+        if (!prevBtn || !nextBtn) return;
+
+        var overflowing = nav.scrollWidth > nav.clientWidth + 1;
+        prevBtn.classList.toggle('d-none', !overflowing);
+        nextBtn.classList.toggle('d-none', !overflowing);
+        if (!overflowing) return;
+
+        prevBtn.disabled = nav.scrollLeft <= 0;
+        nextBtn.disabled = nav.scrollLeft + nav.clientWidth >= nav.scrollWidth - 1;
+    }
+
+    function ensureButtons(nav) {
+        if (nav.dataset.scrollReady) return;
+        nav.dataset.scrollReady = '1';
+
+        var $prev = $(PREV_HTML);
+        var $next = $(NEXT_HTML);
+        $(nav).before($prev);
+        $(nav).after($next);
+
+        nav.addEventListener('scroll', function () { updateState(nav); }, { passive: true });
+
+        $prev.on('click', function () {
+            nav.scrollBy({ left: -Math.round(nav.clientWidth * 0.7), behavior: 'smooth' });
+        });
+        $next.on('click', function () {
+            nav.scrollBy({ left: Math.round(nav.clientWidth * 0.7), behavior: 'smooth' });
+        });
+
+        updateState(nav);
+    }
+
+    function scan() {
+        document.querySelectorAll('.pm-tab-header > .pm-tab-nav').forEach(function (nav) {
+            ensureButtons(nav);
+            updateState(nav);
+        });
+    }
+
+    window.addEventListener('resize', function () {
+        document.querySelectorAll('.pm-tab-header > .pm-tab-nav').forEach(updateState);
+    });
+
+    new MutationObserver(function () {
+        requestAnimationFrame(scan);
+    }).observe(document.body, { childList: true, subtree: true });
+
+    $(document).ready(scan);
+}());
+
 function toggleAdvanceSearch() {
     const advanceSearch = document.getElementById("advanceSearchForm");
     const toggleBtn = document.getElementById("toggleAdvanceSearch");

@@ -147,6 +147,15 @@ function renderForm(res) {
                             BOQ Sampling
                         </button>
                     </li>` : ''}
+                    ${can('wo-output-other', 'can_read') ? `
+                    <li role="presentation">
+                        <button class="pm-tab-btn" id="tab-output-other-btn" type="button" role="tab"
+                            data-bs-toggle="tab" data-bs-target="#tabOutputOther"
+                            data-wo-id="${res.id_wo}">
+                            <i class="fa-solid fa-file-circle-plus me-1" style="color:#0f766e;font-size:11px;"></i>
+                            Output Other
+                        </button>
+                    </li>` : ''}
                 </ul>
 
                 <div class="pm-tab-actions">
@@ -217,6 +226,17 @@ function renderForm(res) {
                                 data-jenis="sampling" data-wo-id="${res.id_wo}" data-no-disable>
                                 <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                                 <i class="fa-solid fa-vial-virus" style="font-size:11px;"></i> Tambah Item
+                            </button>` : '')
+                            : woLockedLabel()
+                        }
+                    </div>
+                    <div id="woTabActionsOutputOther" class="d-none align-items-center gap-2">
+                        ${res.status !== 'completed'
+                            ? (can('wo-output-other', 'can_create') ? `
+                            <button type="button" id="btnAddOutputOther" data-wo-id="${res.id_wo}"
+                                class="pm-btn-pill pm-btn-pill--teal" data-no-disable>
+                                <i class="fa-solid fa-plus" style="font-size:10px;"></i>
+                                <i class="fa-solid fa-file-circle-plus" style="font-size:11px;"></i> Tambah Item
                             </button>` : '')
                             : woLockedLabel()
                         }
@@ -374,6 +394,14 @@ function renderForm(res) {
                             </div>
                         </div>
                     </div>
+                    <!-- TAB: OUTPUT OTHER -->
+                    <div class="tab-pane fade" id="tabOutputOther" role="tabpanel">
+                        <div class="card card-body" id="woOutputOtherContent">
+                            <div class="text-center text-muted py-4">
+                                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -421,6 +449,81 @@ function renderForm(res) {
                 <div class="modal-footer py-2 px-3" style="border-top:1px solid #e2e8f0;">
                     <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" data-no-disable>Batal</button>
                     <button type="button" class="btn btn-sm btn-primary" id="boqTambahanModal-btn-save" data-no-disable>
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Simpan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: TAMBAH/EDIT OUTPUT OTHER -->
+    <div class="modal fade" id="outputOtherModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:560px;">
+            <div class="modal-content">
+                <div class="modal-header py-2 px-3" style="border-bottom:1px solid #e2e8f0;">
+                    <h6 class="modal-title mb-0" id="outputOtherModalLabel">
+                        <i class="fa-solid fa-file-circle-plus me-2" style="color:#0f766e;"></i>Tambah Output Other
+                    </h6>
+                    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3 px-3">
+                    <input type="hidden" id="outputOtherModal-id">
+                    <input type="hidden" id="outputOtherModal-id-wo">
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Nama Item <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm" id="outputOtherModal-nama"
+                                placeholder="cth: Surat Keterangan..." data-no-disable>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Qty <span class="text-danger">*</span></label>
+                            <input type="text" inputmode="numeric" class="form-control form-control-sm input-num-mask input-num-int"
+                                id="outputOtherModal-qty" placeholder="0" data-no-disable>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Satuan</label>
+                            <select class="form-select form-select-sm" id="outputOtherModal-satuan" data-no-disable></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Harga (Rp) <span class="text-danger">*</span></label>
+                            <input type="text" inputmode="numeric" class="form-control form-control-sm input-num-mask"
+                                id="outputOtherModal-harga" placeholder="0" data-no-disable>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Status</label>
+                            <select class="form-select form-select-sm" id="outputOtherModal-status" data-no-disable>
+                                <option value="belum_siap">Belum Siap</option>
+                                <option value="siap">Siap</option>
+                                <option value="terkirim">Terkirim</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Mulai</label>
+                            <input type="text" class="form-control form-control-sm fp-date" id="outputOtherModal-tgl-mulai" name="output_other_tgl_mulai" autocomplete="off" data-no-disable>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Selesai</label>
+                            <input type="text" class="form-control form-control-sm fp-date" id="outputOtherModal-tgl-selesai" name="output_other_tgl_selesai" autocomplete="off" data-no-disable>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;"><i class="fa-brands fa-google-drive me-1" style="color:#1a73e8;"></i>Link Drive</label>
+                            <input type="url" class="form-control form-control-sm" id="outputOtherModal-link-drive"
+                                placeholder="https://drive.google.com/..." data-no-disable>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Lampiran</label>
+                            <div id="outputOtherModal-existing-files" class="mb-2"></div>
+                            <input type="file" id="outputOtherModal-attachments" multiple data-no-disable>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Keterangan</label>
+                            <textarea class="form-control form-control-sm" id="outputOtherModal-keterangan" rows="2" placeholder="Opsional" data-no-disable></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3" style="border-top:1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" data-no-disable>Batal</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="outputOtherModal-btn-save" data-no-disable>
                         <i class="fa-solid fa-floppy-disk me-1"></i> Simpan
                     </button>
                 </div>
@@ -658,7 +761,7 @@ function renderForm(res) {
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold" style="font-size:12px;">No. Sample</label>
-                            <input type="text" class="form-control form-control-sm" id="woSampleModal-no" placeholder="Kode/nomor sample" data-no-disable>
+                            <input type="text" class="form-control form-control-sm" id="woSampleModal-no" placeholder="Kode/nomor sample" readonly style="background:#f8fafc;color:#64748b;" data-no-disable>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Pengambilan</label>
@@ -675,7 +778,7 @@ function renderForm(res) {
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold" style="font-size:12px;">Titik / Lokasi</label>
-                            <input type="text" class="form-control form-control-sm" id="woSampleModal-titik" placeholder="Titik lokasi…" data-no-disable>
+                            <select class="form-select form-select-sm" id="woSampleModal-titik" data-no-disable></select>
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold" style="font-size:12px;">Status</label>
@@ -688,6 +791,11 @@ function renderForm(res) {
                         <div class="col-12">
                             <label class="form-label fw-semibold" style="font-size:12px;">Keterangan</label>
                             <textarea class="form-control form-control-sm" id="woSampleModal-keterangan" rows="2" placeholder="Opsional" data-no-disable></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Lampiran</label>
+                            <div id="woSampleModal-existing-files" class="mb-2"></div>
+                            <input type="file" id="woSampleModal-attachments" multiple data-no-disable>
                         </div>
                     </div>
                 </div>

@@ -51,6 +51,16 @@ window.addEventListener("storage", function (e) {
             }
         } catch (_) {}
     }
+
+    if (e.key === "boq_updated" && e.newValue) {
+        try {
+            var updData = JSON.parse(e.newValue);
+            var updTarget = updData.id_wo || currentBoqWoId;
+            if (updTarget && String(updTarget) === String(currentBoqWoId)) {
+                loadBoqProgress(updTarget);
+            }
+        } catch (_) {}
+    }
 });
 
 // ── Tab switch: show/hide action buttons ──────────────────────────────────────
@@ -59,7 +69,7 @@ $(document).on(
     '#woDetailTabs button[data-bs-toggle="tab"]',
     function (e) {
         const target = $(e.target).data("bs-target");
-        $("#woTabActionsInfo, #woTabActionsBoq, #woTabActionsFwo, #woTabActionsOutput, #woTabActionsBudget, #woTabActionsSample, #woTabActionsBoqOther, #woTabActionsBoqSampling").addClass("d-none").removeClass("d-flex");
+        $("#woTabActionsInfo, #woTabActionsBoq, #woTabActionsFwo, #woTabActionsOutput, #woTabActionsBudget, #woTabActionsSample, #woTabActionsBoqOther, #woTabActionsBoqSampling, #woTabActionsOutputOther").addClass("d-none").removeClass("d-flex");
         if (target === "#tabInfo")   $("#woTabActionsInfo").removeClass("d-none");
         if (target === "#tabBoq")    $("#woTabActionsBoq").removeClass("d-none");
         if (target === "#tabFwo")    $("#woTabActionsFwo").removeClass("d-none");
@@ -83,6 +93,11 @@ $(document).on(
             $("#woTabActionsBoqSampling").removeClass("d-none").addClass("d-flex");
             const idWo = $(e.target).data("wo-id");
             loadWoBoqTambahanData("sampling", idWo);
+        }
+        if (target === "#tabOutputOther") {
+            $("#woTabActionsOutputOther").removeClass("d-none").addClass("d-flex");
+            const idWo = $(e.target).data("wo-id");
+            loadOutputOtherData(idWo);
         }
     },
 );
@@ -318,11 +333,310 @@ $(document).on('click', '.btn-wo-boq-tambahan-delete', function () {
     });
 });
 
+// ── OUTPUT OTHER (level WO, berdiri sendiri) ────────────────────────────────────
+
+let outputOtherFilePond = null;
+let woSampleFilePond = null;
+
+const OUTPUT_OTHER_STATUS_LABEL = { belum_siap: 'Belum Siap', siap: 'Siap', terkirim: 'Terkirim' };
+const OUTPUT_OTHER_STATUS_COLOR = {
+    belum_siap: { bg: '#fee2e2', color: '#dc2626' },
+    siap:       { bg: '#dbeafe', color: '#1d4ed8' },
+    terkirim:   { bg: '#dcfce7', color: '#15803d' },
+};
+
+function loadOutputOtherData(idWo) {
+    const $wrap = $('#woOutputOtherContent');
+    $wrap.html('<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>');
+
+    $.get(`/wo-output-other/${idWo}/list`)
+        .done(function (res) {
+            const rows     = res.data || [];
+            const isLocked = res.wo_status === 'completed';
+            $wrap.html(renderOutputOtherList(rows, res.total || 0, isLocked));
+        })
+        .fail(function () {
+            $wrap.html('<div class="text-center text-danger py-4">Gagal memuat data.</div>');
+        });
+}
+
+function renderOutputOtherList(rows, total, isLocked) {
+    if (!rows.length) {
+        return `<div class="text-center text-muted py-4">
+            <i class="fa-solid fa-file-circle-plus fa-2x d-block mb-2 opacity-25"></i>
+            Belum ada item Output Other
+        </div>`;
+    }
+
+    const rowsHtml = rows.map(function (r, i) {
+        const subtotal = (r.qty || 0) * (r.harga || 0);
+        const st = OUTPUT_OTHER_STATUS_COLOR[r.status] || OUTPUT_OTHER_STATUS_COLOR.belum_siap;
+        const periode = r.tanggal_mulai || r.tanggal_selesai
+            ? `${r.tanggal_mulai ? r.tanggal_mulai.substring(0,10) : '—'} s/d ${r.tanggal_selesai ? r.tanggal_selesai.substring(0,10) : '—'}`
+            : '—';
+        const files = r.attachments || [];
+        const filesHtml = files.length
+            ? files.map(f => `<a href="/storage/${f}" target="_blank" class="d-block" style="font-size:11px;"><i class="fa-solid fa-paperclip me-1"></i>${escHtml(f.split('/').pop())}</a>`).join('')
+            : '<span class="text-muted" style="font-size:11px;">—</span>';
+        const drive = r.link_drive
+            ? `<a href="${escHtml(r.link_drive)}" target="_blank" style="font-size:11px;color:#1a56db;"><i class="fa-brands fa-google-drive me-1"></i>Drive</a>`
+            : '';
+
+        return `<tr data-id="${r.id_output_tambahan}">
+            <td style="font-size:12px;color:#94a3b8;width:36px;">${i + 1}</td>
+            <td style="font-size:12px;">${escHtml(r.nama_item)}</td>
+            <td style="font-size:12px;text-align:right;white-space:nowrap;">${r.qty ?? 0} ${escHtml(r.satuan || '')}</td>
+            <td style="font-size:12px;text-align:right;white-space:nowrap;">Rp ${Number(r.harga || 0).toLocaleString('id-ID')}</td>
+            <td style="font-size:12px;text-align:right;white-space:nowrap;font-weight:600;">Rp ${Number(subtotal).toLocaleString('id-ID')}</td>
+            <td style="text-align:center;white-space:nowrap;">
+                <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:${st.bg};color:${st.color};">${OUTPUT_OTHER_STATUS_LABEL[r.status] || r.status}</span>
+            </td>
+            <td style="font-size:11px;white-space:nowrap;color:#64748b;">${periode}</td>
+            <td style="font-size:11px;">${filesHtml}${drive}</td>
+            <td class="text-center" style="width:72px;white-space:nowrap;">
+                ${!isLocked ? `
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-output-other-edit"
+                    data-id="${r.id_output_tambahan}" title="Edit" style="font-size:11px;">
+                    <i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-output-other-delete"
+                    data-id="${r.id_output_tambahan}" data-nama="${escHtml(r.nama_item)}"
+                    title="Hapus" style="font-size:11px;">
+                    <i class="fa-solid fa-trash" style="color:#dc2626;"></i>
+                </button>` : ''}
+            </td>
+        </tr>`;
+    }).join('');
+
+    return `<div class="table-responsive">
+        <table class="pm-table">
+            <thead>
+                <tr>
+                    <th style="width:36px;">No</th>
+                    <th>Nama Item</th>
+                    <th style="width:100px;text-align:right;">Qty</th>
+                    <th style="width:120px;text-align:right;">Harga</th>
+                    <th style="width:130px;text-align:right;">Subtotal</th>
+                    <th style="width:90px;text-align:center;">Status</th>
+                    <th style="width:170px;">Periode</th>
+                    <th style="width:140px;">Lampiran</th>
+                    <th style="width:72px;"></th>
+                </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="4" style="font-size:12px;font-weight:600;text-align:right;">Total</td>
+                    <td style="font-size:12px;font-weight:700;text-align:right;color:#1d4ed8;">Rp ${Number(total).toLocaleString('id-ID')}</td>
+                    <td colspan="4"></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>`;
+}
+
+function initOutputOtherSatuanSelect2(idVal, labelVal) {
+    const $sel = $('#outputOtherModal-satuan');
+    if ($sel.hasClass('select2-hidden-accessible')) $sel.select2('destroy');
+    $sel.empty();
+    if (idVal && labelVal) {
+        $sel.append(new Option(labelVal, idVal, true, true));
+    }
+    $sel.select2({
+        width: '100%',
+        placeholder: '— Pilih —',
+        allowClear: true,
+        minimumInputLength: 0,
+        dropdownParent: $('#outputOtherModal'),
+        ajax: {
+            url: '/satuan/select2',
+            delay: 200,
+            dataType: 'json',
+            data: (p) => ({ q: p.term ?? '' }),
+            processResults: (d) => ({ results: d }),
+        },
+        language: {
+            noResults: () => `<span>Tidak ditemukan. <a href="/satuan/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`,
+        },
+        escapeMarkup: (m) => m,
+    });
+}
+
+$(document).on('click', '#btnAddOutputOther', function () {
+    const idWo   = $(this).data('wo-id');
+    const $modal = $('#outputOtherModal');
+
+    $modal.find('#outputOtherModalLabel').html('<i class="fa-solid fa-file-circle-plus me-2" style="color:#0f766e;"></i>Tambah Output Other');
+    $modal.find('#outputOtherModal-id').val('');
+    $modal.find('#outputOtherModal-id-wo').val(idWo);
+    $modal.find('#outputOtherModal-nama').val('');
+    $modal.find('#outputOtherModal-qty').val('');
+    $modal.find('#outputOtherModal-harga').val('');
+    $modal.find('#outputOtherModal-status').val('belum_siap');
+    $modal.find('#outputOtherModal-tgl-mulai').val('');
+    $modal.find('#outputOtherModal-tgl-selesai').val('');
+    $modal.find('#outputOtherModal-link-drive').val('');
+    $modal.find('#outputOtherModal-keterangan').val('');
+    $modal.find('#outputOtherModal-existing-files').empty();
+    initOutputOtherSatuanSelect2();
+
+    if (outputOtherFilePond) { outputOtherFilePond.destroy(); outputOtherFilePond = null; }
+    outputOtherFilePond = createFileUploader('#outputOtherModal-attachments');
+
+    new bootstrap.Modal($modal[0]).show();
+    initNumericMask($modal[0]);
+    initFpDate($modal[0]);
+});
+
+$(document).on('click', '.btn-output-other-edit', function (e) {
+    e.stopPropagation();
+    const id     = $(this).data('id');
+    const $modal = $('#outputOtherModal');
+
+    $modal.find('#outputOtherModalLabel').html('<i class="fa-solid fa-pen me-2" style="color:#0f766e;"></i>Edit Output Other');
+    $modal.find('#outputOtherModal-id').val(id);
+
+    $.get(`/wo-output-other/${id}`)
+        .done(function (r) {
+            $modal.find('#outputOtherModal-id-wo').val(r.id_wo);
+            $modal.find('#outputOtherModal-nama').val(r.nama_item || '');
+            const qtyEl = $modal.find('#outputOtherModal-qty')[0];
+            if (qtyEl && qtyEl._cleave) qtyEl._cleave.setRawValue(r.qty || ''); else $modal.find('#outputOtherModal-qty').val(r.qty || '');
+            const hargaEl = $modal.find('#outputOtherModal-harga')[0];
+            if (hargaEl && hargaEl._cleave) hargaEl._cleave.setRawValue(r.harga || ''); else $modal.find('#outputOtherModal-harga').val(r.harga || '');
+            $modal.find('#outputOtherModal-status').val(r.status || 'belum_siap');
+            $modal.find('#outputOtherModal-tgl-mulai').val(r.tanggal_mulai ? r.tanggal_mulai.substring(0,10) : '');
+            $modal.find('#outputOtherModal-tgl-selesai').val(r.tanggal_selesai ? r.tanggal_selesai.substring(0,10) : '');
+            $modal.find('#outputOtherModal-link-drive').val(r.link_drive || '');
+            $modal.find('#outputOtherModal-keterangan').val(r.keterangan || '');
+            initOutputOtherSatuanSelect2(r.id_satuan, r.satuan);
+
+            const files = r.attachments || [];
+            const filesHtml = files.length
+                ? files.map(f => `<div class="d-flex align-items-center gap-2 mb-1" style="font-size:12px;">
+                        <i class="fa-solid fa-paperclip"></i>
+                        <a href="/storage/${f}" target="_blank">${escHtml(f.split('/').pop())}</a>
+                        <a href="#" class="btn-remove-existing-output-file" style="font-size:11px;color:#dc2626;cursor:pointer;">Hapus</a>
+                        <input type="hidden" class="existing-output-file-path" value="${escHtml(f)}">
+                    </div>`).join('')
+                : '';
+            $modal.find('#outputOtherModal-existing-files').html(filesHtml);
+        })
+        .always(function () {
+            if (outputOtherFilePond) { outputOtherFilePond.destroy(); outputOtherFilePond = null; }
+            outputOtherFilePond = createFileUploader('#outputOtherModal-attachments');
+            new bootstrap.Modal($modal[0]).show();
+            initNumericMask($modal[0]);
+            initFpDate($modal[0]);
+        });
+});
+
+$(document).on('click', '.btn-remove-existing-output-file', function (e) {
+    e.preventDefault();
+    $(this).closest('div').remove();
+});
+
+$('#outputOtherModal').on('hidden.bs.modal', function () {
+    if (outputOtherFilePond) { outputOtherFilePond.destroy(); outputOtherFilePond = null; }
+});
+
+$(document).on('click', '#outputOtherModal-btn-save', function () {
+    const $modal = $('#outputOtherModal');
+    const id     = $modal.find('#outputOtherModal-id').val();
+    const idWo   = $modal.find('#outputOtherModal-id-wo').val();
+    const $btn   = $(this);
+
+    const namaItem = $modal.find('#outputOtherModal-nama').val().trim();
+    const qty      = rawNumVal($modal.find('#outputOtherModal-qty')[0]);
+    if (!namaItem) { Notify.warning('Nama item wajib diisi.'); return; }
+    if (!qty)      { Notify.warning('Qty wajib diisi.'); return; }
+
+    const fd = new FormData();
+    fd.append('_token', window.route.csrf);
+    fd.append('id_wo', idWo);
+    fd.append('nama_item', namaItem);
+    fd.append('qty', qty);
+    fd.append('id_satuan', $modal.find('#outputOtherModal-satuan').val() || '');
+    fd.append('harga', rawNumVal($modal.find('#outputOtherModal-harga')[0]) || 0);
+    fd.append('status', $modal.find('#outputOtherModal-status').val());
+    fd.append('tanggal_mulai', $modal.find('#outputOtherModal-tgl-mulai').val() || '');
+    fd.append('tanggal_selesai', $modal.find('#outputOtherModal-tgl-selesai').val() || '');
+    fd.append('link_drive', $modal.find('#outputOtherModal-link-drive').val().trim());
+    fd.append('keterangan', $modal.find('#outputOtherModal-keterangan').val().trim());
+
+    $modal.find('.existing-output-file-path').each(function () {
+        fd.append('existing_attachments[]', $(this).val());
+    });
+    if (outputOtherFilePond) {
+        outputOtherFilePond.getFiles().forEach(function (f) {
+            fd.append('attachments[]', f.file);
+        });
+    }
+
+    const isEdit = !!id;
+    const url    = isEdit ? `/wo-output-other/${id}` : `/wo-output-other`;
+
+    $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...');
+    $.ajax({
+        url: url,
+        method: 'POST',
+        data: fd,
+        processData: false,
+        contentType: false,
+    })
+        .done(function (res) {
+            if (res.success) {
+                bootstrap.Modal.getInstance($modal[0])?.hide();
+                Notify.success('Item berhasil disimpan.');
+                loadOutputOtherData(idWo);
+            } else {
+                Notify.error(res.message || 'Gagal menyimpan item.');
+            }
+        })
+        .fail(function (xhr) {
+            Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan item.');
+        })
+        .always(function () { $btn.prop('disabled', false).html('<i class="fa-solid fa-floppy-disk me-1"></i> Simpan'); });
+});
+
+$(document).on('click', '.btn-output-other-delete', function () {
+    const id   = $(this).data('id');
+    const nama = $(this).data('nama');
+    const idWo = $('#woDetailTabs button[data-bs-target="#tabOutputOther"]').data('wo-id');
+
+    Swal.fire({
+        title: 'Hapus Item?',
+        html: `Item <strong>${escHtml(nama)}</strong> akan dihapus.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#dc2626',
+        reverseButtons: true,
+    }).then(function (result) {
+        if (!result.isConfirmed) return;
+        $.ajax({
+            url: `/wo-output-other/${id}`,
+            method: 'DELETE',
+            headers: { 'X-CSRF-TOKEN': window.route.csrf },
+            success: function () {
+                Notify.success('Item berhasil dihapus.');
+                loadOutputOtherData(idWo);
+            },
+            error: function (xhr) {
+                Notify.error(xhr.responseJSON?.message || 'Gagal menghapus item.');
+            },
+        });
+    });
+});
+
 // ── SAMPLE (langsung di level WO, tanpa FWO) ───────────────────────────────────
 
 const JENIS_LABEL_WO_SAMPLE = { env: 'ENV', we: 'WE', mp: 'MP', product: 'Product' };
 const SAMPLE_STATUS_LABEL_WO = { belum_diambil: 'Belum Diambil', diambil: 'Diambil', dikirim: 'Dikirim' };
 const SAMPLE_STATUS_COLOR_WO = { belum_diambil: '#64748b', diambil: '#0369a1', dikirim: '#15803d' };
+const KONDISI_LABEL_WO = { baik: 'Baik', rusak: 'Rusak', tidak_lengkap: 'Tidak Lengkap' };
+const KONDISI_COLOR_WO = { baik: '#15803d', rusak: '#dc2626', tidak_lengkap: '#b45309' };
 
 function loadWoSampleData(idWo) {
     const $wrap = $('#woSampleContent');
@@ -332,17 +646,105 @@ function loadWoSampleData(idWo) {
         .done(function (res) {
             const boqs     = res.data || [];
             const isLocked = res.wo_status === 'completed';
+            const idSite   = res.id_site || null;
 
             if (!boqs.length) {
                 $wrap.html('<div class="text-center text-muted py-4">Tidak ada BOQ pada WO ini.</div>');
                 return;
             }
 
-            $wrap.html(renderWoSampleList(boqs, isLocked));
+            window._woSamplingPoints = [];
+            const renderAll = function () {
+                $wrap.html(renderWoSampleList(boqs, isLocked));
+                initWoSampleStatusSelect2($wrap[0]);
+                initWoSampleTitikSelect2($wrap[0]);
+                if (!isLocked) initWoSampleModalTitikSelect2();
+            };
+
+            if (idSite) {
+                $.get(`/wo-samples/sampling-points/${idSite}`)
+                    .done(function (data) { window._woSamplingPoints = data || []; })
+                    .always(renderAll);
+            } else {
+                renderAll();
+            }
         })
         .fail(function () {
             $wrap.html('<div class="text-center text-danger py-4">Gagal memuat data sample.</div>');
         });
+}
+
+function _woSpOptions(usedLocations, currentVal) {
+    return [{ id: '', text: '' }].concat(
+        (window._woSamplingPoints || []).map(function (sp) {
+            const isUsed = usedLocations && usedLocations.includes(sp.text) && sp.text !== currentVal;
+            return { id: sp.text, text: sp.text, _used: isUsed };
+        })
+    );
+}
+
+function initWoSampleStatusSelect2(container) {
+    $(container).find('.wo-sample-inline-status').each(function () {
+        const $sel = $(this);
+        if ($sel.data('select2')) $sel.select2('destroy');
+        $sel.select2({
+            width: 'resolve',
+            minimumResultsForSearch: Infinity,
+            dropdownParent: $sel.closest('td'),
+        });
+    });
+}
+
+function initWoSampleTitikSelect2(container) {
+    $(container).find('table').each(function () {
+        const $table = $(this);
+        const usedLocations = [];
+        $table.find('.wo-sample-inline-titik').each(function () {
+            const val = $(this).data('current') || '';
+            if (val) usedLocations.push(val);
+        });
+
+        $table.find('.wo-sample-inline-titik').each(function () {
+            const $sel    = $(this);
+            const current = $sel.data('current') || '';
+            if ($sel.data('select2')) $sel.select2('destroy');
+            $sel.select2({
+                width: 'resolve',
+                placeholder: 'Pilih titik…',
+                allowClear: true,
+                dropdownParent: $sel.closest('td'),
+                data: _woSpOptions(usedLocations, current),
+                templateResult: function (opt) {
+                    if (!opt.id) return opt.text;
+                    if (opt._used) {
+                        return $('<span class="sp-opt-used" style="display:flex;align-items:center;gap:6px;color:#16a34a;pointer-events:none;cursor:not-allowed;">'
+                            + '<i class="fa-solid fa-circle-check" style="font-size:11px;flex-shrink:0;"></i>'
+                            + '<span>' + $('<span>').text(opt.text).html() + '</span>'
+                            + '</span>');
+                    }
+                    return $('<span>').text(opt.text);
+                },
+            })
+            .on('select2:selecting', function (e) {
+                if (e.params && e.params.args && e.params.args.data && e.params.args.data._used) {
+                    e.preventDefault();
+                }
+            })
+            .val(current).trigger('change.select2');
+        });
+    });
+}
+
+function initWoSampleModalTitikSelect2() {
+    const $sel = $('#woSampleModal-titik');
+    if ($sel.data('select2')) $sel.select2('destroy');
+    $sel.select2({
+        width: '100%',
+        placeholder: 'Pilih titik lokasi…',
+        allowClear: true,
+        dropdownParent: $('#woSampleDetailModal'),
+        data: _woSpOptions(),
+    });
 }
 
 function renderWoSampleList(boqs, isLocked) {
@@ -355,7 +757,7 @@ function renderWoSampleList(boqs, isLocked) {
         const sisa     = boq.sisa ?? 0;
 
         const slotRows = total === 0
-            ? `<tr><td colspan="5" class="text-center text-muted py-3" style="font-size:12px;font-style:italic;">Belum ada sample — gunakan tombol "Tambah Sample" di atas</td></tr>`
+            ? `<tr><td colspan="9" class="text-center text-muted py-3" style="font-size:12px;font-style:italic;">Belum ada sample — gunakan tombol "Tambah Sample" di atas</td></tr>`
             : (boq.samples || []).map(function (s) {
                 const statusVal = s.status || 'belum_diambil';
                 const jenisTag  = s.jenis_sample
@@ -365,18 +767,41 @@ function renderWoSampleList(boqs, isLocked) {
                     ? `<span style="font-size:11px;font-weight:600;">${escHtml(s.no_sample)}</span>`
                     : `<span class="text-muted" style="font-size:11px;font-style:italic;">–</span>`;
 
+                const attCountWo = (s.attachments || []).length;
+                const attBadgeWo = attCountWo > 0
+                    ? `<span class="btn-wo-sample-edit" data-id="${s.id_lab_sample}"
+                            title="${attCountWo} lampiran" style="font-size:11px;color:#0369a1;cursor:pointer;white-space:nowrap;">
+                            <i class="fa-solid fa-paperclip"></i> ${attCountWo}
+                       </span>`
+                    : `<span style="color:#94a3b8;font-style:italic;font-size:11px;">–</span>`;
+
                 const titikVal  = s.titik_lokasi || '';
                 const titikCell = !isLocked
-                    ? `<input type="text" class="form-control form-control-sm wo-sample-inline-titik"
-                            data-id="${s.id_lab_sample}" value="${escHtml(titikVal)}"
-                            placeholder="Titik lokasi…" style="font-size:11px;">`
+                    ? `<select class="form-select form-select-sm wo-sample-inline-titik"
+                            data-id="${s.id_lab_sample}"
+                            data-current="${escHtml(titikVal)}"
+                            style="font-size:11px;width:260px;"></select>`
                     : (titikVal ? escHtml(titikVal) : '<span style="color:#94a3b8;font-style:italic;">–</span>');
+
+                const tglCellWo = s.tanggal_pengambilan
+                    ? `<span style="font-size:11px;white-space:nowrap;">${fmtDate(s.tanggal_pengambilan)}</span>`
+                    : `<span style="color:#94a3b8;font-style:italic;font-size:11px;">–</span>`;
+
+                const kondisiCellWo = s.kondisi_sample
+                    ? `<span style="font-size:11px;font-weight:600;color:${KONDISI_COLOR_WO[s.kondisi_sample]||'#64748b'};">${KONDISI_LABEL_WO[s.kondisi_sample]||s.kondisi_sample}</span>`
+                    : `<span style="color:#94a3b8;font-style:italic;font-size:11px;">–</span>`;
+
+                const keteranganCellWo = s.keterangan
+                    ? `<span style="font-size:11px;" title="${escHtml(s.keterangan)}">${escHtml(s.keterangan)}</span>`
+                    : `<span style="color:#94a3b8;font-style:italic;font-size:11px;">–</span>`;
 
                 return `
                 <tr data-id-sample="${s.id_lab_sample}" data-boq-name="${escHtml(boq.nama_boq)}">
                     <td style="font-size:12px;color:#64748b;width:36px;">${s.no_urut}</td>
-                    <td style="font-size:12px;">${jenisTag} ${noSample}</td>
+                    <td style="font-size:12px;white-space:nowrap;">${jenisTag} ${noSample}</td>
                     <td style="font-size:12px;">${titikCell}</td>
+                    <td style="width:100px;">${tglCellWo}</td>
+                    <td style="width:100px;">${kondisiCellWo}</td>
                     <td style="font-size:12px;width:150px;">
                         ${!isLocked
                             ? `<select class="form-select form-select-sm wo-sample-inline-status"
@@ -389,6 +814,8 @@ function renderWoSampleList(boqs, isLocked) {
                             : `<span style="font-size:11px;font-weight:600;color:${SAMPLE_STATUS_COLOR_WO[statusVal]||'#64748b'};">${SAMPLE_STATUS_LABEL_WO[statusVal]||statusVal}</span>`
                         }
                     </td>
+                    <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${keteranganCellWo}</td>
+                    <td style="width:80px;text-align:center;">${attBadgeWo}</td>
                     <td class="text-center" style="width:72px;white-space:nowrap;">
                         ${!isLocked ? `
                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-wo-sample-edit"
@@ -469,7 +896,11 @@ function renderWoSampleList(boqs, isLocked) {
                                 <th style="width:36px;">#</th>
                                 <th style="width:1%;white-space:nowrap;">Jenis / No. Sample</th>
                                 <th style="width:220px;">Titik Lokasi</th>
+                                <th style="width:100px;">Tgl Pengambilan</th>
+                                <th style="width:100px;">Kondisi</th>
                                 <th>Status</th>
+                                <th>Keterangan</th>
+                                <th style="width:80px;">Lampiran</th>
                                 <th style="width:48px;"></th>
                             </tr>
                         </thead>
@@ -530,8 +961,15 @@ $(document).on('click', '.btn-wo-sample-add-one', function () {
 });
 
 $(document).on('change', '.wo-sample-inline-titik', function () {
-    const id  = $(this).data('id');
-    const val = $(this).val().trim();
+    const $sel = $(this);
+    const id   = $sel.data('id');
+    const val  = $sel.val() || null;
+
+    // Update data-current lalu reinit semua titik dalam tabel yang sama
+    $sel.data('current', val || '');
+    const $table = $sel.closest('table');
+    initWoSampleTitikSelect2($table.closest('div')[0]);
+
     $.post(`/wo-samples/${id}/field`, { _token: window.route.csrf, field: 'titik_lokasi', value: val })
         .fail(function (xhr) {
             Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan titik lokasi.');
@@ -602,10 +1040,14 @@ $(document).on('click', '.btn-wo-sample-edit', function (e) {
     $modal.find('#woSampleModal-jenis').val('');
     $modal.find('#woSampleModal-no').val('');
     $modal.find('#woSampleModal-tanggal').val('');
-    $modal.find('#woSampleModal-titik').val('');
+    const $titikSelWo = $modal.find('#woSampleModal-titik');
+    $titikSelWo.data('_pendingVal', '');
+    if ($titikSelWo.data('select2')) $titikSelWo.val(null).trigger('change');
     $modal.find('#woSampleModal-kondisi').val('');
     $modal.find('#woSampleModal-status').val('belum_diambil');
     $modal.find('#woSampleModal-keterangan').val('');
+    $modal.find('#woSampleModal-existing-files').empty();
+    if (woSampleFilePond) { woSampleFilePond.destroy(); woSampleFilePond = null; }
 
     $.get(`/wo-samples/${idSample}`)
         .done(function (res) {
@@ -613,12 +1055,43 @@ $(document).on('click', '.btn-wo-sample-edit', function (e) {
             $modal.find('#woSampleModal-jenis').val(s.jenis_sample || '');
             $modal.find('#woSampleModal-no').val(s.no_sample || '');
             $modal.find('#woSampleModal-tanggal').val(s.tanggal_pengambilan || '');
-            $modal.find('#woSampleModal-titik').val(s.titik_lokasi || '');
+            $modal.find('#woSampleModal-titik').data('_pendingVal', s.titik_lokasi || '');
             $modal.find('#woSampleModal-kondisi').val(s.kondisi_sample || '');
             $modal.find('#woSampleModal-status').val(s.status || 'belum_diambil');
             $modal.find('#woSampleModal-keterangan').val(s.keterangan || '');
+
+            const files = s.attachments || [];
+            const filesHtml = files.length
+                ? files.map(f => `<div class="d-flex align-items-center gap-2 mb-1" style="font-size:12px;">
+                        <i class="fa-solid fa-paperclip"></i>
+                        <a href="/storage/${f}" target="_blank">${escHtml(f.split('/').pop())}</a>
+                        <a href="#" class="btn-remove-existing-wo-sample-file" style="font-size:11px;color:#dc2626;cursor:pointer;">Hapus</a>
+                        <input type="hidden" class="existing-wo-sample-file-path" value="${escHtml(f)}">
+                    </div>`).join('')
+                : '';
+            $modal.find('#woSampleModal-existing-files').html(filesHtml);
         })
         .always(function () {
+            if (woSampleFilePond) { woSampleFilePond.destroy(); woSampleFilePond = null; }
+            woSampleFilePond = createFileUploader('#woSampleModal-attachments');
+
+            // Init Select2 untuk field enum
+            const s2OptsWo = { width: '100%', dropdownParent: $modal, allowClear: true };
+            ['#woSampleModal-jenis', '#woSampleModal-kondisi', '#woSampleModal-status'].forEach(function (sel) {
+                const $el = $modal.find(sel);
+                if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
+                $el.select2({ ...s2OptsWo, placeholder: $el.find('option:first').text() || '-- Pilih --' });
+                $el.trigger('change');
+            });
+
+            // Re-init Select2 titik lokasi (supaya options ter-refresh & value bisa di-set)
+            initWoSampleModalTitikSelect2();
+            const curTitikWo = $modal.find('#woSampleModal-titik').data('_pendingVal');
+            if (curTitikWo !== undefined) {
+                $modal.find('#woSampleModal-titik').val(curTitikWo || null).trigger('change');
+                $modal.find('#woSampleModal-titik').removeData('_pendingVal');
+            }
+
             new bootstrap.Modal($modal[0]).show();
             initFpDate('#woSampleDetailModal');
         });
@@ -630,19 +1103,33 @@ $(document).on('click', '#woSampleModal-btn-save', function () {
 
     const $btn  = $(this);
     const idWo  = currentWoData.id_wo;
-    const payload = {
-        _token:              window.route.csrf,
-        jenis_sample:        $('#woSampleModal-jenis').val() || null,
-        no_sample:           $('#woSampleModal-no').val().trim() || null,
-        tanggal_pengambilan: $('#woSampleModal-tanggal').val() || null,
-        titik_lokasi:        $('#woSampleModal-titik').val().trim() || null,
-        kondisi_sample:      $('#woSampleModal-kondisi').val() || null,
-        status:              $('#woSampleModal-status').val(),
-        keterangan:          $('#woSampleModal-keterangan').val().trim() || null,
-    };
+
+    const fd = new FormData();
+    fd.append('_token', window.route.csrf);
+    fd.append('jenis_sample', $('#woSampleModal-jenis').val() || '');
+    fd.append('tanggal_pengambilan', $('#woSampleModal-tanggal').val() || '');
+    fd.append('titik_lokasi', $('#woSampleModal-titik').val() || '');
+    fd.append('kondisi_sample', $('#woSampleModal-kondisi').val() || '');
+    fd.append('status', $('#woSampleModal-status').val());
+    fd.append('keterangan', $('#woSampleModal-keterangan').val().trim());
+
+    $('#woSampleModal-existing-files .existing-wo-sample-file-path').each(function () {
+        fd.append('existing_attachments[]', $(this).val());
+    });
+    if (woSampleFilePond) {
+        woSampleFilePond.getFiles().forEach(function (f) {
+            fd.append('attachments[]', f.file);
+        });
+    }
 
     $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...');
-    $.post(`/wo-samples/${idSample}`, payload)
+    $.ajax({
+        url: `/wo-samples/${idSample}`,
+        method: 'POST',
+        data: fd,
+        processData: false,
+        contentType: false,
+    })
         .done(function (res) {
             if (res.success) {
                 bootstrap.Modal.getInstance(document.getElementById('woSampleDetailModal'))?.hide();
@@ -654,6 +1141,15 @@ $(document).on('click', '#woSampleModal-btn-save', function () {
             Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan sample.');
         })
         .always(function () { $btn.prop('disabled', false).html('<i class="fa-solid fa-floppy-disk me-1"></i> Simpan'); });
+});
+
+$(document).on('click', '.btn-remove-existing-wo-sample-file', function (e) {
+    e.preventDefault();
+    $(this).closest('div').remove();
+});
+
+$('#woSampleDetailModal').on('hidden.bs.modal', function () {
+    if (woSampleFilePond) { woSampleFilePond.destroy(); woSampleFilePond = null; }
 });
 
 $(document).on('click', '.btn-wo-sample-delete', function (e) {

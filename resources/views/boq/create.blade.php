@@ -178,6 +178,8 @@
     .modal-item-row:hover { background: #f8fafc; }
     .boq-items-toggle:hover .text-muted { color: #475569 !important; }
     .boq-items-chevron.collapsed { transform: rotate(180deg); }
+    .btn-section-toggle:hover { color: #1d4ed8 !important; }
+    .btn-section-toggle.rotated { transform: rotate(90deg); }
 </style>
 
 <script>
@@ -185,6 +187,8 @@ let addedPointIds    = new Set();
 let existingDbPointIds = new Set();
 let selectedPoint    = null;
 let editingSectionId = null;
+let existingSectionsFull = [];
+let editingExistingItems = false;
 
 $(document).ready(function () {
 
@@ -318,6 +322,7 @@ $(document).ready(function () {
     // ── Reset saat modal ditutup ──────────────────────────────────────────────
     $("#modalAddSection").on("hidden.bs.modal", function () {
         editingSectionId = null;
+        editingExistingItems = false;
         selectedPoint    = null;
         $("#selectTestingPoint").val(null).trigger("change").prop("disabled", false);
         resetModalItems();
@@ -332,6 +337,7 @@ $(document).ready(function () {
         const ptTxt = $sec.find(".section-point-name").text().trim();
 
         editingSectionId = ptId;
+        editingExistingItems = false;
         selectedPoint    = { id: ptId, text: ptTxt };
 
         const opt = new Option(ptTxt, ptId, true, true);
@@ -343,6 +349,29 @@ $(document).ready(function () {
 
         resetModalItems();
         loadModalItems(ptId, getCurrentItemIds(ptId));
+        new bootstrap.Modal("#modalAddSection").show();
+    });
+
+    // ── Buka modal ubah item pada section yang sudah ada di DB ─────────────────
+    $(document).on("click", ".btn-existing-edit-items", function () {
+        const $sec = $(this).closest(".boq-section");
+        const ptId = String($sec.data("point-id"));
+        const sec  = findExistingSection(ptId);
+        if (!sec) return;
+
+        editingSectionId = ptId;
+        editingExistingItems = true;
+        selectedPoint = { id: ptId, text: sec.point_name };
+
+        const opt = new Option(sec.point_name, ptId, true, true);
+        $("#selectTestingPoint").empty().append(opt).trigger("change");
+        $("#selectTestingPoint").prop("disabled", true);
+
+        $("#modalSectionTitle").html('<i class="fa-solid fa-pen me-2 text-warning"></i> Ubah Item BOQ');
+        $("#btnConfirmText").text("Simpan Perubahan");
+
+        resetModalItems();
+        loadModalItems(ptId, new Set((sec.items || []).map(it => String(it.id_testing_item))));
         new bootstrap.Modal("#modalAddSection").show();
     });
 
@@ -379,6 +408,11 @@ $(document).ready(function () {
             checkedItems.push($(this).data("item"));
         });
         if (!checkedItems.length) return;
+
+        if (editingExistingItems && editingSectionId) {
+            saveExistingSectionItems(editingSectionId, checkedItems);
+            return;
+        }
 
         if (editingSectionId) {
             updateSection(editingSectionId, checkedItems);
@@ -528,6 +562,7 @@ function addSection(pointId, pointText, items) {
         <div class="card mb-4 boq-section" data-point-id="${pointId}">
             <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <i class="fa-solid fa-chevron-right btn-section-toggle" style="color:#64748b;font-size:12px;width:14px;text-align:center;cursor:pointer;transition:transform .2s;"></i>
                     <i class="fa-solid fa-layer-group" style="color:#2563eb;"></i>
                     <span class="fw-semibold section-point-name">${escHtml(pointText)}</span>
                     <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary section-item-count"
@@ -544,7 +579,7 @@ function addSection(pointId, pointText, items) {
                     </button>
                 </div>
             </div>
-            <div class="card-body px-3 py-3">
+            <div class="card-body px-3 py-3" style="display:none;">
                 <div class="section-fields">
                     <div class="row g-2">
                         <div class="col-md-6">
@@ -593,6 +628,10 @@ function addSection(pointId, pointText, items) {
     initSatuanSelect2($el.find(".input-satuan"));
     addedPointIds.add(String(pointId));
     $("#btnSave").prop("disabled", false);
+
+    // Item baru saja ditambahkan — langsung expand agar bisa diisi
+    $el.find(".card-body").show();
+    $el.find(".btn-section-toggle").addClass("rotated");
 }
 
 // Select2 ajax untuk master data Satuan
@@ -621,15 +660,9 @@ function initSatuanSelect2($select, idVal, labelVal) {
     });
 }
 
-// ── Section dari DB — hanya tampilan, tidak bisa diedit atau disimpan ulang ────
-function addExistingSection(sec) {
-    const ptId   = String(sec.id_testing_point);
-    const items  = sec.items || [];
-    const harga  = sec.harga  ? Number(sec.harga).toLocaleString('en-US') : '—';
-    const qty    = sec.qty    ?? '—';
-    const satuan = sec.satuan ?? '—';
-
-    const itemsHtml = items.map(function (item, i) {
+// ── Section dari DB — bisa diedit (field) & dihapus langsung dari modal ini ────
+function renderExistingItemsHtml(items) {
+    return (items || []).map(function (item, i) {
         const unit  = item.kode_unit || '—';
         const nilai = item.nilai ?? '—';
         return `<div class="d-flex align-items-center flex-wrap gap-2" style="padding:5px 0;border-bottom:1px solid #f1f5f9;">
@@ -638,7 +671,118 @@ function addExistingSection(sec) {
             <span class="text-muted small">/ ${escHtml(item.judul_inggris ?? '—')}</span>
             <span class="item-meta-badge">${escHtml(unit)} · ${escHtml(String(nilai))}</span>
         </div>`;
-    }).join('');
+    }).join('') || '<div class="text-muted small py-2">Tidak ada item</div>';
+}
+
+function renderExistingViewBody(sec) {
+    const harga  = sec.harga ? Number(sec.harga).toLocaleString('en-US') : '—';
+    const qty    = sec.qty ?? '—';
+    const satuan = sec.satuan ?? '—';
+    return `
+        <div style="background:#f8fafc;border:1px solid #e9ecef;border-radius:6px;padding:10px 14px;margin-bottom:12px;">
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label class="form-label form-label-sm text-muted mb-1">Item Produk Alternatif</label>
+                    <p class="form-control form-control-sm mb-0">${escHtml(sec.item_produk_alternate ?? '—')}</p>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label form-label-sm text-muted mb-1">Qty</label>
+                    <p class="form-control form-control-sm mb-0">${escHtml(String(qty))}</p>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label form-label-sm text-muted mb-1">Satuan</label>
+                    <p class="form-control form-control-sm mb-0">${escHtml(String(satuan))}</p>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
+                    <p class="form-control form-control-sm mb-0">${harga}</p>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label form-label-sm text-muted mb-1">Keterangan</label>
+                    <p class="form-control form-control-sm mb-0">${escHtml(sec.keterangan ?? '—')}</p>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex align-items-center justify-content-between mb-1">
+            <div class="d-flex align-items-center gap-2 boq-items-toggle" style="cursor:pointer;user-select:none;flex:1;">
+                <span class="text-muted small fw-semibold">
+                    <i class="fa-solid fa-list-check me-1"></i> Items
+                </span>
+                <i class="fa-solid fa-chevron-up text-muted boq-items-chevron" style="font-size:11px;transition:transform .2s;"></i>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary btn-existing-edit-items py-0 px-2" style="font-size:11px;">
+                <i class="fa-solid fa-pen me-1"></i> Ubah Item
+            </button>
+        </div>
+        <div class="boq-items">${renderExistingItemsHtml(sec.items)}</div>`;
+}
+
+function renderExistingEditBody(sec) {
+    return `
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 14px;margin-bottom:12px;">
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label class="form-label form-label-sm text-muted mb-1">Item Produk Alternatif</label>
+                    <input type="text" class="form-control form-control-sm existing-edit-item-produk"
+                        value="${escHtml(sec.item_produk_alternate ?? '')}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label form-label-sm text-muted mb-1">Qty</label>
+                    <input type="text" inputmode="numeric" class="form-control form-control-sm existing-edit-qty input-num-mask input-num-int"
+                        value="${sec.qty ?? ''}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label form-label-sm text-muted mb-1">Satuan</label>
+                    <select class="form-select form-select-sm existing-edit-satuan"></select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
+                    <input type="text" inputmode="numeric" class="form-control form-control-sm existing-edit-harga input-num-mask"
+                        value="${sec.harga ?? ''}">
+                </div>
+                <div class="col-md-12">
+                    <div class="existing-edit-total-line text-end" style="font-size:12px;color:#64748b;min-height:18px;margin-bottom:2px;"></div>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label form-label-sm text-muted mb-1">Keterangan</label>
+                    <input type="text" class="form-control form-control-sm existing-edit-ket"
+                        value="${escHtml(sec.keterangan ?? '')}">
+                </div>
+            </div>
+            <div class="d-flex justify-content-end gap-2 mt-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-existing-cancel py-1 px-2" style="font-size:12px;">Batal</button>
+                <button type="button" class="btn btn-sm btn-primary btn-existing-save py-1 px-2" style="font-size:12px;">
+                    <i class="fa-solid fa-check me-1"></i> Simpan
+                </button>
+            </div>
+        </div>
+        <div class="d-flex align-items-center justify-content-between mb-1">
+            <div class="d-flex align-items-center gap-2 boq-items-toggle" style="cursor:pointer;user-select:none;flex:1;">
+                <span class="text-muted small fw-semibold">
+                    <i class="fa-solid fa-list-check me-1"></i> Items
+                </span>
+                <i class="fa-solid fa-chevron-up text-muted boq-items-chevron" style="font-size:11px;transition:transform .2s;"></i>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary btn-existing-edit-items py-0 px-2" style="font-size:11px;">
+                <i class="fa-solid fa-pen me-1"></i> Ubah Item
+            </button>
+        </div>
+        <div class="boq-items">${renderExistingItemsHtml(sec.items)}</div>`;
+}
+
+function addExistingSection(sec) {
+    const ptId  = String(sec.id_testing_point);
+    const items = sec.items || [];
+
+    const deleteBtnHtml = sec.has_fwo
+        ? `<button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 disabled" disabled
+                style="font-size:12px;opacity:.45;cursor:not-allowed;"
+                title="Tidak dapat dihapus — sudah digunakan oleh FWO">
+                <i class="fa-solid fa-trash me-1"></i> Sudah Ada FWO
+           </button>`
+        : `<button type="button" class="btn btn-sm btn-outline-danger btn-existing-delete py-1 px-2" style="font-size:12px;">
+                <i class="fa-solid fa-trash me-1"></i> Hapus
+           </button>`;
 
     const html = `
         <div class="card mb-4 boq-section" data-point-id="${ptId}" data-from-db="true"
@@ -646,54 +790,109 @@ function addExistingSection(sec) {
             <div class="card-header d-flex justify-content-between align-items-center py-2 px-3"
                 style="background:#f1f5f9;border-bottom:1px solid #e2e8f0;">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <i class="fa-solid fa-chevron-right btn-section-toggle" style="color:#64748b;font-size:12px;width:14px;text-align:center;cursor:pointer;transition:transform .2s;"></i>
                     <i class="fa-solid fa-layer-group" style="color:#2563eb;"></i>
                     <span class="fw-semibold section-point-name">${escHtml(sec.point_name)}</span>
-                    <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary"
+                    <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary section-item-count"
                         style="font-size:11px;">${items.length} item</span>
                     <span class="badge" style="font-size:10px;background:#e0e7ef;color:#475569;">Sudah ada</span>
                 </div>
-            </div>
-            <div class="card-body px-3 py-3">
-                <div style="background:#f8fafc;border:1px solid #e9ecef;border-radius:6px;padding:10px 14px;margin-bottom:12px;">
-                    <div class="row g-2">
-                        <div class="col-md-6">
-                            <label class="form-label form-label-sm text-muted mb-1">Item Produk Alternatif</label>
-                            <p class="form-control form-control-sm mb-0">${escHtml(sec.item_produk_alternate ?? '—')}</p>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label form-label-sm text-muted mb-1">Qty</label>
-                            <p class="form-control form-control-sm mb-0">${escHtml(String(qty))}</p>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label form-label-sm text-muted mb-1">Satuan</label>
-                            <p class="form-control form-control-sm mb-0">${escHtml(String(satuan))}</p>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
-                            <p class="form-control form-control-sm mb-0">${harga}</p>
-                        </div>
-                        <div class="col-md-12">
-                            <label class="form-label form-label-sm text-muted mb-1">Keterangan</label>
-                            <p class="form-control form-control-sm mb-0">${escHtml(sec.keterangan ?? '—')}</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="d-flex align-items-center justify-content-between mb-1 boq-items-toggle"
-                    style="cursor:pointer;user-select:none;">
-                    <span class="text-muted small fw-semibold">
-                        <i class="fa-solid fa-list-check me-1"></i> Items
-                    </span>
-                    <i class="fa-solid fa-chevron-up text-muted boq-items-chevron" style="font-size:11px;transition:transform .2s;"></i>
-                </div>
-                <div class="boq-items">
-                    ${itemsHtml || '<div class="text-muted small py-2">Tidak ada item</div>'}
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-existing-edit py-1 px-2" style="font-size:12px;">
+                        <i class="fa-solid fa-pen me-1"></i> Edit
+                    </button>
+                    ${deleteBtnHtml}
                 </div>
             </div>
+            <div class="card-body px-3 py-3 existing-section-body" style="display:none;">${renderExistingViewBody(sec)}</div>
         </div>`;
 
     $("#boqSections").append(html);
     addedPointIds.add(ptId);
     $("#boqEmpty").hide();
+}
+
+// ── Cari data section (dari existingSectionsFull) berdasar id_testing_point ────
+function findExistingSection(ptId) {
+    return existingSectionsFull.find(s => String(s.id_testing_point) === String(ptId));
+}
+
+// ── Bangun payload sections dari existingSectionsFull, dengan override opsional ─
+function buildExistingSectionsPayload(overridePtId, overrideFields, excludePtId) {
+    return existingSectionsFull
+        .filter(s => String(s.id_testing_point) !== String(excludePtId))
+        .map(function (s) {
+            const isOverride = overridePtId && String(s.id_testing_point) === String(overridePtId);
+            const fields = isOverride ? overrideFields : s;
+            return {
+                id_testing_point:      s.id_testing_point,
+                item_produk_alternate: fields.item_produk_alternate ?? null,
+                qty:                   fields.qty ?? null,
+                id_satuan:             fields.id_satuan ?? null,
+                harga:                 fields.harga ?? null,
+                keterangan:            fields.keterangan ?? null,
+                items:                 (s.items ?? []).map(it => it.id_testing_item),
+            };
+        });
+}
+
+function notifyBoqUpdated(woId) {
+    try {
+        localStorage.setItem('boq_updated', JSON.stringify({ id_wo: woId, ts: Date.now() }));
+    } catch (_) {}
+}
+
+// ── Simpan perubahan daftar item (parameter) pada section yang sudah ada di DB ─
+function saveExistingSectionItems(ptId, checkedItems) {
+    const woId = $("#id_wo").val();
+    if (!woId) return;
+
+    const newItemIds = checkedItems.map(it => it.id_testing_item);
+    const sections = existingSectionsFull.map(function (s) {
+        const itemIds = String(s.id_testing_point) === String(ptId)
+            ? newItemIds
+            : (s.items ?? []).map(it => it.id_testing_item);
+        return {
+            id_testing_point:      s.id_testing_point,
+            item_produk_alternate: s.item_produk_alternate ?? null,
+            qty:                   s.qty ?? null,
+            id_satuan:             s.id_satuan ?? null,
+            harga:                 s.harga ?? null,
+            keterangan:            s.keterangan ?? null,
+            items:                 itemIds,
+        };
+    });
+
+    const $btn = $("#btnConfirmSection");
+    $btn.prop("disabled", true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
+
+    $.ajax({
+        url: "{{ url('boq') }}/" + woId,
+        method: "PUT",
+        contentType: "application/json",
+        headers: { "X-CSRF-TOKEN": "{{ csrf_token() }}" },
+        data: JSON.stringify({ sections: sections }),
+        success: function () {
+            Notify.success("Item BOQ berhasil diperbarui");
+            bootstrap.Modal.getInstance("#modalAddSection").hide();
+
+            const sec = findExistingSection(ptId);
+            if (sec) {
+                sec.items = checkedItems;
+                const $sec = $(`.boq-section[data-point-id="${ptId}"]`);
+                $sec.find(".existing-section-body").html(renderExistingViewBody(sec));
+                $sec.find(".section-item-count").text(sec.items.length + " item");
+            }
+            notifyBoqUpdated(woId);
+        },
+        error: function (xhr) {
+            Notify.error(xhr.responseJSON?.message || "Gagal menyimpan perubahan item");
+        },
+        complete: function () {
+            $btn.prop("disabled", false)
+                .html('<i class="fa-solid fa-check me-1"></i> <span id="btnConfirmText">Simpan Perubahan</span>');
+        },
+    });
 }
 
 // ── Update items pada section yang sudah ada ───────────────────────────────────
@@ -723,9 +922,11 @@ function renderItem(pointId, item, num) {
 
 function loadExistingBoqPoints(woId) {
     existingDbPointIds.clear();
+    existingSectionsFull = [];
 
     $.get("{{ url('boq') }}/" + woId, function (data) {
         const sections = data.sections ?? [];
+        existingSectionsFull = sections;
         if (!sections.length) return;
 
         sections.forEach(function (sec) {
@@ -736,6 +937,145 @@ function loadExistingBoqPoints(woId) {
         // 404 = belum ada BOQ, mulai dari awal
     });
 }
+
+// ── Expand / collapse section card ──────────────────────────────────────────────
+$(document).on("click", ".btn-section-toggle", function () {
+    const $card = $(this).closest(".boq-section");
+    $card.children(".card-body").slideToggle(150);
+    $(this).toggleClass("rotated");
+});
+
+function expandSection($sec) {
+    $sec.children(".card-body").show();
+    $sec.find(".btn-section-toggle").addClass("rotated");
+}
+
+// ── Edit item yang sudah ada di DB (toggle field-edit, simpan langsung ke server) ─
+$(document).on("click", ".btn-existing-edit", function () {
+    const $sec = $(this).closest(".boq-section");
+    const ptId = String($sec.data("point-id"));
+    const sec  = findExistingSection(ptId);
+    if (!sec) return;
+
+    const $body = $sec.find(".existing-section-body");
+    $body.html(renderExistingEditBody(sec));
+    initNumericMask($body);
+    initSatuanSelect2($body.find(".existing-edit-satuan"), sec.id_satuan, sec.satuan);
+    expandSection($sec);
+});
+
+$(document).on("click", ".btn-existing-cancel", function () {
+    const $sec = $(this).closest(".boq-section");
+    const ptId = String($sec.data("point-id"));
+    const sec  = findExistingSection(ptId);
+    if (!sec) return;
+    $sec.find(".existing-section-body").html(renderExistingViewBody(sec));
+});
+
+$(document).on("input", ".existing-edit-qty, .existing-edit-harga", function () {
+    updateExistingItemTotal($(this).closest(".existing-section-body"));
+});
+
+function updateExistingItemTotal($body) {
+    const qty   = rawNumVal($body.find(".existing-edit-qty")[0]) || 0;
+    const harga = rawNumVal($body.find(".existing-edit-harga")[0]) || 0;
+    const $line = $body.find(".existing-edit-total-line");
+    if (qty && harga) {
+        $line.html(
+            Number(qty).toLocaleString('en-US') + ' qty &times; Rp ' + Number(harga).toLocaleString('en-US') +
+            ' = <strong style="color:#1d4ed8;">Rp ' + Number(qty * harga).toLocaleString('en-US') + '</strong>'
+        );
+    } else {
+        $line.html('');
+    }
+}
+
+$(document).on("click", ".btn-existing-save", function () {
+    const $btn = $(this);
+    const $sec = $btn.closest(".boq-section");
+    const $body = $sec.find(".existing-section-body");
+    const ptId = String($sec.data("point-id"));
+    const woId = $("#id_wo").val();
+    if (!woId) return;
+
+    const overrideFields = {
+        item_produk_alternate: $body.find(".existing-edit-item-produk").val() || null,
+        qty:                   rawNumVal($body.find(".existing-edit-qty")[0]),
+        id_satuan:             $body.find(".existing-edit-satuan").val() || null,
+        harga:                 rawNumVal($body.find(".existing-edit-harga")[0]),
+        keterangan:            $body.find(".existing-edit-ket").val() || null,
+    };
+
+    if (!overrideFields.qty) {
+        Notify.warning("Qty harus diisi.");
+        return;
+    }
+    if (!overrideFields.id_satuan) {
+        Notify.warning("Satuan harus diisi.");
+        return;
+    }
+
+    const sections = buildExistingSectionsPayload(ptId, overrideFields, null);
+
+    $btn.prop("disabled", true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
+
+    $.ajax({
+        url: "{{ url('boq') }}/" + woId,
+        method: "PUT",
+        contentType: "application/json",
+        headers: { "X-CSRF-TOKEN": "{{ csrf_token() }}" },
+        data: JSON.stringify({ sections: sections }),
+        success: function () {
+            Notify.success("Item BOQ berhasil diperbarui");
+            const sec = findExistingSection(ptId);
+            if (sec) Object.assign(sec, overrideFields);
+            $body.html(renderExistingViewBody(sec));
+            notifyBoqUpdated(woId);
+        },
+        error: function (xhr) {
+            Notify.error(xhr.responseJSON?.message || "Gagal menyimpan perubahan");
+            $btn.prop("disabled", false).html('<i class="fa-solid fa-check me-1"></i> Simpan');
+        },
+    });
+});
+
+$(document).on("click", ".btn-existing-delete", function () {
+    const $sec = $(this).closest(".boq-section");
+    const ptId = String($sec.data("point-id"));
+    const woId = $("#id_wo").val();
+    if (!woId) return;
+
+    const ptTxt = $sec.find(".section-point-name").text().trim();
+
+    Notify.confirm('Hapus item BOQ "' + ptTxt + '"?', function () {
+        const sections = buildExistingSectionsPayload(null, null, ptId);
+
+        if (!sections.length) {
+            Notify.error("Tidak dapat menghapus item BOQ terakhir. Minimal harus ada 1 item BOQ pada Work Order ini.");
+            return;
+        }
+
+        $.ajax({
+            url: "{{ url('boq') }}/" + woId,
+            method: "PUT",
+            contentType: "application/json",
+            headers: { "X-CSRF-TOKEN": "{{ csrf_token() }}" },
+            data: JSON.stringify({ sections: sections }),
+            success: function () {
+                Notify.success("Item BOQ berhasil dihapus");
+                existingSectionsFull = existingSectionsFull.filter(s => String(s.id_testing_point) !== String(ptId));
+                addedPointIds.delete(ptId);
+                existingDbPointIds.delete(ptId);
+                $sec.remove();
+                checkEmpty();
+                notifyBoqUpdated(woId);
+            },
+            error: function (xhr) {
+                Notify.error(xhr.responseJSON?.message || "Gagal menghapus item BOQ");
+            },
+        });
+    });
+});
 
 function checkEmpty() {
     if ($(".boq-section:not([data-from-db])").length === 0) {
