@@ -45,6 +45,7 @@ use App\Http\Controllers\FwoBudgetActualController;
 use App\Http\Controllers\WoBudgetController;
 use App\Http\Controllers\WoBudgetActualController;
 use App\Http\Controllers\LabSampleController;
+use App\Http\Controllers\ProfileController;
 use Spatie\LaravelPdf\Facades\Pdf;
 
 Route::get('/ui-guideline', function () {
@@ -76,6 +77,13 @@ Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->n
 Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->name('password.email');
 Route::get('/reset-password/{token}', [AuthController::class, 'showResetPassword'])->name('password.reset');
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
+
+Route::middleware('auth')->prefix('profile')->name('profile.')->group(function () {
+    Route::get('/', [ProfileController::class, 'edit'])->name('edit');
+    Route::post('/', [ProfileController::class, 'update'])->name('update');
+    Route::post('/password', [ProfileController::class, 'updatePassword'])->name('update-password');
+    Route::post('/avatar', [ProfileController::class, 'updateAvatar'])->name('update-avatar');
+});
 
 
 //TestingUnits

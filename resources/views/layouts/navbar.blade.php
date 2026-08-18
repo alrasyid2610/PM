@@ -34,7 +34,7 @@
                    class="nav-link dropdown-toggle nav-link-lg nav-link-user d-flex align-items-center">
 
                     <div class="avatar me-2">
-                        <img src="{{ asset('assets/images/avatar/avatar-s-1.png') }}"
+                        <img src="{{ Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : asset('assets/images/avatar/avatar-s-1.png') }}"
                              alt="avatar">
                     </div>
 
@@ -44,12 +44,8 @@
                 </a>
 
                 <div class="dropdown-menu dropdown-menu-end">
-                    <a class="dropdown-item" href="#">
+                    <a class="dropdown-item" href="{{ route('profile.edit') }}">
                         <i data-feather="user" class="me-2"></i> Profile
-                    </a>
-
-                    <a class="dropdown-item" href="#">
-                        <i data-feather="settings" class="me-2"></i> Settings
                     </a>
 
                     <div class="dropdown-divider"></div>

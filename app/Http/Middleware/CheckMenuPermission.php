@@ -11,7 +11,7 @@ class CheckMenuPermission
     private const PUBLIC_SEGMENTS = ['login', 'logout', 'up', 'test-pdf', 'test-pdf-view', 'test-pdf-download', 'test-so-pdf', 'test-fwo-view', 'wilayah', 'forgot-password', 'reset-password'];
 
     // Route yang tidak perlu cek permission (cukup auth)
-    private const OPEN_SEGMENTS = ['dashboard', 'api', 'calendar', 'ui-guideline'];
+    private const OPEN_SEGMENTS = ['dashboard', 'api', 'calendar', 'ui-guideline', 'profile'];
 
     // Endpoint supporting — tidak perlu cek permission spesifik
     private const OPEN_LAST_SEGMENTS = ['select2', 'select2byid', 'data', 'pdf'];
