@@ -46,6 +46,7 @@ use App\Http\Controllers\WoBudgetController;
 use App\Http\Controllers\WoBudgetActualController;
 use App\Http\Controllers\LabSampleController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PersonnelController;
 use Spatie\LaravelPdf\Facades\Pdf;
 
 Route::get('/ui-guideline', function () {
@@ -202,6 +203,21 @@ Route::prefix('wo-output-other')->name('wo-output-other.')->group(function () {
     Route::post('/{id}', [OutputTambahanController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}', [OutputTambahanController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/history', [OutputTambahanController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('personnel')->name('personnel.')->group(function () {
+    Route::get('/select2', [PersonnelController::class, 'select2'])->name('select2');
+    Route::get('/', [PersonnelController::class, 'index'])->name('index');
+    Route::get('/data', [PersonnelController::class, 'data'])->name('data');
+    Route::get('/create', [PersonnelController::class, 'create'])->name('create');
+    Route::post('/', [PersonnelController::class, 'store'])->name('store');
+    Route::get('/{id}', [PersonnelController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [PersonnelController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [PersonnelController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/detail', [PersonnelController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::get('/{id}/history', [PersonnelController::class, 'history'])->name('history')->whereNumber('id');
+    Route::post('/{id}/account', [PersonnelController::class, 'createAccount'])->name('create-account')->whereNumber('id');
+    Route::delete('/{id}/account', [PersonnelController::class, 'revokeAccount'])->name('revoke-account')->whereNumber('id');
 });
 
 Route::prefix('satuan')->name('satuan.')->group(function () {

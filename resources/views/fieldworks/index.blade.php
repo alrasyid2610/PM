@@ -143,7 +143,7 @@
         personelUpdate:   "{{ url('fieldworks') }}/",
         fwoComplete:      "{{ url('fieldworks') }}/",
         fwoAttachments:   "{{ url('fieldworks') }}/",
-        userSelect2:      "{{ route('users.select2') }}",
+        personnelSelect2: "{{ route('personnel.select2') }}",
     }
 </script>
 

@@ -103,9 +103,9 @@ class FieldworkController extends Controller
         }
 
         $data->personels = DB::table('fieldwork_personels as fp')
-            ->join('users as u', 'fp.id_user', '=', 'u.id')
+            ->join('personnel as p', 'fp.id_personnel', '=', 'p.id_personnel')
             ->where('fp.id_fwo', $id)
-            ->select(['fp.id_fwo_personel', 'fp.id_user', 'u.name as user_name', 'fp.role'])
+            ->select(['fp.id_fwo_personel', 'fp.id_personnel', 'p.nama as user_name', 'fp.role'])
             ->get();
 
         return response()->json($data);
@@ -114,9 +114,9 @@ class FieldworkController extends Controller
     public function updatePersonels(Request $request, $id)
     {
         $validated = $request->validate([
-            'personels'           => 'nullable|array',
-            'personels.*.id_user' => 'required|integer',
-            'personels.*.role'    => 'nullable|string|max:500',
+            'personels'                 => 'nullable|array',
+            'personels.*.id_personnel'  => 'required|integer',
+            'personels.*.role'          => 'nullable|string|max:500',
         ]);
 
         DB::table('fieldwork_personels')->where('id_fwo', $id)->delete();
@@ -124,11 +124,11 @@ class FieldworkController extends Controller
         if (!empty($validated['personels'])) {
             DB::table('fieldwork_personels')->insert(
                 array_map(fn($p) => [
-                    'id_fwo'     => $id,
-                    'id_user'    => $p['id_user'],
-                    'role'       => $p['role'] ?? null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'id_fwo'       => $id,
+                    'id_personnel' => $p['id_personnel'],
+                    'role'         => $p['role'] ?? null,
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
                 ], $validated['personels'])
             );
         }
@@ -149,7 +149,7 @@ class FieldworkController extends Controller
             'status'                      => 'nullable|string|in:planned,completed',
             'keterangan'                  => 'nullable|string',
             'personels'                   => 'nullable|array',
-            'personels.*.id_user'         => 'required|integer',
+            'personels.*.id_personnel'    => 'required|integer',
             'personels.*.role'            => 'nullable|string|max:500',
         ]);
 
@@ -202,11 +202,11 @@ class FieldworkController extends Controller
         if (!empty($validated['personels'])) {
             DB::table('fieldwork_personels')->insert(
                 array_map(fn($p) => [
-                    'id_fwo'     => $id,
-                    'id_user'    => $p['id_user'],
-                    'role'       => $p['role'] ?? null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'id_fwo'       => $id,
+                    'id_personnel' => $p['id_personnel'],
+                    'role'         => $p['role'] ?? null,
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
                 ], $validated['personels'])
             );
         }
@@ -335,9 +335,9 @@ class FieldworkController extends Controller
             'tanggal_mulai'         => 'nullable|date',
             'tanggal_selesai'       => 'nullable|date',
             'keterangan'            => 'nullable|string',
-            'personels'             => 'nullable|array',
-            'personels.*.id_user'   => 'required|integer',
-            'personels.*.role'      => 'nullable|string|max:500',
+            'personels'                => 'nullable|array',
+            'personels.*.id_personnel' => 'required|integer',
+            'personels.*.role'         => 'nullable|string|max:500',
             'sections'              => 'nullable|array',
             'sections.*.id_boq'     => 'required|integer',
             'sections.*.qty'        => 'nullable|integer|min:1',
@@ -409,11 +409,11 @@ class FieldworkController extends Controller
             if (!empty($validated['personels'])) {
                 DB::table('fieldwork_personels')->insert(
                     array_map(fn($p) => [
-                        'id_fwo'     => $newId,
-                        'id_user'    => $p['id_user'],
-                        'role'       => $p['role'] ?? null,
-                        'created_at' => now(),
-                        'updated_at' => now(),
+                        'id_fwo'       => $newId,
+                        'id_personnel' => $p['id_personnel'],
+                        'role'         => $p['role'] ?? null,
+                        'created_at'   => now(),
+                        'updated_at'   => now(),
                     ], $validated['personels'])
                 );
             }
@@ -513,9 +513,9 @@ class FieldworkController extends Controller
         \Carbon\Carbon::setLocale('id');
 
         $personels = DB::table('fieldwork_personels as fp')
-            ->join('users as u', 'fp.id_user', '=', 'u.id')
+            ->join('personnel as p', 'fp.id_personnel', '=', 'p.id_personnel')
             ->where('fp.id_fwo', $id)
-            ->select(['u.name', 'fp.role'])
+            ->select(['p.nama as name', 'fp.role'])
             ->get();
 
         $fieldwork_boq = DB::table('fieldwork_boq as fwb')

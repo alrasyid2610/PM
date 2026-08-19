@@ -71,6 +71,7 @@ return [
         'items'   => [
             ['slug' => 'menu-groups', 'label' => 'Grup Menu',        'icon' => 'fa-sitemap'],
             ['slug' => 'users',       'label' => 'User Management',  'icon' => 'fa-users-gear'],
+            ['slug' => 'personnel',   'label' => 'Personnel',        'icon' => 'fa-people-group'],
         ],
     ],
 ];

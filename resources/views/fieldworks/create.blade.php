@@ -310,7 +310,7 @@
             <div class="personel-row d-flex align-items-start gap-2" data-idx="${idx}">
                 <div style="flex:1;min-width:0;">
                     <label class="form-label form-label-sm text-muted mb-1">Personel</label>
-                    <select name="personels[${idx}][id_user]"
+                    <select name="personels[${idx}][id_personnel]"
                         class="form-select personel-user-select" required></select>
                 </div>
                 <div style="flex:1;min-width:0;">
@@ -341,7 +341,7 @@
             allowClear: true,
             minimumInputLength: 0,
             ajax: {
-                url: "{{ route('users.select2') }}",
+                url: "{{ route('personnel.select2') }}",
                 dataType: 'json',
                 delay: 200,
                 data: p => ({ q: p.term }),

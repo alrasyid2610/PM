@@ -1535,7 +1535,7 @@ function enterPersonelEditMode() {
     // Pre-load existing personels
     if (currentPersonelData.length > 0) {
         currentPersonelData.forEach(function (p) {
-            addPersonelEditRow({ id: p.id_user, text: p.user_name }, p.role);
+            addPersonelEditRow({ id: p.id_personnel, text: p.user_name }, p.role);
         });
     } else {
         syncPersonelEditEmpty();
@@ -1588,7 +1588,7 @@ function addPersonelEditRow(userData, roleVal) {
         allowClear: true,
         minimumInputLength: 0,
         ajax: {
-            url: window.route.userSelect2,
+            url: window.route.personnelSelect2,
             dataType: 'json',
             delay: 200,
             data: p => ({ q: p.term }),
@@ -1618,9 +1618,9 @@ function syncPersonelEditEmpty() {
 function collectPersonelRows() {
     const rows = [];
     $('#personelEditRows .personel-edit-row').each(function () {
-        const id_user = $(this).find('.personel-edit-user').val();
-        const role    = $(this).find('.personel-edit-role').val() || null;
-        if (id_user) rows.push({ id_user: parseInt(id_user), role });
+        const id_personnel = $(this).find('.personel-edit-user').val();
+        const role         = $(this).find('.personel-edit-role').val() || null;
+        if (id_personnel) rows.push({ id_personnel: parseInt(id_personnel), role });
     });
     return rows;
 }
