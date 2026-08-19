@@ -47,6 +47,7 @@ use App\Http\Controllers\WoBudgetActualController;
 use App\Http\Controllers\LabSampleController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PersonnelController;
+use App\Http\Controllers\LabDataImportController;
 use Spatie\LaravelPdf\Facades\Pdf;
 
 Route::get('/ui-guideline', function () {
@@ -203,6 +204,13 @@ Route::prefix('wo-output-other')->name('wo-output-other.')->group(function () {
     Route::post('/{id}', [OutputTambahanController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}', [OutputTambahanController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/history', [OutputTambahanController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('lab-data-import')->name('lab-data-import.')->group(function () {
+    Route::get('/', [LabDataImportController::class, 'index'])->name('index');
+    Route::get('/template', [LabDataImportController::class, 'downloadTemplate'])->name('template');
+    Route::post('/', [LabDataImportController::class, 'import'])->name('import');
+    Route::get('/result/{file}', [LabDataImportController::class, 'downloadResult'])->name('result');
 });
 
 Route::prefix('personnel')->name('personnel.')->group(function () {
