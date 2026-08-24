@@ -37,8 +37,8 @@
     }
 
     window.datatableHeaderLabels = {
-        is_aktif:      'Status',
-        is_kantor_pusat: 'Tipe Lokasi',
+        is_aktif:    'Status',
+        jumlah_site: 'Jumlah Site',
     };
 </script>
 <script src="{{ asset('assets/js/business-relations/index.js') }}"></script>

@@ -126,7 +126,7 @@ function renderForm(res) {
                             data-bs-toggle="tab" data-bs-target="#tabSample"
                             data-wo-id="${res.id_wo}">
                             <i class="fa-solid fa-vial me-1" style="color:#0369a1;font-size:11px;"></i>
-                            Sample
+                            Lab Sample Reg
                         </button>
                     </li>
                     ${can('wo-boq-other', 'can_read') ? `
@@ -202,6 +202,15 @@ function renderForm(res) {
                         </button>` : woLockedLabel()}
                     </div>
                     <div id="woTabActionsSample" class="d-none align-items-center gap-2">
+                        ${res.status !== 'completed' ? `
+                        <button type="button" class="pm-btn-pill" id="btn-wo-reg-from-fwo" data-wo-id="${res.id_wo}" data-no-disable
+                            style="border-color:#0369a1;color:#0369a1;">
+                            <i class="fa-solid fa-file-import" style="font-size:11px;"></i> Registrasi dari FWO
+                        </button>
+                        <button type="button" class="pm-btn-pill" id="btn-wo-add-sample-no-boq" data-wo-id="${res.id_wo}" data-no-disable
+                            style="border-color:#7c3aed;color:#7c3aed;">
+                            <i class="fa-solid fa-plus" style="font-size:11px;"></i> Sample Tanpa BOQ
+                        </button>` : ''}
                         <button type="button" id="btnRefreshWoSample" data-wo-id="${res.id_wo}"
                             class="pm-btn-icon" title="Refresh" data-no-disable>
                             <i class="fa-solid fa-rotate-right"></i>
@@ -764,6 +773,10 @@ function renderForm(res) {
                             <input type="text" class="form-control form-control-sm" id="woSampleModal-no" placeholder="Kode/nomor sample" readonly style="background:#f8fafc;color:#64748b;" data-no-disable>
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:12px;">No. Reg Lab</label>
+                            <input type="text" class="form-control form-control-sm" id="woSampleModal-no-reg-lab" placeholder="Belum diregistrasi" readonly style="background:#f8fafc;color:#64748b;" data-no-disable>
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Pengambilan</label>
                             <input type="text" class="form-control form-control-sm fp-date" id="woSampleModal-tanggal" placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
                         </div>
@@ -864,6 +877,154 @@ function renderForm(res) {
                     <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" data-no-disable>Batal</button>
                     <button type="button" class="btn btn-sm btn-primary" id="woSampleBulkFillModal-btn-save" data-no-disable>
                         <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Apply ke Semua Sample
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: HEADER REGISTRASI LAB (dipakai untuk Buat Otomatis / Tambah 1 Sample) -->
+    <div class="modal fade" id="woRegHeaderModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
+            <div class="modal-content">
+                <div class="modal-header py-2 px-3" style="border-bottom:1px solid #e2e8f0;">
+                    <h6 class="modal-title mb-0" id="woRegHeaderModalLabel">
+                        <i class="fa-solid fa-clipboard-check me-2" style="color:#0369a1;"></i>Registrasi Sample Diterima
+                    </h6>
+                    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3 px-3">
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Diterima <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm fp-date" id="woRegHeaderModal-tanggal" placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Diterima Oleh</label>
+                            <select class="form-select form-select-sm" id="woRegHeaderModal-personnel" data-no-disable></select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Keterangan</label>
+                            <textarea class="form-control form-control-sm" id="woRegHeaderModal-keterangan" rows="2" placeholder="Opsional" data-no-disable></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3" style="border-top:1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" data-no-disable>Batal</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="woRegHeaderModal-btn-save" data-no-disable>
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Simpan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: TARIK SAMPLE DARI FWO -->
+    <div class="modal fade" id="woRegFromFwoModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
+            <div class="modal-content">
+                <div class="modal-header py-2 px-3" style="border-bottom:1px solid #e2e8f0;">
+                    <h6 class="modal-title mb-0">
+                        <i class="fa-solid fa-file-import me-2" style="color:#0369a1;"></i>Registrasi Sample dari FWO
+                    </h6>
+                    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3 px-3">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Diterima <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm fp-date" id="woRegFromFwoModal-tanggal" placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Diterima Oleh</label>
+                            <select class="form-select form-select-sm" id="woRegFromFwoModal-personnel" data-no-disable></select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Keterangan</label>
+                            <textarea class="form-control form-control-sm" id="woRegFromFwoModal-keterangan" rows="2" placeholder="Opsional" data-no-disable></textarea>
+                        </div>
+                    </div>
+                    <hr>
+                    <div id="woRegFromFwoModal-list">
+                        <div class="text-center text-muted py-3"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data sample dari FWO...</div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3" style="border-top:1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" data-no-disable>Batal</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="woRegFromFwoModal-btn-save" data-no-disable>
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Registrasi Sample Terpilih
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: SAMPLE TANPA BOQ -->
+    <div class="modal fade" id="woNoBoqSampleModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:520px;">
+            <div class="modal-content">
+                <div class="modal-header py-2 px-3" style="border-bottom:1px solid #e2e8f0;">
+                    <h6 class="modal-title mb-0">
+                        <i class="fa-solid fa-plus me-2" style="color:#7c3aed;"></i>Registrasi Sample Tanpa BOQ
+                    </h6>
+                    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3 px-3">
+                    <p class="text-muted mb-3" style="font-size:12px;">
+                        <i class="fa-solid fa-circle-info me-1"></i>
+                        Untuk sample yang tidak berasal dari BOQ manapun (mis. dibawa langsung oleh pelanggan tanpa proses sampling lapangan).
+                    </p>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Jenis Sample</label>
+                            <select class="form-select form-select-sm" id="woNoBoqModal-jenis" data-no-disable>
+                                <option value="">-- Pilih --</option>
+                                <option value="env">ENV — Lingkungan Hidup</option>
+                                <option value="we">WE — Lingkungan Kerja</option>
+                                <option value="mp">MP — Makanan & Produk</option>
+                                <option value="product">Product — Produk Industri</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Pengambilan</label>
+                            <input type="text" class="form-control form-control-sm fp-date" id="woNoBoqModal-tanggal-ambil" placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Titik / Lokasi</label>
+                            <select class="form-select form-select-sm" id="woNoBoqModal-titik" data-no-disable></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Kondisi Sample</label>
+                            <select class="form-select form-select-sm" id="woNoBoqModal-kondisi" data-no-disable>
+                                <option value="">-- Pilih --</option>
+                                <option value="baik">Baik</option>
+                                <option value="rusak">Rusak</option>
+                                <option value="tidak_lengkap">Tidak Lengkap</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Keterangan Sample</label>
+                            <textarea class="form-control form-control-sm" id="woNoBoqModal-keterangan-sample" rows="2" placeholder="Opsional" data-no-disable></textarea>
+                        </div>
+                        <hr class="my-2">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Diterima <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm fp-date" id="woNoBoqModal-tanggal-terima" placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Diterima Oleh</label>
+                            <select class="form-select form-select-sm" id="woNoBoqModal-personnel" data-no-disable></select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Keterangan Registrasi</label>
+                            <textarea class="form-control form-control-sm" id="woNoBoqModal-keterangan-reg" rows="2" placeholder="Opsional" data-no-disable></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3" style="border-top:1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" data-no-disable>Batal</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="woNoBoqModal-btn-save" data-no-disable>
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Simpan & Registrasi
                     </button>
                 </div>
             </div>

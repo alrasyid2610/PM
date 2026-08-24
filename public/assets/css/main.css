@@ -47,8 +47,7 @@ div.dt-scroll-body > table > tbody > tr:last-child > .dt-empty {
     /* height: 100px; */
     overflow: hidden;
     /* border-radius: 12px; */
-    /* margin-bottom: 24px; */
-    margin-bottom: 1rem;
+    margin-bottom: 0;
     padding: 1rem 0;
 }
 
@@ -2239,6 +2238,84 @@ tr.shown td.dt-control i {
     padding: 16px 0;
 }
 
+/* ── Sub-tab card 1 Site terpilih (tab Site, business-relations) ─────────── */
+.pm-subtab-card {
+    margin-top: -16px; /* cancel padding-top .pm-tab-body supaya nempel ke tab-nav atas */
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* ── Back-to-list pill, menyatu dengan sub-tab nav Site (tab Site, business-relations) ── */
+.pm-site-subtab-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+}
+
+.pm-site-back-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    background: #fff;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color .15s ease, color .15s ease, background .15s ease;
+}
+
+.pm-site-back-pill i {
+    font-size: 11px;
+}
+
+.pm-site-back-pill:hover {
+    border-color: #93c5fd;
+    color: #1d4ed8;
+    background: #eff6ff;
+}
+
+.pm-site-subtab-divider {
+    width: 1px;
+    align-self: stretch;
+    margin: 8px 0;
+    background: #e2e8f0;
+    flex-shrink: 0;
+}
+
+/* ── Site picker card (tab Site, business-relations) ─────────────────────── */
+.pm-site-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    cursor: pointer;
+    transition: box-shadow .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+.pm-site-card:hover {
+    border-color: #93c5fd;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
+}
+
+.pm-site-card:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
 /* ── Pill Button ──────────────────────────────────────────────────────────── */
 .pm-btn-pill {
     display: inline-flex;
@@ -2403,6 +2480,20 @@ tr.shown td.dt-control i {
 }
 .pm-table tbody tr:last-child td {
     border-bottom: 0;
+}
+
+/* ── Baris header grup di dalam pm-table (mis. Lab Sample Reg per event) ──── */
+.pm-table tr.wo-reg-group-header {
+    cursor: pointer;
+    user-select: none;
+}
+.pm-table tr.wo-reg-group-header td {
+    background: #f1f5f9;
+    border-top: 1px solid #e2e8f0;
+    padding: 8px 12px;
+}
+.pm-table tr.wo-reg-group-header:hover td {
+    background: #e2e8f0;
 }
 
 /* ── Plan Header Buttons ──────────────────────────────────────────────────── */

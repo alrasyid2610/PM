@@ -36,9 +36,13 @@
                         <label class="form-label">Site</label>
                         <select id="select_site" name="id_site" class="form-select"></select>
                     </div>
-                    <div class="col-md-12">
+                    <div class="col-md-9">
                         <label class="form-label required">Nama PIC</label>
                         <input type="text" class="form-control" id="nama_pic" name="nama_pic" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Jabatan</label>
+                        <input type="text" class="form-control" id="jabatan" name="jabatan" placeholder="cth: HRD, Manager">
                     </div>
                     <div class="col-md-3 col-12">
                         <label class="form-label required">No. Telp PIC</label>

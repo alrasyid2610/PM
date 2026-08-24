@@ -35,6 +35,10 @@
         deleteAttachment: "{{ route('testing-parameters.delete-attachment') }}",
         csrf: "{{ csrf_token() }}"
     }
+
+    window.datatableHeaderLabels = {
+        is_kan: 'KAN',
+    };
 </script>
 <script src="{{ asset('assets/js/testing-parameters/form.js') }}"></script>
 <script src="{{ asset('assets/js/testing-parameters/index.js') }}"></script>

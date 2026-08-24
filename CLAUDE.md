@@ -1,21 +1,27 @@
 # Aturan Kerja Project PM
 
-## ⚠️ WAJIB DIBACA SEBELUM MULAI
+## ⚠️ WAJIB DIBACA SEBELUM MULAI — SETIAP TASK, TANPA TERKECUALI
 
-Sebelum melakukan **analisa apapun** atau **perubahan apapun** pada project ini, kamu HARUS membaca terlebih dahulu file referensi project:
+**Sebelum melakukan analisa apapun atau perubahan apapun pada project ini, WAJIB baca dulu referensi project.** Ini bukan opsional dan bukan cuma untuk task besar — berlaku juga untuk pertanyaan kecil, "lanjutan" dari task sebelumnya, atau hal yang terasa sudah familiar dari percakapan. Jangan andalkan ingatan dari sesi sebelumnya — file referensi bisa berubah kapan saja.
+
+Sejak 2026-08-19, referensi ini dipecah jadi 2 lapis:
 
 ```
-C:\Users\5891\Documents\Obsidian Vault\PM\Project Reference.md
+C:\Users\5891\Documents\Obsidian Vault\PM\Project Reference.md   ← index utama + pola/aturan lintas modul
+C:\Users\5891\Documents\Obsidian Vault\PM\Modules\*.md            ← detail per modul bisnis (skema tabel + behavior)
 ```
 
 ### Alur yang harus diikuti:
 
-1. **Baca** `Project Reference.md` dari Obsidian vault
-2. **Cek** apakah topik yang sedang didiskusikan sudah ada di referensi
+1. **Selalu baca `Project Reference.md` dulu** (index) — walau kelihatannya sudah tahu isinya dari sesi sebelumnya.
+2. **Tentukan modul mana yang relevan** dengan topik yang sedang dibahas, lihat tabel [📚 Modul](Project%20Reference.md) di index tersebut.
+3. **Baca file modul terkait** di `Modules/` sebelum menganalisa atau mengubah apapun yang menyentuh modul itu — jangan cukup baca index saja kalau topiknya spesifik ke 1 modul.
+4. **Cek** apakah topik yang sedang didiskusikan sudah ada di referensi (index atau file modul)
    - **Sudah ada** → langsung analisa berdasarkan data referensi, lanjutkan pekerjaan
    - **Belum ada** → informasikan ke user bahwa topik ini belum ada di referensi, tanyakan apakah perlu ditambahkan
-3. **Jika ada perubahan/tambahan** pada referensi → tulis langsung ke `Project Reference.md` setelah mendapat persetujuan user
-4. **Fitur/behavior baru yang selesai dikerjakan** → wajib didokumentasikan ke `Project Reference.md` sebelum task dianggap selesai, bukan opsional. Task belum benar-benar "done" kalau referensinya belum diupdate.
+5. **Jika ada perubahan/tambahan** pada referensi → tulis ke file yang tepat (index untuk hal lintas modul, file `Modules/*.md` untuk detail 1 modul) setelah mendapat persetujuan user
+6. **Fitur/behavior baru yang selesai dikerjakan** → wajib didokumentasikan ke file yang tepat sebelum task dianggap selesai, bukan opsional. Task belum benar-benar "done" kalau referensinya belum diupdate.
+7. **Modul baru yang belum punya file sendiri** → ikuti pola modul lain di `Modules/` (skema tabel + kondisi/behavior + relasi digabung 1 file), lalu tambahkan barisnya ke tabel index di `Project Reference.md`.
 
 ### Aturan lainnya:
 - Selalu gunakan **Bahasa Indonesia** dalam semua respons

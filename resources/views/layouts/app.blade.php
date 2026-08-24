@@ -191,6 +191,21 @@
             var submenu = item.querySelector('.submenu');
             if (submenu) submenu.classList.add('active');
         });
+
+        // Scroll sidebar supaya menu yang sedang aktif tetap terlihat setelah
+        // pindah halaman — tanpa ini, menu yang posisinya jauh di bawah (mis.
+        // Testing Points) selalu balik ke atas & user harus scroll ulang.
+        (function () {
+            var activeItem = document.querySelector('.sidebar-wrapper .menu .submenu li.active')
+                || document.querySelector('.sidebar-wrapper .menu > .sidebar-item.active');
+            var scrollContainer = document.querySelector('.sidebar-wrapper');
+            if (!activeItem || !scrollContainer) return;
+
+            var itemRect      = activeItem.getBoundingClientRect();
+            var containerRect = scrollContainer.getBoundingClientRect();
+            var offset = (itemRect.top - containerRect.top) - (containerRect.height / 2) + (itemRect.height / 2);
+            scrollContainer.scrollTop += offset;
+        })();
     </script>
     <script>
         let resource = '{{ request()->segment(1) }}';

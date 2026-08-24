@@ -175,19 +175,22 @@ class BusinessRelationSiteController extends Controller
         // VALIDASI
         // =========================
         $validated = $request->validate([
-            'nama_lokasi'     => 'required|string|max:255',
-            'alamat_lengkap'  => 'nullable|string',
-            'provinsi'        => 'nullable|string|max:100',
-            'kota_kabupaten'  => 'nullable|string|max:100',
-            'kecamatan'       => 'nullable|string|max:100',
-            'kelurahan'       => 'nullable|string|max:100',
-            'kode_pos'        => 'nullable|string|max:10',
-            'kawasan_bisnis'  => 'nullable|string|max:150',
-            'gedung'          => 'nullable|string|max:150',
-            'alamat'          => 'nullable|string|max:255',
-            'npwp_cabang'     => 'nullable|string|max:50',
-            'is_aktif'        => 'required|in:0,1',
-            'is_kantor_pusat' => 'required|in:0,1',
+            'nama_lokasi'       => 'required|string|max:255',
+            'nama_jalan'        => 'nullable|string',
+            'alamat_lengkap'    => 'nullable|string',
+            'keterangan_alamat' => 'nullable|string|max:255',
+            'provinsi'          => 'nullable|string|max:100',
+            'kota_kabupaten'    => 'nullable|string|max:100',
+            'kecamatan'         => 'nullable|string|max:100',
+            'kelurahan'         => 'nullable|string|max:100',
+            'kode_pos'          => 'nullable|string|max:10',
+            'kawasan_bisnis'    => 'nullable|integer|exists:business_estates,id_bestate',
+            'gedung'            => 'nullable|integer|exists:commercial_buildings,id_building',
+            'latitude'          => 'nullable|numeric',
+            'longitude'         => 'nullable|numeric',
+            'npwp_cabang'       => 'nullable|string|max:50',
+            'is_aktif'          => 'required|in:0,1',
+            'is_kantor_pusat'   => 'required|in:0,1',
         ]);
 
         // =========================
@@ -217,12 +220,17 @@ class BusinessRelationSiteController extends Controller
         // =========================
         // UPDATE DATA
         // =========================
+        $before = json_encode($site);
+
         try {
             DB::beginTransaction();
 
             DB::table('business_relation_sites')
                 ->where('id_site', $id)
                 ->update([...$validated, 'updated_at' => now()]);
+
+            $after = DB::table('business_relation_sites')->where('id_site', $id)->first();
+            saveAudit('business_relation_sites', $id, 'update', $before, json_encode($after));
 
             DB::commit();
         } catch (\Throwable $th) {

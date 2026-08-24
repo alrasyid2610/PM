@@ -47,7 +47,8 @@ function renderParameterForm(res) {
                                     ],
                                     { className: "col-md-4", required: true }
                                 )}
-                                ${formGroup.text("kode", "Kode", res.kode, true, { className: "col-md-4" })}
+                                ${formGroup.text("kode", "Kode", res.kode, true, { className: "col-md-3" })}
+                                ${formGroup.checkbox("is_kan", "KAN", res.is_kan, { className: "col-md-1", checkLabel: "KAN" })}
                                 ${formGroup.text("judul_indonesia", "Judul Indonesia", res.judul_indonesia, true, { className: "col-md-4" })}
                                 ${formGroup.text("judul_inggris", "Judul Inggris", res.judul_inggris, true, { className: "col-md-4" })}
                                 ${formGroup.text("rumus_empiris", "Rumus Empiris", res.rumus_empiris, false, { className: "col-md-4" })}

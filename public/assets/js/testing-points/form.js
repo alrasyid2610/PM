@@ -7,7 +7,7 @@ function renderForm(res) {
     <input type="hidden" name="id_testing_matriks_sample" value="${res.id_testing_matriks_sample}">
 
     ${formGroup.actionBar({
-        number: escHtml(res.nama ?? '—'),
+        number: escHtml([res.matrik_sample_judul_indonesia, res.standard_nomor, res.nama].filter(Boolean).join(' ') || '—'),
         createdAt: escHtml(res.created_at ?? '—'),
         updatedAt: escHtml(res.updated_at ?? '—'),
         deleteId: res.id_testing_point,

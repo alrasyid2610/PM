@@ -49,7 +49,8 @@ function renderForm(res) {
                                     <label class="form-label">Site</label>
                                     <select name="id_site" id="detail_id_site" class="form-select disabled"></select>
                                 </div>
-                                ${formGroup.text("nama_pic", "Nama PIC", res.nama_pic, true, { className: "col-md-12" })}
+                                ${formGroup.text("nama_pic", "Nama PIC", res.nama_pic, true, { className: "col-md-9" })}
+                                ${formGroup.text("jabatan", "Jabatan", res.jabatan, false, { className: "col-md-3" })}
                                 <div class="col-md-3 mb-3">
                                     <label class="form-label form-label-sm text-muted mb-1 required">No. Telp PIC</label>
                                     <input type="text" name="nomor_telepon_pic" class="form-control disabled numeric-only"

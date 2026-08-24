@@ -44,9 +44,7 @@ class BusinessRelationController extends Controller
 
     public function history($id)
     {
-        $site = DB::table('business_relation_sites')->where('id_site', $id)->first();
-        if (!$site) return response()->json([]);
-        return $this->historyById($site->id_br);
+        return $this->historyById($id);
     }
 
     public function index()
@@ -92,22 +90,17 @@ class BusinessRelationController extends Controller
     public function data(Request $request)
     {
         // =========================
-        // QUERY DASAR (JOIN BR + BRS)
+        // QUERY DASAR (1 baris = 1 BR)
         // =========================
-        $query = DB::table('business_relation_sites as s')
-            ->join('business_relations as br', 'br.id_br', '=', 's.id_br')
+        $query = DB::table('business_relations as br')
             ->leftJoin('entitas as e', 'e.id_entitas', '=', 'br.id_entitas')
-            ->whereNull('s.deleted_at')
             ->select([
-                's.id_site',
                 'br.id_br',
                 'br.nama',
                 'e.nama as entitas',
-                's.nama_lokasi',
-                's.alamat_lengkap',
-                's.is_kantor_pusat',
-                's.is_aktif',
-                's.created_at',
+                'br.is_aktif',
+                'br.created_at',
+                DB::raw('(select count(*) from business_relation_sites s where s.id_br = br.id_br and s.deleted_at is null) as jumlah_site'),
             ]);
 
         // =========================
@@ -140,11 +133,10 @@ class BusinessRelationController extends Controller
                 return trim($prefix . ' ' . $row->nama);
             })
 
-            // Tipe lokasi
-            ->editColumn('is_kantor_pusat', function ($row) {
-                return $row->is_kantor_pusat
-                    ? '<span class="badge bg-primary">Kantor Pusat</span>'
-                    : '<span class="badge bg-secondary">Cabang</span>';
+            // Jumlah Site
+            ->editColumn('jumlah_site', function ($row) {
+                return '<span class="badge rounded-pill" style="background:#e0f2fe;color:#0284c7;font-size:11px;font-weight:600;">'
+                    . $row->jumlah_site . ' Site</span>';
             })
 
             // Status
@@ -154,25 +146,7 @@ class BusinessRelationController extends Controller
                     : '<span class="badge rounded-pill" style="background:#fee2e2;color:#991b1b;font-size:11px;font-weight:600;">Tidak Aktif</span>';
             })
 
-            // ->addColumn('action', function ($row) {
-            //     return '
-            //     <div class="d-flex justify-content-center gap-1">
-            //         <button class="btn btn-sm btn-warning btn-edit-site"
-            //                 data-id="' . $row->id_site . '"
-            //                 title="Edit Site">
-            //             <i class="fa-solid fa-pen"></i>
-            //         </button>
-
-            //         <button class="btn btn-sm btn-danger btn-delete-site"
-            //                 data-id="' . $row->id_site . '"
-            //                 title="Delete Site">
-            //             <i class="fa-solid fa-trash"></i>
-            //         </button>
-            //     </div>
-            // ';
-            // })
-
-            ->rawColumns(['is_kantor_pusat', 'is_aktif'])
+            ->rawColumns(['jumlah_site', 'is_aktif'])
             ->make(true);
     }
 
@@ -334,10 +308,7 @@ class BusinessRelationController extends Controller
 
     public function update(Request $request)
     {
-
-        // dd($request->all(), $request->kawasan_bisnis, $request->id_site);
-
-        $validated = $request->validate([
+        $request->validate([
             'id_br'   => 'nullable|exists:business_relations,id_br',
             'nama_br' => 'required|string|max:255',
             'id_entitas' => 'nullable|integer|exists:entitas,id_entitas',
@@ -348,11 +319,9 @@ class BusinessRelationController extends Controller
             'id_sub_kategori_bisnis' => 'nullable|integer|exists:sub_kategori_bisnis,id_sub_kategori_bisnis',
             'website' => 'nullable|string|max:255',
             'nomor_telepon' => 'nullable|string|max:50',
-            'nama_lokasi' => 'required_if:id_site,null|string|max:255',
-            'alamat_lengkap' => 'nullable|string',
         ]);
 
-        // Capture BEFORE state
+        // Capture BEFORE state (BR + lines Site, untuk audit)
         $id_br = $request->id_br;
         $beforeBr = (array) DB::table('business_relations')->where('id_br', $id_br)->first();
         $beforeSites = DB::table('business_relation_sites')->where('id_br', $id_br)->get()->map(fn($r) => (array)$r)->toArray();
@@ -375,29 +344,6 @@ class BusinessRelationController extends Controller
                     'nomor_telepon'          => $request->nomor_telepon,
                     'is_aktif'               => $request->br_is_aktif ?? 1,
                     'updated_at'             => now(),
-                ]);
-
-
-            DB::table('business_relation_sites')
-                ->where('id_site', $request->id_site)
-                ->update([
-                    'nama_lokasi'       => $request->nama_lokasi,
-                    'is_kantor_pusat'   => $request->is_kantor_pusat,
-                    'nama_jalan'        => $request->nama_jalan,
-                    'alamat_lengkap'    => $request->alamat_lengkap,
-                    'keterangan_alamat' => $request->keterangan_alamat,
-                    'latitude'          => $request->latitude ?: null,
-                    'longitude'         => $request->longitude ?: null,
-                    'provinsi'          => $request->provinsi,
-                    'kota_kabupaten'    => $request->kota_kabupaten,
-                    'kecamatan'         => $request->kecamatan,
-                    'kelurahan'         => $request->kelurahan,
-                    'kode_pos'          => $request->kode_pos,
-                    'kawasan_bisnis'    => $request->kawasan_bisnis,
-                    'gedung'            => $request->gedung,
-                    'npwp_cabang'       => $request->npwp_cabang,
-                    'is_aktif'          => $request->s_is_aktif ?? 1,
-                    'updated_at'        => now(),
                 ]);
 
             // Capture AFTER state
@@ -519,16 +465,12 @@ class BusinessRelationController extends Controller
 
     public function detail($id)
     {
-        $data = DB::table('business_relation_sites as s')
-            ->join('business_relations as br', 'br.id_br', '=', 's.id_br')
-            ->leftJoin('commercial_buildings as cb', 'cb.id_building', '=', 's.gedung')
-            ->leftJoin('business_estates as be', 'be.id_bestate', '=', 's.kawasan_bisnis')
+        $data = DB::table('business_relations as br')
             ->leftJoin('entitas as e', 'e.id_entitas', '=', 'br.id_entitas')
             ->leftJoin('kepemilikan as k', 'k.id_kepemilikan', '=', 'br.id_kepemilikan')
             ->leftJoin('kategori_bisnis as kb', 'kb.id_kategori_bisnis', '=', 'br.id_kategori_bisnis')
             ->leftJoin('sub_kategori_bisnis as skb', 'skb.id_sub_kategori_bisnis', '=', 'br.id_sub_kategori_bisnis')
-            ->where('s.id_site', $id)
-            ->whereNull('s.deleted_at')
+            ->where('br.id_br', $id)
             ->select([
                 'br.id_br',
                 'br.nama as nama_br',
@@ -547,6 +489,30 @@ class BusinessRelationController extends Controller
                 'br.is_aktif as br_is_aktif',
                 'br.created_at as br_created_at',
                 'br.updated_at as br_updated_at',
+            ])
+            ->first();
+
+        if ($data) {
+            $data->jumlah_site = DB::table('business_relation_sites')
+                ->where('id_br', $id)
+                ->whereNull('deleted_at')
+                ->count();
+        }
+
+        return response()->json($data);
+    }
+
+    public function siteDetail($id)
+    {
+        $data = DB::table('business_relation_sites as s')
+            ->join('business_relations as br', 'br.id_br', '=', 's.id_br')
+            ->leftJoin('commercial_buildings as cb', 'cb.id_building', '=', 's.gedung')
+            ->leftJoin('business_estates as be', 'be.id_bestate', '=', 's.kawasan_bisnis')
+            ->where('s.id_site', $id)
+            ->whereNull('s.deleted_at')
+            ->select([
+                'br.id_br',
+                'br.nama as nama_br',
                 's.id_site',
                 's.nama_lokasi',
                 's.is_kantor_pusat',

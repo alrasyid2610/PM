@@ -48,6 +48,7 @@ class BusinessRelationContactController extends Controller
             ->select([
                 'brc.id_contact',
                 'brc.nama_pic',
+                'brc.jabatan',
                 'brc.nomor_telepon_pic',
                 'brc.email_pic',
                 's.nama_lokasi as site',
@@ -173,6 +174,20 @@ class BusinessRelationContactController extends Controller
         return response()->json(['data' => $rows]);
     }
 
+    public function listByBr($id_br)
+    {
+        $rows = DB::table('business_relation_contacts as brc')
+            ->leftJoin('business_relation_sites as s', 's.id_site', '=', 'brc.id_site')
+            ->where('brc.id_br', $id_br)
+            ->whereNull('brc.deleted_at')
+            ->select(['brc.*', 's.nama_lokasi'])
+            ->orderByRaw('brc.id_site is null')
+            ->orderBy('brc.nama_pic')
+            ->get();
+
+        return response()->json(['data' => $rows]);
+    }
+
     public function select2(Request $request)
     {
         $search   = $request->q;
@@ -242,6 +257,7 @@ class BusinessRelationContactController extends Controller
             'id_br'             => 'required|integer',
             'id_site'           => 'nullable|integer',
             'nama_pic'          => 'required|string|max:50',
+            'jabatan'           => 'nullable|string|max:100',
             'nomor_telepon_pic' => 'required|string|max:20|regex:/^[0-9]+$/',
             'email_pic'         => 'nullable|email|max:100',
         ], [
@@ -253,6 +269,7 @@ class BusinessRelationContactController extends Controller
             'id_br' => $request['id_br'],
             'id_site' => $request['id_site'] ?: null,
             'nama_pic' => $request['nama_pic'],
+            'jabatan' => $request['jabatan'] ?: null,
             'nomor_telepon_pic' => $request['nomor_telepon_pic'],
             'email_pic' => $request['email_pic'],
             'lokasi_pic' => $request['lokasi_pic'],
@@ -285,6 +302,7 @@ class BusinessRelationContactController extends Controller
             'id_br'             => 'required|integer',
             'id_site'           => 'nullable|integer',
             'nama_pic'          => 'required|string|max:255',
+            'jabatan'           => 'nullable|string|max:100',
             'nomor_telepon_pic' => 'required|string|max:20|regex:/^[0-9]+$/',
             'email_pic'         => 'nullable|email|max:100',
             'lokasi_pic'        => 'nullable|string|max:255',

@@ -47,6 +47,7 @@ use App\Http\Controllers\WoBudgetActualController;
 use App\Http\Controllers\LabSampleController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PersonnelController;
+use App\Http\Controllers\DocumentationController;
 use App\Http\Controllers\LabDataImportController;
 use Spatie\LaravelPdf\Facades\Pdf;
 
@@ -226,6 +227,19 @@ Route::prefix('personnel')->name('personnel.')->group(function () {
     Route::get('/{id}/history', [PersonnelController::class, 'history'])->name('history')->whereNumber('id');
     Route::post('/{id}/account', [PersonnelController::class, 'createAccount'])->name('create-account')->whereNumber('id');
     Route::delete('/{id}/account', [PersonnelController::class, 'revokeAccount'])->name('revoke-account')->whereNumber('id');
+});
+
+Route::prefix('documentations')->name('documentations.')->group(function () {
+    Route::get('/', [DocumentationController::class, 'index'])->name('index');
+    Route::get('/data', [DocumentationController::class, 'data'])->name('data');
+    Route::get('/create', [DocumentationController::class, 'create'])->name('create');
+    Route::post('/', [DocumentationController::class, 'store'])->name('store');
+    Route::get('/tags/select2', [DocumentationController::class, 'tagSelect2'])->name('tags.select2');
+    Route::post('/upload-image', [DocumentationController::class, 'uploadImage'])->name('upload-image');
+    Route::get('/{id}', [DocumentationController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::get('/{id}/history', [DocumentationController::class, 'history'])->name('history')->whereNumber('id');
+    Route::put('/{id}', [DocumentationController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [DocumentationController::class, 'destroy'])->name('destroy')->whereNumber('id');
 });
 
 Route::prefix('satuan')->name('satuan.')->group(function () {
@@ -428,8 +442,10 @@ Route::prefix('business-relations')
             ->name('store'); // ok - store new
         Route::post('/edit-context', [BusinessRelationController::class, 'setEditContext'])
             ->name('set-edit-context');
-        Route::get('/sites/{id}/detail', [BusinessRelationController::class, 'detail'])
+        Route::get('/sites/{id}/detail', [BusinessRelationController::class, 'siteDetail'])
             ->name('sites.detail'); // ok - site detail
+        Route::delete('/sites/{id}', [BusinessRelationController::class, 'destroy'])
+            ->name('sites.destroy'); // ok - hapus 1 site (soft delete)
 
 
 
@@ -447,8 +463,8 @@ Route::prefix('business-relations')
 
         // Route::get('/{id}', [BusinessRelationController::class, 'show'])
         //     ->name('show');
-        Route::delete('/{id}', [BusinessRelationController::class, 'destroy'])
-            ->name('destroy');
+        // Catatan: hapus BR (bukan Site) belum didukung — business_relations tidak
+        // punya kolom deleted_at. Hapus record dilakukan per-Site lewat sites.destroy.
     });
 
 Route::prefix('business-relation-sites')
@@ -605,6 +621,10 @@ Route::prefix('/business-relation-contacts')
         Route::get('/by-site/{id_site}', [BusinessRelationContactController::class, 'listBySite'])
             ->name('by-site')
             ->whereNumber('id_site');
+
+        Route::get('/by-br/{id_br}', [BusinessRelationContactController::class, 'listByBr'])
+            ->name('by-br')
+            ->whereNumber('id_br');
 
         Route::get('/{id}', [BusinessRelationContactController::class, 'show'])->name('show')->whereNumber('id');
 
@@ -806,6 +826,9 @@ Route::prefix('termin')->name('termin.')->group(function () {
 Route::prefix('wo-samples')->name('wo-samples.')->group(function () {
     Route::get('/sampling-points/{id_site}',    [WoSampleController::class, 'samplingPointsBySite'])->name('sampling-points')->whereNumber('id_site');
     Route::get('/by-wo/{id_wo}',                [WoSampleController::class, 'boqByWo'])->name('by-wo')->whereNumber('id_wo');
+    Route::get('/by-wo/{id_wo}/available-fwo-samples', [WoSampleController::class, 'availableFwoSamples'])->name('available-fwo-samples')->whereNumber('id_wo');
+    Route::post('/by-wo/{id_wo}/pull-from-fwo', [WoSampleController::class, 'pullFromFwo'])->name('pull-from-fwo')->whereNumber('id_wo');
+    Route::post('/by-wo/{id_wo}/store-without-boq', [WoSampleController::class, 'storeWithoutBoq'])->name('store-without-boq')->whereNumber('id_wo');
     Route::post('/by-wo/{id_wo}/boq/{id_boq}/generate',  [WoSampleController::class, 'generateSlots'])->name('generate')->whereNumber(['id_wo', 'id_boq']);
     Route::post('/by-wo/{id_wo}/boq/{id_boq}/add-one',   [WoSampleController::class, 'addOne'])->name('add-one')->whereNumber(['id_wo', 'id_boq']);
     Route::post('/by-wo/{id_wo}/boq/{id_boq}/bulk-fill', [WoSampleController::class, 'bulkFill'])->name('bulk-fill')->whereNumber(['id_wo', 'id_boq']);

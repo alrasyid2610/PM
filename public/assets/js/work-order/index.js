@@ -644,21 +644,50 @@ function loadWoSampleData(idWo) {
 
     $.get(`/wo-samples/by-wo/${idWo}`)
         .done(function (res) {
-            const boqs     = res.data || [];
+            const regs     = res.regs || [];
+            const boqs     = res.boqs || []; // BOQ item yang belum pernah disentuh FWO manapun — bisa dibuat sample langsung
             const isLocked = res.wo_status === 'completed';
             const idSite   = res.id_site || null;
+            window._woHasFwo = !!res.has_fwo;
 
-            if (!boqs.length) {
-                $wrap.html('<div class="text-center text-muted py-4">Tidak ada BOQ pada WO ini.</div>');
+            if (!regs.length && !boqs.length) {
+                $wrap.html(window._woHasFwo
+                    ? '<div class="text-center text-muted py-4">Belum ada sample yang diregistrasi. Gunakan tombol "Registrasi dari FWO" di atas.</div>'
+                    : '<div class="text-center text-muted py-4">Tidak ada BOQ pada WO ini.</div>');
+                $('#btn-wo-reg-from-fwo').toggle(window._woHasFwo && !isLocked);
                 return;
             }
 
             window._woSamplingPoints = [];
             const renderAll = function () {
-                $wrap.html(renderWoSampleList(boqs, isLocked));
+                const regsHtml = regs.length ? `
+                    <div class="mb-3">
+                        <div class="fw-semibold mb-2" style="font-size:13px;color:#1e293b;">
+                            <i class="fa-solid fa-clipboard-check me-1" style="color:#0369a1;"></i>Sudah Diregistrasi
+                        </div>
+                        ${renderWoLabRegGroups(regs, isLocked)}
+                    </div>` : '';
+                const boqsHtml = boqs.length ? `
+                    <div>
+                        <div class="d-flex align-items-center justify-content-between mb-2" id="woDirectSectionHeader">
+                            <div class="fw-semibold" style="font-size:13px;color:#1e293b;">
+                                <i class="fa-solid fa-flask me-1" style="color:#7c3aed;"></i>Belum Diregistrasi
+                            </div>
+                            ${!isLocked ? `
+                            <button type="button" class="pm-btn-pill d-none" id="btn-wo-register-direct-selected"
+                                style="border-color:#0369a1;color:#0369a1;background:#eff6ff;">
+                                <i class="fa-solid fa-clipboard-check" style="font-size:11px;"></i>
+                                Registrasi <span id="woDirectSelectedCount">0</span> Sample Terpilih
+                            </button>` : ''}
+                        </div>
+                        ${renderWoSampleList(boqs, isLocked, false)}
+                    </div>` : '';
+
+                $wrap.html(regsHtml + boqsHtml);
                 initWoSampleStatusSelect2($wrap[0]);
                 initWoSampleTitikSelect2($wrap[0]);
                 if (!isLocked) initWoSampleModalTitikSelect2();
+                $('#btn-wo-reg-from-fwo').toggle(window._woHasFwo && !isLocked);
             };
 
             if (idSite) {
@@ -747,7 +776,7 @@ function initWoSampleModalTitikSelect2() {
     });
 }
 
-function renderWoSampleList(boqs, isLocked) {
+function renderWoSampleList(boqs, isLocked, hasFwo) {
     return boqs.map(function (boq) {
         const total    = (boq.samples || []).length;
         const diambil  = (boq.samples || []).filter(s => s.status === 'diambil' || s.status === 'dikirim').length;
@@ -757,7 +786,7 @@ function renderWoSampleList(boqs, isLocked) {
         const sisa     = boq.sisa ?? 0;
 
         const slotRows = total === 0
-            ? `<tr><td colspan="9" class="text-center text-muted py-3" style="font-size:12px;font-style:italic;">Belum ada sample — gunakan tombol "Tambah Sample" di atas</td></tr>`
+            ? `<tr><td colspan="10" class="text-center text-muted py-3" style="font-size:12px;font-style:italic;">Belum ada sample — gunakan tombol "Registrasi Sample" di atas</td></tr>`
             : (boq.samples || []).map(function (s) {
                 const statusVal = s.status || 'belum_diambil';
                 const jenisTag  = s.jenis_sample
@@ -797,6 +826,9 @@ function renderWoSampleList(boqs, isLocked) {
 
                 return `
                 <tr data-id-sample="${s.id_lab_sample}" data-boq-name="${escHtml(boq.nama_boq)}">
+                    <td class="text-center" style="width:32px;">
+                        ${!isLocked ? `<input type="checkbox" class="wo-direct-sample-check" value="${s.id_lab_sample}">` : ''}
+                    </td>
                     <td style="font-size:12px;color:#64748b;width:36px;">${s.no_urut}</td>
                     <td style="font-size:12px;white-space:nowrap;">${jenisTag} ${noSample}</td>
                     <td style="font-size:12px;">${titikCell}</td>
@@ -831,7 +863,7 @@ function renderWoSampleList(boqs, isLocked) {
                 </tr>`;
             }).join('');
 
-        const addBtn = !isLocked ? `
+        const addBtn = (!isLocked && !hasFwo) ? `
             <div class="d-flex gap-2">
                 ${total > 0 ? `
                 <button type="button" class="btn btn-sm py-0 px-2 btn-wo-sample-bulk-fill"
@@ -843,7 +875,7 @@ function renderWoSampleList(boqs, isLocked) {
                     <button type="button" class="btn btn-sm dropdown-toggle py-0 px-2"
                         data-bs-toggle="dropdown"
                         style="font-size:11px;border:1px solid #0369a1;color:#0369a1;background:#eff6ff;">
-                        <i class="fa-solid fa-plus me-1"></i>Tambah Sample
+                        <i class="fa-solid fa-plus me-1"></i>Registrasi Sample
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" style="font-size:12px;min-width:200px;">
                         <li>
@@ -893,6 +925,7 @@ function renderWoSampleList(boqs, isLocked) {
                     <table class="pm-table">
                         <thead>
                             <tr>
+                                <th style="width:32px;"></th>
                                 <th style="width:36px;">#</th>
                                 <th style="width:1%;white-space:nowrap;">Jenis / No. Sample</th>
                                 <th style="width:220px;">Titik Lokasi</th>
@@ -912,12 +945,161 @@ function renderWoSampleList(boqs, isLocked) {
     }).join('');
 }
 
-$(document).on('click', '.btn-wo-sample-collapse', function () {
-    const target = $(this).data('target');
-    const $icon  = $(this).find('i');
-    $(target).slideToggle(150);
-    $icon.toggleClass('fa-chevron-up fa-chevron-down');
+function _woRegSampleRow(s, isLocked, groupId) {
+    const statusVal = s.status || 'belum_diambil';
+    const jenisTag  = s.jenis_sample
+        ? `<span style="font-size:10px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:4px;padding:1px 6px;">${JENIS_LABEL_WO_SAMPLE[s.jenis_sample] || s.jenis_sample}</span>`
+        : `<span style="font-size:10px;color:#94a3b8;font-style:italic;">–</span>`;
+    const noSample = s.no_sample
+        ? `<span style="font-size:11px;font-weight:600;">${escHtml(s.no_sample)}</span>`
+        : `<span class="text-muted" style="font-size:11px;font-style:italic;">–</span>`;
+    const noRegLabCell = s.no_reg_lab
+        ? `<span style="font-size:11px;font-weight:600;color:#0369a1;">${escHtml(s.no_reg_lab)}</span>`
+        : `<span class="text-muted" style="font-size:11px;font-style:italic;">–</span>`;
+    const statusLabCell = s.status_lab === 'diterima'
+        ? `<span class="pm-badge pm-badge--completed" style="font-size:10px;">Diterima</span>`
+        : `<span class="text-muted" style="font-size:11px;font-style:italic;">–</span>`;
+
+    const attCountWo = (s.attachments || []).length;
+    const attBadgeWo = attCountWo > 0
+        ? `<span class="btn-wo-sample-edit" data-id="${s.id_lab_sample}"
+                title="${attCountWo} lampiran" style="font-size:11px;color:#0369a1;cursor:pointer;white-space:nowrap;">
+                <i class="fa-solid fa-paperclip"></i> ${attCountWo}
+           </span>`
+        : `<span style="color:#94a3b8;font-style:italic;font-size:11px;">–</span>`;
+
+    const titikVal  = s.titik_lokasi || '';
+    const titikCell = !isLocked
+        ? `<select class="form-select form-select-sm wo-sample-inline-titik"
+                data-id="${s.id_lab_sample}"
+                data-current="${escHtml(titikVal)}"
+                style="font-size:11px;width:220px;"></select>`
+        : (titikVal ? escHtml(titikVal) : '<span style="color:#94a3b8;font-style:italic;">–</span>');
+
+    const tglCellWo = s.tanggal_pengambilan
+        ? `<span style="font-size:11px;white-space:nowrap;">${fmtDate(s.tanggal_pengambilan)}</span>`
+        : `<span style="color:#94a3b8;font-style:italic;font-size:11px;">–</span>`;
+
+    const kondisiCellWo = s.kondisi_sample
+        ? `<span style="font-size:11px;font-weight:600;color:${KONDISI_COLOR_WO[s.kondisi_sample]||'#64748b'};">${KONDISI_LABEL_WO[s.kondisi_sample]||s.kondisi_sample}</span>`
+        : `<span style="color:#94a3b8;font-style:italic;font-size:11px;">–</span>`;
+
+    const keteranganCellWo = s.keterangan
+        ? `<span style="font-size:11px;" title="${escHtml(s.keterangan)}">${escHtml(s.keterangan)}</span>`
+        : `<span style="color:#94a3b8;font-style:italic;font-size:11px;">–</span>`;
+
+    return `
+    <tr data-id-sample="${s.id_lab_sample}" data-boq-name="${escHtml(s.nama_boq || '')}" class="${groupId || ''}-row">
+        <td style="font-size:12px;white-space:nowrap;">${jenisTag} ${noSample}</td>
+        <td style="font-size:12px;white-space:nowrap;">${noRegLabCell}</td>
+        <td style="font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(s.nama_boq || '')}">${escHtml(s.nama_boq || '-')}</td>
+        <td style="font-size:12px;">${titikCell}</td>
+        <td style="width:100px;">${tglCellWo}</td>
+        <td style="width:100px;">${kondisiCellWo}</td>
+        <td style="font-size:12px;width:150px;">
+            ${!isLocked
+                ? `<select class="form-select form-select-sm wo-sample-inline-status"
+                        data-id="${s.id_lab_sample}"
+                        style="font-size:11px;width:140px;">
+                        <option value="belum_diambil"${statusVal==='belum_diambil'?' selected':''}>Belum Diambil</option>
+                        <option value="diambil"${statusVal==='diambil'?' selected':''}>Diambil</option>
+                        <option value="dikirim"${statusVal==='dikirim'?' selected':''}>Dikirim ke Lab</option>
+                   </select>`
+                : `<span style="font-size:11px;font-weight:600;color:${SAMPLE_STATUS_COLOR_WO[statusVal]||'#64748b'};">${SAMPLE_STATUS_LABEL_WO[statusVal]||statusVal}</span>`
+            }
+        </td>
+        <td style="width:100px;">${statusLabCell}</td>
+        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${keteranganCellWo}</td>
+        <td style="width:80px;text-align:center;">${attBadgeWo}</td>
+        <td class="text-center" style="width:72px;white-space:nowrap;">
+            ${!isLocked ? `
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-wo-sample-edit"
+                data-id="${s.id_lab_sample}" title="Edit" style="font-size:11px;">
+                <i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-wo-sample-delete"
+                data-id="${s.id_lab_sample}" data-no="${escHtml(s.no_sample || 'Sample #' + s.id_lab_sample)}"
+                title="Hapus" style="font-size:11px;">
+                <i class="fa-solid fa-trash" style="color:#dc2626;"></i>
+            </button>` : ''}
+        </td>
+    </tr>`;
+}
+
+function renderWoLabRegGroups(regs, isLocked) {
+    const bodyRows = regs.map(function (reg) {
+        const groupId = `woRegGroup_${reg.id_wo_lab_sample_reg}`;
+        const count   = (reg.samples || []).length;
+
+        const headerRow = `
+        <tr class="wo-reg-group-header" data-group="${groupId}">
+            <td colspan="11">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <i class="fa-solid fa-clipboard-check" style="color:#0369a1;font-size:12px;"></i>
+                        <span style="font-size:12px;font-weight:600;color:#1e293b;">Diterima ${fmtDate(reg.tanggal_diterima)}</span>
+                        <span class="text-muted" style="font-size:11px;">Oleh: ${reg.nama_personnel ? escHtml(reg.nama_personnel) : '-'} &nbsp;·&nbsp; ${count} sample</span>
+                        ${reg.keterangan ? `<span class="text-muted" style="font-size:11px;font-style:italic;" title="${escHtml(reg.keterangan)}">"${escHtml(reg.keterangan)}"</span>` : ''}
+                    </div>
+                    <i class="fa-solid fa-chevron-up wo-reg-group-chevron" style="font-size:11px;color:#64748b;"></i>
+                </div>
+            </td>
+        </tr>`;
+
+        const rows = count
+            ? reg.samples.map(s => _woRegSampleRow(s, isLocked, groupId)).join('')
+            : `<tr class="${groupId}-row"><td colspan="11" class="text-center text-muted py-3" style="font-size:12px;font-style:italic;">Tidak ada sample dalam registrasi ini</td></tr>`;
+
+        return headerRow + rows;
+    }).join('');
+
+    return `
+    <div class="table-responsive border rounded" style="background:#fff;">
+        <table class="pm-table mb-0">
+            <thead>
+                <tr>
+                    <th style="width:1%;white-space:nowrap;">Jenis / No. Sample</th>
+                    <th style="width:120px;">No. Reg Lab</th>
+                    <th style="min-width:180px;">BOQ</th>
+                    <th style="width:220px;">Titik Lokasi</th>
+                    <th style="width:100px;">Tgl Pengambilan</th>
+                    <th style="width:100px;">Kondisi</th>
+                    <th>Status</th>
+                    <th style="width:100px;">Status Lab</th>
+                    <th>Keterangan</th>
+                    <th style="width:80px;">Lampiran</th>
+                    <th style="width:48px;"></th>
+                </tr>
+            </thead>
+            <tbody>${bodyRows}</tbody>
+        </table>
+    </div>`;
+}
+
+$(document).on('click', '.wo-reg-group-header', function () {
+    const groupId = $(this).data('group');
+    $(`.${groupId}-row`).toggle();
+    $(this).find('.wo-reg-group-chevron').toggleClass('fa-chevron-up fa-chevron-down');
 });
+
+function _initWoRegPersonnelSelect2(selector, dropdownParent) {
+    const $sel = $(selector);
+    if ($sel.data('select2')) $sel.select2('destroy');
+    $sel.empty();
+    $sel.select2({
+        width: '100%',
+        placeholder: 'Pilih personil (opsional)',
+        allowClear: true,
+        dropdownParent: dropdownParent,
+        ajax: {
+            url: '/personnel/select2',
+            delay: 200,
+            dataType: 'json',
+            data: (p) => ({ q: p.term ?? '' }),
+            processResults: (d) => ({ results: d }),
+        },
+    });
+}
 
 $(document).on('click', '.btn-wo-sample-generate', function () {
     const idBoq = $(this).data('id-boq');
@@ -957,6 +1139,221 @@ $(document).on('click', '.btn-wo-sample-add-one', function () {
         })
         .fail(function (xhr) {
             Swal.fire({ icon: 'warning', title: 'Tidak Dapat Ditambahkan', text: xhr.responseJSON?.message || 'Gagal menambah sample.', confirmButtonText: 'OK' });
+        });
+});
+
+// Tombol "Registrasi Sample Terpilih" cuma muncul kalau ada checkbox yang dicentang
+$(document).on('change', '.wo-direct-sample-check', function () {
+    const count = $('.wo-direct-sample-check:checked').length;
+    $('#woDirectSelectedCount').text(count);
+    $('#btn-wo-register-direct-selected').toggleClass('d-none', count === 0);
+});
+
+// Registrasi sample yang dicentang di tabel "Belum Diregistrasi" (jalur WO-langsung)
+$(document).on('click', '#btn-wo-register-direct-selected', function () {
+    const ids = $('.wo-direct-sample-check:checked').map(function () { return $(this).val(); }).get();
+    if (!ids.length) return Swal.fire('Perhatian', 'Pilih minimal 1 sample untuk diregistrasi.', 'warning');
+    _openWoRegHeaderModal(ids);
+});
+
+function _openWoRegHeaderModal(idLabSampleList) {
+    $('#woRegHeaderModal').data('id-lab-sample', idLabSampleList);
+    $('#woRegHeaderModal-tanggal').val('');
+    $('#woRegHeaderModal-keterangan').val('');
+    initFpDate('#woRegHeaderModal');
+    _initWoRegPersonnelSelect2('#woRegHeaderModal-personnel', $('#woRegHeaderModal'));
+    new bootstrap.Modal(document.getElementById('woRegHeaderModal')).show();
+}
+
+$(document).on('click', '#woRegHeaderModal-btn-save', function () {
+    const idWo   = currentWoData.id_wo;
+    const idLabSample = $('#woRegHeaderModal').data('id-lab-sample') || [];
+    const tanggalDiterima = $('#woRegHeaderModal-tanggal').val();
+
+    if (!tanggalDiterima) return Swal.fire('Perhatian', 'Tanggal Diterima wajib diisi.', 'warning');
+
+    const payload = {
+        _token: window.route.csrf,
+        tanggal_diterima: tanggalDiterima,
+        id_personnel_penerima: $('#woRegHeaderModal-personnel').val() || '',
+        keterangan: $('#woRegHeaderModal-keterangan').val().trim(),
+        id_lab_sample: idLabSample,
+    };
+
+    $('#woRegHeaderModal-btn-save').prop('disabled', true);
+    $.post(`/wo-samples/by-wo/${idWo}/pull-from-fwo`, payload)
+        .done(function (res) {
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('woRegHeaderModal'))?.hide();
+                Notify.success('Sample berhasil diregistrasi.');
+                loadWoSampleData(idWo);
+            } else {
+                Swal.fire('Gagal', res.message || 'Gagal registrasi sample.', 'error');
+            }
+        })
+        .fail(function (xhr) {
+            const errs = xhr.responseJSON?.errors;
+            const msg  = errs ? Object.values(errs).flat().join('<br>') : (xhr.responseJSON?.message || 'Gagal registrasi sample.');
+            Swal.fire({ icon: 'error', title: 'Gagal', html: msg });
+        })
+        .always(function () {
+            $('#woRegHeaderModal-btn-save').prop('disabled', false);
+        });
+});
+
+// ─── Sample Tanpa BOQ ───────────────────────────────────────────────────────
+
+$(document).on('click', '#btn-wo-add-sample-no-boq', function () {
+    const idWo = $(this).data('wo-id');
+    $('#woNoBoqSampleModal').data('id-wo', idWo);
+    $('#woNoBoqModal-jenis').val('');
+    $('#woNoBoqModal-tanggal-ambil').val('');
+    $('#woNoBoqModal-kondisi').val('');
+    $('#woNoBoqModal-keterangan-sample').val('');
+    $('#woNoBoqModal-tanggal-terima').val('');
+    $('#woNoBoqModal-keterangan-reg').val('');
+    initFpDate('#woNoBoqSampleModal');
+    _initWoRegPersonnelSelect2('#woNoBoqModal-personnel', $('#woNoBoqSampleModal'));
+
+    const $titik = $('#woNoBoqModal-titik');
+    if ($titik.data('select2')) $titik.select2('destroy');
+    $titik.empty().select2({
+        width: '100%',
+        placeholder: 'Pilih titik lokasi…',
+        allowClear: true,
+        dropdownParent: $('#woNoBoqSampleModal'),
+        data: _woSpOptions(),
+    });
+
+    new bootstrap.Modal(document.getElementById('woNoBoqSampleModal')).show();
+});
+
+$(document).on('click', '#woNoBoqModal-btn-save', function () {
+    const idWo = $('#woNoBoqSampleModal').data('id-wo');
+    const tanggalTerima = $('#woNoBoqModal-tanggal-terima').val();
+
+    if (!tanggalTerima) return Swal.fire('Perhatian', 'Tanggal Diterima wajib diisi.', 'warning');
+
+    const payload = {
+        _token: window.route.csrf,
+        jenis_sample: $('#woNoBoqModal-jenis').val() || '',
+        titik_lokasi: $('#woNoBoqModal-titik').val() || '',
+        tanggal_pengambilan: $('#woNoBoqModal-tanggal-ambil').val() || '',
+        kondisi_sample: $('#woNoBoqModal-kondisi').val() || '',
+        keterangan_sample: $('#woNoBoqModal-keterangan-sample').val().trim(),
+        tanggal_diterima: tanggalTerima,
+        id_personnel_penerima: $('#woNoBoqModal-personnel').val() || '',
+        keterangan: $('#woNoBoqModal-keterangan-reg').val().trim(),
+    };
+
+    $('#woNoBoqModal-btn-save').prop('disabled', true);
+    $.post(`/wo-samples/by-wo/${idWo}/store-without-boq`, payload)
+        .done(function (res) {
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('woNoBoqSampleModal'))?.hide();
+                Notify.success('Sample berhasil diregistrasi.');
+                loadWoSampleData(idWo);
+            } else {
+                Swal.fire('Gagal', res.message || 'Gagal registrasi sample.', 'error');
+            }
+        })
+        .fail(function (xhr) {
+            const errs = xhr.responseJSON?.errors;
+            const msg  = errs ? Object.values(errs).flat().join('<br>') : (xhr.responseJSON?.message || 'Gagal registrasi sample.');
+            Swal.fire({ icon: 'error', title: 'Gagal', html: msg });
+        })
+        .always(function () {
+            $('#woNoBoqModal-btn-save').prop('disabled', false);
+        });
+});
+
+// ─── Registrasi dari FWO ────────────────────────────────────────────────────
+
+$(document).on('click', '#btn-wo-reg-from-fwo', function () {
+    const idWo = $(this).data('wo-id');
+    $('#woRegFromFwoModal-tanggal').val('');
+    $('#woRegFromFwoModal-keterangan').val('');
+    $('#woRegFromFwoModal').data('id-wo', idWo);
+    initFpDate('#woRegFromFwoModal');
+    _initWoRegPersonnelSelect2('#woRegFromFwoModal-personnel', $('#woRegFromFwoModal'));
+
+    const $list = $('#woRegFromFwoModal-list');
+    $list.html('<div class="text-center text-muted py-3"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data sample dari FWO...</div>');
+
+    new bootstrap.Modal(document.getElementById('woRegFromFwoModal')).show();
+
+    $.get(`/wo-samples/by-wo/${idWo}/available-fwo-samples`)
+        .done(function (res) {
+            $list.html(renderWoRegFromFwoList(res.data || []));
+        })
+        .fail(function () {
+            $list.html('<div class="text-center text-danger py-3">Gagal memuat data.</div>');
+        });
+});
+
+function renderWoRegFromFwoList(groups) {
+    if (!groups.length) {
+        return '<div class="text-center text-muted py-3" style="font-size:13px;">Tidak ada sample dari FWO yang belum diregistrasi.</div>';
+    }
+
+    return groups.map(function (g) {
+        const rows = g.samples.map(function (s) {
+            const jenisTxt = JENIS_LABEL_WO_SAMPLE[s.jenis_sample] || s.jenis_sample || '–';
+            return `
+            <div class="form-check">
+                <input class="form-check-input wo-reg-from-fwo-check" type="checkbox" value="${s.id_lab_sample}" id="fwoSample${s.id_lab_sample}">
+                <label class="form-check-label" for="fwoSample${s.id_lab_sample}" style="font-size:12px;">
+                    <b>${escHtml(s.no_sample || ('Sample #' + s.id_lab_sample))}</b> — ${escHtml(jenisTxt)}
+                    ${s.titik_lokasi ? ' · ' + escHtml(s.titik_lokasi) : ''}
+                </label>
+            </div>`;
+        }).join('');
+
+        return `
+        <div class="mb-3">
+            <div class="fw-semibold" style="font-size:12px;color:#1e293b;">
+                <i class="fa-solid fa-file-lines me-1" style="color:#0369a1;"></i>
+                FWO ${escHtml(g.no_fwo)} — ${escHtml(g.nama_boq)}
+            </div>
+            <div class="ps-3 pt-1">${rows}</div>
+        </div>`;
+    }).join('');
+}
+
+$(document).on('click', '#woRegFromFwoModal-btn-save', function () {
+    const idWo = $('#woRegFromFwoModal').data('id-wo');
+    const tanggalDiterima = $('#woRegFromFwoModal-tanggal').val();
+    const idLabSample = $('.wo-reg-from-fwo-check:checked').map(function () { return $(this).val(); }).get();
+
+    if (!tanggalDiterima) return Swal.fire('Perhatian', 'Tanggal Diterima wajib diisi.', 'warning');
+    if (!idLabSample.length) return Swal.fire('Perhatian', 'Pilih minimal 1 sample untuk diregistrasi.', 'warning');
+
+    const payload = {
+        _token: window.route.csrf,
+        tanggal_diterima: tanggalDiterima,
+        id_personnel_penerima: $('#woRegFromFwoModal-personnel').val() || '',
+        keterangan: $('#woRegFromFwoModal-keterangan').val().trim(),
+        id_lab_sample: idLabSample,
+    };
+
+    $('#woRegFromFwoModal-btn-save').prop('disabled', true);
+    $.post(`/wo-samples/by-wo/${idWo}/pull-from-fwo`, payload)
+        .done(function (res) {
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('woRegFromFwoModal'))?.hide();
+                Notify.success('Sample berhasil diregistrasi.');
+                loadWoSampleData(idWo);
+            } else {
+                Swal.fire('Gagal', res.message || 'Gagal registrasi sample.', 'error');
+            }
+        })
+        .fail(function (xhr) {
+            const errs = xhr.responseJSON?.errors;
+            const msg  = errs ? Object.values(errs).flat().join('<br>') : (xhr.responseJSON?.message || 'Gagal registrasi sample.');
+            Swal.fire({ icon: 'error', title: 'Gagal', html: msg });
+        })
+        .always(function () {
+            $('#woRegFromFwoModal-btn-save').prop('disabled', false);
         });
 });
 
@@ -1039,6 +1436,7 @@ $(document).on('click', '.btn-wo-sample-edit', function (e) {
     $modal.find('#woSampleModal-id').val(idSample);
     $modal.find('#woSampleModal-jenis').val('');
     $modal.find('#woSampleModal-no').val('');
+    $modal.find('#woSampleModal-no-reg-lab').val('');
     $modal.find('#woSampleModal-tanggal').val('');
     const $titikSelWo = $modal.find('#woSampleModal-titik');
     $titikSelWo.data('_pendingVal', '');
@@ -1054,6 +1452,7 @@ $(document).on('click', '.btn-wo-sample-edit', function (e) {
             const s = res.data || {};
             $modal.find('#woSampleModal-jenis').val(s.jenis_sample || '');
             $modal.find('#woSampleModal-no').val(s.no_sample || '');
+            $modal.find('#woSampleModal-no-reg-lab').val(s.no_reg_lab || '');
             $modal.find('#woSampleModal-tanggal').val(s.tanggal_pengambilan || '');
             $modal.find('#woSampleModal-titik').data('_pendingVal', s.titik_lokasi || '');
             $modal.find('#woSampleModal-kondisi').val(s.kondisi_sample || '');

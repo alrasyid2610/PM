@@ -40,9 +40,16 @@
                             <option value="Mikrobiologi">Mikrobiologi</option>
                         </select>
                     </div>
-                    <div class="col-md-4 col-12">
+                    <div class="col-md-3 col-12">
                         <label for="kode" class="form-label required">Kode</label>
                         <input type="text" class="form-control scientific-input" id="kode" name="kode" required>
+                    </div>
+                    <div class="col-md-1 col-12">
+                        <label class="form-label">KAN</label>
+                        <div class="form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="is_kan" name="is_kan" value="1">
+                            <label class="form-check-label" for="is_kan">KAN</label>
+                        </div>
                     </div>
                     <div class="col-md-4 col-12">
                         <label for="judul_indonesia" class="form-label required">Judul Indonesia</label>

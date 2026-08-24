@@ -37,6 +37,7 @@ class TestingParameterController extends Controller
                 'id_testing_parameter',
                 'kelompok',
                 'kode',
+                'is_kan',
                 'judul_indonesia',
                 'judul_inggris',
                 'rumus_empiris',
@@ -49,6 +50,12 @@ class TestingParameterController extends Controller
 
         return DataTables::of($query)
             ->addIndexColumn()
+            ->editColumn('is_kan', function ($row) {
+                return $row->is_kan
+                    ? '<span class="badge rounded-pill" style="background:#dcfce7;color:#166534;font-size:11px;font-weight:600;">KAN</span>'
+                    : '<span class="badge rounded-pill" style="background:#f1f5f9;color:#64748b;font-size:11px;font-weight:600;">Non-KAN</span>';
+            })
+            ->rawColumns(['is_kan'])
             ->make(true);
     }
 
@@ -66,6 +73,7 @@ class TestingParameterController extends Controller
         $validated = $request->validate([
             'kelompok' => 'nullable|string|max:255',
             'kode' => 'required|string|max:100',
+            'is_kan' => 'nullable|boolean',
             'judul_indonesia' => 'required|string|max:255',
             'judul_inggris' => 'nullable|string|max:255',
             'rumus_empiris' => 'nullable|string',
@@ -81,6 +89,7 @@ class TestingParameterController extends Controller
         $id = DB::table('testing_parameters')->insertGetId([
             'kelompok' => $validated['kelompok'] ?? null,
             'kode' => $validated['kode'],
+            'is_kan' => $request->boolean('is_kan'),
             'judul_indonesia' => $validated['judul_indonesia'],
             'judul_inggris' => $validated['judul_inggris'] ?? null,
             'rumus_empiris' => $validated['rumus_empiris'] ?? null,
@@ -127,6 +136,7 @@ class TestingParameterController extends Controller
         $validated = $request->validate([
             'kelompok'        => 'nullable|string|max:255',
             'kode'            => ['required', 'string', 'max:100', Rule::unique('testing_parameters', 'kode')->ignore((int)$id, 'id_testing_parameter')],
+            'is_kan'          => 'nullable|boolean',
             'judul_indonesia' => 'required|string|max:255',
             'judul_inggris'   => 'required|string|max:255',
             'rumus_empiris'   => 'nullable|string',
@@ -173,6 +183,7 @@ class TestingParameterController extends Controller
                 ->update([
                     'kelompok' => $validated['kelompok'] ?? null,
                     'kode' => $validated['kode'],
+                    'is_kan' => $request->boolean('is_kan'),
                     'judul_indonesia' => $validated['judul_indonesia'],
                     'judul_inggris' => $validated['judul_inggris'] ?? null,
                     'rumus_empiris' => $validated['rumus_empiris'] ?? null,

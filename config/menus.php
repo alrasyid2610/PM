@@ -73,6 +73,7 @@ return [
             ['slug' => 'users',       'label' => 'User Management',  'icon' => 'fa-users-gear'],
             ['slug' => 'personnel',   'label' => 'Personnel',        'icon' => 'fa-people-group'],
             ['slug' => 'lab-data-import', 'label' => 'Import Data Lab', 'icon' => 'fa-file-import'],
+            ['slug' => 'documentations', 'label' => 'Dokumentasi', 'icon' => 'fa-book'],
         ],
     ],
 ];

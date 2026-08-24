@@ -439,7 +439,8 @@ function getFormData(container) {
             if ($(this).is(":checkbox")) {
                 data[name] = $(this).is(":checked") ? 1 : 0;
             } else {
-                data[name] = $(this).val()?.trim();
+                const val = $(this).val();
+                data[name] = Array.isArray(val) ? val : val?.trim();
             }
         });
 

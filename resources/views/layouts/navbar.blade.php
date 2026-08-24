@@ -11,6 +11,13 @@
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav ms-auto align-items-center">
 
+            {{-- HELP / DOCUMENTATION --}}
+            <li class="nav-item me-2">
+                <a href="{{ route('documentations.index') }}" class="nav-link nav-link-lg" title="Dokumentasi">
+                    <i data-feather="help-circle"></i>
+                </a>
+            </li>
+
             {{-- NOTIFICATION (optional, static dulu) --}}
             <li class="nav-item dropdown me-2">
                 <a href="#" data-bs-toggle="dropdown"
