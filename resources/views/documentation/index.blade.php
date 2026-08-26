@@ -49,4 +49,35 @@
 
 @section('style')
 <link href="{{ asset('assets/vendor/quill/quill.snow.css') }}" rel="stylesheet">
+<style>
+    /* Quill mengosongkan margin p/h1-h6/list/blockquote di dalam .ql-editor
+       (quill.snow.css) karena di dalam editor spasi antar baris diatur lewat
+       baris kosong yang diketik user sendiri. Saat konten ditampilkan
+       read-only di #documentation-view (bukan instance editor aktif),
+       perilaku itu bikin semua heading/paragraf menempel tanpa jarak — jadi
+       spacing blog yang wajar perlu di-set ulang khusus untuk tampilan ini. */
+    #documentation-view.ql-editor h1,
+    #documentation-view.ql-editor h2,
+    #documentation-view.ql-editor h3,
+    #documentation-view.ql-editor h4,
+    #documentation-view.ql-editor h5,
+    #documentation-view.ql-editor h6 {
+        margin: 1.5em 0 0.6em;
+    }
+    #documentation-view.ql-editor h1:first-child,
+    #documentation-view.ql-editor h2:first-child,
+    #documentation-view.ql-editor h3:first-child {
+        margin-top: 0;
+    }
+    #documentation-view.ql-editor p,
+    #documentation-view.ql-editor ol,
+    #documentation-view.ql-editor ul,
+    #documentation-view.ql-editor pre,
+    #documentation-view.ql-editor blockquote {
+        margin: 0 0 1em;
+    }
+    #documentation-view.ql-editor li {
+        margin-bottom: 0.25em;
+    }
+</style>
 @endsection

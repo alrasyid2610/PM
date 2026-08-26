@@ -114,6 +114,25 @@ class DocumentationController extends Controller
         }
     }
 
+    /**
+     * Ambil semua path file (relatif ke disk 'public') dari tag <img> di
+     * dalam konten HTML Quill yang mengarah ke storage lokal — dipakai untuk
+     * ikut menghapus file fisik saat gambar dilepas dari konten (update)
+     * atau saat dokumentasinya sendiri dihapus (destroy).
+     */
+    private function extractDocImagePaths(string $html): array
+    {
+        preg_match_all('/<img[^>]+src="([^"]+)"/i', $html, $matches);
+
+        $paths = [];
+        foreach ($matches[1] ?? [] as $src) {
+            if (!str_contains($src, '/storage/')) continue;
+            $paths[] = Str::after($src, '/storage/');
+        }
+
+        return array_unique($paths);
+    }
+
     private function uniqueSlug(string $judul, ?int $ignoreId = null): string
     {
         $base = Str::slug($judul);
@@ -198,6 +217,15 @@ class DocumentationController extends Controller
 
         $before = DB::table('documentations')->where('id_documentation', $id)->get()->toJson();
 
+        $kontenLama = DB::table('documentations')->where('id_documentation', $id)->value('konten');
+        $removedImages = array_diff(
+            $this->extractDocImagePaths($kontenLama ?? ''),
+            $this->extractDocImagePaths($validated['konten'])
+        );
+        foreach ($removedImages as $path) {
+            Storage::disk('public')->delete($path);
+        }
+
         $judulLama = DB::table('documentations')->where('id_documentation', $id)->value('judul');
         $slug = $judulLama === $validated['judul']
             ? DB::table('documentations')->where('id_documentation', $id)->value('slug')
@@ -224,6 +252,12 @@ class DocumentationController extends Controller
     public function destroy($id)
     {
         $before = DB::table('documentations')->where('id_documentation', $id)->get()->toJson();
+
+        $konten = DB::table('documentations')->where('id_documentation', $id)->value('konten');
+        foreach ($this->extractDocImagePaths($konten ?? '') as $path) {
+            Storage::disk('public')->delete($path);
+        }
+
         DB::table('documentations')->where('id_documentation', $id)->update(['deleted_at' => now()]);
         $after = DB::table('documentations')->where('id_documentation', $id)->get()->toJson();
         saveAudit('documentations', $id, 'delete', $before, $after);
