@@ -226,7 +226,7 @@ class WoBudgetController extends Controller
         $dokumenPath = null;
         if ($surplus > 0) {
             $request->validate([
-                'dokumen_realisasi' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+                'dokumen_realisasi' => 'required|file|mimes:pdf,jpg,jpeg,png|max:153600',
             ], [
                 'dokumen_realisasi.required' => 'Dokumen Laporan Realisasi wajib diupload karena ada surplus anggaran.',
             ]);

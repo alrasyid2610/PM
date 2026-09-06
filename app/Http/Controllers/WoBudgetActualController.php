@@ -33,7 +33,7 @@ class WoBudgetActualController extends Controller
             'id_budget_item'  => 'required|integer',
             'nominal_actual'  => 'required|integer|min:0',
             'keterangan'      => 'nullable|string',
-            'attachments.*'   => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'attachments.*'   => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:153600',
         ]);
 
         $files = [];
@@ -76,7 +76,7 @@ class WoBudgetActualController extends Controller
         $request->validate([
             'nominal_actual' => 'required|integer|min:0',
             'keterangan'     => 'nullable|string',
-            'attachments.*'  => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'attachments.*'  => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:153600',
         ]);
 
         $existing = json_decode($row->attachments ?? '[]', true) ?: [];

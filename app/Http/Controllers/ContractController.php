@@ -83,7 +83,7 @@ class ContractController extends Controller
             'id_pic_pelanggan'     => 'nullable|integer',
             'id_pic_pramatek'      => 'nullable|integer',
             'catatan'              => 'nullable|string',
-            'attachments.*'        => 'nullable|file|mimes:pdf,doc,docx,jpg,png|max:5120',
+            'attachments.*'        => 'nullable|file|mimes:pdf,doc,docx,jpg,png|max:153600',
         ]);
 
         $upload = uploadAttachment($request->file('attachments'), 'contracts');
@@ -153,7 +153,7 @@ class ContractController extends Controller
             'id_pic_pelanggan'     => 'nullable|integer',
             'id_pic_pramatek'      => 'nullable|integer',
             'catatan'              => 'nullable|string',
-            'attachments.*'        => 'nullable|file|mimes:pdf,doc,docx,jpg,png|max:5120',
+            'attachments.*'        => 'nullable|file|mimes:pdf,doc,docx,jpg,png|max:153600',
         ]);
 
         try {

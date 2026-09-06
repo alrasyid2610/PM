@@ -261,7 +261,7 @@ class FieldworkController extends Controller
             'groups.*.existing'        => 'nullable|array',
             'groups.*.existing.*'      => 'nullable|string',
             'groups.*.files'           => 'nullable|array',
-            'groups.*.files.*'         => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:10240',
+            'groups.*.files.*'         => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:153600',
         ]);
 
         $groups = $request->input('groups', []);

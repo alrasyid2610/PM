@@ -113,6 +113,7 @@ class TestingPointController extends Controller
             'nomor_halaman' => 'nullable|string|max:50',
             'keterangan' => 'nullable|string',
             'is_aktif' => 'required|boolean',
+            'attachments.*' => 'nullable|file|max:153600',
         ]);
 
         $upload = uploadAttachment($request->file('attachments'), $table);
@@ -197,6 +198,7 @@ class TestingPointController extends Controller
                 'deskripsi' => 'nullable|string',
                 'nomor_halaman' => 'nullable|string|max:50',
                 'attachment' => 'nullable|string|max:255',
+                'attachments.*' => 'nullable|file|max:153600',
                 'keterangan_point' => 'nullable|string',
                 'is_aktif' => 'required|boolean',
             ]);

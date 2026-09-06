@@ -64,7 +64,7 @@ class OutputTambahanController extends Controller
             'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal_mulai',
             'link_drive'      => 'nullable|string|max:2048',
             'keterangan'      => 'nullable|string',
-            'attachments.*'   => 'nullable|file|max:10240',
+            'attachments.*'   => 'nullable|file|max:153600',
         ]);
     }
 

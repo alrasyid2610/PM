@@ -96,7 +96,7 @@ class TerminController extends Controller
             'status'        => 'required|in:pending,siap_kirim,selesai',
             'keterangan'    => 'nullable|string',
             'id_so'         => 'nullable|integer',
-            'attachments.*' => 'nullable|file|max:5120',
+            'attachments.*' => 'nullable|file|max:153600',
         ]);
 
         if ($request->boolean('is_dp') && !empty($request->input('selected_outputs', []))) {

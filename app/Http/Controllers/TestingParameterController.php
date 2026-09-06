@@ -80,6 +80,7 @@ class TestingParameterController extends Controller
             'judul_iupac' => 'nullable|string|max:255',
             'referensi' => 'nullable|string|max:255',
             'keterangan' => 'nullable|string',
+            'attachments.*' => 'nullable|file|max:153600',
         ]);
 
         $upload = uploadAttachment($request->file('attachments'), $table);
@@ -143,6 +144,7 @@ class TestingParameterController extends Controller
             'judul_iupac'     => 'nullable|string|max:255',
             'referensi'       => 'nullable|string|max:255',
             'keterangan'      => 'nullable|string',
+            'attachments.*'   => 'nullable|file|max:153600',
         ], [
             'kode.required'          => 'Kode wajib diisi.',
             'kode.unique'            => 'Kode sudah digunakan, gunakan kode lain.',

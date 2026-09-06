@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'ghostscript' => [
+        // Linux (VPS): 'gs' sudah cukup, ada di PATH setelah `apt install ghostscript`.
+        // Windows (lokal): isi GHOSTSCRIPT_BIN di .env dengan path lengkap ke gswin64c.exe,
+        // mis. "C:\Program Files\gs\gs10.03.1\bin\gswin64c.exe"
+        'bin' => env('GHOSTSCRIPT_BIN', 'gs'),
+    ],
+
 ];

@@ -256,7 +256,7 @@ class LabSampleController extends Controller
             'kondisi_sample'      => 'nullable|in:baik,rusak,tidak_lengkap',
             'status'              => 'required|in:belum_diambil,diambil,dikirim',
             'keterangan'          => 'nullable|string',
-            'attachments.*'       => 'nullable|file|max:10240',
+            'attachments.*'       => 'nullable|file|max:153600',
         ]);
 
         $existing = $request->input('existing_attachments', []);

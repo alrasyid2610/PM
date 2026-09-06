@@ -109,7 +109,7 @@ class TestingStandardController extends Controller
             'nomor' => ['required', 'string', 'max:100', Rule::unique('testing_standards', 'nomor')],
             'judul' => 'required|string|max:255',
             'is_aktif' => 'required|boolean',
-            'attachments.*' => 'nullable|file|max:5120'
+            'attachments.*' => 'nullable|file|max:153600'
         ], [
             'nomor.unique' => 'Nomor sudah digunakan, gunakan nomor lain.',
         ]);

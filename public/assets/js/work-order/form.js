@@ -169,8 +169,7 @@ function renderForm(res) {
                         ${res.status !== 'completed' ? `
                         <button type="button" class="pm-btn-pill pm-btn-pill--green btn-add-boq-modal"
                             data-wo-id="${res.id_wo}" data-no-disable>
-                            <i class="fa-solid fa-plus" style="font-size:10px;"></i>
-                            <i class="fa-solid fa-layer-group" style="font-size:11px;"></i> BOQ
+                            <i class="fa-solid fa-layer-group" style="font-size:11px;"></i> Kelola BOQ
                         </button>` : woLockedLabel()}
                     </div>
                     <div id="woTabActionsFwo" class="d-flex align-items-center gap-2 d-none">

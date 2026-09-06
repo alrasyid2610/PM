@@ -30,7 +30,7 @@ class OutputPekerjaanController extends Controller
             'status'         => 'nullable|in:belum_siap,siap',
             'tanggal_mulai'  => 'nullable|date',
             'tanggal_selesai'=> 'nullable|date|after_or_equal:tanggal_mulai',
-            'attachments.*'  => 'nullable|file|max:10240',
+            'attachments.*'  => 'nullable|file|max:153600',
         ]);
 
         $files = [];
@@ -73,7 +73,7 @@ class OutputPekerjaanController extends Controller
             'status'          => 'nullable|in:belum_siap,siap',
             'tanggal_mulai'   => 'nullable|date',
             'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal_mulai',
-            'attachments.*'   => 'nullable|file|max:10240',
+            'attachments.*'   => 'nullable|file|max:153600',
         ]);
 
         $existing = $request->existing_attachments ?? [];

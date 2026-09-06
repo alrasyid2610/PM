@@ -92,6 +92,11 @@ function uploadAttachment($fieldAttachments, $table)
             'public'
         );
 
+        if (strtolower($file->getClientOriginalExtension()) === 'pdf'
+            && \Illuminate\Support\Facades\Storage::disk('public')->size($path) > 2 * 1024 * 1024) {
+            \App\Jobs\CompressPdfAttachment::dispatch($path);
+        }
+
         $files[] = $path;
     }
 
