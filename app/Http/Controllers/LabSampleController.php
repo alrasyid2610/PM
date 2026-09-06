@@ -22,7 +22,7 @@ class LabSampleController extends Controller
     private function nextNoSample(): string
     {
         $year = date('y'); // 2 digit, misal "26"
-        $prefix = "Lab.{$year}.";
+        $prefix = "FWOS.{$year}.";
         $last = DB::table('lab_samples')
             ->where('no_sample', 'like', "{$prefix}%")
             ->orderByRaw('CAST(SUBSTRING(no_sample, ? + 1) AS UNSIGNED) DESC', [strlen($prefix)])

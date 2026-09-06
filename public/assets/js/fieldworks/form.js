@@ -66,10 +66,12 @@ function renderFwoForm(res) {
                    <i class="fa-solid fa-lock" style="font-size:10px; line-height: 14px;"></i>
                    ${isWoCompleted && res.status !== 'completed' ? 'WO sudah selesai, FWO tidak dapat diubah' : 'FWO sudah selesai, data tidak dapat diubah'}
                </span>`
-              : `<button type="button" id="btnCompleteFwo" data-fwo-id="${res.id_fwo}" data-no-disable
-                class="btn btn-sm btn-success" style="font-size:12px;">
-                <i class="fa-solid fa-circle-check me-1"></i> Selesaikan FWO
-               </button>`,
+              : (can('fwo-complete', 'can_update')
+                  ? `<button type="button" id="btnCompleteFwo" data-fwo-id="${res.id_fwo}" data-no-disable
+                    class="btn btn-sm btn-success" style="font-size:12px;">
+                    <i class="fa-solid fa-circle-check me-1"></i> Selesaikan FWO
+                   </button>`
+                  : ''),
         noWrap: true,
     })}
 
@@ -151,11 +153,13 @@ function renderFwoForm(res) {
                         isDeleted
                             ? ""
                             : !isCompleted
-                              ? `<button type="button" id="btnAddFwoBoqDirect" data-no-disable
-                                class="pm-btn-pill pm-btn-pill--green">
-                                <i class="fa-solid fa-plus" style="font-size:10px;"></i>
-                                <i class="fa-solid fa-clipboard-list" style="font-size:11px;"></i> Kelola BOQ
-                           </button>`
+                              ? (can('fieldworks', 'can_update')
+                                  ? `<button type="button" id="btnAddFwoBoqDirect" data-no-disable
+                                    class="pm-btn-pill pm-btn-pill--green">
+                                    <i class="fa-solid fa-plus" style="font-size:10px;"></i>
+                                    <i class="fa-solid fa-clipboard-list" style="font-size:11px;"></i> Kelola BOQ
+                               </button>`
+                                  : '')
                               : `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
                                <i class="fa-solid fa-lock" style="font-size:10px;"></i>
                                FWO sudah selesai, data tidak dapat diubah
@@ -170,11 +174,12 @@ function renderFwoForm(res) {
                         isDeleted
                             ? ""
                             : !isCompleted
-                              ? `<button type="button" class="pm-btn-pill pm-btn-pill--teal btn-budget-add"
+                              ? (can('fieldworks', 'can_create') ? `
+                                <button type="button" class="pm-btn-pill pm-btn-pill--teal btn-budget-add"
                                 data-id-fwo="${res.id_fwo}" data-no-disable>
                                 <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                                 <i class="fa-solid fa-wallet" style="font-size:11px;"></i> Tambah Budget Plan
-                              </button>`
+                              </button>` : '')
                               : `<span style="font-size:11px;color:#dc2626;display:flex;align-items:center;gap:5px;">
                                 <i class="fa-solid fa-lock" style="font-size:10px;"></i>
                                 FWO sudah selesai, data tidak dapat diubah
@@ -590,11 +595,13 @@ function renderFwoForm(res) {
                             <label class="form-label">Tanggal Mulai</label>
                             <input type="text" class="form-control form-control-sm fp-date" id="budgetModal-tgl-mulai"
                                 placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
+                            <small class="text-muted d-block mt-1" id="budgetModal-hint-tgl-mulai" style="display:none;font-size:11px;"></small>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Tanggal Selesai</label>
                             <input type="text" class="form-control form-control-sm fp-date" id="budgetModal-tgl-selesai"
                                 placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
+                            <small class="text-muted d-block mt-1" id="budgetModal-hint-tgl-selesai" style="display:none;font-size:11px;"></small>
                         </div>
                     </div>
 
@@ -796,7 +803,7 @@ function renderFwoBoqView(sections, isLocked) {
             <td ${TD} style="padding:8px 12px;color:#374151;font-weight:500;">${escHtml(sec.point_name ?? "—")}</td>
             <td ${TD} style="padding:8px 12px;color:#374151;white-space:nowrap;">${qtyLabel}</td>
             <td ${TD} style="padding:8px 8px;text-align:center;width:40px;">
-                ${isLocked ? '' : `<button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-fwo-boq-delete" data-boq-id="${sec.id_boq}"
+                ${isLocked || !can('fieldworks', 'can_delete') ? '' : `<button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-fwo-boq-delete" data-boq-id="${sec.id_boq}"
                     title="Hapus item ini" style="font-size:11px;">
                     <i class="fa-solid fa-trash"></i>
                 </button>`}

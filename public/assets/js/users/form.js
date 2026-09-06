@@ -38,8 +38,30 @@ function renderPermissionMatrix(permissions) {
             </td>
         </tr>`;
 
+        const isActionGroup = group.permission_mode === 'action';
+
         group.items.forEach(item => {
             const p = perms[item.slug] || {};
+
+            if (isActionGroup) {
+                // Aksi granular (bukan menu CRUD) — cuma 1 toggle "Diizinkan",
+                // disimpan di kolom can_update supaya tidak perlu skema baru.
+                rows += `
+                <tr data-search="${item.label.toLowerCase()} ${group.group.toLowerCase()}">
+                    <td class="text-center">
+                        <input type="checkbox" class="form-check-input select-all-row disabled" data-slug="${item.slug}" title="Pilih semua aksi">
+                    </td>
+                    <td class="ps-3">${item.label}</td>
+                    <td colspan="4" class="text-center">
+                        <div class="form-check form-switch d-inline-flex align-items-center gap-2 mb-0">
+                            <input type="checkbox" name="permissions[${item.slug}][can_update]" value="1" class="form-check-input perm-check disabled" role="switch" data-col="can_update" data-slug="${item.slug}" ${p.can_update ? 'checked' : ''}>
+                            <label class="form-check-label text-muted" style="font-size:12px;">Diizinkan</label>
+                        </div>
+                    </td>
+                </tr>`;
+                return;
+            }
+
             rows += `
             <tr data-search="${item.label.toLowerCase()} ${group.group.toLowerCase()}">
                 <td class="text-center">

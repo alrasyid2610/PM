@@ -209,17 +209,46 @@ class WoBudgetController extends Controller
 
     public function closePlan(Request $request, $id)
     {
+        if (!userCan('wo-budget-close', 'can_update')) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk menyelesaikan Plan Budget WO'], 403);
+        }
+
         $budget = DB::table('wo_budgets')->where('id_budget', $id)->first();
         if (!$budget) return response()->json(['message' => 'Tidak ditemukan'], 404);
         if ($this->woIsCompleted($budget->id_wo)) {
             return response()->json(['success' => false, 'message' => 'WO sudah selesai.'], 403);
         }
 
-        $items       = DB::table('wo_budget_items')->where('id_budget', $id)->get(['id_budget_item', 'nominal_budget']);
+        // Blocking: plan hanya bisa diselesaikan kalau SEMUA item sudah diverifikasi —
+        // tiap item wajib punya minimal 1 realisasi berstatus "disetujui" dan tidak boleh
+        // ada realisasi yang masih "menunggu". Item tanpa realisasi / hanya "ditolak" → blocking.
+        $items = DB::table('wo_budget_items')->where('id_budget', $id)->get(['id_budget_item', 'nominal_budget']);
+        $belumBeres = 0;
+        foreach ($items as $item) {
+            $statuses = DB::table('wo_budget_actuals')
+                ->where('id_budget_item', $item->id_budget_item)
+                ->pluck('status_verifikasi');
+            $adaMenunggu  = $statuses->isEmpty() || $statuses->contains(fn($s) => $s === null || $s === 'menunggu');
+            $adaDisetujui = $statuses->contains('disetujui');
+            if ($adaMenunggu || !$adaDisetujui) {
+                $belumBeres++;
+            }
+        }
+        if ($belumBeres > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => "Masih ada {$belumBeres} item budget yang realisasinya belum diverifikasi/disetujui. Semua item wajib punya realisasi yang sudah disetujui sebelum Plan Budget bisa diselesaikan.",
+            ], 422);
+        }
+
+        // Hitung surplus — hanya realisasi yang disetujui yang dihitung sebagai pengeluaran
         $totalBudget = $items->sum('nominal_budget');
         $totalActual = 0;
         foreach ($items as $item) {
-            $totalActual += DB::table('wo_budget_actuals')->where('id_budget_item', $item->id_budget_item)->sum('nominal_actual');
+            $totalActual += DB::table('wo_budget_actuals')
+                ->where('id_budget_item', $item->id_budget_item)
+                ->where('status_verifikasi', 'disetujui')
+                ->sum('nominal_actual');
         }
         $surplus = $totalBudget - $totalActual;
 

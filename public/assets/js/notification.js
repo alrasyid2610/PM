@@ -82,6 +82,56 @@ window.Notify = {
         });
     },
 
+    // Overlay progress upload — dipakai submitCreateForm/submitCrudForm saat
+    // form membawa attachment. Return controller {update, processing, close}
+    // supaya kode pemanggil bisa update persentase real-time dari event
+    // xhr.upload.progress, lalu pindah ke mode "memproses" begitu upload
+    // selesai (100%) tapi server belum sempat merespons.
+    uploadProgress(initialTitle = "Mengupload File...") {
+        Swal.fire({
+            html: `
+                <div class="pm-upload-progress">
+                    <div class="pm-upload-progress-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                    <div class="pm-upload-progress-title" id="pmUploadProgressTitle">${initialTitle}</div>
+                    <div class="pm-upload-progress-bar-wrap">
+                        <div class="pm-upload-progress-bar-fill" id="pmUploadProgressFill"></div>
+                    </div>
+                    <div class="pm-upload-progress-percent" id="pmUploadProgressPercent">0%</div>
+                    <div class="pm-upload-progress-sub">Mohon tidak menutup atau me-refresh halaman ini</div>
+                </div>
+            `,
+            showConfirmButton: false,
+            showCancelButton: false,
+            showCloseButton: false,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            width: 380,
+        });
+
+        return {
+            update(percent) {
+                const fill = document.getElementById("pmUploadProgressFill");
+                const pct = document.getElementById("pmUploadProgressPercent");
+                if (fill) {
+                    fill.classList.remove("is-indeterminate");
+                    fill.style.width = percent + "%";
+                }
+                if (pct) pct.textContent = percent + "%";
+            },
+            processing() {
+                const fill = document.getElementById("pmUploadProgressFill");
+                const pct = document.getElementById("pmUploadProgressPercent");
+                const title = document.getElementById("pmUploadProgressTitle");
+                if (fill) fill.classList.add("is-indeterminate");
+                if (pct) pct.textContent = "";
+                if (title) title.textContent = "Memproses data...";
+            },
+            close() {
+                Swal.close();
+            },
+        };
+    },
+
     validation(errors) {
         if (!errors) return;
 

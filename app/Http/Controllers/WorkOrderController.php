@@ -299,6 +299,10 @@ class WorkOrderController extends Controller
 
     public function complete(int $id)
     {
+        if (!userCan('wo-complete', 'can_update')) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk menyelesaikan Work Order'], 403);
+        }
+
         $wo = DB::table('work_orders')->where('id_wo', $id)->first();
         if (!$wo) {
             return response()->json(['message' => 'Work Order tidak ditemukan'], 404);

@@ -144,7 +144,7 @@
 @section('custom-script')
 <style>
     .boq-section .card-header {
-        background: #f8fafc;
+        background: #fff;
         border-bottom: 1px solid #e2e8f0;
     }
     .section-fields {
@@ -786,9 +786,9 @@ function addExistingSection(sec) {
 
     const html = `
         <div class="card mb-4 boq-section" data-point-id="${ptId}" data-from-db="true"
-            style="border-color:#e2e8f0;background:#fafbfc;">
+            style="border-color:#e2e8f0;background:#fff;">
             <div class="card-header d-flex justify-content-between align-items-center py-2 px-3"
-                style="background:#f1f5f9;border-bottom:1px solid #e2e8f0;">
+                style="background:#fff;border-bottom:1px solid #e2e8f0;">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <i class="fa-solid fa-chevron-right btn-section-toggle" style="color:#64748b;font-size:12px;width:14px;text-align:center;cursor:pointer;transition:transform .2s;"></i>
                     <i class="fa-solid fa-layer-group" style="color:#2563eb;"></i>

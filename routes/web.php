@@ -662,6 +662,9 @@ Route::prefix('sales-orders')->name('sales-orders.')->group(function () {
     Route::get('/select2', [SalesOrderController::class, 'select2'])
         ->name('select2');
 
+    Route::post('/delete-attachment', [SalesOrderController::class, 'deleteAttachment'])
+        ->name('delete-attachment');
+
     Route::get('/{id}/detail', [SalesOrderController::class, 'detail'])
         ->name('detail')
         ->whereNumber('id');

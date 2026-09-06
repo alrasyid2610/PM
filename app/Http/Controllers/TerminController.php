@@ -108,6 +108,8 @@ class TerminController extends Controller
         $upload = uploadAttachment($request->file('attachments'), 'termin');
         $files  = $upload['files'];
 
+        $status = $this->guardTerminStatus($request->status, 'pending');
+
         $id = DB::table('termin')->insertGetId([
             'id_so'      => $request->id_so ?: null,
             'no_termin'  => $this->generateNoTermin(),
@@ -115,7 +117,7 @@ class TerminController extends Controller
             'persentase' => $request->persentase,
             'nilai'      => $request->nilai,
             'tanggal'    => $request->tanggal,
-            'status'     => $request->status,
+            'status'     => $status,
             'is_dp'      => $request->boolean('is_dp') ? 1 : 0,
             'keterangan' => $request->keterangan,
             'attachment' => json_encode($files),
@@ -217,6 +219,10 @@ class TerminController extends Controller
 
     public function siapKirim($id)
     {
+        if (!userCan('termin-siap-kirim', 'can_update')) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk aksi Siap Kirim Termin'], 403);
+        }
+
         DB::table('termin')->where('id_termin', $id)->update([
             'status'     => 'siap_kirim',
             'updated_at' => now(),
@@ -226,11 +232,32 @@ class TerminController extends Controller
 
     public function selesai($id)
     {
+        if (!userCan('termin-selesai', 'can_update')) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk aksi Selesaikan Termin'], 403);
+        }
+
         DB::table('termin')->where('id_termin', $id)->update([
             'status'     => 'selesai',
             'updated_at' => now(),
         ]);
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Transisi status Termin ke 'siap_kirim'/'selesai' cuma boleh lewat aksi
+     * khusus (siapKirim()/selesai()) — kalau dikirim langsung lewat
+     * store()/update() biasa tanpa slug aksi terkait, turunkan ke status
+     * sebelumnya (create: 'pending') supaya tidak jadi celah bypass.
+     */
+    private function guardTerminStatus(string $requestedStatus, string $fallback): string
+    {
+        if ($requestedStatus === 'siap_kirim' && $fallback !== 'siap_kirim' && !userCan('termin-siap-kirim', 'can_update')) {
+            return $fallback;
+        }
+        if ($requestedStatus === 'selesai' && $fallback !== 'selesai' && !userCan('termin-selesai', 'can_update')) {
+            return $fallback;
+        }
+        return $requestedStatus;
     }
 
     public function checkDpBySo($id_so, Request $request)
@@ -296,13 +323,16 @@ class TerminController extends Controller
 
         $attachments = array_merge($existing, $newFiles);
 
+        $currentStatus = DB::table('termin')->where('id_termin', $id)->value('status');
+        $status = $this->guardTerminStatus($request->status, $currentStatus);
+
         DB::table('termin')->where('id_termin', $id)->update([
             'id_so'      => $request->id_so ?: null,
             'nama'       => $request->nama,
             'persentase' => $request->persentase,
             'nilai'      => $request->nilai,
             'tanggal'    => $request->tanggal,
-            'status'     => $request->status,
+            'status'     => $status,
             'is_dp'      => $request->boolean('is_dp') ? 1 : 0,
             'keterangan' => $request->keterangan,
             'attachment' => json_encode($attachments),

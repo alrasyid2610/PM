@@ -39,6 +39,14 @@ class OutputPekerjaanController extends Controller
             $files  = $upload['files'];
         }
 
+        // Status 'siap' cuma boleh diset lewat aksi khusus (slug
+        // 'output-pekerjaan-siap') — kalau dikirim langsung tanpa akses itu,
+        // turunkan diam-diam ke 'belum_siap' supaya tidak jadi celah bypass.
+        $status = $request->status ?? 'belum_siap';
+        if ($status === 'siap' && !userCan('output-pekerjaan-siap', 'can_update')) {
+            $status = 'belum_siap';
+        }
+
         $id = DB::table('output_pekerjaan')->insertGetId([
             'id_wo'           => $request->id_wo,
             'judul_output'    => $request->judul_output,
@@ -47,7 +55,7 @@ class OutputPekerjaanController extends Controller
             'qty_copy'        => in_array($request->jenis_dokumen, ['copy','asli_dan_copy']) ? ($request->qty_copy ?: null) : null,
             'qty_asli'        => in_array($request->jenis_dokumen, ['asli','asli_dan_copy']) ? ($request->qty_asli ?: null) : null,
             'link_drive'      => $request->link_drive ?: null,
-            'status'          => $request->status ?? 'belum_siap',
+            'status'          => $status,
             'tanggal_mulai'   => $request->tanggal_mulai ?: null,
             'tanggal_selesai' => $request->tanggal_selesai ?: null,
             'attachments'     => $files ? json_encode($files) : null,
@@ -84,6 +92,16 @@ class OutputPekerjaanController extends Controller
         }
         $allFiles = array_merge($existing, $newFiles);
 
+        // Transisi ke 'siap' cuma boleh lewat aksi khusus (slug
+        // 'output-pekerjaan-siap') — kalau form edit biasa coba ubah ke
+        // 'siap' tanpa akses itu, pertahankan status lama (field lain tetap
+        // ikut ter-update seperti biasa, bukan seluruh request ditolak).
+        $current = DB::table('output_pekerjaan')->where('id_output', $id)->value('status');
+        $status  = $request->status ?? 'belum_siap';
+        if ($status === 'siap' && $current !== 'siap' && !userCan('output-pekerjaan-siap', 'can_update')) {
+            $status = $current;
+        }
+
         DB::table('output_pekerjaan')->where('id_output', $id)->update([
             'judul_output'  => $request->judul_output,
             'judul_dokumen' => $request->judul_dokumen,
@@ -91,7 +109,7 @@ class OutputPekerjaanController extends Controller
             'qty_copy'      => in_array($request->jenis_dokumen, ['copy','asli_dan_copy']) ? ($request->qty_copy ?: null) : null,
             'qty_asli'      => in_array($request->jenis_dokumen, ['asli','asli_dan_copy']) ? ($request->qty_asli ?: null) : null,
             'link_drive'      => $request->link_drive ?: null,
-            'status'          => $request->status ?? 'belum_siap',
+            'status'          => $status,
             'tanggal_mulai'   => $request->tanggal_mulai ?: null,
             'tanggal_selesai' => $request->tanggal_selesai ?: null,
             'attachments'     => $allFiles ? json_encode($allFiles) : null,
@@ -107,6 +125,11 @@ class OutputPekerjaanController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $request->validate(['status' => 'required|in:belum_siap,siap,terkirim']);
+
+        if ($request->status === 'siap' && !userCan('output-pekerjaan-siap', 'can_update')) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk aksi Siap Output Pekerjaan'], 403);
+        }
+
         DB::table('output_pekerjaan')->where('id_output', $id)->update([
             'status'     => $request->status,
             'updated_at' => now(),

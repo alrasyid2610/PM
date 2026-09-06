@@ -69,10 +69,12 @@ function renderForm(res) {
                    <i class="fa-solid fa-lock" style="font-size:10px;"></i>
                    WO sudah selesai, data tidak dapat diubah
                </span>`
-            : `<button type="button" id="btnSelesaikanWo" data-wo-id="${res.id_wo}" data-no-disable
-                class="btn btn-sm btn-success" style="font-size:12px;">
-                <i class="fa-solid fa-circle-check me-1"></i> Selesaikan WO
-               </button>`,
+            : (can('wo-complete', 'can_update')
+                ? `<button type="button" id="btnSelesaikanWo" data-wo-id="${res.id_wo}" data-no-disable
+                    class="btn btn-sm btn-success" style="font-size:12px;">
+                    <i class="fa-solid fa-circle-check me-1"></i> Selesaikan WO
+                   </button>`
+                : ''),
         noWrap: true,
     })}
 
@@ -99,36 +101,6 @@ function renderForm(res) {
                             BOQ
                         </button>
                     </li>
-                    <li role="presentation">
-                        <button class="pm-tab-btn" id="tab-fwo-btn" type="button" role="tab"
-                            data-bs-toggle="tab" data-bs-target="#tabFwo">
-                            <i class="fa-solid fa-hard-hat me-1" style="color:#1a56db;font-size:11px;"></i>
-                            Fieldwork Orders
-                        </button>
-                    </li>
-                    <li role="presentation">
-                        <button class="pm-tab-btn" id="tab-output-btn" type="button" role="tab"
-                            data-bs-toggle="tab" data-bs-target="#tabOutput">
-                            <i class="fa-solid fa-file-circle-check me-1" style="color:#0f766e;font-size:11px;"></i>
-                            Output Pekerjaan
-                        </button>
-                    </li>
-                    <li role="presentation">
-                        <button class="pm-tab-btn" id="tab-wo-budget-btn" type="button" role="tab"
-                            data-bs-toggle="tab" data-bs-target="#tabWoBudget"
-                            data-wo-id="${res.id_wo}">
-                            <i class="fa-solid fa-wallet me-1" style="color:#0f766e;font-size:11px;"></i>
-                            Budget
-                        </button>
-                    </li>
-                    <li role="presentation">
-                        <button class="pm-tab-btn" id="tab-sample-btn" type="button" role="tab"
-                            data-bs-toggle="tab" data-bs-target="#tabSample"
-                            data-wo-id="${res.id_wo}">
-                            <i class="fa-solid fa-vial me-1" style="color:#0369a1;font-size:11px;"></i>
-                            Lab Sample Reg
-                        </button>
-                    </li>
                     ${can('wo-boq-other', 'can_read') ? `
                     <li role="presentation">
                         <button class="pm-tab-btn" id="tab-boq-other-btn" type="button" role="tab"
@@ -147,6 +119,20 @@ function renderForm(res) {
                             BOQ Sampling
                         </button>
                     </li>` : ''}
+                    <li role="presentation">
+                        <button class="pm-tab-btn" id="tab-fwo-btn" type="button" role="tab"
+                            data-bs-toggle="tab" data-bs-target="#tabFwo">
+                            <i class="fa-solid fa-hard-hat me-1" style="color:#1a56db;font-size:11px;"></i>
+                            Fieldwork Orders
+                        </button>
+                    </li>
+                    <li role="presentation">
+                        <button class="pm-tab-btn" id="tab-output-btn" type="button" role="tab"
+                            data-bs-toggle="tab" data-bs-target="#tabOutput">
+                            <i class="fa-solid fa-file-circle-check me-1" style="color:#0f766e;font-size:11px;"></i>
+                            Output Pekerjaan
+                        </button>
+                    </li>
                     ${can('wo-output-other', 'can_read') ? `
                     <li role="presentation">
                         <button class="pm-tab-btn" id="tab-output-other-btn" type="button" role="tab"
@@ -156,6 +142,22 @@ function renderForm(res) {
                             Output Other
                         </button>
                     </li>` : ''}
+                    <li role="presentation">
+                        <button class="pm-tab-btn" id="tab-wo-budget-btn" type="button" role="tab"
+                            data-bs-toggle="tab" data-bs-target="#tabWoBudget"
+                            data-wo-id="${res.id_wo}">
+                            <i class="fa-solid fa-wallet me-1" style="color:#0f766e;font-size:11px;"></i>
+                            Budget
+                        </button>
+                    </li>
+                    <li role="presentation">
+                        <button class="pm-tab-btn" id="tab-sample-btn" type="button" role="tab"
+                            data-bs-toggle="tab" data-bs-target="#tabSample"
+                            data-wo-id="${res.id_wo}">
+                            <i class="fa-solid fa-vial me-1" style="color:#0369a1;font-size:11px;"></i>
+                            Lab Sample Reg
+                        </button>
+                    </li>
                 </ul>
 
                 <div class="pm-tab-actions">
@@ -166,11 +168,11 @@ function renderForm(res) {
                             class="pm-btn-icon" title="Refresh" data-no-disable>
                             <i class="fa-solid fa-rotate-right"></i>
                         </button>
-                        ${res.status !== 'completed' ? `
+                        ${res.status !== 'completed' && can('work-orders', 'can_update') ? `
                         <button type="button" class="pm-btn-pill pm-btn-pill--green btn-add-boq-modal"
                             data-wo-id="${res.id_wo}" data-no-disable>
                             <i class="fa-solid fa-layer-group" style="font-size:11px;"></i> Kelola BOQ
-                        </button>` : woLockedLabel()}
+                        </button>` : (res.status === 'completed' ? woLockedLabel() : '')}
                     </div>
                     <div id="woTabActionsFwo" class="d-flex align-items-center gap-2 d-none">
                         <button type="button" id="btnRefreshFwoProgress" data-wo-id="${res.id_wo}"
@@ -182,26 +184,26 @@ function renderForm(res) {
                             data-wo-id="${res.id_wo}" data-no-disable>
                             <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                             <i class="fa-solid fa-hard-hat" style="font-size:11px;"></i> FWO
-                        </button>` : woLockedLabel()}
+                        </button>` : (res.status === 'completed' ? woLockedLabel() : '')}
                     </div>
                     <div id="woTabActionsOutput" class="d-flex align-items-center gap-2 d-none">
-                        ${res.status !== 'completed' ? `
+                        ${res.status !== 'completed' && can('work-orders', 'can_create') ? `
                         <button type="button" id="btnAddOutput" data-wo-id="${res.id_wo}"
                             class="pm-btn-pill pm-btn-pill--teal" data-no-disable>
                             <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                             <i class="fa-solid fa-file-circle-check" style="font-size:11px;"></i> Output
-                        </button>` : woLockedLabel()}
+                        </button>` : (res.status === 'completed' ? woLockedLabel() : '')}
                     </div>
                     <div id="woTabActionsBudget" class="d-none align-items-center gap-2">
-                        ${res.status !== 'completed' ? `
+                        ${res.status !== 'completed' && can('work-orders', 'can_create') ? `
                         <button type="button" class="pm-btn-pill pm-btn-pill--teal btn-wo-budget-add"
                             data-wo-id="${res.id_wo}" data-no-disable>
                             <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                             <i class="fa-solid fa-wallet" style="font-size:11px;"></i> Tambah Budget Plan
-                        </button>` : woLockedLabel()}
+                        </button>` : (res.status === 'completed' ? woLockedLabel() : '')}
                     </div>
                     <div id="woTabActionsSample" class="d-none align-items-center gap-2">
-                        ${res.status !== 'completed' ? `
+                        ${res.status !== 'completed' && can('work-orders', 'can_create') ? `
                         <button type="button" class="pm-btn-pill" id="btn-wo-reg-from-fwo" data-wo-id="${res.id_wo}" data-no-disable
                             style="border-color:#0369a1;color:#0369a1;">
                             <i class="fa-solid fa-file-import" style="font-size:11px;"></i> Registrasi dari FWO
@@ -568,11 +570,13 @@ function renderForm(res) {
                             <label class="form-label">Tanggal Mulai</label>
                             <input type="text" class="form-control form-control-sm fp-date" id="woBudgetModal-tgl-mulai"
                                 placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
+                            <small class="text-muted d-block mt-1" id="woBudgetModal-hint-tgl-mulai" style="display:none;font-size:11px;"></small>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Tanggal Selesai</label>
                             <input type="text" class="form-control form-control-sm fp-date" id="woBudgetModal-tgl-selesai"
                                 placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
+                            <small class="text-muted d-block mt-1" id="woBudgetModal-hint-tgl-selesai" style="display:none;font-size:11px;"></small>
                         </div>
                     </div>
 
@@ -895,7 +899,7 @@ function renderForm(res) {
                 <div class="modal-body py-3 px-3">
                     <div class="row g-2">
                         <div class="col-12">
-                            <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Diterima <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Registrasi <span class="text-danger">*</span></label>
                             <input type="text" class="form-control form-control-sm fp-date" id="woRegHeaderModal-tanggal" placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
                         </div>
                         <div class="col-12">
@@ -931,7 +935,7 @@ function renderForm(res) {
                 <div class="modal-body py-3 px-3">
                     <div class="row g-2 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Diterima <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Registrasi <span class="text-danger">*</span></label>
                             <input type="text" class="form-control form-control-sm fp-date" id="woRegFromFwoModal-tanggal" placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
                         </div>
                         <div class="col-md-6">
@@ -944,6 +948,20 @@ function renderForm(res) {
                         </div>
                     </div>
                     <hr>
+                    <div class="row g-2 align-items-center mb-2">
+                        <div class="col-md-7">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                                <input type="text" class="form-control" id="woRegFromFwoModal-search" placeholder="Cari no. sample, jenis, titik, no. FWO..." data-no-disable>
+                            </div>
+                        </div>
+                        <div class="col-md-5 text-md-end">
+                            <div class="form-check d-inline-block mb-0">
+                                <input class="form-check-input" type="checkbox" id="woRegFromFwoModal-check-all" data-no-disable>
+                                <label class="form-check-label" for="woRegFromFwoModal-check-all" style="font-size:12px;">Pilih Semua (Tampil)</label>
+                            </div>
+                        </div>
+                    </div>
                     <div id="woRegFromFwoModal-list">
                         <div class="text-center text-muted py-3"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data sample dari FWO...</div>
                     </div>
@@ -1007,7 +1025,7 @@ function renderForm(res) {
                         </div>
                         <hr class="my-2">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Diterima <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Registrasi <span class="text-danger">*</span></label>
                             <input type="text" class="form-control form-control-sm fp-date" id="woNoBoqModal-tanggal-terima" placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
                         </div>
                         <div class="col-md-6">

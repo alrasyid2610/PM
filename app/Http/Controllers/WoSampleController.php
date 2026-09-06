@@ -47,7 +47,7 @@ class WoSampleController extends Controller
     private function nextNoRegLab(): string
     {
         $year = date('y');
-        $prefix = "Reg.{$year}.";
+        $prefix = "LS.{$year}.";
         $last = DB::table('lab_samples')
             ->where('no_reg_lab', 'like', "{$prefix}%")
             ->orderByRaw('CAST(SUBSTRING(no_reg_lab, ? + 1) AS UNSIGNED) DESC', [strlen($prefix)])
@@ -64,7 +64,7 @@ class WoSampleController extends Controller
 
     /**
      * Cari event registrasi (wo_lab_sample_regs) yang sudah ada untuk WO ini
-     * dengan tanggal_diterima + penerima yang sama — kalau ada, sample baru
+     * dengan tanggal_registrasi + penerima yang sama — kalau ada, sample baru
      * digabung ke situ (bukan bikin event baru), supaya tidak numpuk jadi
      * banyak grup terpisah kalau user registrasi beberapa kali di hari &
      * penerima yang sama (dikonfirmasi user 2026-08-24).
@@ -73,7 +73,7 @@ class WoSampleController extends Controller
     {
         $query = DB::table('wo_lab_sample_regs')
             ->where('id_wo', $id_wo)
-            ->where('tanggal_diterima', $validated['tanggal_diterima']);
+            ->where('tanggal_registrasi', $validated['tanggal_registrasi']);
 
         if (!empty($validated['id_personnel_penerima'])) {
             $query->where('id_personnel_penerima', $validated['id_personnel_penerima']);
@@ -88,7 +88,7 @@ class WoSampleController extends Controller
 
         return DB::table('wo_lab_sample_regs')->insertGetId([
             'id_wo'                 => $id_wo,
-            'tanggal_diterima'      => $validated['tanggal_diterima'],
+            'tanggal_registrasi'      => $validated['tanggal_registrasi'],
             'id_personnel_penerima' => $validated['id_personnel_penerima'] ?? null,
             'keterangan'            => $validated['keterangan'] ?? null,
             'created_at'            => now(),
@@ -211,7 +211,7 @@ class WoSampleController extends Controller
             ->leftJoin('personnel as p', 'p.id_personnel', '=', 'r.id_personnel_penerima')
             ->where('r.id_wo', $id_wo)
             ->orderByDesc('r.id_wo_lab_sample_reg')
-            ->get(['r.id_wo_lab_sample_reg', 'r.tanggal_diterima', 'r.keterangan', 'p.nama as nama_personnel']);
+            ->get(['r.id_wo_lab_sample_reg', 'r.tanggal_registrasi', 'r.keterangan', 'p.nama as nama_personnel']);
 
         foreach ($regs as $reg) {
             $samples = DB::table('lab_samples')
@@ -314,7 +314,7 @@ class WoSampleController extends Controller
         $validated = $request->validate([
             'id_lab_sample'          => 'required|array|min:1',
             'id_lab_sample.*'        => 'integer',
-            'tanggal_diterima'       => 'required|date',
+            'tanggal_registrasi'       => 'required|date',
             'id_personnel_penerima'  => 'nullable|integer',
             'keterangan'             => 'nullable|string',
         ]);
@@ -373,7 +373,7 @@ class WoSampleController extends Controller
             'tanggal_pengambilan'   => 'nullable|date',
             'kondisi_sample'        => 'nullable|in:baik,rusak,tidak_lengkap',
             'keterangan_sample'     => 'nullable|string',
-            'tanggal_diterima'      => 'required|date',
+            'tanggal_registrasi'      => 'required|date',
             'id_personnel_penerima' => 'nullable|integer',
             'keterangan'            => 'nullable|string',
         ]);

@@ -1,4 +1,4 @@
-<nav class="navbar navbar-header navbar-expand navbar-light">
+<nav class="navbar navbar-header navbar-expand navbar-light" style="padding-top: 0px">
     <a class="sidebar-toggler" href="#">
         <span class="navbar-toggler-icon"></span>
     </a>

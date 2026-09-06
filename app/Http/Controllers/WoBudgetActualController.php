@@ -108,6 +108,10 @@ class WoBudgetActualController extends Controller
 
     public function bulkVerify(Request $request)
     {
+        if (!userCan('wo-budget-verify', 'can_update')) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk verifikasi budget WO'], 403);
+        }
+
         $request->validate([
             'items'                     => 'required|array|min:1',
             'items.*.id_actual'         => 'required|integer',
@@ -135,6 +139,10 @@ class WoBudgetActualController extends Controller
 
     public function verify(Request $request, $id)
     {
+        if (!userCan('wo-budget-verify', 'can_update')) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk verifikasi budget WO'], 403);
+        }
+
         $row = DB::table('wo_budget_actuals')->where('id_actual', $id)->first();
         if (!$row) return response()->json(['message' => 'Tidak ditemukan'], 404);
 

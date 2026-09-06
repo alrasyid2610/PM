@@ -295,6 +295,10 @@ class FieldworkController extends Controller
 
     public function complete($id)
     {
+        if (!userCan('fwo-complete', 'can_update')) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk menyelesaikan FWO'], 403);
+        }
+
         $fwo = DB::table('fieldworks')->where('id_fwo', $id)->whereNull('deleted_at')->first();
         if (!$fwo) {
             return response()->json(['message' => 'FWO tidak ditemukan'], 404);

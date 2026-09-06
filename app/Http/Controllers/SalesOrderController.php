@@ -6,11 +6,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistory;
+use App\Traits\HasAttachment;
 
 
 class SalesOrderController extends Controller
 {
-    use HasAuditHistory;
+    use HasAuditHistory, HasAttachment;
+
+    protected function attachmentTable(): string      { return 'sales_orders'; }
+    protected function attachmentPrimaryKey(): string { return 'id_so'; }
 
     protected function auditTable(): string
     {
@@ -254,7 +258,21 @@ class SalesOrderController extends Controller
             'keterangan_status' => 'nullable|string',
             'cara_pembayaran'   => 'nullable|string',
             'keterangan'        => 'nullable|string',
+
+            'attachments'            => 'nullable|array',
+            'attachments.*'          => 'nullable|file|max:153600',
+            'existing_attachments'   => 'nullable|array',
+            'existing_attachments.*' => 'nullable|string',
         ]);
+
+        // Gabungan attachment lama (yang tidak dihapus user) + file baru yang diupload
+        $existingAtt = $request->existing_attachments ?? [];
+        $newAtt      = [];
+        if ($request->hasFile('attachments')) {
+            $upload = uploadAttachment($request->file('attachments'), 'sales_orders');
+            $newAtt = $upload['files'];
+        }
+        $mergedAtt = json_encode(array_values(array_merge($existingAtt, $newAtt)));
 
         try {
 
@@ -296,6 +314,8 @@ class SalesOrderController extends Controller
                     'keterangan_status' => $validated['keterangan_status'] ?? null,
                     'cara_pembayaran'   => $validated['cara_pembayaran'] ?? null,
                     'keterangan'        => $validated['keterangan'] ?? null,
+
+                    'attachment' => $mergedAtt,
 
                     'updated_at' => now(),
                 ]);

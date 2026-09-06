@@ -248,6 +248,7 @@
 @section('custom-script')
 <script>
     var dataPelanggan = '';
+    var allSites = [];
 
     $(document).ready(function () {
         initFpDate(document);
@@ -300,6 +301,20 @@
         companyPicPairs.forEach(function (pair) {
             $(pair[0]).on('select2:select select2:clear', function () {
                 $(pair[1]).val(null).trigger('change');
+            });
+        });
+
+        // Site di tiap kategori mengikuti Perusahaan yang dipilih di kategori
+        // yang sama — begitu Perusahaan berubah, opsi Site difilter ulang
+        // (kalau belum pilih Perusahaan, semua Site tetap ditampilkan).
+        const companySitePairs = [
+            ['#id_pelanggan', "select[name='id_site_pelanggan']"],
+            ['select[name="id_pelanggan_delivery"]', "select[name='id_site_pelanggan_delivery']"],
+            ['select[name="id_pelanggan_payment"]', "select[name='id_site_pelanggan_payment']"],
+        ];
+        companySitePairs.forEach(function (pair) {
+            $(pair[0]).on('select2:select select2:clear', function () {
+                populateSiteOptions(pair[1], $(pair[0]).val());
             });
         });
     });
@@ -416,23 +431,44 @@
             url: "{{ route('api.get-data-site') }}",
             method: "GET",
             success: function (response) {
-                const selects = [
-                    "select[name='id_site_pelanggan']",
-                    "select[name='id_site_pelanggan_delivery']",
-                    "select[name='id_site_pelanggan_payment']",
+                allSites = response;
+
+                const pairs = [
+                    ['#id_pelanggan', "select[name='id_site_pelanggan']"],
+                    ['select[name="id_pelanggan_delivery"]', "select[name='id_site_pelanggan_delivery']"],
+                    ['select[name="id_pelanggan_payment"]', "select[name='id_site_pelanggan_payment']"],
                 ];
 
-                selects.forEach(function (sel) {
-                    $.each(response, function (index, item) {
-                        $(sel).append(new Option(item.nama_lokasi, item.id_site));
-                    });
-                    $(sel).select2({ placeholder: "Pilih Site", allowClear: true });
+                pairs.forEach(function (pair) {
+                    $(pair[1]).select2({ placeholder: "Pilih Site", allowClear: true });
+                    populateSiteOptions(pair[1], $(pair[0]).val());
                 });
             },
             error: function () {
                 Notify.error('Gagal memuat data site');
             }
         });
+    }
+
+    // Isi ulang opsi Site untuk 1 select berdasarkan Perusahaan yang dipilih
+    // (id_br). Kalau id_br kosong, tampilkan semua Site (perilaku lama).
+    // Value yang sudah terpilih tapi tidak lagi cocok dengan Perusahaan baru
+    // akan dikosongkan.
+    function populateSiteOptions(siteSelector, id_br) {
+        const $el = $(siteSelector);
+        const currentVal = $el.val();
+
+        const filtered = id_br
+            ? allSites.filter(function (s) { return String(s.id_br) === String(id_br); })
+            : allSites;
+
+        $el.empty();
+        $.each(filtered, function (index, item) {
+            $el.append(new Option(item.nama_lokasi, item.id_site));
+        });
+
+        const stillValid = filtered.some(function (s) { return String(s.id_site) === String(currentVal); });
+        $el.val(stillValid ? currentVal : null).trigger('change');
     }
 
     function initPicInternal() {

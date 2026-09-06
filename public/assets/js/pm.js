@@ -423,6 +423,16 @@ function setDynamicFormState(disabled = true) {
         .trigger("change.select2");
 }
 
+// Cek apakah sebuah FormData benar-benar membawa file (bukan cuma field
+// text/select kosong) — dipakai submitCreateForm/submitCrudForm untuk
+// memutuskan perlu tidaknya menampilkan overlay progress upload.
+function formDataHasFile(formData, minBytes = 1) {
+    for (const pair of formData.entries()) {
+        if (pair[1] instanceof File && pair[1].size > minBytes) return true;
+    }
+    return false;
+}
+
 function getFormData(container) {
     let data = {};
 

@@ -136,6 +136,8 @@ function renderWoBoqTambahanList(jenis, rows, total, isLocked) {
         </div>`;
     }
 
+    const boqTambahanSlug = jenis === 'sampling' ? 'wo-boq-sampling' : 'wo-boq-other';
+
     const rowsHtml = rows.map(function (r, i) {
         const subtotal = (r.qty || 0) * (r.harga || 0);
         return `<tr data-id="${r.id_boq_tambahan}">
@@ -146,11 +148,12 @@ function renderWoBoqTambahanList(jenis, rows, total, isLocked) {
             <td style="font-size:12px;text-align:right;white-space:nowrap;font-weight:600;">Rp ${Number(subtotal).toLocaleString('id-ID')}</td>
             <td style="font-size:12px;">${escHtml(r.keterangan || '—')}</td>
             <td class="text-center" style="width:72px;white-space:nowrap;">
-                ${!isLocked ? `
+                ${!isLocked && can(boqTambahanSlug, 'can_update') ? `
                 <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-wo-boq-tambahan-edit"
                     data-id="${r.id_boq_tambahan}" data-jenis="${jenis}" title="Edit" style="font-size:11px;">
                     <i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i>
-                </button>
+                </button>` : ''}
+                ${!isLocked && can(boqTambahanSlug, 'can_delete') ? `
                 <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-wo-boq-tambahan-delete"
                     data-id="${r.id_boq_tambahan}" data-jenis="${jenis}" data-nama="${escHtml(r.nama_item)}"
                     title="Hapus" style="font-size:11px;">
@@ -394,11 +397,12 @@ function renderOutputOtherList(rows, total, isLocked) {
             <td style="font-size:11px;white-space:nowrap;color:#64748b;">${periode}</td>
             <td style="font-size:11px;">${filesHtml}${drive}</td>
             <td class="text-center" style="width:72px;white-space:nowrap;">
-                ${!isLocked ? `
+                ${!isLocked && can('wo-output-other', 'can_update') ? `
                 <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-output-other-edit"
                     data-id="${r.id_output_tambahan}" title="Edit" style="font-size:11px;">
                     <i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i>
-                </button>
+                </button>` : ''}
+                ${!isLocked && can('wo-output-other', 'can_delete') ? `
                 <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-output-other-delete"
                     data-id="${r.id_output_tambahan}" data-nama="${escHtml(r.nama_item)}"
                     title="Hapus" style="font-size:11px;">
@@ -849,11 +853,12 @@ function renderWoSampleList(boqs, isLocked, hasFwo) {
                     <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${keteranganCellWo}</td>
                     <td style="width:80px;text-align:center;">${attBadgeWo}</td>
                     <td class="text-center" style="width:72px;white-space:nowrap;">
-                        ${!isLocked ? `
+                        ${!isLocked && can('work-orders', 'can_update') ? `
                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-wo-sample-edit"
                             data-id="${s.id_lab_sample}" title="Edit" style="font-size:11px;">
                             <i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i>
-                        </button>
+                        </button>` : ''}
+                        ${!isLocked && can('work-orders', 'can_delete') ? `
                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-wo-sample-delete"
                             data-id="${s.id_lab_sample}" data-no="${escHtml(s.no_sample || 'Sample #' + s.no_urut)}"
                             title="Hapus" style="font-size:11px;">
@@ -1012,11 +1017,12 @@ function _woRegSampleRow(s, isLocked, groupId) {
         <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${keteranganCellWo}</td>
         <td style="width:80px;text-align:center;">${attBadgeWo}</td>
         <td class="text-center" style="width:72px;white-space:nowrap;">
-            ${!isLocked ? `
+            ${!isLocked && can('work-orders', 'can_update') ? `
             <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-wo-sample-edit"
                 data-id="${s.id_lab_sample}" title="Edit" style="font-size:11px;">
                 <i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i>
-            </button>
+            </button>` : ''}
+            ${!isLocked && can('work-orders', 'can_delete') ? `
             <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-wo-sample-delete"
                 data-id="${s.id_lab_sample}" data-no="${escHtml(s.no_sample || 'Sample #' + s.id_lab_sample)}"
                 title="Hapus" style="font-size:11px;">
@@ -1037,7 +1043,7 @@ function renderWoLabRegGroups(regs, isLocked) {
                 <div class="d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                         <i class="fa-solid fa-clipboard-check" style="color:#0369a1;font-size:12px;"></i>
-                        <span style="font-size:12px;font-weight:600;color:#1e293b;">Diterima ${fmtDate(reg.tanggal_diterima)}</span>
+                        <span style="font-size:12px;font-weight:600;color:#1e293b;">Registrasi ${fmtDate(reg.tanggal_registrasi)}</span>
                         <span class="text-muted" style="font-size:11px;">Oleh: ${reg.nama_personnel ? escHtml(reg.nama_personnel) : '-'} &nbsp;·&nbsp; ${count} sample</span>
                         ${reg.keterangan ? `<span class="text-muted" style="font-size:11px;font-style:italic;" title="${escHtml(reg.keterangan)}">"${escHtml(reg.keterangan)}"</span>` : ''}
                     </div>
@@ -1170,11 +1176,11 @@ $(document).on('click', '#woRegHeaderModal-btn-save', function () {
     const idLabSample = $('#woRegHeaderModal').data('id-lab-sample') || [];
     const tanggalDiterima = $('#woRegHeaderModal-tanggal').val();
 
-    if (!tanggalDiterima) return Swal.fire('Perhatian', 'Tanggal Diterima wajib diisi.', 'warning');
+    if (!tanggalDiterima) return Swal.fire('Perhatian', 'Tanggal Registrasi wajib diisi.', 'warning');
 
     const payload = {
         _token: window.route.csrf,
-        tanggal_diterima: tanggalDiterima,
+        tanggal_registrasi: tanggalDiterima,
         id_personnel_penerima: $('#woRegHeaderModal-personnel').val() || '',
         keterangan: $('#woRegHeaderModal-keterangan').val().trim(),
         id_lab_sample: idLabSample,
@@ -1232,7 +1238,7 @@ $(document).on('click', '#woNoBoqModal-btn-save', function () {
     const idWo = $('#woNoBoqSampleModal').data('id-wo');
     const tanggalTerima = $('#woNoBoqModal-tanggal-terima').val();
 
-    if (!tanggalTerima) return Swal.fire('Perhatian', 'Tanggal Diterima wajib diisi.', 'warning');
+    if (!tanggalTerima) return Swal.fire('Perhatian', 'Tanggal Registrasi wajib diisi.', 'warning');
 
     const payload = {
         _token: window.route.csrf,
@@ -1241,7 +1247,7 @@ $(document).on('click', '#woNoBoqModal-btn-save', function () {
         tanggal_pengambilan: $('#woNoBoqModal-tanggal-ambil').val() || '',
         kondisi_sample: $('#woNoBoqModal-kondisi').val() || '',
         keterangan_sample: $('#woNoBoqModal-keterangan-sample').val().trim(),
-        tanggal_diterima: tanggalTerima,
+        tanggal_registrasi: tanggalTerima,
         id_personnel_penerima: $('#woNoBoqModal-personnel').val() || '',
         keterangan: $('#woNoBoqModal-keterangan-reg').val().trim(),
     };
@@ -1273,6 +1279,8 @@ $(document).on('click', '#btn-wo-reg-from-fwo', function () {
     const idWo = $(this).data('wo-id');
     $('#woRegFromFwoModal-tanggal').val('');
     $('#woRegFromFwoModal-keterangan').val('');
+    $('#woRegFromFwoModal-search').val('');
+    $('#woRegFromFwoModal-check-all').prop('checked', false);
     $('#woRegFromFwoModal').data('id-wo', idWo);
     initFpDate('#woRegFromFwoModal');
     _initWoRegPersonnelSelect2('#woRegFromFwoModal-personnel', $('#woRegFromFwoModal'));
@@ -1299,8 +1307,10 @@ function renderWoRegFromFwoList(groups) {
     return groups.map(function (g) {
         const rows = g.samples.map(function (s) {
             const jenisTxt = JENIS_LABEL_WO_SAMPLE[s.jenis_sample] || s.jenis_sample || '–';
+            const searchText = [s.no_sample, jenisTxt, s.titik_lokasi, g.no_fwo, g.nama_boq]
+                .filter(Boolean).join(' ').toLowerCase();
             return `
-            <div class="form-check">
+            <div class="form-check wo-reg-from-fwo-row" data-search="${escHtml(searchText)}">
                 <input class="form-check-input wo-reg-from-fwo-check" type="checkbox" value="${s.id_lab_sample}" id="fwoSample${s.id_lab_sample}">
                 <label class="form-check-label" for="fwoSample${s.id_lab_sample}" style="font-size:12px;">
                     <b>${escHtml(s.no_sample || ('Sample #' + s.id_lab_sample))}</b> — ${escHtml(jenisTxt)}
@@ -1310,7 +1320,7 @@ function renderWoRegFromFwoList(groups) {
         }).join('');
 
         return `
-        <div class="mb-3">
+        <div class="mb-3 wo-reg-from-fwo-group">
             <div class="fw-semibold" style="font-size:12px;color:#1e293b;">
                 <i class="fa-solid fa-file-lines me-1" style="color:#0369a1;"></i>
                 FWO ${escHtml(g.no_fwo)} — ${escHtml(g.nama_boq)}
@@ -1320,17 +1330,48 @@ function renderWoRegFromFwoList(groups) {
     }).join('');
 }
 
+// Cari sample (no. sample/jenis/titik/no. FWO/nama BOQ) — baris yang tidak
+// cocok disembunyikan, grup yang semua barisnya tersembunyi ikut disembunyikan.
+$(document).on('input', '#woRegFromFwoModal-search', function () {
+    const term = $(this).val().trim().toLowerCase();
+
+    // Pakai class d-none (bukan :visible/.toggle()) supaya tidak tergantung
+    // pada visibility parent — .toggle()+:visible bisa "macet" tersembunyi:
+    // kalau parent group sedang display:none, jQuery :visible pada baris di
+    // dalamnya ikut kebaca false walau baris itu sendiri sudah di-toggle(true),
+    // jadi grup tidak pernah ke-unhide lagi saat search dikosongkan.
+    $('#woRegFromFwoModal-list .wo-reg-from-fwo-row').each(function () {
+        const match = !term || ($(this).data('search') || '').includes(term);
+        $(this).toggleClass('d-none', !match);
+    });
+
+    $('#woRegFromFwoModal-list .wo-reg-from-fwo-group').each(function () {
+        const anyVisible = $(this).find('.wo-reg-from-fwo-row:not(.d-none)').length > 0;
+        $(this).toggleClass('d-none', !anyVisible);
+    });
+
+    // Checkbox "Pilih Semua" merefleksikan baris yang sedang tampil saja
+    $('#woRegFromFwoModal-check-all').prop('checked', false);
+});
+
+// "Pilih Semua (Tampil)" — cuma centang/uncheck checkbox yang sedang
+// terlihat (hasil filter search), bukan seluruh sample.
+$(document).on('change', '#woRegFromFwoModal-check-all', function () {
+    const checked = $(this).is(':checked');
+    $('#woRegFromFwoModal-list .wo-reg-from-fwo-row:not(.d-none) .wo-reg-from-fwo-check').prop('checked', checked);
+});
+
 $(document).on('click', '#woRegFromFwoModal-btn-save', function () {
     const idWo = $('#woRegFromFwoModal').data('id-wo');
     const tanggalDiterima = $('#woRegFromFwoModal-tanggal').val();
     const idLabSample = $('.wo-reg-from-fwo-check:checked').map(function () { return $(this).val(); }).get();
 
-    if (!tanggalDiterima) return Swal.fire('Perhatian', 'Tanggal Diterima wajib diisi.', 'warning');
+    if (!tanggalDiterima) return Swal.fire('Perhatian', 'Tanggal Registrasi wajib diisi.', 'warning');
     if (!idLabSample.length) return Swal.fire('Perhatian', 'Pilih minimal 1 sample untuk diregistrasi.', 'warning');
 
     const payload = {
         _token: window.route.csrf,
-        tanggal_diterima: tanggalDiterima,
+        tanggal_registrasi: tanggalDiterima,
         id_personnel_penerima: $('#woRegFromFwoModal-personnel').val() || '',
         keterangan: $('#woRegFromFwoModal-keterangan').val().trim(),
         id_lab_sample: idLabSample,
@@ -1929,11 +1970,12 @@ function renderBoqProgressContent(data, id_wo) {
                             <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">
                                 <span style="font-size:11px;font-weight:700;color:#7c3aed;">${fwo.qty} ${satuan || "qty"}</span>
                                 <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;background:${fPctBg};color:${fPctColor};">${fwoPct}%</span>
+                                ${can('fieldworks', 'can_create') ? `
                                 <button type="button" class="btn-copy-fwo" data-fwo-id="${fwo.id_fwo}"
                                     style="border:none;background:none;padding:1px 3px;color:#94a3b8;cursor:pointer;line-height:1;font-size:10px;"
                                     title="Salin FWO ini">
                                     <i class="fa-solid fa-copy"></i>
-                                </button>
+                                </button>` : ''}
                             </div>
                         </div>
                         <div class="progress mt-1" style="height:3px;border-radius:2px;">
@@ -2041,10 +2083,11 @@ function renderFwoProgressTable(data, id_wo) {
                     class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;" title="Buka detail FWO">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i>
                 </a>
+                ${can('fieldworks', 'can_create') ? `
                 <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 btn-copy-fwo"
                     style="font-size:11px;" title="Salin FWO ini" data-fwo-id="${f.id_fwo}">
                     <i class="fa-solid fa-copy"></i>
-                </button>
+                </button>` : ''}
                 </div>
             </td>
         </tr>`;
@@ -2197,7 +2240,7 @@ function renderOutputTable(outputs) {
                     '<div class="d-flex align-items-center gap-1">' +
                     (currentWoData && currentWoData.status === 'completed'
                         ? '<span class="text-muted" style="font-size:11px;">—</span>'
-                        : (item.status === 'belum_siap'
+                        : (item.status === 'belum_siap' && can('output-pekerjaan-siap', 'can_update')
                             ? '<button type="button" class="btn btn-sm btn-success py-0 px-2 btn-output-status" data-id="' + item.id_output + '" data-status="siap" data-no-disable style="font-size:11px;"><i class="fa-solid fa-check me-1"></i>Siap</button>'
                             : '') +
                           '<button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 btn-edit-output" ' +
@@ -2288,7 +2331,7 @@ function showOutputForm(data) {
         '<label class="form-label form-label-sm text-muted mb-1">Status</label>' +
         '<select id="outputStatus" class="form-select form-select-sm">' +
         '<option value="belum_siap"' + (isEdit && data.status === 'belum_siap' ? ' selected' : (!isEdit ? ' selected' : '')) + '>Belum Siap</option>' +
-        '<option value="siap"'      + (isEdit && data.status === 'siap'       ? ' selected' : '') + '>Siap</option>' +
+        '<option value="siap"'      + (isEdit && data.status === 'siap' ? ' selected' : '') + (can('output-pekerjaan-siap', 'can_update') || (isEdit && data.status === 'siap') ? '' : ' disabled') + '>Siap</option>' +
         '</select>' +
         '</div>' +
         '<div class="col-md-3">' +
@@ -3418,6 +3461,19 @@ function loadWoBudgetData(idWo) {
         });
 }
 
+// Plan bisa diselesaikan hanya kalau tiap item punya >=1 realisasi "disetujui" dan tidak ada "menunggu"
+function woBudgetPlanFullyVerified(plan) {
+    const items = (plan && plan.items) || [];
+    if (!items.length) return false;
+    return items.every(function (item) {
+        const acts = item.actuals || [];
+        if (!acts.length) return false;
+        const adaMenunggu  = acts.some(function (a) { return !a.status_verifikasi || a.status_verifikasi === 'menunggu'; });
+        const adaDisetujui = acts.some(function (a) { return a.status_verifikasi === 'disetujui'; });
+        return !adaMenunggu && adaDisetujui;
+    });
+}
+
 function renderWoBudgetList(plans, isLocked) {
     const cards = plans.map(function (p) {
         const selisih      = p.total_budget - p.total_actual;
@@ -3456,15 +3512,17 @@ function renderWoBudgetList(plans, isLocked) {
                         </div>
                         <div class="mt-1">${fileLinks}</div>
                     </div>
-                    ${!planLocked ? `<div class="d-flex gap-1">
+                    ${!planLocked && (can('work-orders', 'can_update') || can('work-orders', 'can_delete')) ? `<div class="d-flex gap-1">
+                        ${can('work-orders', 'can_update') ? `
                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 btn-wo-actual-edit"
                             data-id="${a.id_actual}" data-wo-id="${p.id_wo || ''}" style="font-size:10px;" data-no-disable title="Edit">
                             <i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i>
-                        </button>
+                        </button>` : ''}
+                        ${can('work-orders', 'can_delete') ? `
                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 btn-wo-actual-delete"
                             data-id="${a.id_actual}" style="font-size:10px;" data-no-disable title="Hapus">
                             <i class="fa-solid fa-trash" style="color:#dc2626;"></i>
-                        </button>
+                        </button>` : ''}
                     </div>` : ''}
                 </div>`;
             }).join('');
@@ -3522,7 +3580,7 @@ function renderWoBudgetList(plans, isLocked) {
                         title="Download Dokumen Realisasi yang sudah ditandatangani">
                         <i class="fa-solid fa-file-arrow-down me-1"></i>Dok. Realisasi
                     </a>` : ''}
-                    ${!planLocked && p.items.some(i => (i.actuals || []).length > 0) ? `
+                    ${!planLocked && p.items.some(i => (i.actuals || []).length > 0) && can('wo-budget-verify', 'can_update') ? `
                     <button type="button" class="btn btn-sm btn-plan-verify btn-wo-bulk-verify"
                         data-id-budget="${p.id_budget}" data-label="${escHtml(p.label)}"
                         data-no-disable>
@@ -3546,26 +3604,29 @@ function renderWoBudgetList(plans, isLocked) {
                                 </a>
                             </li>
                             ${!planLocked ? `
+                            ${can('work-orders', 'can_update') ? `
                             <li><hr class="dropdown-divider my-1"></li>
                             <li>
                                 <button type="button" class="dropdown-item btn-wo-budget-edit"
                                     data-id="${p.id_budget}" data-no-disable>
                                     <i class="fa-solid fa-pen-to-square me-2" style="color:#1e40af;"></i>Edit Plan
                                 </button>
-                            </li>
+                            </li>` : ''}
+                            ${can('wo-budget-close', 'can_update') ? `
                             <li>
                                 <button type="button" class="dropdown-item btn-wo-budget-close"
                                     data-id="${p.id_budget}" data-label="${escHtml(p.label)}" data-no-disable>
                                     <i class="fa-solid fa-circle-check me-2" style="color:#15803d;"></i>Selesaikan Plan
                                 </button>
-                            </li>
+                            </li>` : ''}
+                            ${can('work-orders', 'can_delete') ? `
                             <li><hr class="dropdown-divider my-1"></li>
                             <li>
                                 <button type="button" class="dropdown-item btn-wo-budget-delete"
                                     data-id="${p.id_budget}" data-label="${escHtml(p.label)}" data-no-disable>
                                     <i class="fa-solid fa-trash me-2" style="color:#dc2626;"></i>Hapus Plan
                                 </button>
-                            </li>` : ''}
+                            </li>` : ''}` : ''}
                         </ul>
                     </div>
                     <button type="button" class="btn btn-sm btn-plan-icon btn-wo-budget-collapse"
@@ -3690,6 +3751,17 @@ function openWoBudgetModal(idWo, budgetData) {
     $('#woBudgetModal-id-wo').val(idWo);
     $('#woBudgetModal-label').val(isEdit ? budgetData.label : '');
     $('#woBudgetModal-keterangan').val(isEdit ? (budgetData.keterangan || '') : '');
+
+    // Info rentang tanggal WO sebagai referensi (cuma informasi, tidak
+    // membatasi input tanggal budget plan).
+    const woMulai   = currentWoData ? currentWoData.tanggal_mulai : null;
+    const woSelesai = currentWoData ? currentWoData.tanggal_selesai : null;
+    $('#woBudgetModal-hint-tgl-mulai')
+        .text(woMulai ? 'Tanggal mulai WO: ' + fmtDate(woMulai) : '')
+        .toggle(!!woMulai);
+    $('#woBudgetModal-hint-tgl-selesai')
+        .text(woSelesai ? 'Tanggal selesai WO: ' + fmtDate(woSelesai) : '')
+        .toggle(!!woSelesai);
 
     const $body = $('#woBudgetItemsBody').empty();
     const items = isEdit ? (budgetData.items || []) : [];
@@ -3837,6 +3909,13 @@ $(document).off('click.wobudget', '.btn-wo-budget-close').on('click.wobudget', '
 
     const plans   = window._woBudgetPlans || [];
     const plan    = plans.find(function (p) { return p.id_budget == id; });
+
+    // Blocking: semua item wajib punya realisasi yang sudah disetujui, tidak boleh ada yang menunggu
+    if (plan && !woBudgetPlanFullyVerified(plan)) {
+        Swal.fire('Belum Bisa Diselesaikan', 'Masih ada item budget yang realisasinya belum diverifikasi/disetujui. Semua item wajib punya realisasi yang sudah disetujui (tidak boleh ada yang berstatus Menunggu atau tanpa realisasi) sebelum Plan Budget bisa diselesaikan.', 'warning');
+        return;
+    }
+
     const surplus = plan ? (plan.total_budget - plan.total_actual) : 0;
 
     $('#woClosePlanModal-id').val(id);

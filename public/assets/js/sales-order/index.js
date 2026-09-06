@@ -54,6 +54,57 @@ function _syncSoPemesanToOthers() {
     });
 }
 
+// Site di tiap kategori (Pemesan/Pengiriman/Pembayaran) di-scope oleh
+// Perusahaan yang dipilih di kategori yang sama — reinit select2 dengan ajax
+// yang menyertakan id_br dari field company pasangannya.
+function initSoSiteFields() {
+    const pairs = [
+        { company: '#detail_id_pelanggan', site: '#detail_id_site_pelanggan' },
+        { company: '#detail_id_pelanggan_delivery', site: '#detail_id_site_pelanggan_delivery' },
+        { company: '#detail_id_pelanggan_payment', site: '#detail_id_site_pelanggan_payment' },
+    ];
+
+    pairs.forEach(function (pair) {
+        const $el = $(pair.site);
+        if (!$el.length) return;
+        if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
+
+        $el.select2({
+            width: '100%',
+            dropdownParent: $('#detailContent'),
+            placeholder: 'Pilih Data',
+            allowClear: true,
+            minimumInputLength: 0,
+            ajax: {
+                url: 'business-relations/sites/select2',
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return { q: params.term || '', id_br: $(pair.company).val() || '' };
+                },
+                processResults: function (data) { return { results: data }; },
+                cache: false,
+            },
+            language: {
+                noResults: function () {
+                    return '<span>Tidak ditemukan. <a href="/business-relations/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>';
+                },
+            },
+            escapeMarkup: function (m) { return m; },
+        });
+    });
+
+    // Ganti Perusahaan di suatu kategori → kosongkan Site kategori itu
+    // (Site lama sudah tentu tidak valid lagi untuk Perusahaan yang baru)
+    pairs.forEach(function (pair) {
+        $(pair.company)
+            .off('select2:select.soCompanySiteClear select2:clear.soCompanySiteClear')
+            .on('select2:select.soCompanySiteClear select2:clear.soCompanySiteClear', function () {
+                $(pair.site).val(null).trigger('change');
+            });
+    });
+}
+
 function initSoPicFields() {
     const selectors = [
         '#detail_id_pic_pelanggan',
@@ -380,10 +431,11 @@ function renderWoProgressTable(wos) {
                     class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;" title="Buka detail WO">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i>
                 </a>
+                ${can('work-orders', 'can_create') ? `
                 <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 ms-1 btn-copy-wo"
                     style="font-size:11px;" title="Salin WO ini" data-wo-id="${wo.id_wo}">
                     <i class="fa-solid fa-copy"></i>
-                </button>
+                </button>` : ''}
             </td>
         </tr>`;
     }
@@ -848,10 +900,17 @@ $(document).ready(function () {
     page = new CrudPageController({
         primaryKey: "id_so",
         renderForm: renderForm,
+        useAttachment: true,
         initSelect: function () {
             initSoPicFields();
         },
         afterLoad: function (res) {
+            // Site pakai class .form-select-dynamic (mode ajax generik) yang
+            // di-init ulang oleh initDynamicSelect() setelah initSelect() —
+            // kalau initSoSiteFields() dipanggil di initSelect, hasilnya akan
+            // ditimpa lagi. Jadi harus dipanggil di sini (afterLoad), yang
+            // jalan setelah initDynamicSelect().
+            initSoSiteFields();
             loadWoProgress(res.id_so);
             loadTerminList(res.id_so);
             initFpDate('#detailContent');

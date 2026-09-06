@@ -75,6 +75,8 @@ function renderBoqTambahanList(jenis, rows, total, isLocked) {
         </div>`;
     }
 
+    const boqTambahanSlug = jenis === 'sampling' ? 'fwo-boq-sampling' : 'fwo-boq-other';
+
     const rowsHtml = rows.map(function (r, i) {
         const subtotal = (r.qty || 0) * (r.harga || 0);
         return `<tr data-id="${r.id_fwo_boq_tambahan}">
@@ -85,11 +87,12 @@ function renderBoqTambahanList(jenis, rows, total, isLocked) {
             <td style="font-size:12px;text-align:right;white-space:nowrap;font-weight:600;">Rp ${Number(subtotal).toLocaleString('id-ID')}</td>
             <td style="font-size:12px;">${escHtml(r.keterangan || '—')}</td>
             <td class="text-center" style="width:72px;white-space:nowrap;">
-                ${!isLocked ? `
+                ${!isLocked && can(boqTambahanSlug, 'can_update') ? `
                 <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-boq-tambahan-edit"
                     data-id="${r.id_fwo_boq_tambahan}" data-jenis="${jenis}" title="Edit" style="font-size:11px;">
                     <i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i>
-                </button>
+                </button>` : ''}
+                ${!isLocked && can(boqTambahanSlug, 'can_delete') ? `
                 <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-boq-tambahan-delete"
                     data-id="${r.id_fwo_boq_tambahan}" data-jenis="${jenis}" data-nama="${escHtml(r.nama_item)}"
                     title="Hapus" style="font-size:11px;">
@@ -309,6 +312,19 @@ function fmtTgl(val) {
     return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+// Plan bisa diselesaikan hanya kalau tiap item punya >=1 realisasi "disetujui" dan tidak ada "menunggu"
+function budgetPlanFullyVerified(plan) {
+    const items = (plan && plan.items) || [];
+    if (!items.length) return false;
+    return items.every(function (item) {
+        const acts = item.actuals || [];
+        if (!acts.length) return false;
+        const adaMenunggu  = acts.some(function (a) { return !a.status_verifikasi || a.status_verifikasi === 'menunggu'; });
+        const adaDisetujui = acts.some(function (a) { return a.status_verifikasi === 'disetujui'; });
+        return !adaMenunggu && adaDisetujui;
+    });
+}
+
 function renderBudgetList(plans, isLocked) {
     const cards = plans.map(function (p) {
         const selisih     = p.total_budget - p.total_actual;
@@ -413,7 +429,7 @@ function renderBudgetList(plans, isLocked) {
                         title="Download Dokumen Realisasi yang sudah ditandatangani">
                         <i class="fa-solid fa-file-arrow-down me-1"></i>Dok. Realisasi
                     </a>` : ''}
-                    ${!planLocked && p.items.some(i => (i.actuals || []).length > 0) ? `
+                    ${!planLocked && p.items.some(i => (i.actuals || []).length > 0) && can('fwo-budget-verify', 'can_update') ? `
                     <button type="button" class="btn btn-sm btn-plan-verify btn-bulk-verify"
                         data-id-budget="${p.id_budget}" data-label="${escHtml(p.label)}"
                         data-no-disable>
@@ -444,12 +460,13 @@ function renderBudgetList(plans, isLocked) {
                                     <i class="fa-solid fa-pen-to-square me-2" style="color:#1e40af;"></i>Edit Plan
                                 </button>
                             </li>
+                            ${can('fwo-budget-close', 'can_update') ? `
                             <li>
                                 <button type="button" class="dropdown-item btn-budget-close"
                                     data-id="${p.id_budget}" data-label="${escHtml(p.label)}" data-no-disable>
                                     <i class="fa-solid fa-circle-check me-2" style="color:#15803d;"></i>Selesaikan Plan
                                 </button>
-                            </li>
+                            </li>` : ''}
                             <li><hr class="dropdown-divider my-1"></li>
                             <li>
                                 <button type="button" class="dropdown-item btn-budget-delete"
@@ -582,6 +599,17 @@ function openBudgetModal(idFwo, budgetData) {
     $('#budgetModal-id-fwo').val(idFwo);
     $('#budgetModal-label').val(isEdit ? budgetData.label : '');
     $('#budgetModal-keterangan').val(isEdit ? (budgetData.keterangan || '') : '');
+
+    // Info rentang tanggal FWO sebagai referensi (cuma informasi, tidak
+    // membatasi input tanggal budget plan).
+    const fwoMulai   = currentFwoData ? currentFwoData.tanggal_mulai : null;
+    const fwoSelesai = currentFwoData ? currentFwoData.tanggal_selesai : null;
+    $('#budgetModal-hint-tgl-mulai')
+        .text(fwoMulai ? 'Tanggal mulai FWO: ' + fmtTgl(fwoMulai) : '')
+        .toggle(!!fwoMulai);
+    $('#budgetModal-hint-tgl-selesai')
+        .text(fwoSelesai ? 'Tanggal selesai FWO: ' + fmtTgl(fwoSelesai) : '')
+        .toggle(!!fwoSelesai);
 
     const $body = $('#budgetItemsBody').empty();
     const items = isEdit ? (budgetData.items || []) : [];
@@ -743,6 +771,13 @@ $(document).off('click.budget', '.btn-budget-close').on('click.budget', '.btn-bu
     // Cari data plan dari cache
     const plans   = window._budgetPlans || [];
     const plan    = plans.find(function (p) { return p.id_budget == id; });
+
+    // Blocking: semua item wajib punya realisasi yang sudah disetujui, tidak boleh ada yang menunggu
+    if (plan && !budgetPlanFullyVerified(plan)) {
+        Swal.fire('Belum Bisa Diselesaikan', 'Masih ada item budget yang realisasinya belum diverifikasi/disetujui. Semua item wajib punya realisasi yang sudah disetujui (tidak boleh ada yang berstatus Menunggu atau tanpa realisasi) sebelum Plan Budget bisa diselesaikan.', 'warning');
+        return;
+    }
+
     const surplus = plan ? (plan.total_budget - plan.total_actual) : 0;
 
     // Set nilai modal
@@ -2402,7 +2437,7 @@ function renderSampleList(boqs, isLocked) {
                             <tr>
                                 <th style="width:36px;">#</th>
                                 <th style="width:1%;white-space:nowrap;">Jenis / No. Sample</th>
-                                <th style="width:220px;">Titik Lokasi</th>
+                                <th style="width:220px;">Titik Sample</th>
                                 <th style="width:100px;">Tgl Pengambilan</th>
                                 <th style="width:100px;">Kondisi</th>
                                 <th>Status</th>
@@ -2417,6 +2452,21 @@ function renderSampleList(boqs, isLocked) {
             </div>
         </div>`;
     }).join('');
+}
+
+// Kunci input Tanggal Pengambilan sample (single edit & bulk insert) supaya
+// tidak bisa pilih di luar rentang Tanggal Mulai – Tanggal Selesai FWO.
+// Dipanggil tiap modal dibuka (bukan cuma sekali) karena initFpDate() cuma
+// nge-init flatpickr sekali per elemen (skip kalau instance sudah ada).
+function lockSampleTanggalToFwoRange(inputSelector) {
+    const el = document.querySelector(inputSelector);
+    if (!el || !el._fp) return;
+
+    const tglMulaiFwo   = $('[name="tanggal_mulai"]').val() || null;
+    const tglSelesaiFwo = $('[name="tanggal_selesai"]').val() || null;
+
+    el._fp.set('minDate', tglMulaiFwo);
+    el._fp.set('maxDate', tglSelesaiFwo);
 }
 
 // ── Buka modal edit sample ──
@@ -2474,6 +2524,7 @@ $(document).off('click.sample', '.btn-sample-edit').on('click.sample', '.btn-sam
 
             // Re-init flatpickr
             initFpDate('#sampleDetailModal');
+            lockSampleTanggalToFwoRange('#sampleModal-tanggal');
 
             // Init Select2 untuk field enum
             const s2Opts = { width: '100%', dropdownParent: $modal, allowClear: true };
@@ -2620,6 +2671,7 @@ $(document).off('click.sample', '.btn-sample-bulk-fill').on('click.sample', '.bt
         $el.select2(s2Opts);
     });
     initFpDate('#sampleBulkFillModal');
+    lockSampleTanggalToFwoRange('#bulkFill-tanggal');
 
     bootstrap.Modal.getOrCreateInstance($modal[0]).show();
 });

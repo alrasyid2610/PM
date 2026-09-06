@@ -50,6 +50,25 @@ function submitCrudForm(options) {
     }
 
     Notify.confirm("Simpan Data?", function () {
+        // Attachment beneran (bukan cuma field kosong) → tampilkan overlay
+        // progress upload, supaya user tidak mengira form "hang" saat file
+        // besar sedang terkirim ke server.
+        let progress = null;
+        let ajaxExtra = {};
+        if (formDataHasFile(formData)) {
+            progress = Notify.uploadProgress();
+            ajaxExtra.xhr = function () {
+                const xhr = new window.XMLHttpRequest();
+                xhr.upload.addEventListener("progress", function (e) {
+                    if (!e.lengthComputable) return;
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    progress.update(percent);
+                    if (percent >= 100) progress.processing();
+                });
+                return xhr;
+            };
+        }
+
         $.ajax({
             url: url + id,
             method: "POST",
@@ -57,8 +76,10 @@ function submitCrudForm(options) {
 
             processData: false,
             contentType: false,
+            ...ajaxExtra,
 
             success: function (response) {
+                if (progress) progress.close();
                 Notify.success("Data berhasil diperbarui");
 
                 if (reload) {
@@ -67,6 +88,8 @@ function submitCrudForm(options) {
             },
 
             error: function (xhr) {
+                if (progress) progress.close();
+
                 if (xhr.status === 422 && xhr.responseJSON) {
                     const json = xhr.responseJSON;
                     let html = '';

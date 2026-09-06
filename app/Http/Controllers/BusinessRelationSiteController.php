@@ -37,8 +37,12 @@ class BusinessRelationSiteController extends Controller
                 's.is_aktif',
             ]);
 
-        if (!empty($id)) {
-            $query->where('s.id_br', $id);
+        // id_br bisa dari route param (site-switcher) atau query string (select2
+        // Site di form SO/WO yang di-scope oleh Perusahaan yang sedang dipilih).
+        $idBr = !empty($id) ? $id : $request->query('id_br');
+
+        if (!empty($idBr)) {
+            $query->where('s.id_br', $idBr);
         }
 
         if (!empty($search)) {
@@ -49,9 +53,9 @@ class BusinessRelationSiteController extends Controller
             ->orderByDesc('s.is_kantor_pusat')
             ->orderBy('s.nama_lokasi');
 
-        // Scope per-BR (dipakai site-switcher) → load semua, tidak dibatasi.
-        // Search umum tanpa id_br (dipakai ajax select2 di form SO/WO) → batasi hasil.
-        if (empty($id)) {
+        // Scope per-BR (dipakai site-switcher / Perusahaan terpilih) → load semua, tidak dibatasi.
+        // Search umum tanpa id_br (dipakai ajax select2 umum) → batasi hasil.
+        if (empty($idBr)) {
             $query->limit(10);
         }
 

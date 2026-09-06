@@ -13,6 +13,14 @@ class CheckMenuPermission
     // Route yang tidak perlu cek permission (cukup auth)
     private const OPEN_SEGMENTS = ['dashboard', 'api', 'calendar', 'ui-guideline', 'profile'];
 
+    // Modul yang di-nonaktifkan sementara — diblokir 403 untuk SEMUA user
+    // (termasuk yang sudah punya permission tersimpan di DB), berlaku sampai
+    // dihapus dari sini. Juga dihapus dari config/menus.php supaya tidak
+    // muncul di sidebar maupun matrix permission (Grup Menu/User Management).
+    // 'lab-data-import' — Import Data Lab, dinonaktifkan 2026-09-07 karena
+    // fiturnya belum terverifikasi.
+    private const DISABLED_SEGMENTS = ['lab-data-import'];
+
     // Endpoint supporting — tidak perlu cek permission spesifik
     private const OPEN_LAST_SEGMENTS = ['select2', 'select2byid', 'data', 'pdf'];
 
@@ -54,6 +62,14 @@ class CheckMenuPermission
             return $request->expectsJson()
                 ? response()->json(['success' => false, 'message' => 'Unauthenticated'], 401)
                 : redirect()->route('login');
+        }
+
+        // Modul yang di-nonaktifkan sementara — blokir semua orang, tanpa
+        // terkecuali (tidak peduli permission tersimpan apa di DB)
+        if (in_array($first, self::DISABLED_SEGMENTS)) {
+            return $request->expectsJson()
+                ? response()->json(['success' => false, 'message' => 'Modul ini sedang dinonaktifkan'], 403)
+                : abort(403, 'Modul ini sedang dinonaktifkan');
         }
 
         // Route yang open untuk semua user yang sudah login

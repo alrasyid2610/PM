@@ -92,9 +92,15 @@ function uploadAttachment($fieldAttachments, $table)
             'public'
         );
 
-        if (strtolower($file->getClientOriginalExtension()) === 'pdf'
+        $ext = strtolower($file->getClientOriginalExtension());
+
+        if ($ext === 'pdf'
             && \Illuminate\Support\Facades\Storage::disk('public')->size($path) > 2 * 1024 * 1024) {
             \App\Jobs\CompressPdfAttachment::dispatch($path);
+        }
+
+        if (in_array($ext, ['jpg', 'jpeg', 'png'])) {
+            compressImageIfLarge($path);
         }
 
         $files[] = $path;
@@ -105,4 +111,60 @@ function uploadAttachment($fieldAttachments, $table)
         'message' => 'Berhasil store file',
         'files' => $files
     ];
+}
+
+/**
+ * Kompres gambar (JPEG/PNG) di storage disk 'public' pakai GD kalau
+ * ukurannya melebihi threshold. Sinkron (bukan queue) karena prosesnya
+ * cepat, beda dari kompresi PDF via Ghostscript. Menimpa file asli di
+ * tempat hanya kalau hasil kompresi benar-benar lebih kecil. Gagal dengan
+ * aman (skip, file asli dibiarkan apa adanya) kalau GD tidak mendukung
+ * format tersebut atau terjadi error apapun.
+ */
+function compressImageIfLarge(string $path, int $thresholdBytes = 1024 * 1024): void
+{
+    $disk = \Illuminate\Support\Facades\Storage::disk('public');
+    $fullPath = $disk->path($path);
+
+    if (!file_exists($fullPath) || filesize($fullPath) <= $thresholdBytes) {
+        return;
+    }
+
+    $originalSize = filesize($fullPath);
+    $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+
+    try {
+        $image = match ($ext) {
+            'jpg', 'jpeg' => imagecreatefromjpeg($fullPath),
+            'png' => imagecreatefrompng($fullPath),
+            default => null,
+        };
+
+        if (!$image) {
+            return;
+        }
+
+        $tmpOutput = $fullPath . '.compressed.tmp';
+
+        if ($ext === 'png') {
+            imagealphablending($image, false);
+            imagesavealpha($image, true);
+            imagepng($image, $tmpOutput, 8);
+        } else {
+            imagejpeg($image, $tmpOutput, 75);
+        }
+
+        imagedestroy($image);
+
+        if (file_exists($tmpOutput) && filesize($tmpOutput) > 0 && filesize($tmpOutput) < $originalSize) {
+            rename($tmpOutput, $fullPath);
+        } elseif (file_exists($tmpOutput)) {
+            unlink($tmpOutput);
+        }
+    } catch (\Throwable $e) {
+        if (isset($tmpOutput) && file_exists($tmpOutput)) {
+            @unlink($tmpOutput);
+        }
+        \Illuminate\Support\Facades\Log::warning('Kompresi gambar gagal, file asli dipakai apa adanya: ' . $e->getMessage());
+    }
 }

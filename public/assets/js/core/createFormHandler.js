@@ -49,7 +49,26 @@ function submitCreateForm(options) {
                 ajaxOptions.data = $(form).serialize();
             }
 
+            // Attachment beneran (bukan cuma field kosong) → tampilkan
+            // overlay progress upload, supaya user tidak mengira form
+            // "hang" saat file besar sedang terkirim ke server.
+            let progress = null;
+            if (ajaxOptions.data instanceof FormData && formDataHasFile(ajaxOptions.data)) {
+                progress = Notify.uploadProgress();
+                ajaxOptions.xhr = function () {
+                    const xhr = new window.XMLHttpRequest();
+                    xhr.upload.addEventListener("progress", function (e) {
+                        if (!e.lengthComputable) return;
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        progress.update(percent);
+                        if (percent >= 100) progress.processing();
+                    });
+                    return xhr;
+                };
+            }
+
             ajaxOptions.success = function (res) {
+                if (progress) progress.close();
                 Notify.success(res.message || successMessage);
 
                 if (onSuccess) {
@@ -60,6 +79,8 @@ function submitCreateForm(options) {
             };
 
             ajaxOptions.error = function (xhr) {
+                if (progress) progress.close();
+
                 if (onError) {
                     onError(xhr);
                     return;

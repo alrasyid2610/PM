@@ -40,8 +40,12 @@
                         <label for="status" class="form-label required">Status</label>
                         <select class="form-select" id="status" name="status" required>
                             <option value="pending">Pending</option>
+                            @if(userCan('termin-siap-kirim', 'can_update'))
                             <option value="siap_kirim">Siap Kirim</option>
+                            @endif
+                            @if(userCan('termin-selesai', 'can_update'))
                             <option value="selesai">Selesai</option>
+                            @endif
                         </select>
                     </div>
                     <div class="col-md-2 col-12">

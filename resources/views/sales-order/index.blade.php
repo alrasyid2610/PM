@@ -109,6 +109,7 @@
         history:    "{{ url('sales-orders') }}/",
         csrf:       "{{ csrf_token() }}",
         update:     "{{ url('sales-orders') }}/",
+        deleteAttachment: "{{ route('sales-orders.delete-attachment') }}",
         woProgress:   "{{ url('sales-orders') }}/",
         woDuplicate:  "{{ url('work-orders') }}/",
         woDetail:     "{{ url('work-orders') }}/",

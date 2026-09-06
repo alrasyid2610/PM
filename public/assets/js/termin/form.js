@@ -98,14 +98,18 @@ function renderForm(res) {
                    Termin sudah selesai, data tidak dapat diubah
                </span>`
             : statusKey === 'siap_kirim'
-            ? `<button type="button" id="btnSelesaikanTermin" data-termin-id="${res.id_termin}" data-no-disable
-                class="btn btn-sm btn-success" style="font-size:12px;">
-                <i class="fa-solid fa-circle-check me-1"></i> Selesaikan
-               </button>`
-            : `<button type="button" id="btnSiapKirimTermin" data-termin-id="${res.id_termin}" data-no-disable
-                class="btn btn-sm btn-primary" style="font-size:12px;">
-                <i class="fa-solid fa-paper-plane me-1"></i> Siap Kirim
-               </button>`,
+            ? (can('termin-selesai', 'can_update')
+                ? `<button type="button" id="btnSelesaikanTermin" data-termin-id="${res.id_termin}" data-no-disable
+                    class="btn btn-sm btn-success" style="font-size:12px;">
+                    <i class="fa-solid fa-circle-check me-1"></i> Selesaikan
+                   </button>`
+                : '')
+            : (can('termin-siap-kirim', 'can_update')
+                ? `<button type="button" id="btnSiapKirimTermin" data-termin-id="${res.id_termin}" data-no-disable
+                    class="btn btn-sm btn-primary" style="font-size:12px;">
+                    <i class="fa-solid fa-paper-plane me-1"></i> Siap Kirim
+                   </button>`
+                : ''),
         noWrap: true,
     })}
 
@@ -135,7 +139,7 @@ function renderForm(res) {
                     <button type="button" id="btnRefreshOutputTermin" class="pm-btn-icon" title="Refresh" data-no-disable>
                         <i class="fa-solid fa-rotate-right"></i>
                     </button>
-                    ${res.id_so && statusKey !== 'selesai'
+                    ${res.id_so && statusKey !== 'selesai' && can('termin', 'can_update')
                         ? `<button type="button" id="btnAddOutputTermin" data-so-id="${res.id_so}"
                                class="pm-btn-pill pm-btn-pill--teal" data-no-disable>
                                <i class="fa-solid fa-plus" style="font-size:10px;"></i>
@@ -165,8 +169,14 @@ function renderForm(res) {
                                 ${formGroup.select("status", "Status", res.status,
                                     [
                                         { value: "pending",    label: "Pending"    },
-                                        { value: "siap_kirim", label: "Siap Kirim" },
-                                        { value: "selesai",    label: "Selesai"    },
+                                        // Transisi ke Siap Kirim/Selesai lewat form edit biasa
+                                        // dibatasi slug aksi khusus (termin-siap-kirim/termin-selesai)
+                                        // — kalau bukan status saat ini & tidak ada akses, opsi disembunyikan
+                                        // (backend juga tetap menolak/menurunkan kalau dipaksa lewat request).
+                                        ...(res.status === 'siap_kirim' || can('termin-siap-kirim', 'can_update')
+                                            ? [{ value: "siap_kirim", label: "Siap Kirim" }] : []),
+                                        ...(res.status === 'selesai' || can('termin-selesai', 'can_update')
+                                            ? [{ value: "selesai", label: "Selesai" }] : []),
                                     ],
                                     { className: "col-md-2" }
                                 )}

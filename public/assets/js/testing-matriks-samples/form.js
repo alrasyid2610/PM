@@ -38,7 +38,7 @@ function renderForm(res) {
                         ${formGroup.sectionCard(
                             { icon: 'fa-vials', color: 'icon-teal', title: 'Testing Matriks Samples', subtitle: 'Data matriks sampel pengujian' },
                             `<div class="row g-3 form-1">
-                                ${formGroup.select("kelompok", "Kelompok", res.id_testing_kelompok_matriks_sample, [], {
+                                ${formGroup.select("kelompok", `Kelompok${res.id_testing_kelompok_matriks_sample ? ` <a href="/testing-kelompok-matriks-samples?open=${res.id_testing_kelompok_matriks_sample}" target="_blank" class="ms-1 text-decoration-none" title="Buka data Kelompok Matriks Sample"><i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px;"></i></a>` : ""}`, res.id_testing_kelompok_matriks_sample, [], {
                                     mode: "ajax", url: "testing-kelompok-matriks-samples/select2",
                                     placeholder: "Pilih Kelompok", label: res.kelompok_matriks_judul_indonesia,
                                     className: "col-md-12", createUrl: "/testing-kelompok-matriks-samples/create",

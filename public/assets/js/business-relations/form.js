@@ -766,14 +766,16 @@ function renderContactList(rows) {
             <td>${r.lokasi_pic ? escHtml(r.lokasi_pic) : '<span class="text-muted">—</span>'}</td>
             <td>${r.is_aktif ? badgeAktif : badgeNon}</td>
             <td class="text-center">
+                ${can('business-relations', 'can_update') ? `
                 <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-contact-edit"
                     data-id="${r.id_contact}" title="Edit" style="font-size:11px;" data-no-disable>
                     <i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i>
-                </button>
+                </button>` : ''}
+                ${can('business-relations', 'can_delete') ? `
                 <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-contact-delete"
                     data-id="${r.id_contact}" data-nama="${escHtml(r.nama_pic)}" title="Hapus" style="font-size:11px;" data-no-disable>
                     <i class="fa-solid fa-trash" style="color:#dc2626;"></i>
-                </button>
+                </button>` : ''}
             </td>
         </tr>`;
     }).join('');
@@ -1615,22 +1617,25 @@ function renderForm(res) {
                     <!-- Edit di action bar atas -->
                 </div>
                 <div id="brTabActionsContact" class="d-none align-items-center gap-2">
+                    ${can('business-relations', 'can_create') ? `
                     <button type="button" class="pm-btn-pill btn-contact-add"
                         data-id-br="${res.id_br}" data-no-disable
                         style="border-color:#db2777;color:#db2777;">
                         <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                         <i class="fa-solid fa-address-book" style="font-size:11px;"></i> Tambah
-                    </button>
+                    </button>` : ''}
                 </div>
                 <div id="brTabActionsProduct" class="d-none align-items-center gap-2">
+                    ${can('business-relations', 'can_create') ? `
                     <button type="button" class="pm-btn-pill btn-product-add"
                         data-id-br="${res.id_br}" data-no-disable
                         style="border-color:#0f766e;color:#0f766e;">
                         <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                         <i class="fa-solid fa-box-open" style="font-size:11px;"></i> Tambah
-                    </button>
+                    </button>` : ''}
                 </div>
                 <div id="brTabActionsSiteInfo" class="d-none align-items-center gap-2">
+                    ${can('business-relations', 'can_update') ? `
                     <button type="button" class="pm-btn-pill" id="btn-edit-site-info" data-no-disable
                         style="border-color:#1a3a6e;color:#1a3a6e;">
                         <i class="fa-solid fa-pen" style="font-size:11px;"></i> Edit Site
@@ -1642,32 +1647,36 @@ function renderForm(res) {
                     <button type="button" class="pm-btn-pill d-none" id="btn-cancel-site-info" data-no-disable
                         style="border-color:#64748b;color:#64748b;">
                         <i class="fa-solid fa-xmark" style="font-size:11px;"></i> Batal
-                    </button>
+                    </button>` : ''}
+                    ${can('business-relations', 'can_delete') ? `
                     <button type="button" class="pm-btn-pill" id="btn-delete-site-info" data-no-disable
                         style="border-color:#dc2626;color:#dc2626;">
                         <i class="fa-solid fa-trash" style="font-size:11px;"></i> Hapus Site
-                    </button>
+                    </button>` : ''}
                 </div>
                 <div id="brTabActionsEnv" class="d-none align-items-center gap-2">
+                    ${can('business-relations', 'can_create') ? `
                     <button type="button" class="pm-btn-pill pm-btn-pill--teal btn-sp-add"
                         data-jenis="env" data-no-disable>
                         <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                         <i class="fa-solid fa-wind" style="font-size:11px;"></i> Tambah
-                    </button>
+                    </button>` : ''}
                 </div>
                 <div id="brTabActionsWe" class="d-none align-items-center gap-2">
+                    ${can('business-relations', 'can_create') ? `
                     <button type="button" class="pm-btn-pill pm-btn-pill--amber btn-sp-add"
                         data-jenis="we" data-no-disable>
                         <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                         <i class="fa-solid fa-helmet-safety" style="font-size:11px;"></i> Tambah
-                    </button>
+                    </button>` : ''}
                 </div>
                 <div id="brTabActionsMp" class="d-none align-items-center gap-2">
+                    ${can('business-relations', 'can_create') ? `
                     <button type="button" class="pm-btn-pill btn-mp-add" data-no-disable
                         style="border-color:#7c3aed;color:#7c3aed;">
                         <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                         <i class="fa-solid fa-user-plus" style="font-size:11px;"></i> Tambah
-                    </button>
+                    </button>` : ''}
                 </div>
             </div>
         </div>
