@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BusinessRelationController;
 use App\Http\Controllers\BusinessRelationSiteController;
+use App\Http\Controllers\SiteDirectoryController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BoqController;
@@ -492,8 +493,17 @@ Route::prefix('business-relation-sites')
             ->name('destroy')
             ->whereNumber('id');    // delete
 
+    });
 
-
+// Halaman read-only "Site" — daftar semua BRS lintas Perusahaan, jalan pintas
+// navigasi ke workspace BR yang benar (BR & BRS tetap 1 workspace gabungan,
+// bukan modul CRUD terpisah). Slug 'site-directory' independen, permission
+// sendiri (di-seed dari 'business-relations' can_read).
+Route::prefix('site-directory')
+    ->name('site-directory.')
+    ->group(function () {
+        Route::get('/', [SiteDirectoryController::class, 'index'])->name('index');
+        Route::get('/data', [SiteDirectoryController::class, 'data'])->name('data');
     });
 
 

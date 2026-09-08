@@ -304,7 +304,25 @@
                 processResults: d => ({ results: d }),
                 cache: false,
             },
-            ...noResultsAdd('/business-relation-contacts/create'),
+            language: {
+                // Bawa Perusahaan (id_br) & Site yang sedang dipilih di form ini
+                // supaya begitu masuk halaman create BRC, kedua field itu
+                // sudah otomatis terisi (tidak perlu isi ulang manual).
+                noResults: function () {
+                    // Site bisa ada di 2 tempat tergantung status lock: select2
+                    // biasa (#create_id_site) kalau belum preselect dari WO, atau
+                    // hidden input (id_site_pelanggan_pekerjaan) kalau sudah
+                    // di-lock otomatis dari WO (lihat blok preselectWoId di atas).
+                    const idSite = $('input[name="id_site_pelanggan_pekerjaan"]').val() || $('#create_id_site').val() || '';
+                    let url = '/business-relation-contacts/create';
+                    const qs = [];
+                    if (currentWoIdBr) qs.push('id_br=' + currentWoIdBr);
+                    if (idSite) qs.push('id_site=' + idSite);
+                    if (qs.length) url += '?' + qs.join('&');
+                    return `<span>Tidak ditemukan. <a href="${url}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`;
+                },
+            },
+            escapeMarkup: function (m) { return m; },
         });
     });
 

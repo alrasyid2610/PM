@@ -104,7 +104,7 @@
         });
 
         // Site mengikuti Business Relation yang dipilih
-        function reloadSiteOptions(idBr) {
+        function reloadSiteOptions(idBr, presetIdSite) {
             const $site = $("#select_site");
             $site.empty();
             if (!idBr) { $site.trigger("change"); return; }
@@ -113,6 +113,9 @@
                 (data || []).forEach(function (s) {
                     $site.append(new Option(s.text, s.id, false, false));
                 });
+                if (presetIdSite) {
+                    $site.val(String(presetIdSite));
+                }
                 $site.trigger("change");
             });
         }
@@ -124,6 +127,20 @@
         $("#select_br").on("select2:clear", function () {
             reloadSiteOptions(null);
         });
+
+        // Preselect BR & Site dari query string (?id_br=&id_site=) — dipakai
+        // saat masuk dari tombol "Add Data" di form lain (mis. modal Tambah
+        // FWO) supaya tidak perlu isi ulang Perusahaan/Site secara manual.
+        const presetParams = new URLSearchParams(window.location.search);
+        const presetIdBr   = presetParams.get('id_br');
+        const presetIdSite = presetParams.get('id_site');
+        if (presetIdBr) {
+            $.get(`/business-relations/${presetIdBr}`, function (br) {
+                if (!br || !br.id_br) return;
+                $('#select_br').append(new Option(br.nama_br, br.id_br, true, true)).trigger('change');
+                reloadSiteOptions(br.id_br, presetIdSite);
+            });
+        }
     });
 
     function setEmailError(msg) {

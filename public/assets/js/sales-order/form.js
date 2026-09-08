@@ -15,8 +15,16 @@ function renderForm(res) {
           : `<span class="pm-badge" style="background:#eff6ff;color:#1a56db;border:1px solid #bfdbfe;">
                <i class="fa-solid fa-spinner" style="font-size:10px;"></i> On Progress
            </span>`;
+    // Sejak restrukturisasi BR (2026-08-23), ?open= di /business-relations
+    // artinya id_br (bukan id_site lagi) — link ini dulu masih pakai
+    // id_site_pelanggan (perilaku lama, ketinggalan), makanya salah buka BR.
+    // &tab=tabBrsSite&site={id_site} dipakai supaya tetap langsung ke
+    // workspace Site (pola sama seperti menu "Site"/site-directory).
+    const pelangganTagParams = res.id_pelanggan
+        ? '?open=' + res.id_pelanggan + (res.id_site_pelanggan ? '&tab=tabBrsSite&site=' + res.id_site_pelanggan : '')
+        : '';
     const pelangganTag = res.nama_pelanggan
-        ? `<a href="/business-relations${res.id_site_pelanggan ? '?open=' + res.id_site_pelanggan : ''}" class="pm-badge" style="background:#f1f5f9;color:#475569;text-decoration:none;">
+        ? `<a href="/business-relations${pelangganTagParams}" class="pm-badge" style="background:#f1f5f9;color:#475569;text-decoration:none;">
                <i class="fa-solid fa-building" style="font-size:10px;"></i>
                ${escHtml(res.nama_pelanggan)}
            </a>`

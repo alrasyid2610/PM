@@ -39,8 +39,14 @@ function renderForm(res) {
                ${escHtml(res.no_so ?? 'SO')}
            </a>`
         : '';
+    // ?open= di /business-relations artinya id_br (bukan id_site) sejak
+    // restrukturisasi BR 2026-08-23 — &tab=tabBrsSite&site= dipakai supaya
+    // tetap langsung ke workspace Site (pola sama seperti site-directory).
+    const pelangganTagParams = res.id_pelanggan_pekerjaan
+        ? '?open=' + res.id_pelanggan_pekerjaan + (res.id_site_pelanggan_pekerjaan ? '&tab=tabBrsSite&site=' + res.id_site_pelanggan_pekerjaan : '')
+        : '';
     const pelangganTag = res.nama_site_pelanggan_pekerjaan
-        ? `<a href="/business-relations${res.id_site_pelanggan_pekerjaan ? '?open=' + res.id_site_pelanggan_pekerjaan : ''}" class="pm-badge" style="background:#f1f5f9;color:#475569;text-decoration:none;">
+        ? `<a href="/business-relations${pelangganTagParams}" class="pm-badge" style="background:#f1f5f9;color:#475569;text-decoration:none;">
                <i class="fa-solid fa-location-dot" style="font-size:10px;"></i>
                ${escHtml(res.nama_site_pelanggan_pekerjaan)}
            </a>`

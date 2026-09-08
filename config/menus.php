@@ -48,6 +48,9 @@ return [
         'items'   => [
             ['slug' => 'business-relations',         'label' => 'Business Relation',         'icon' => 'fa-handshake',        'section' => 'Business Relation'],
             ['slug' => 'business-relation-contacts', 'label' => 'Business Relation Contact', 'icon' => 'fa-address-book',     'section' => 'Business Relation'],
+            // Read-only, jalan pintas navigasi ke tab Site di workspace BR —
+            // BR & BRS tetap 1 workspace gabungan, ini BUKAN modul CRUD baru.
+            ['slug' => 'site-directory',              'label' => 'Site',                      'icon' => 'fa-map-location-dot', 'section' => 'Business Relation'],
             ['slug' => 'entitas',                    'label' => 'Entitas',                  'icon' => 'fa-sitemap',          'section' => 'Klasifikasi'],
             ['slug' => 'kepemilikan',                'label' => 'Kepemilikan',              'icon' => 'fa-landmark',         'section' => 'Klasifikasi'],
             ['slug' => 'kategori-bisnis',            'label' => 'Kategori Bisnis',          'icon' => 'fa-tags',             'section' => 'Klasifikasi'],

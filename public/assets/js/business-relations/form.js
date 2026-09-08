@@ -1446,6 +1446,14 @@ function initSiteTabEvents() {
         $('#site-workspace-wrap').addClass('d-none');
         $('#site-picker-wrap').removeClass('d-none');
         loadSitePickerList(idBr);
+
+        // Datang dari halaman "Site" (?site={id}) → langsung buka workspace
+        // site itu, cuma sekali di kunjungan pertama (bukan tiap pindah tab).
+        const targetSiteId = new URLSearchParams(window.location.search).get('site');
+        if (targetSiteId && !window._siteDirectoryAutoOpened) {
+            window._siteDirectoryAutoOpened = true;
+            openSiteWorkspace(targetSiteId);
+        }
     });
 
     $panel.on('click', '.btn-site-pick', function () {

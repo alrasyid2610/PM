@@ -1510,8 +1510,16 @@ $(document).ready(function () {
                         cache: false,
                     },
                     language: {
+                        // Bawa Perusahaan & Site FWO ini supaya begitu masuk
+                        // halaman create BRC, kedua field itu sudah otomatis
+                        // terisi (tidak perlu isi ulang manual).
                         noResults: function () {
-                            return '<span>Tidak ditemukan. <a href="/business-relation-contacts/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>';
+                            let url = '/business-relation-contacts/create';
+                            const qs = [];
+                            if (res.id_pelanggan_pekerjaan) qs.push('id_br=' + res.id_pelanggan_pekerjaan);
+                            if (res.id_site_pelanggan_pekerjaan) qs.push('id_site=' + res.id_site_pelanggan_pekerjaan);
+                            if (qs.length) url += '?' + qs.join('&');
+                            return `<span>Tidak ditemukan. <a href="${url}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`;
                         },
                     },
                     escapeMarkup: function (m) { return m; },
