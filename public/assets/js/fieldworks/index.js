@@ -1482,6 +1482,41 @@ $(document).ready(function () {
         },
         afterLoad: function (res) {
             currentFwoData      = res;
+
+            // PIC Pelanggan di-scope ke Perusahaan pemilik WO (id_pelanggan_pekerjaan).
+            // Field ini pakai .form-select-dynamic (mode ajax generik) yang
+            // di-init ulang oleh initDynamicSelect() setelah initSelect() —
+            // makanya reinit custom-nya harus di sini (afterLoad), bukan di
+            // initSelect, supaya tidak ketimpa lagi (sama seperti kasus Site SO).
+            (function initFwoPicSelect() {
+                const $el = $('#detail_id_pic_pelanggan_pekerjaan');
+                if (!$el.length) return;
+                if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
+
+                $el.select2({
+                    width: '100%',
+                    dropdownParent: $('#detailContent'),
+                    placeholder: 'Pilih PIC',
+                    allowClear: true,
+                    minimumInputLength: 0,
+                    ajax: {
+                        url: 'business-relation-contacts/select2',
+                        dataType: 'json',
+                        delay: 250,
+                        data: function (params) {
+                            return { q: params.term || '', id_br: res.id_pelanggan_pekerjaan || '' };
+                        },
+                        processResults: function (data) { return { results: data }; },
+                        cache: false,
+                    },
+                    language: {
+                        noResults: function () {
+                            return '<span>Tidak ditemukan. <a href="/business-relation-contacts/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>';
+                        },
+                    },
+                    escapeMarkup: function (m) { return m; },
+                });
+            })();
             currentPersonelData = res.personels || [];
             try {
                 fwoAttachmentData = res.attachments

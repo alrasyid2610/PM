@@ -89,6 +89,7 @@ class FieldworkController extends Controller
                 'fw.*',
                 'wo.no_wo as wo_no_wo',
                 'wo.id_so',
+                'wo.id_pelanggan_pekerjaan',
                 'wo.judul_pekerjaan as wo_judul_pekerjaan',
                 'wo.status as wo_status',
                 'so.no_so',

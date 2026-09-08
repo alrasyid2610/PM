@@ -163,6 +163,11 @@
         }
     }
 
+    // Perusahaan (id_br) pemilik WO yang dipilih — dipakai untuk scope PIC
+    // Pelanggan supaya cuma nampilin kontak dari Perusahaan WO ini, bukan
+    // semua BRC se-sistem.
+    let currentWoIdBr = null;
+
     function noResultsAdd(createUrl) {
         return {
             language: {
@@ -211,6 +216,10 @@
 
             $('#create_id_wo').on('select2:select', function (e) {
                 $('input[name="judul_pekerjaan"]').val(e.params.data.judul || '');
+                currentWoIdBr = e.params.data.id_pelanggan_pekerjaan || null;
+                // Perusahaan WO berubah → PIC yang sudah dipilih (kalau ada)
+                // belum tentu valid lagi untuk Perusahaan baru
+                $('#create_id_pic').val(null).trigger('change');
             });
         }
 
@@ -260,6 +269,9 @@
 
                 // Batasi tanggal mulai/selesai FWO sesuai rentang tanggal WO
                 applyWoDateRange(res.tanggal_mulai, res.tanggal_selesai);
+
+                // Scope PIC Pelanggan ke Perusahaan WO ini
+                currentWoIdBr = res.id_pelanggan_pekerjaan || null;
             });
         }
 
@@ -288,9 +300,9 @@
                 url: "{{ route('business-relation-contacts.select2') }}",
                 dataType: 'json',
                 delay: 250,
-                data: p => ({ q: p.term }),
+                data: p => ({ q: p.term, id_br: currentWoIdBr || '' }),
                 processResults: d => ({ results: d }),
-                cache: true,
+                cache: false,
             },
             ...noResultsAdd('/business-relation-contacts/create'),
         });
