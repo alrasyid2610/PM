@@ -115,6 +115,7 @@ class TestingPointController extends Controller
             'is_aktif' => 'required|boolean',
             'attachments.*' => 'nullable|file|max:153600',
         ]);
+        unset($validated['attachments']); // wildcard rule ikut masuk ke $validated, tapi kolom DB-nya 'attachment' (singular)
 
         $upload = uploadAttachment($request->file('attachments'), $table);
         $files = $upload['files'];
@@ -190,23 +191,18 @@ class TestingPointController extends Controller
     {
 
 
-        try {
-            $validated = $request->validate([
-                'id_testing_standard' => 'required|integer',
-                'id_testing_matriks_sample' => 'required|integer',
-                'nama' => 'required|string|max:255',
-                'deskripsi' => 'nullable|string',
-                'nomor_halaman' => 'nullable|string|max:50',
-                'attachment' => 'nullable|string|max:255',
-                'attachments.*' => 'nullable|file|max:153600',
-                'keterangan_point' => 'nullable|string',
-                'is_aktif' => 'required|boolean',
-            ]);
-
-            // dd($request->all());
-        } catch (\Throwable $th) {
-            dd($th);
-        }
+        $validated = $request->validate([
+            'id_testing_standard' => 'required|integer',
+            'id_testing_matriks_sample' => 'required|integer',
+            'nama' => 'required|string|max:255',
+            'deskripsi' => 'nullable|string',
+            'nomor_halaman' => 'nullable|string|max:50',
+            'attachment' => 'nullable|string|max:255',
+            'attachments.*' => 'nullable|file|max:153600',
+            'keterangan_point' => 'nullable|string',
+            'is_aktif' => 'required|boolean',
+        ]);
+        unset($validated['attachments']); // wildcard rule ikut masuk ke $validated, tapi kolom DB-nya 'attachment' (singular)
 
         // Capture BEFORE state (point + lines)
         $beforePoint = (array) DB::table('testing_points')->where('id_testing_point', $id)->first();
