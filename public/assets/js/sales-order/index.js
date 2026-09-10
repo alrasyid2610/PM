@@ -908,6 +908,7 @@ $(document).ready(function () {
     page = new CrudPageController({
         primaryKey: "id_so",
         renderForm: renderForm,
+        detailTitle: function (res) { return res.no_so; },
         useAttachment: true,
         initSelect: function () {
             initSoPicFields();

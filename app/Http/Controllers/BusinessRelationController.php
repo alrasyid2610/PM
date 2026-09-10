@@ -291,7 +291,12 @@ class BusinessRelationController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Data Business Relation berhasil disimpan',
-                'id'      => $idSite,
+                // ?open= di /business-relations = id_br sejak restrukturisasi BR
+                // 2026-08-23 (bukan id_site). id_site dikirim terpisah untuk
+                // membuka langsung tab Site yang baru dibuat.
+                'id_br'   => $idBr,
+                'id_site' => $idSite,
+                'id'      => $idBr, // backward-compat
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();

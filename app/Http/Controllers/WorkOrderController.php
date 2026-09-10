@@ -126,6 +126,22 @@ class WorkOrderController extends Controller
 
         $interval = $request->interval_bulan ?: null;
         $id_site  = $request->id_site_pelanggan ?: $wo->id_site_pelanggan_pekerjaan;
+
+        // Site harus milik Perusahaan (BR) yang dipilih — dropdown Site di form
+        // sudah di-scope ke Perusahaan, guard ini menutup jalur submit langsung.
+        if ($id_site && $request->filled('id_pelanggan')) {
+            $siteBelongsToBr = DB::table('business_relation_sites')
+                ->where('id_site', $id_site)
+                ->where('id_br', $request->id_pelanggan)
+                ->exists();
+            if (!$siteBelongsToBr) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Site yang dipilih bukan milik Perusahaan yang dipilih',
+                ], 422);
+            }
+        }
+
         $no_urut  = null;
         if ($id_site && $interval) {
             if ($request->filled('no_urut_period')) {

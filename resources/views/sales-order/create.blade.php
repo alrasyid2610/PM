@@ -239,6 +239,13 @@
             </x-section-card>
         </div>
 
+        <!-- SECTION 6: ATTACHMENT -->
+        <div class="col-12">
+            <x-section-card icon="fa-paperclip" color="icon-teal" title="Attachment" subtitle="File pendukung sales order">
+                <input type="file" class="filepond" name="attachments[]" multiple>
+            </x-section-card>
+        </div>
+
         <x-form-actions back-route="{{ url('sales-orders') }}" submit-label="Simpan Sales Order" />
 
     </form>
@@ -252,6 +259,7 @@
 
     $(document).ready(function () {
         initFpDate(document);
+        createFileUploader(".filepond");
         $('select[name="id_office"]').select2({ placeholder: 'Pilih Office', allowClear: true, width: '100%' });
 
         $('#id_sc').select2({
@@ -499,7 +507,10 @@
     submitCreateForm({
         formId: "#salesOrderForm",
         url: "{{ url('sales-orders') }}",
-        redirect: "{{ url('sales-orders') }}",
+        filepond: ".filepond",
+        onSuccess: function (res) {
+            window.location.href = "{{ url('sales-orders') }}" + (res.id_so ? "?open=" + res.id_so : "");
+        },
     });
 </script>
 @endsection

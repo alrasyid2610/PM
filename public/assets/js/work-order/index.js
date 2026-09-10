@@ -7,6 +7,49 @@ function fmtDate(str) {
 }
 
 let page;
+
+// Scope field "Site Pelanggan" ke Perusahaan yang dipilih di form detail WO.
+// Field id_pelanggan & id_site_pelanggan dirender sebagai .form-select-dynamic
+// (mode ajax generik) yang di-init oleh initDynamicSelect() TANPA kirim id_br —
+// jadi harus di-reinit di sini (dipanggil dari afterLoad, yang jalan SETELAH
+// initDynamicSelect). Pola sama seperti initSoSiteFields() di Sales Order.
+function initWoSiteField() {
+    const $site = $('#detail_id_site_pelanggan');
+    if (!$site.length) return;
+    if ($site.hasClass('select2-hidden-accessible')) $site.select2('destroy');
+
+    $site.select2({
+        width: '100%',
+        dropdownParent: $('#detailContent'),
+        placeholder: 'Pilih Site',
+        allowClear: true,
+        minimumInputLength: 0,
+        ajax: {
+            url: '/business-relations/sites/select2',
+            dataType: 'json',
+            delay: 250,
+            data: function (params) {
+                return { q: params.term || '', id_br: $('#detail_id_pelanggan').val() || '' };
+            },
+            processResults: function (data) { return { results: data }; },
+            cache: false,
+        },
+        language: {
+            noResults: function () {
+                return '<span>Tidak ditemukan. <a href="/business-relations/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>';
+            },
+        },
+        escapeMarkup: function (m) { return m; },
+    });
+
+    // Ganti Perusahaan → Site lama sudah tentu tidak valid lagi
+    $('#detail_id_pelanggan')
+        .off('select2:select.woCompanySiteClear select2:clear.woCompanySiteClear')
+        .on('select2:select.woCompanySiteClear select2:clear.woCompanySiteClear', function () {
+            $('#detail_id_site_pelanggan').val(null).trigger('change');
+        });
+}
+
 let currentBoqData = null;
 let currentBoqWoId = null;
 let currentWoData = null;
@@ -2972,8 +3015,10 @@ $(document).ready(function () {
     page = new CrudPageController({
         primaryKey: "id_wo",
         renderForm: renderForm,
+        detailTitle: function (res) { return res.no_wo; },
         afterLoad: function (res) {
             currentWoData = res;
+            initWoSiteField();
             loadBoqProgress(res.id_wo);
             loadOutputProgress(res.id_wo);
             initFpDate('#detailContent');

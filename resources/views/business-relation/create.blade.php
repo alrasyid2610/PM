@@ -537,7 +537,13 @@
                 data: form.serialize(),
                 success: function (res) {
                     Notify.success('Data berhasil disimpan!');
-                    window.location.href = "{{ route('business-relations.index') }}?open=" + res.id;
+                    // ?open= = id_br (bukan id_site) sejak restrukturisasi BR
+                    // 2026-08-23; &tab=tabBrsSite&site= supaya langsung buka
+                    // Site yang baru dibuat di dalam workspace BR.
+                    var brId = res.id_br || res.id;
+                    var url = "{{ route('business-relations.index') }}?open=" + brId;
+                    if (res.id_site) url += "&tab=tabBrsSite&site=" + res.id_site;
+                    window.location.href = url;
                 },
                 error: function (xhr) {
                     btn.prop('disabled', false).text('Simpan Data');

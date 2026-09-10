@@ -1475,6 +1475,7 @@ $(document).ready(function () {
     page = new CrudPageController({
         primaryKey: 'id_fwo',
         renderForm: renderFwoForm,
+        detailTitle: function (res) { return res.no_fwo; },
         initSelect: function () {
             $('#detail_id_wo').on('select2:select', function (e) {
                 $('input[name="judul_pekerjaan"]').val(e.params.data.judul || '');

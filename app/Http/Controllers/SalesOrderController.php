@@ -50,9 +50,16 @@ class SalesOrderController extends Controller
         $request->validate([
             'tanggal_so' => 'required|date',
             'id_pelanggan' => 'required|integer',
+            'attachments'   => 'nullable|array',
+            'attachments.*' => 'nullable|file|max:153600',
         ]);
 
         $soNumber = $this->generateSoNumber();
+
+        // Attachment (opsional saat create) — pakai infrastruktur generik yang
+        // sama seperti update(): helper uploadAttachment() + kolom json.
+        $upload = uploadAttachment($request->file('attachments'), 'sales_orders');
+        $files  = $upload['files'];
 
         // ==========================
         // INSERT
@@ -97,6 +104,8 @@ class SalesOrderController extends Controller
             'keterangan_status' => $request->keterangan_status,
             'cara_pembayaran'   => $request->cara_pembayaran,
             'keterangan'        => $request->keterangan,
+
+            'attachment' => json_encode($files),
 
             'created_at' => now(),
             'updated_at' => now(),

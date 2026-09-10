@@ -80,7 +80,7 @@
             <tr>
                 <td class="label">Jam Kedatangan</td>
                 <td class="colon">:</td>
-                <td class="value">{{ $fwo->waktu_kedatangan ?? '-' }}</td>
+                <td class="value">{{ $fwo->waktu_kedatangan ? \Carbon\Carbon::parse($fwo->waktu_kedatangan)->format('H:i') : '-' }}</td>
             </tr>
             <tr>
                 <td colspan="3" style="padding: 10px 0 4px;">Maka kami tugaskan personel kami :</td>

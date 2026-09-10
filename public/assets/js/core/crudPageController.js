@@ -10,6 +10,13 @@ class CrudPageController {
         this.afterLoad = options.afterLoad || null;
         this.noEditBind = options.noEditBind || false;
 
+        // Judul tab browser saat sebuah record dibuka. Fungsi menerima `res`
+        // (data detail) dan mengembalikan teks pendek — biasanya nomor dokumen
+        // (mis. "WO.25.014"). Suffix " · <judul halaman>" ditambahkan otomatis
+        // supaya tiap tab record punya identitas sendiri saat banyak tab dibuka.
+        this.detailTitle = options.detailTitle || null;
+        this.baseTitle = document.title;
+
         this.selectedRow = { id: null };
 
         this.attachmentData = [];
@@ -96,6 +103,7 @@ class CrudPageController {
                 self.selectedRow.id = null;
                 $('#detailContent').html('');
                 $('#history-tab').addClass('disabled').attr('disabled', true);
+                document.title = self.baseTitle;
             }
         });
     }
@@ -214,6 +222,16 @@ class CrudPageController {
 
                 if (self.afterLoad) {
                     self.afterLoad(res);
+                }
+
+                // Judul tab browser: sisipkan identitas record yang dibuka
+                // (mis. "WO.25.014 · Work Order · Pramatek") supaya tab bisa
+                // dibedakan saat user membuka banyak record sekaligus.
+                if (self.detailTitle) {
+                    try {
+                        var dt = self.detailTitle(res);
+                        if (dt) document.title = dt + ' · ' + self.baseTitle;
+                    } catch (e) { /* judul default dipertahankan */ }
                 }
             },
         });
