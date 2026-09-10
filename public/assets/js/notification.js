@@ -11,6 +11,19 @@ window.Notify = {
         });
     },
 
+    // Toast generik, ringkas — dipakai untuk aksi cepat/tidak mengganggu yang
+    // bukan submit form (mis. drag-and-drop reorder baris).
+    toast(message, icon = "success") {
+        return Swal.fire({
+            toast: true,
+            position: "top-end",
+            icon: icon,
+            title: message,
+            timer: 1200,
+            showConfirmButton: false,
+        });
+    },
+
     error(message = "Terjadi kesalahan") {
         return Swal.fire({
             icon: "error",

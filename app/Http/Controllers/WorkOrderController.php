@@ -388,24 +388,44 @@ class WorkOrderController extends Controller
 
         $no_wo = $this->generateNoWo();
 
-        $dupInterval = $source->interval_bulan;
+        // Site & Frekuensi sekarang bisa diubah saat clone (sebelumnya selalu
+        // ikut WO sumber apa adanya). Pelanggan (id_br) TIDAK ikut diubah,
+        // jadi Site baru wajib tetap milik Perusahaan yang sama.
+        $targetSiteId = $request->filled('id_site_pelanggan_pekerjaan')
+            ? $request->id_site_pelanggan_pekerjaan
+            : $source->id_site_pelanggan_pekerjaan;
+
+        if ($targetSiteId) {
+            $siteBelongsToSameBr = DB::table('business_relation_sites')
+                ->where('id_site', $targetSiteId)
+                ->where('id_br', $source->id_pelanggan_pekerjaan)
+                ->exists();
+            if (!$siteBelongsToSameBr) {
+                return response()->json(['message' => 'Site yang dipilih bukan milik Perusahaan yang sama dengan WO sumber'], 422);
+            }
+        }
+
+        // interval_bulan pakai has() (bukan filled()) supaya user bisa dengan
+        // sengaja mengosongkan frekuensi (WO sumber ada interval → salinan
+        // tanpa interval), bukan cuma bisa ganti ke interval lain.
+        $dupInterval = $request->has('interval_bulan') ? ($request->interval_bulan ?: null) : $source->interval_bulan;
         $dupNoUrut   = $request->filled('no_urut_period') ? (int) $request->no_urut_period : null;
-        if (!$dupNoUrut && $source->id_site_pelanggan_pekerjaan && $dupInterval) {
+        if (!$dupNoUrut && $targetSiteId && $dupInterval) {
             $existing = DB::table('work_orders')
                 ->where('id_so', $source->id_so)
-                ->where('id_site_pelanggan_pekerjaan', $source->id_site_pelanggan_pekerjaan)
+                ->where('id_site_pelanggan_pekerjaan', $targetSiteId)
                 ->where('interval_bulan', $dupInterval)
                 ->whereNull('deleted_at')
                 ->count();
             $dupNoUrut = $existing + 1;
         }
 
-        return DB::transaction(function () use ($request, $source, $no_wo, $dupInterval, $dupNoUrut, $tanggalMulai, $tanggalSelesai) {
+        return DB::transaction(function () use ($request, $source, $no_wo, $targetSiteId, $dupInterval, $dupNoUrut, $tanggalMulai, $tanggalSelesai) {
             $newId = DB::table('work_orders')->insertGetId([
                 'no_wo'                       => $no_wo,
                 'id_so'                       => $source->id_so,
                 'id_pelanggan_pekerjaan'      => $source->id_pelanggan_pekerjaan,
-                'id_site_pelanggan_pekerjaan' => $source->id_site_pelanggan_pekerjaan,
+                'id_site_pelanggan_pekerjaan' => $targetSiteId,
                 'id_pic_pelanggan_pekerjaan'  => $request->id_pic_pelanggan_pekerjaan ?: $source->id_pic_pelanggan_pekerjaan,
                 'judul_pekerjaan'             => $request->judul_pekerjaan             ?: $source->judul_pekerjaan,
                 'keterangan'                  => $request->filled('keterangan')        ? $request->keterangan : $source->keterangan,

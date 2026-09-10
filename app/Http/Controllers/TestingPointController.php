@@ -117,6 +117,19 @@ class TestingPointController extends Controller
         ]);
         unset($validated['attachments']); // wildcard rule ikut masuk ke $validated, tapi kolom DB-nya 'attachment' (singular)
 
+        // Validasi terpisah untuk field per-item (dynamic table) — sengaja
+        // TIDAK digabung ke $validated di atas (yang di-spread ke insert
+        // testing_points) supaya tidak kena bug yang sama seperti kasus
+        // 'attachments' (field array ikut nyasar ke kolom yang salah).
+        $request->validate([
+            'judul_indonesia.*' => 'nullable|string|max:255',
+            'judul_inggris.*'   => 'nullable|string|max:255',
+            'parameter.*'       => 'nullable|integer',
+            'unit.*'            => 'nullable|integer',
+            'nilai.*'           => 'nullable|string|max:100',
+            'item_keterangan.*' => 'nullable|string|max:255',
+        ]);
+
         $upload = uploadAttachment($request->file('attachments'), $table);
         $files = $upload['files'];
 
@@ -130,25 +143,25 @@ class TestingPointController extends Controller
         ]);
 
         // Insert testing items
-        $judulIndonesia = $request->judul_indonesia ?? [];
-        $judulInggris   = $request->judul_inggris   ?? [];
-        $parameter      = $request->parameter       ?? [];
-        $unit           = $request->unit            ?? [];
-        $nilai          = $request->nilai           ?? [];
-        $itemKeterangan = $request->item_keterangan ?? [];
-        $status         = $request->status          ?? [];
-        $nomor          = $request->nomor           ?? [];
+        $judul_indonesia = $request->judul_indonesia ?? [];
+        $judul_inggris   = $request->judul_inggris   ?? [];
+        $parameter       = $request->parameter       ?? [];
+        $unit            = $request->unit            ?? [];
+        $nilai           = $request->nilai           ?? [];
+        $item_keterangan = $request->item_keterangan ?? [];
+        $status          = $request->status          ?? [];
+        $nomor           = $request->nomor           ?? [];
 
-        foreach ($judulIndonesia as $i => $val) {
+        foreach ($judul_indonesia as $i => $val) {
             DB::table('testing_items')->insert([
                 'id_testing_point'     => $id,
-                'nomor'                => $nomor[$i] ?? ($i + 1),
+                'nomor'                => (int) ($nomor[$i] ?? ($i + 1)),
                 'judul_indonesia'      => $val,
-                'judul_inggris'        => $judulInggris[$i]   ?? null,
-                'id_testing_parameter' => $parameter[$i]      ?? null,
-                'id_testing_unit'      => $unit[$i]           ?? null,
-                'nilai'                => $nilai[$i]          ?? null,
-                'keterangan'           => $itemKeterangan[$i] ?? null,
+                'judul_inggris'        => $judul_inggris[$i]   ?? null,
+                'id_testing_parameter' => $parameter[$i]       ?? null,
+                'id_testing_unit'      => $unit[$i]            ?? null,
+                'nilai'                => $nilai[$i]           ?? null,
+                'keterangan'           => $item_keterangan[$i] ?? null,
                 'is_aktif'             => isset($status[$i]) ? $status[$i] : 0,
                 'created_at'           => now(),
                 'updated_at'           => now(),
@@ -204,6 +217,21 @@ class TestingPointController extends Controller
         ]);
         unset($validated['attachments']); // wildcard rule ikut masuk ke $validated, tapi kolom DB-nya 'attachment' (singular)
 
+        // Validasi terpisah untuk field per-item (dynamic table) — sengaja
+        // TIDAK digabung ke $validated di atas (yang di-spread ke update
+        // testing_points) supaya tidak kena bug yang sama seperti kasus
+        // 'attachments' (field array ikut nyasar ke kolom yang salah).
+        $request->validate([
+            'id_testing_item.*' => 'nullable|integer',
+            'judul_indonesia.*' => 'nullable|string|max:255',
+            'judul_inggris.*'   => 'nullable|string|max:255',
+            'parameter.*'       => 'nullable|integer',
+            'unit.*'            => 'nullable|integer',
+            'nilai.*'           => 'nullable|string|max:100',
+            'keterangan.*'      => 'nullable|string|max:255',
+            'nomor.*'           => 'nullable|integer',
+        ]);
+
         // Capture BEFORE state (point + lines)
         $beforePoint = (array) DB::table('testing_points')->where('id_testing_point', $id)->first();
         $beforeLines = DB::table('testing_items')->where('id_testing_point', $id)->get()->map(fn($r) => (array)$r)->toArray();
@@ -219,7 +247,11 @@ class TestingPointController extends Controller
             $parameter      = $request->parameter ?? [];
             $unit           = $request->unit ?? [];
             $nilai          = $request->nilai ?? [];
-            $keterangan     = $request->item_keterangan ?? [];
+            // Field di form edit (testing-points/form.js) bernama "keterangan[]",
+            // BEDA dari form create yang pakai "item_keterangan[]" — sebelumnya
+            // di sini salah baca "item_keterangan" (selalu kosong di form edit),
+            // jadi keterangan tiap item selalu ke-null-kan tiap kali Simpan.
+            $keterangan     = $request->keterangan ?? [];
             $status         = $request->status ?? [];
             $nomor          = $request->nomor ?? [];
 
@@ -236,7 +268,7 @@ class TestingPointController extends Controller
 
                 $dataItem = [
                     'id_testing_point'   => $id,
-                    'nomor'              => $nomor[$i] ?? ($i + 1),
+                    'nomor'              => (int) ($nomor[$i] ?? ($i + 1)),
                     'judul_indonesia'    => $judul_indonesia[$i] ?? null,
                     'judul_inggris'      => $judul_inggris[$i] ?? null,
                     'id_testing_parameter' => $parameter[$i] ?? null,

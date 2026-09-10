@@ -848,6 +848,52 @@ section .card {
 }
 
 /* =====================
+   DRAG HANDLE (reorder baris dynamic-table, mis. Testing Items)
+   ===================== */
+.drag-handle-btn {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 7px;
+    background: rgba(var(--primary-400-rgb, 74, 158, 255), 0.14);
+    color: var(--primary-500, #1a5fbe);
+    transition: background-color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.drag-handle-btn i {
+    color: inherit !important;
+    font-size: 13px;
+}
+.drag-handle-btn:hover:not(:disabled) {
+    background: var(--primary-500, #1a5fbe);
+    color: #fff;
+    transform: scale(1.08);
+    box-shadow: 0 2px 6px rgba(var(--primary-500-rgb, 26, 95, 190), 0.35);
+}
+.drag-handle-btn:active:not(:disabled) {
+    cursor: grabbing;
+    transform: scale(0.96);
+}
+.drag-handle-btn:disabled {
+    background: #f1f5f9;
+    color: #cbd5e1;
+    cursor: default;
+}
+/* Kartu yang lagi di-drag (dragula) */
+.gu-mirror .drag-handle-btn {
+    background: var(--primary-500, #1a5fbe);
+    color: #fff;
+}
+tr.gu-transit {
+    outline: 2px dashed var(--primary-400, #4a9eff);
+    outline-offset: -2px;
+    background: rgba(var(--primary-400-rgb, 74, 158, 255), 0.08) !important;
+}
+
+/* =====================
    UPLOAD PROGRESS (overlay Swal saat submit form yang bawa attachment)
    ===================== */
 .pm-upload-progress {

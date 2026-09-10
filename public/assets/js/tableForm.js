@@ -14,6 +14,7 @@ class DynamicTable {
         this.initPlugins(this.table);
         this.updateRowNumbers();
         this._initActionMenu();
+        this._initDragReorder();
 
         this.wrapper.on("click", ".btn-add-row", () => {
             this.addRow();
@@ -23,6 +24,50 @@ class DynamicTable {
             e.stopPropagation();
             this._currentActionRow = $(e.currentTarget).closest("tr");
             this._showActionMenu(e.currentTarget);
+        });
+
+        // Checkbox status[] tidak boleh punya `name` langsung — browser tidak
+        // ikut mengirim checkbox yang UNCHECKED sama sekali, jadi array
+        // status[] yang sampai ke server jadi lebih pendek & ke-reindex ulang
+        // (index 0,1,2,... dari checkbox yang KECEKLIS saja), bukan align ke
+        // posisi baris aslinya seperti judul_indonesia[]/dst yang selalu
+        // terkirim. Akibatnya baris yang ke-set aktif jadi salah/acak (bug
+        // dilaporkan: ceklis 10 baris, yang aktif kesimpan cuma 1 & bukan
+        // yang benar). Fix: checkbox cuma UI, nilai sungguhan disimpan di
+        // hidden input `status[]` yang selalu ada 1 per baris (disinkron di
+        // sini), jadi urutan & jumlah array-nya selalu sama dengan baris.
+        this.table.on("change", ".status-checkbox", (e) => {
+            $(e.currentTarget)
+                .closest("td")
+                .find(".status-hidden")
+                .val(e.currentTarget.checked ? "1" : "0");
+        });
+    }
+
+    // Drag-and-drop reorder baris lewat handle (ikon grip di kolom pertama)
+    // pakai dragula (sudah ada di public/assets/vendor/dragula, sebelumnya
+    // tidak dipakai di mana pun). Cuma bisa drag kalau handle-nya tidak
+    // disabled — otomatis ikut ter-lock/unlock sama seperti field lain di
+    // dynamic-table-wrapper, karena drag-handle-btn adalah <button> biasa
+    // yang ikut ter-enable/disable oleh toggle Edit (formEditHandler.js).
+    _initDragReorder() {
+        if (typeof dragula === "undefined") return;
+        if (!this.table.find(".drag-handle-btn").length) return;
+
+        const tbody = this.table.find("tbody").get(0);
+        if (!tbody) return;
+
+        const self = this;
+        this._drake = dragula([tbody], {
+            moves: function (el, source, handle) {
+                const $handle = $(handle).closest(".drag-handle-btn");
+                return $handle.length > 0 && !$handle.prop("disabled");
+            },
+        });
+
+        this._drake.on("drop", function () {
+            self.updateRowNumbers();
+            if (window.Notify) Notify.toast("Urutan baris diperbarui");
         });
     }
 
@@ -170,6 +215,16 @@ class DynamicTable {
             let row = $(template);
 
             Object.keys(item).forEach((key) => {
+                if (key === "status") {
+                    // Checkbox-nya tidak punya `name` (lihat catatan di
+                    // _initDragReorder/init) — set hidden-nya, lalu sinkronkan
+                    // checkbox visual-nya lewat class sibling-nya.
+                    const $hidden = row.find('.status-hidden');
+                    $hidden.val(item[key] == 1 ? '1' : '0');
+                    $hidden.siblings('.status-checkbox').prop('checked', item[key] == 1);
+                    return;
+                }
+
                 let input = row.find(`[name="${key}[]"]`);
                 if (!input.length) return;
 

@@ -789,6 +789,12 @@ $(document).ready(function () {
             return;
         }
 
+        const siteId = $("#copyWoSite").val();
+        if (!siteId) {
+            Notify.warning("Pelanggan Site wajib diisi");
+            return;
+        }
+
         const tglMulai = $("#copyWoTglMulai").val();
         const tglSelesai = $("#copyWoTglSelesai").val();
         $("#copyWoTglSelesaiError").remove();
@@ -859,6 +865,8 @@ $(document).ready(function () {
             headers: { "X-CSRF-TOKEN": window.route.csrf },
             data: JSON.stringify({
                 judul_pekerjaan: judul,
+                id_site_pelanggan_pekerjaan: siteId,
+                interval_bulan: $("#copyWoInterval").val() || null,
                 tanggal_mulai: tglMulai || null,
                 tanggal_selesai: tglSelesai || null,
                 keterangan: $("#copyWoKeterangan").val() || null,
@@ -1032,16 +1040,6 @@ function fillCopyWoModal(wo) {
         </div>`;
     }
 
-    const urutanRow = wo.interval_bulan
-        ? `
-        <div class="col-md-2">
-            <label class="form-label">Urutan ke-</label>
-            <input type="number" id="copyWoUrutan" class="form-control form-control-sm" value="${nextUrut}" min="1" style="width:80px;">
-        </div>`
-        : "";
-
-    const picColClass = wo.interval_bulan ? "col-md-4" : "col-md-5";
-
     $("#modalCopyWoBody").html(`
         <div style="position:sticky;top:0;z-index:10;background:#fff;border-bottom:2px solid #e2e8f0;padding:10px 16px;margin:-16px -16px 16px;box-shadow:0 2px 10px rgba(0,0,0,.08);">
             <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size:13px;">
@@ -1074,14 +1072,25 @@ function fillCopyWoModal(wo) {
             </div>
             <div class="col-md-5">
                 <label class="form-label">Pelanggan Site</label>
-                <input type="text" class="form-control form-control-sm" value="${escHtml(wo["Site Pelanggan"] ?? "—")}" disabled>
+                <select id="copyWoSite" class="form-select form-select-sm"></select>
             </div>
             <div class="col-md-2">
                 <label class="form-label">Frekuensi</label>
-                <input type="text" class="form-control form-control-sm" value="${escHtml(intervalLabel)}" disabled>
+                <select id="copyWoInterval" class="form-select form-select-sm">
+                    <option value="">— Tidak ada —</option>
+                    <option value="1">Bulanan</option>
+                    <option value="2">Bimulanan</option>
+                    <option value="3">Triwulan</option>
+                    <option value="4">Caturwulan</option>
+                    <option value="6">Semester</option>
+                    <option value="12">Annual</option>
+                </select>
             </div>
-            ${urutanRow}
-            <div class="${picColClass}">
+            <div class="col-md-2" id="copyWoUrutanWrap" style="display:none;">
+                <label class="form-label">Urutan ke-</label>
+                <input type="number" id="copyWoUrutan" class="form-control form-control-sm" value="${nextUrut}" min="1">
+            </div>
+            <div class="col-md-4">
                 <label class="form-label">PIC Pekerjaan</label>
                 <select id="copyWoPic" class="form-select form-select-sm"></select>
             </div>
@@ -1126,6 +1135,44 @@ function fillCopyWoModal(wo) {
         );
         $("#copyWoPic").append(opt).trigger("change");
     }
+
+    // Pelanggan Site — bisa diubah, tapi tetap discope ke Perusahaan yang
+    // sama (Pelanggan tidak ikut diubah saat clone WO), sama pola dengan
+    // Site di form SO/FWO.
+    $("#copyWoSite").select2({
+        width: "100%",
+        placeholder: "Pilih Site",
+        allowClear: false,
+        dropdownParent: $("#modalCopyWo"),
+        ajax: {
+            url: "/business-relations/sites/select2",
+            dataType: "json",
+            delay: 250,
+            data: (params) => ({ q: params.term || "", id_br: wo.id_pelanggan_pekerjaan || "" }),
+            processResults: (data) => ({ results: data }),
+            cache: false,
+        },
+        escapeMarkup: (m) => m,
+    });
+
+    if (wo.id_site_pelanggan_pekerjaan) {
+        const siteOpt = new Option(
+            wo["Site Pelanggan"] || wo.id_site_pelanggan_pekerjaan,
+            wo.id_site_pelanggan_pekerjaan,
+            true,
+            true,
+        );
+        $("#copyWoSite").append(siteOpt).trigger("change");
+    }
+
+    // Frekuensi — bisa diubah. "Urutan ke-" cuma relevan kalau frekuensi
+    // dipilih, jadi tampil/hilang ngikutin pilihan (bukan cuma dari data WO
+    // sumber seperti sebelumnya).
+    $("#copyWoInterval").val(wo.interval_bulan || "");
+    $("#copyWoUrutanWrap").toggle(!!wo.interval_bulan);
+    $("#copyWoInterval").on("change", function () {
+        $("#copyWoUrutanWrap").toggle(!!$(this).val());
+    });
 
     renderCopyWoBoq(wo.boq_items || []);
 

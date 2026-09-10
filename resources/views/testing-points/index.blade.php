@@ -25,55 +25,16 @@
 @endsection
 
 @section('custom-script')
-<script type="text/template" id="row-template">
+{{-- Dragula: drag-and-drop reorder baris Testing Items (lihat tableForm.js) --}}
+<link href="{{ asset('assets/vendor/dragula/dragula.min.css') }}" rel="stylesheet">
+<script src="{{ asset('assets/vendor/dragula/dragula.min.js') }}"></script>
 
-    <tr>
-
-        <input type="hidden" name="id_testing_item[]" value="">
-        
-        <td class="row-number"></td>
-
-        <td>
-            <input type="text" name="judul_indonesia[]" class="form-control">
-        </td>
-
-        <td>
-            <input type="text" name="judul_inggris[]" class="form-control">
-        </td>
-
-        <td>
-            <select name="parameter[]" class="form-control parameter-select"></select>
-        </td>
-
-        <td>
-            <select name="unit[]" class="form-control unit-select"></select>
-        </td>
-
-        <td>
-            <input type="text" name="nilai[]" class="form-control">
-        </td>
-
-        <td>
-            <input type="text" name="keterangan[]" class="form-control">
-        </td>
-
-        <td class="text-center">
-            <input type="checkbox" name="status[]" value="1">
-        </td>
-
-        <td class="text-center">
-            <button type="button" class="btn btn-danger btn-sm btn-remove">
-                <i class="fa-solid fa-trash"></i>
-            </button>
-        </td>
-
-    </tr>
-
-</script>
-
-
-
-
+{{-- Catatan: #row-template yang benar-benar dipakai di-render inline oleh
+     renderForm() di testing-points/form.js (di dalam #detailContent, dimuat
+     lewat AJAX). Template statis yang dulu ada di sini sudah tidak
+     dipakai/basi (duplikat id="row-template" & sudah ketinggalan struktur —
+     tidak ada kolom drag handle/hidden status[]) — dihapus 2026-09-09 supaya
+     tidak jadi duplikat ID yang membingungkan di kemudian hari. --}}
 <script>
     window.route = {
         data: "{{ route('testing-points.data') }}",

@@ -1683,6 +1683,24 @@ function renderBoqSummary(data) {
             </div>
         </div>`;
 
+    // Card "Total Nilai" — isinya (BOQ Other/Sampling) belum ada di sini,
+    // ditambahkan async dari loadBoqValueSummary()/updateBoqValueCard(). Nilai
+    // BOQ-nya sendiri sudah tahu duluan (data.total_boq_amount) jadi langsung
+    // ditampilkan sebagai placeholder awal supaya tidak "hilang" saat nunggu.
+    const boqAmountFmt = "Rp " + Number(data.total_boq_amount || 0).toLocaleString("en-US");
+    const totalNilaiCard = `
+        <div class="pm-kpi-card kpi-tab-link" data-tab-target="#tabBoq" style="flex-direction:column;align-items:flex-start;gap:8px;min-width:220px;cursor:pointer;" id="boqValueCard">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div class="pm-kpi-icon" style="background:#7c3aed;flex-shrink:0;">
+                    <i class="fa-solid fa-sack-dollar"></i>
+                </div>
+                <div>
+                    <div class="pm-kpi-label">Total Nilai</div>
+                    <div class="pm-kpi-value">${boqAmountFmt}</div>
+                </div>
+            </div>
+        </div>`;
+
     $("#boqSummaryCard").html(
         kpiCard("fa-layer-group", "#0891b2", "Total BOQ", totalBoqItems + " item", '', "#tabBoq") +
         `<div class="pm-kpi-card kpi-tab-link" data-tab-target="#tabFwo" style="cursor:pointer;">
@@ -1695,7 +1713,8 @@ function renderBoqSummary(data) {
                 <div class="pm-kpi-sub">FWO selesai</div>
             </div>
         </div>` +
-        outputCard
+        outputCard +
+        totalNilaiCard
     );
 }
 
@@ -1712,6 +1731,7 @@ function loadBoqProgress(id_wo) {
         currentBoqData = data;
         renderBoqSummary(data);
         renderBoqView(data, id_wo);
+        loadBoqValueSummary(id_wo, data.total_boq_amount || 0);
     }).fail(function () {
         $("#boqProgressContent").html(
             '<div class="text-center text-danger py-3"><i class="fa-solid fa-circle-exclamation me-1"></i> Gagal memuat data</div>',
@@ -1722,6 +1742,66 @@ function loadBoqProgress(id_wo) {
 function renderBoqView(data, id_wo) {
     $("#boqProgressContent").html(renderBoqProgressTable(data, id_wo));
     $("#fwoProgressContent").html(renderFwoProgressTable(data, id_wo));
+}
+
+// ── Card "Total Nilai" (BOQ + BOQ Other + BOQ Sampling) di row KPI tab BOQ ──
+// Ambil total BOQ Other & BOQ Sampling dari endpoint list masing-masing
+// (sudah menghitung `total` = SUM(qty*harga) di controller, tidak perlu
+// endpoint baru). Card BOQ-nya sendiri sudah dirender duluan oleh
+// renderBoqSummary() (pakai boqAmount saja) supaya row KPI tidak nunggu 2
+// request tambahan ini — begitu kedua total lain didapat, cuma kartu ini
+// yang di-update in-place (bukan render ulang seluruh row).
+function loadBoqValueSummary(id_wo, boqAmount) {
+    let otherAmount = 0;
+    let samplingAmount = 0;
+    let pending = 2;
+
+    function done() {
+        pending--;
+        if (pending === 0) updateBoqValueCard(boqAmount, otherAmount, samplingAmount);
+    }
+
+    $.get("/wo-boq-other/" + id_wo + "/list")
+        .done(function (res) { otherAmount = res.total || 0; })
+        .always(done);
+
+    $.get("/wo-boq-sampling/" + id_wo + "/list")
+        .done(function (res) { samplingAmount = res.total || 0; })
+        .always(done);
+}
+
+function updateBoqValueCard(boqAmount, otherAmount, samplingAmount) {
+    const $card = $("#boqValueCard");
+    if (!$card.length) return; // tab sudah pindah/detail sudah ganti sebelum request selesai
+
+    const fmtRp = (n) => "Rp " + Number(n || 0).toLocaleString("en-US");
+    const total = (boqAmount || 0) + (otherAmount || 0) + (samplingAmount || 0);
+
+    // Palet kategorikal 3-slot yang sudah divalidasi (skill dataviz) — urutan
+    // slot tetap (bukan dicycle), aman untuk CVD & normal vision.
+    const categories = [
+        { label: "BOQ",          value: boqAmount,      bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" },
+        { label: "BOQ Other",    value: otherAmount,    bg: "#fff7ed", color: "#c2410c", border: "#fed7aa" },
+        { label: "BOQ Sampling", value: samplingAmount, bg: "#f0fdf4", color: "#15803d", border: "#bbf7d0" },
+    ];
+
+    const badgesHtml = categories
+        .filter((c) => c.value > 0)
+        .map((c) => `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:${c.bg};color:${c.color};border:1px solid ${c.border};white-space:nowrap;">${c.label}: ${fmtRp(c.value)}</span>`)
+        .join("");
+
+    $card.html(`
+        <div style="display:flex;align-items:center;gap:8px;">
+            <div class="pm-kpi-icon" style="background:#7c3aed;flex-shrink:0;">
+                <i class="fa-solid fa-sack-dollar"></i>
+            </div>
+            <div>
+                <div class="pm-kpi-label">Total Nilai</div>
+                <div class="pm-kpi-value">${fmtRp(total)}</div>
+            </div>
+        </div>
+        ${badgesHtml ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${badgesHtml}</div>` : ""}
+    `);
 }
 
 function renderBoqProgressTable(data, id_wo) {
@@ -2810,6 +2890,12 @@ $(document).ready(function () {
             return;
         }
 
+        const siteId = $("#copyWoSite").val();
+        if (!siteId) {
+            Notify.warning("Pelanggan Site wajib diisi");
+            return;
+        }
+
         const tglMulai   = $("#copyWoTglMulai").val();
         const tglSelesai = $("#copyWoTglSelesai").val();
         $("#copyWoTglSelesaiError").remove();
@@ -2841,6 +2927,8 @@ $(document).ready(function () {
 
         const payload = {
             judul_pekerjaan:             judul,
+            id_site_pelanggan_pekerjaan: siteId,
+            interval_bulan:              $("#copyWoInterval").val() || null,
             tanggal_mulai:               tglMulai || null,
             tanggal_selesai:             tglSelesai || null,
             keterangan:                  $("#copyWoKeterangan").val() || null,
@@ -3070,14 +3158,6 @@ function fillCopyWoModal(wo) {
         </div>`;
     }
 
-    const urutanRow = wo.interval_bulan ? `
-        <div class="col-md-2">
-            <label class="form-label">Urutan ke-</label>
-            <input type="number" id="copyWoUrutan" class="form-control form-control-sm" value="${nextUrut}" min="1" style="width:80px;">
-        </div>` : '';
-
-    const picColClass = wo.interval_bulan ? 'col-md-4' : 'col-md-5';
-
     $("#modalCopyWoBody").html(`
         <div style="position:sticky;top:0;z-index:10;background:#fff;border-bottom:2px solid #e2e8f0;padding:10px 16px;margin:-16px -16px 16px;box-shadow:0 2px 10px rgba(0,0,0,.08);">
             <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size:13px;">
@@ -3110,14 +3190,25 @@ function fillCopyWoModal(wo) {
             </div>
             <div class="col-md-5">
                 <label class="form-label">Pelanggan Site</label>
-                <input type="text" class="form-control form-control-sm" value="${escHtml(wo['Site Pelanggan'] ?? '—')}" disabled>
+                <select id="copyWoSite" class="form-select form-select-sm"></select>
             </div>
             <div class="col-md-2">
                 <label class="form-label">Frekuensi</label>
-                <input type="text" class="form-control form-control-sm" value="${escHtml(intervalLabel)}" disabled>
+                <select id="copyWoInterval" class="form-select form-select-sm">
+                    <option value="">— Tidak ada —</option>
+                    <option value="1">Bulanan</option>
+                    <option value="2">Bimulanan</option>
+                    <option value="3">Triwulan</option>
+                    <option value="4">Caturwulan</option>
+                    <option value="6">Semester</option>
+                    <option value="12">Annual</option>
+                </select>
             </div>
-            ${urutanRow}
-            <div class="${picColClass}">
+            <div class="col-md-2" id="copyWoUrutanWrap" style="display:none;">
+                <label class="form-label">Urutan ke-</label>
+                <input type="number" id="copyWoUrutan" class="form-control form-control-sm" value="${nextUrut}" min="1">
+            </div>
+            <div class="col-md-4">
                 <label class="form-label">PIC Pekerjaan</label>
                 <select id="copyWoPic" class="form-select form-select-sm"></select>
             </div>
@@ -3157,6 +3248,36 @@ function fillCopyWoModal(wo) {
         const opt = new Option(wo.nama_pic_pelanggan_pekerjaan || wo.id_pic_pelanggan_pekerjaan, wo.id_pic_pelanggan_pekerjaan, true, true);
         $("#copyWoPic").append(opt).trigger("change");
     }
+
+    // Pelanggan Site — bisa diubah, tapi tetap discope ke Perusahaan yang
+    // sama (Pelanggan tidak ikut diubah saat clone WO).
+    $("#copyWoSite").select2({
+        width: '100%',
+        placeholder: 'Pilih Site',
+        allowClear: false,
+        dropdownParent: $("#modalCopyWo"),
+        ajax: {
+            url: '/business-relations/sites/select2',
+            dataType: 'json',
+            delay: 250,
+            data: (params) => ({ q: params.term || '', id_br: wo.id_pelanggan_pekerjaan || '' }),
+            processResults: (data) => ({ results: data }),
+            cache: false,
+        },
+        escapeMarkup: (m) => m,
+    });
+
+    if (wo.id_site_pelanggan_pekerjaan) {
+        const siteOpt = new Option(wo['Site Pelanggan'] || wo.id_site_pelanggan_pekerjaan, wo.id_site_pelanggan_pekerjaan, true, true);
+        $("#copyWoSite").append(siteOpt).trigger("change");
+    }
+
+    // Frekuensi — bisa diubah. "Urutan ke-" tampil/hilang ngikutin pilihan.
+    $("#copyWoInterval").val(wo.interval_bulan || '');
+    $("#copyWoUrutanWrap").toggle(!!wo.interval_bulan);
+    $("#copyWoInterval").on("change", function () {
+        $("#copyWoUrutanWrap").toggle(!!$(this).val());
+    });
 
     // Render BOQ section
     renderCopyWoBoq(wo.boq_items || []);

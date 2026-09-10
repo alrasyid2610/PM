@@ -90,6 +90,7 @@
                         <table id="Table" class="table table-bordered table-sm dynamic-table mb-0">
                             <thead class="table-light">
                                 <tr>
+                                    <th style="width:32px"></th>
                                     <th style="white-space:nowrap;width:40px">No</th>
                                     <th style="min-width:240px">Judul Indonesia</th>
                                     <th style="min-width:240px">Judul Inggris</th>
@@ -104,6 +105,11 @@
                             <tbody>
                                 <tr>
                                     <input type="hidden" name="id_testing_item[]" value="">
+                                    <td class="text-center" style="cursor:grab;">
+                                        <button type="button" class="drag-handle-btn" tabindex="-1" title="Geser untuk urutkan">
+                                            <i class="fa-solid fa-grip-vertical"></i>
+                                        </button>
+                                    </td>
                                     <td class="row-number"></td>
                                     <td>
                                         <input type="text" name="judul_indonesia[]" class="form-control form-control-sm">
@@ -124,7 +130,8 @@
                                         <input type="text" name="item_keterangan[]" class="form-control form-control-sm">
                                     </td>
                                     <td class="text-center">
-                                        <input type="checkbox" name="status[]" value="1">
+                                        <input type="hidden" name="status[]" value="0" class="status-hidden">
+                                        <input type="checkbox" class="status-checkbox" value="1">
                                     </td>
                                     <td class="text-center">
                                         <button type="button" class="btn btn-danger btn-sm btn-remove">
@@ -146,6 +153,10 @@
 @endsection
 
 @section('custom-script')
+{{-- Dragula: drag-and-drop reorder baris Testing Items --}}
+<link href="{{ asset('assets/vendor/dragula/dragula.min.css') }}" rel="stylesheet">
+<script src="{{ asset('assets/vendor/dragula/dragula.min.js') }}"></script>
+
 <script>
     $(document).ready(function () {
         createFileUploader(".filepond");
@@ -207,7 +218,7 @@
                 },
                 language: { noResults: () => `<span>Tidak ditemukan. <a href="{{ route('testing-parameters.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>` },
                 escapeMarkup: (m) => m,
-                dropdownParent: $(row).find('td').eq(3),
+                dropdownParent: $(row).find('td').eq(4),
             });
             $(row).find('.unit-select').select2({
                 width: '100%',
@@ -223,7 +234,7 @@
                 },
                 language: { noResults: () => `<span>Tidak ditemukan. <a href="{{ route('testing-units.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>` },
                 escapeMarkup: (m) => m,
-                dropdownParent: $(row).find('td').eq(4),
+                dropdownParent: $(row).find('td').eq(5),
             });
         }
 
@@ -234,6 +245,11 @@
             let newRow = `
                 <tr>
                     <input type="hidden" name="id_testing_item[]" value="">
+                    <td class="text-center" style="cursor:grab;">
+                        <button type="button" class="drag-handle-btn" tabindex="-1" title="Geser untuk urutkan">
+                            <i class="fa-solid fa-grip-vertical"></i>
+                        </button>
+                    </td>
                     <td class="row-number"></td>
                     <td><input type="text" name="judul_indonesia[]" class="form-control form-control-sm"></td>
                     <td><input type="text" name="judul_inggris[]" class="form-control form-control-sm"></td>
@@ -241,7 +257,10 @@
                     <td><select name="unit[]" class="form-control form-control-sm unit-select"></select></td>
                     <td><input type="text" name="nilai[]" class="form-control form-control-sm"></td>
                     <td><input type="text" name="item_keterangan[]" class="form-control form-control-sm"></td>
-                    <td class="text-center"><input type="checkbox" name="status[]" value="1"></td>
+                    <td class="text-center">
+                        <input type="hidden" name="status[]" value="0" class="status-hidden">
+                        <input type="checkbox" class="status-checkbox" value="1">
+                    </td>
                     <td class="text-center">
                         <button type="button" class="btn btn-danger btn-sm btn-remove">
                             <i class="fa-solid fa-trash"></i>
@@ -252,6 +271,14 @@
             $("#Table tbody").append($newRow);
             initRowSelect2($newRow[0]);
             updateRowNumbers();
+        });
+
+        // Checkbox status[] cuma UI — nilai sungguhan disimpan di hidden
+        // sibling-nya (lihat catatan di tableForm.js: checkbox unchecked
+        // tidak ikut terkirim browser, bikin array status[] jadi tidak align
+        // sama posisi baris kalau langsung pakai name pada checkbox-nya).
+        $(document).on("change", ".status-checkbox", function () {
+            $(this).closest("td").find(".status-hidden").val(this.checked ? "1" : "0");
         });
 
         $(document).on("click", ".btn-remove", function () {
@@ -266,6 +293,21 @@
         }
 
         updateRowNumbers();
+
+        // Drag-and-drop reorder baris lewat handle (ikon grip) — pola sama
+        // seperti DynamicTable._initDragReorder() di tableForm.js, tapi
+        // halaman create ini tidak pakai class DynamicTable (dibangun manual
+        // dari awal), jadi drag-nya di-init langsung di sini.
+        if (typeof dragula !== 'undefined') {
+            dragula([document.querySelector('#Table tbody')], {
+                moves: function (el, source, handle) {
+                    return $(handle).closest('.drag-handle-btn').length > 0;
+                },
+            }).on('drop', function () {
+                updateRowNumbers();
+                if (window.Notify) Notify.toast('Urutan baris diperbarui');
+            });
+        }
     });
 
     submitCreateForm({

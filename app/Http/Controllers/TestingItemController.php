@@ -194,6 +194,10 @@ class TestingItemController extends Controller
             ->leftJoin('testing_parameters', 'testing_items.id_testing_parameter', '=', 'testing_parameters.id_testing_parameter')
             ->leftJoin('testing_units', 'testing_items.id_testing_unit', '=', 'testing_units.id_testing_unit')
             ->where('id_testing_point', $id)
+            // `nomor` sudah INT sejak migration 2026_09_09_000001 (dulu varchar,
+            // ORDER BY-nya kebaca sebagai teks — 1,10,11,...,19,2,20,... — bug
+            // lama yang bikin urutan Testing Item ke-reshuffle permanen tiap
+            // Simpan. Lihat Modules/Testing Points.md untuk analisis lengkap.
             ->orderBy('nomor')
             ->get();
 
