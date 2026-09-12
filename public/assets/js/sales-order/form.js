@@ -44,6 +44,13 @@ function renderForm(res) {
         editText: isDeleted ? '' : 'Edit SO',
         statusBadge: statusBadge,
         tags: pelangganTag,
+        moreActions: [
+            {
+                label: "Printout SO (Sementara)",
+                icon: "fa-solid fa-file-pdf",
+                attrs: `onclick="window.open('/sales-orders/${res.id_so}/print','_blank')"`,
+            },
+        ],
         extra: isDeleted
             ? `<span style="font-size:11px;color:#b91c1c;display:flex;align-items:center;gap:5px;">
                    <i class="fa-solid fa-trash" style="font-size:10px;"></i>

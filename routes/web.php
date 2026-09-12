@@ -366,6 +366,7 @@ Route::prefix('testing-points')
         )->name('delete-attachment');
         Route::put('/{id}', [TestingPointController::class, 'update'])->name('update');
         Route::post('/', [TestingPointController::class, 'store'])->name('store');
+        Route::post('/{id}/duplicate', [TestingPointController::class, 'duplicate'])->name('duplicate');
 
         Route::get('/', [TestingPointController::class, 'index'])->name('index');
         Route::get('/data', [TestingPointController::class, 'data'])->name('data');
@@ -681,6 +682,10 @@ Route::prefix('sales-orders')->name('sales-orders.')->group(function () {
 
     Route::get('/{id}/wo-progress', [SalesOrderController::class, 'woProgress'])
         ->name('wo-progress')
+        ->whereNumber('id');
+
+    Route::get('/{id}/print', [SalesOrderController::class, 'printPdf'])
+        ->name('print')
         ->whereNumber('id');
 
     Route::get('/{id}', [SalesOrderController::class, 'show'])->name('show');

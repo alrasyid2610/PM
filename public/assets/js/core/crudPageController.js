@@ -197,6 +197,7 @@ class CrudPageController {
 
                     $(".dynamic-table-wrapper")
                         .find("input, select, textarea, button")
+                        .not("[data-no-disable]")
                         .prop("disabled", true);
                     // $.get(
                     //     "/testing-items/by-point/" + res.id_testing_point,

@@ -22,6 +22,27 @@
 
 @section('content')
 <x-crud-index title="List of Testing Points" create-route="testing-points.create" :with-history="true" />
+
+{{-- Modal: Salin Testing Point --}}
+<div class="modal fade" id="modalCloneTestingPoint" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width:92vw;">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h5 class="modal-title"><i class="fa-solid fa-copy me-2 text-primary"></i> Salin Testing Point</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalCloneTpBody">
+                <div class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data...</div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                <button type="button" id="btnConfirmCloneTp" class="btn btn-primary btn-sm" disabled>
+                    <i class="fa-solid fa-copy me-1"></i> Buat Salinan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('custom-script')
@@ -41,7 +62,18 @@
         update: "{{ url('testing-points') }}/",
         deleteAttachment: "{{ route('testing-points.delete-attachment') }}",
         history: "{{ url('testing-points') }}/",
-        csrf: "{{ csrf_token() }}"
+        csrf: "{{ csrf_token() }}",
+
+        // Clone Testing Point
+        itemsByPoint:     "{{ url('testing-items/by-point') }}/",
+        select2Standard:  "{{ route('testing-standards.select2') }}",
+        createStandard:   "{{ route('testing-standards.create') }}",
+        select2Matriks:   "{{ route('testing-matriks-samples.select2') }}",
+        createMatriks:    "{{ route('testing-matriks-samples.create') }}",
+        select2Parameter: "{{ route('testing-parameters.select2') }}",
+        createParameter:  "{{ route('testing-parameters.create') }}",
+        select2Unit:      "{{ route('testing-units.select2') }}",
+        createUnit:       "{{ route('testing-units.create') }}",
     }
 </script>
 

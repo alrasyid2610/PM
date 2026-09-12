@@ -26,6 +26,14 @@ class DynamicTable {
             this._showActionMenu(e.currentTarget);
         });
 
+        // Tombol Hapus dipisah dari menu ⋮ (dulu jadi salah satu item di
+        // dropdown Insert Above/Below/Hapus) — sekarang tombol sendiri yang
+        // selalu terlihat, konsisten dengan tabel di halaman create yang dari
+        // awal cuma punya tombol hapus (tidak ada menu ⋮ sama sekali).
+        this.table.on("click", ".btn-row-delete", (e) => {
+            this.removeRow(e);
+        });
+
         // Checkbox status[] tidak boleh punya `name` langsung — browser tidak
         // ikut mengirim checkbox yang UNCHECKED sama sekali, jadi array
         // status[] yang sampai ke server jadi lebih pendek & ke-reindex ulang
@@ -41,6 +49,47 @@ class DynamicTable {
                 .closest("td")
                 .find(".status-hidden")
                 .val(e.currentTarget.checked ? "1" : "0");
+        });
+
+        // Search client-side — baris bisa sampai puluhan (Testing Items per
+        // Testing Point bisa 50+), butuh cara cepat cari 1 baris tanpa
+        // scroll manual. Beda dari pola "Search/Filter Client-Side di Tab"
+        // yang biasa (data-search dibangun sekali dari data server) — di sini
+        // isi baris bisa diedit user kapan saja, jadi teks pencarian dibaca
+        // LANGSUNG dari value input/select saat ini tiap kali difilter
+        // (_rowSearchText), bukan attribute statis yang bisa basi.
+        this.wrapper.on("input", ".dt-search", (e) => {
+            const q = $(e.currentTarget).val();
+            this._filterRows(q);
+            this.wrapper.find(".dt-search-clear").toggleClass("d-none", !String(q).trim());
+        });
+
+        this.wrapper.on("click", ".dt-search-clear", () => {
+            this.wrapper.find(".dt-search").val("").trigger("input");
+        });
+    }
+
+    // Generik (tidak hardcode nama field) supaya tetap reusable kalau ada
+    // konsumen DynamicTable lain di masa depan — kumpulkan teks dari semua
+    // input/textarea/select yang kelihatan di baris tsb.
+    _rowSearchText(row) {
+        const $row = $(row);
+        const parts = [$row.find(".row-number").text()];
+
+        $row.find('input[type="text"], textarea').each(function () {
+            parts.push($(this).val());
+        });
+        $row.find("select").each(function () {
+            parts.push($(this).find("option:selected").text());
+        });
+
+        return parts.filter(Boolean).join(" ").toLowerCase();
+    }
+
+    _filterRows(query) {
+        const q = String(query || "").toLowerCase().trim();
+        this.table.find("tbody tr").each((i, row) => {
+            $(row).toggle(!q || this._rowSearchText(row).includes(q));
         });
     }
 
@@ -79,8 +128,6 @@ class DynamicTable {
                 <ul id="dynamicTableActionMenu" style="position:fixed;z-index:99999;display:none;list-style:none;margin:0;padding:4px 0;background:#fff;border:1px solid rgba(0,0,0,.15);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:160px;">
                     <li><a class="dropdown-item" href="#" data-action="insert-above"><i class="fa-solid fa-arrow-up fa-sm me-2"></i>Insert Above</a></li>
                     <li><a class="dropdown-item" href="#" data-action="insert-below"><i class="fa-solid fa-arrow-down fa-sm me-2"></i>Insert Below</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#" data-action="remove"><i class="fa-solid fa-trash fa-sm me-2"></i>Hapus</a></li>
                 </ul>
             `).appendTo("body");
 
@@ -98,13 +145,6 @@ class DynamicTable {
                 this.insertRow("above", this._currentActionRow);
             } else if (action === "insert-below") {
                 this.insertRow("below", this._currentActionRow);
-            } else if (action === "remove") {
-                if (this.table.find("tbody tr").length > 1) {
-                    this._currentActionRow.remove();
-                    this.updateRowNumbers();
-                } else {
-                    Notify.warning("Minimal harus ada 1 baris.!");
-                }
             }
         });
     }
@@ -112,11 +152,12 @@ class DynamicTable {
     _showActionMenu(button) {
         const rect = button.getBoundingClientRect();
         const menuWidth = 160;
+        const menuHeight = 90; // 2 item (Insert Above/Below) sejak Hapus dipisah jadi tombol sendiri
         let top = rect.top;
         let left = rect.left - menuWidth - 4;
 
         if (left < 4) left = rect.right + 4;
-        if (top + 160 > window.innerHeight) top = window.innerHeight - 164;
+        if (top + menuHeight > window.innerHeight) top = window.innerHeight - menuHeight - 4;
 
         this._actionMenu.css({ top, left }).show();
     }
@@ -256,6 +297,7 @@ class DynamicTable {
 
             $(".dynamic-table-wrapper")
                 .find("input, select, textarea, button")
+                .not("[data-no-disable]")
                 .prop("disabled", true);
         });
 

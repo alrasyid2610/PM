@@ -2549,6 +2549,50 @@ tr.shown td.dt-control i {
     color: inherit !important;
 }
 
+/* ── Dynamic Table (Testing Items dkk) ───────────────────────────────────────
+   Testing Point bisa punya 50+ Testing Item — tanpa batas tinggi, tabel jadi
+   sangat panjang dan toolbar di atasnya (Tambah Baris/Search) ke-scroll ke
+   atas begitu user menelusuri baris ke bawah. Batasi tinggi tabelnya sendiri
+   + scroll internal + sticky header, supaya toolbar & judul kolom selalu di
+   tempat berapa pun banyak barisnya. Berlaku di 3 tempat yang pakai wrapper
+   ini: tab Testing Items (edit), halaman create, dan modal Clone Testing
+   Point.
+
+   Percobaan pertama sticky header (cuma `position:sticky` di atas
+   border-collapse:collapse bawaan .table) bikin baris pertama tabel malah
+   kelihatan "nembus" tampil di atas header — ini bug lama & dikenal luas di
+   semua browser: position:sticky pada <th>/<td> TIDAK reliable kalau induk
+   <table>-nya masih border-collapse:collapse. Fix yang benar: ganti tabel ini
+   ke border-collapse:separate + border-spacing:0, lalu border antar sel
+   dibangun manual (bottom+right tiap sel, ditambah left di kolom pertama &
+   top di baris pertama) supaya tetap terlihat seperti grid 1px biasa tanpa
+   border dobel khas model separate. */
+.dynamic-table-wrapper .table-responsive {
+    max-height: 65vh;
+    overflow-y: auto;
+}
+.dynamic-table-wrapper table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.dynamic-table-wrapper table th,
+.dynamic-table-wrapper table td {
+    border: 0;
+    border-right: 1px solid #dfe3e7;
+    border-bottom: 1px solid #dfe3e7;
+}
+.dynamic-table-wrapper table th:first-child,
+.dynamic-table-wrapper table td:first-child {
+    border-left: 1px solid #dfe3e7;
+}
+.dynamic-table-wrapper table thead th {
+    border-top: 1px solid #dfe3e7;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #f8f9fa;
+}
+
 /* ── Table ────────────────────────────────────────────────────────────────── */
 .pm-table {
     width: 100%;

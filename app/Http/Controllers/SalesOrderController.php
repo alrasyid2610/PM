@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistory;
 use App\Traits\HasAttachment;
+use Spatie\LaravelPdf\Facades\Pdf;
 
 
 class SalesOrderController extends Controller
@@ -529,5 +530,130 @@ class SalesOrderController extends Controller
         return DataTables::of($query)
             ->addIndexColumn()
             ->make(true);
+    }
+
+    /**
+     * Output Printout SO (Sementara) — dokumen cetak PDF internal untuk
+     * mempermudah pengecekan inputan data: SO → daftar WO + detail tiap WO →
+     * BOQ tiap WO (berikut Testing Point/Standard/Matriks Sample-nya).
+     * Belum mencakup FWO — menyusul, menunggu instruksi lanjutan.
+     */
+    public function printPdf($id)
+    {
+        $so = DB::table('sales_orders as so')
+            ->leftJoin('business_relations as pelanggan', 'so.id_pelanggan', '=', 'pelanggan.id_br')
+            ->leftJoin('business_relation_sites as site_pelanggan', 'so.id_site_pelanggan', '=', 'site_pelanggan.id_site')
+            ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'so.id_pic_pelanggan')
+            ->leftJoin('business_relations as del', 'so.id_pelanggan_delivery', '=', 'del.id_br')
+            ->leftJoin('business_relation_sites as site_del', 'so.id_site_pelanggan_delivery', '=', 'site_del.id_site')
+            ->leftJoin('business_relation_contacts as brc_del', 'brc_del.id_contact', '=', 'so.id_pic_pelanggan_delivery')
+            ->leftJoin('business_relations as pay', 'so.id_pelanggan_payment', '=', 'pay.id_br')
+            ->leftJoin('business_relation_sites as site_pay', 'so.id_site_pelanggan_payment', '=', 'site_pay.id_site')
+            ->leftJoin('business_relation_contacts as brc_pay', 'brc_pay.id_contact', '=', 'so.id_pic_pelanggan_payment')
+            ->leftJoin('office as o', 'o.id_office', '=', 'so.id_office')
+            ->leftJoin('users as pic_i', 'pic_i.id', '=', 'so.pic_input')
+            ->leftJoin('users as pic_o', 'pic_o.id', '=', 'so.pic_order')
+            ->leftJoin('users as mkt_i', 'mkt_i.id', '=', 'so.pic_marketing_internal')
+            ->leftJoin('users as mkt_e', 'mkt_e.id', '=', 'so.pic_marketing_eksternal')
+            ->leftJoin('contracts as ct', 'ct.id_contract', '=', 'so.id_sc')
+            ->where('so.id_so', $id)
+            ->select([
+                'so.*',
+                'ct.no_contract',
+                'pelanggan.nama as nama_pelanggan',
+                'site_pelanggan.nama_lokasi as nama_site_pelanggan',
+                'brc.nama_pic as pic_pelanggan',
+                'del.nama as nama_pelanggan_delivery',
+                'site_del.nama_lokasi as nama_site_delivery',
+                'brc_del.nama_pic as pic_delivery',
+                'pay.nama as nama_pelanggan_payment',
+                'site_pay.nama_lokasi as nama_site_payment',
+                'brc_pay.nama_pic as pic_payment',
+                'o.name as nama_office',
+                'pic_i.name as nama_pic_input',
+                'pic_o.name as nama_pic_order',
+                'mkt_i.name as nama_marketing_internal',
+                'mkt_e.name as nama_marketing_eksternal',
+            ])
+            ->first();
+
+        if (!$so) abort(404, 'Sales Order tidak ditemukan');
+
+        $wos = DB::table('work_orders as wo')
+            ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
+            ->leftJoin('users as pic', 'pic.id', '=', 'wo.id_pic_pelanggan_pekerjaan')
+            ->where('wo.id_so', $id)
+            ->whereNull('wo.deleted_at')
+            ->orderBy('wo.id_wo')
+            ->select([
+                'wo.id_wo',
+                'wo.no_wo',
+                'wo.judul_pekerjaan',
+                'wo.status',
+                'wo.interval_bulan',
+                'wo.no_urut_period',
+                'wo.tanggal_mulai',
+                'wo.tanggal_selesai',
+                'wo.keterangan',
+                'brs.nama_lokasi as nama_site',
+                'pic.name as nama_pic',
+            ])
+            ->get();
+
+        $woIds = $wos->pluck('id_wo');
+
+        $boqRows = $woIds->isNotEmpty()
+            ? DB::table('boq as b')
+                ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+                ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+                ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
+                ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'b.id_satuan')
+                ->whereIn('b.id_wo', $woIds)
+                ->whereNull('b.deleted_at')
+                ->orderBy('b.id_boq')
+                ->select([
+                    'b.id_wo',
+                    'b.item_produk_alternate',
+                    'tp.nama as nama_testing_point',
+                    'ts.nomor as standard_nomor',
+                    'ts.judul as standard_judul',
+                    'tms.kode as matriks_kode',
+                    'tms.judul_indonesia as matriks_judul',
+                    'b.qty',
+                    'sat.nama as satuan',
+                    'b.harga',
+                    'b.keterangan',
+                ])
+                ->get()
+                ->groupBy('id_wo')
+            : collect();
+
+        // BOQ Other & BOQ Sampling — 1 tabel sama (boq_tambahan), dibedakan
+        // kolom jenis. Lihat WO.md#wo-boq-other--boq-sampling.
+        $boqTambahanBase = $woIds->isNotEmpty()
+            ? DB::table('boq_tambahan as bt')
+                ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'bt.id_satuan')
+                ->whereIn('bt.id_wo', $woIds)
+                ->whereNull('bt.deleted_at')
+                ->orderBy('bt.id_boq_tambahan')
+                ->select(['bt.id_wo', 'bt.jenis', 'bt.nama_item', 'bt.qty', 'sat.nama as satuan', 'bt.harga', 'bt.keterangan'])
+                ->get()
+            : collect();
+
+        $boqOtherRows    = $boqTambahanBase->where('jenis', 'lainnya')->groupBy('id_wo');
+        $boqSamplingRows = $boqTambahanBase->where('jenis', 'sampling')->groupBy('id_wo');
+
+        $intervalLabels = [1 => 'Bulanan', 2 => 'Bimulanan', 3 => 'Triwulan', 4 => 'Caturwulan', 6 => 'Semester', 12 => 'Annual'];
+
+        return Pdf::view('pdf.sales-order.printout', [
+            'so'              => $so,
+            'wos'             => $wos,
+            'boqRows'         => $boqRows,
+            'boqOtherRows'    => $boqOtherRows,
+            'boqSamplingRows' => $boqSamplingRows,
+            'intervalLabels'  => $intervalLabels,
+        ])
+            ->format('a4')
+            ->name("Printout-{$so->no_so}.pdf");
     }
 }

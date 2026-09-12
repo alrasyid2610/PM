@@ -80,12 +80,19 @@
         <!-- SECTION 3: TESTING ITEMS -->
         <div class="col-12">
             <x-section-card icon="fa-table-list" color="icon-green" title="Testing Items" subtitle="Detail item pengujian per point">
-                <x-slot name="actions">
-                    <button type="button" class="btn btn-primary btn-sm btn-add-row ms-2">
-                        <i class="fa-solid fa-plus me-1"></i> Tambah Baris
-                    </button>
-                </x-slot>
                 <div class="dynamic-table-wrapper">
+                    <div class="mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="pm-search">
+                            <span class="pm-search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+                            <input type="text" id="tpItemsSearch" placeholder="Cari judul, nilai, keterangan...">
+                            <button type="button" id="tpItemsSearchClear" class="pm-search-clear d-none" title="Hapus">
+                                <i class="fa-solid fa-times"></i>
+                            </button>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm btn-add-row">
+                            <i class="fa-solid fa-plus me-1"></i> Tambah Baris
+                        </button>
+                    </div>
                     <div class="table-responsive">
                         <table id="Table" class="table table-bordered table-sm dynamic-table mb-0">
                             <thead class="table-light">
@@ -99,7 +106,7 @@
                                     <th style="min-width:120px">Nilai</th>
                                     <th style="min-width:140px">Keterangan</th>
                                     <th style="white-space:nowrap;width:60px">Status</th>
-                                    <th style="white-space:nowrap;width:60px">Aksi</th>
+                                    <th style="white-space:nowrap;width:90px">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -134,9 +141,14 @@
                                         <input type="checkbox" class="status-checkbox" value="1">
                                     </td>
                                     <td class="text-center">
-                                        <button type="button" class="btn btn-danger btn-sm btn-remove">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
+                                        <div class="d-flex gap-1 justify-content-center">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary px-2 btn-row-action" title="Sisipkan baris">
+                                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger px-2 btn-remove" title="Hapus baris">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -241,8 +253,11 @@
         // Init first row
         $("#Table tbody tr").each(function () { initRowSelect2(this); });
 
-        $(".btn-add-row").on("click", function () {
-            let newRow = `
+        // Template baris — dipakai Tambah Baris DAN Insert Above/Below (menu
+        // ⋮), supaya tidak ada 3 salinan markup yang harus disinkronkan manual
+        // kalau strukturnya berubah lagi nanti.
+        function newRowHtml() {
+            return `
                 <tr>
                     <input type="hidden" name="id_testing_item[]" value="">
                     <td class="text-center" style="cursor:grab;">
@@ -262,12 +277,20 @@
                         <input type="checkbox" class="status-checkbox" value="1">
                     </td>
                     <td class="text-center">
-                        <button type="button" class="btn btn-danger btn-sm btn-remove">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
+                        <div class="d-flex gap-1 justify-content-center">
+                            <button type="button" class="btn btn-sm btn-outline-secondary px-2 btn-row-action" title="Sisipkan baris">
+                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger px-2 btn-remove" title="Hapus baris">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>`;
-            const $newRow = $(newRow);
+        }
+
+        $(".btn-add-row").on("click", function () {
+            const $newRow = $(newRowHtml());
             $("#Table tbody").append($newRow);
             initRowSelect2($newRow[0]);
             updateRowNumbers();
@@ -282,8 +305,12 @@
         });
 
         $(document).on("click", ".btn-remove", function () {
-            $(this).closest("tr").remove();
-            updateRowNumbers();
+            if ($("#Table tbody tr").length > 1) {
+                $(this).closest("tr").remove();
+                updateRowNumbers();
+            } else {
+                Notify.warning("Minimal harus ada 1 baris.!");
+            }
         });
 
         function updateRowNumbers() {
@@ -293,6 +320,91 @@
         }
 
         updateRowNumbers();
+
+        // Search client-side — baris bisa sampai puluhan, teks pencarian
+        // dibaca langsung dari value input/select saat ini (bukan attribute
+        // statis) supaya tetap akurat walau user baru saja mengetik/mengubah
+        // isi baris. Pola sama seperti DynamicTable._filterRows() di
+        // tableForm.js (dipakai halaman edit), diimplementasi ulang di sini
+        // karena halaman ini tidak pakai class DynamicTable.
+        function rowSearchText(row) {
+            const $row = $(row);
+            const parts = [$row.find(".row-number").text()];
+            $row.find('input[type="text"], textarea').each(function () { parts.push($(this).val()); });
+            $row.find("select").each(function () { parts.push($(this).find("option:selected").text()); });
+            return parts.filter(Boolean).join(" ").toLowerCase();
+        }
+
+        $("#tpItemsSearch").on("input", function () {
+            const q = $(this).val().toLowerCase().trim();
+            $("#Table tbody tr").each(function () {
+                $(this).toggle(!q || rowSearchText(this).includes(q));
+            });
+            $("#tpItemsSearchClear").toggleClass("d-none", !q);
+        });
+
+        $("#tpItemsSearchClear").on("click", function () {
+            $("#tpItemsSearch").val("").trigger("input");
+        });
+
+        // Menu ⋮ (Insert Above/Below) — pola sama seperti
+        // DynamicTable._initActionMenu()/_showActionMenu() di tableForm.js
+        // (dipakai halaman edit), tapi diinit terpisah lagi di sini karena
+        // halaman create tidak pakai class DynamicTable. Elemen menu-nya
+        // sengaja BUKAN #dynamicTableActionMenu (id yang dipakai DynamicTable)
+        // supaya kedua implementasi tetap independen, tidak saling rebutan
+        // listener kalau suatu saat halaman ini ikut memuat instance
+        // DynamicTable lain. Tombol Hapus TIDAK ikut di menu ini — dari awal
+        // memang tombol terpisah (.btn-remove) di samping tombol ⋮, konsisten
+        // dengan halaman edit (tab Testing Items) sejak Hapus dipisah dari
+        // menu ⋮ di sana juga.
+        let $createRowActionMenu = null;
+        let currentActionRow = null;
+
+        function initActionMenu() {
+            $createRowActionMenu = $(`
+                <ul id="createTpActionMenu" style="position:fixed;z-index:99999;display:none;list-style:none;margin:0;padding:4px 0;background:#fff;border:1px solid rgba(0,0,0,.15);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:160px;">
+                    <li><a class="dropdown-item" href="#" data-action="insert-above"><i class="fa-solid fa-arrow-up fa-sm me-2"></i>Insert Above</a></li>
+                    <li><a class="dropdown-item" href="#" data-action="insert-below"><i class="fa-solid fa-arrow-down fa-sm me-2"></i>Insert Below</a></li>
+                </ul>
+            `).appendTo("body");
+
+            $(document).on("click.createTpActionMenu", function () {
+                $createRowActionMenu.hide();
+            });
+
+            $createRowActionMenu.on("click", "[data-action]", function (e) {
+                e.preventDefault();
+                const action = $(this).data("action");
+                $createRowActionMenu.hide();
+                if (!currentActionRow) return;
+
+                const $newRow = $(newRowHtml());
+                if (action === "insert-above") {
+                    currentActionRow.before($newRow);
+                } else if (action === "insert-below") {
+                    currentActionRow.after($newRow);
+                }
+                initRowSelect2($newRow[0]);
+                updateRowNumbers();
+            });
+        }
+        initActionMenu();
+
+        $(document).on("click", ".btn-row-action", function (e) {
+            e.stopPropagation();
+            currentActionRow = $(this).closest("tr");
+
+            const rect = this.getBoundingClientRect();
+            const menuWidth = 160;
+            const menuHeight = 90;
+            let top = rect.top;
+            let left = rect.left - menuWidth - 4;
+            if (left < 4) left = rect.right + 4;
+            if (top + menuHeight > window.innerHeight) top = window.innerHeight - menuHeight - 4;
+
+            $createRowActionMenu.css({ top, left }).show();
+        });
 
         // Drag-and-drop reorder baris lewat handle (ikon grip) — pola sama
         // seperti DynamicTable._initDragReorder() di tableForm.js, tapi

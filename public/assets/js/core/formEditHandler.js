@@ -71,6 +71,7 @@ function bindEditToggle(options) {
 
                 $(".dynamic-table-wrapper")
                     .find("input, select, textarea, button")
+                    .not("[data-no-disable]")
                     .prop("disabled", false);
 
                 if (isModern) {
@@ -107,6 +108,7 @@ function bindEditToggle(options) {
 
                 $(".dynamic-table-wrapper")
                     .find("input, select, textarea, button")
+                    .not("[data-no-disable]")
                     .prop("disabled", true);
 
                 if (isModern) {

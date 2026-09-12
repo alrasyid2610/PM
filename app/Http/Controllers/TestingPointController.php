@@ -326,6 +326,108 @@ class TestingPointController extends Controller
         return response()->json(['success' => true]);
     }
 
+    // Clone Testing Point ("Salin Testing Point ini") — full control: user
+    // bebas edit field Informasi & baris Testing Items (pre-filled dari
+    // sumber) sebelum disimpan sebagai record baru yang independen. Tidak ada
+    // field yang dikunci ikut sumber (beda dari Clone WO/FWO yang terikat
+    // parent) karena Testing Point bukan child dari record lain. Attachment
+    // sengaja TIDAK ikut disalin (pola sama seperti WorkOrderController /
+    // FieldworkController::duplicate()) — record baru mulai bersih.
+    public function duplicate(Request $request, $id)
+    {
+        $source = DB::table('testing_points')->where('id_testing_point', $id)->whereNull('deleted_at')->first();
+        if (!$source) {
+            return response()->json(['message' => 'Testing Point sumber tidak ditemukan'], 404);
+        }
+
+        $validated = $request->validate([
+            'id_testing_standard' => 'required|integer',
+            'id_testing_matriks_sample' => 'required|integer',
+            'nama' => 'required|string|max:255',
+            'deskripsi' => 'nullable|string',
+            'nomor_halaman' => 'nullable|string|max:50',
+            'keterangan' => 'nullable|string',
+            'is_aktif' => 'required|boolean',
+        ]);
+
+        // Validasi terpisah untuk field per-item, sama seperti store() — tidak
+        // digabung ke $validated supaya tidak ikut ke-spread ke insert
+        // testing_points.
+        $request->validate([
+            'judul_indonesia.*' => 'nullable|string|max:255',
+            'judul_inggris.*'   => 'nullable|string|max:255',
+            'parameter.*'       => 'nullable|integer',
+            'unit.*'            => 'nullable|integer',
+            'nilai.*'           => 'nullable|string|max:100',
+            'item_keterangan.*' => 'nullable|string|max:255',
+        ]);
+
+        // Keunikan Testing Point = kombinasi Standard + Matriks Sample + Nama
+        // (tidak ada kolom kode sendiri) — cek dulu sebelum insert supaya
+        // hasil clone (setelah diedit user) tidak bentrok sama data lain.
+        $duplicateExists = DB::table('testing_points')
+            ->where('id_testing_standard', $validated['id_testing_standard'])
+            ->where('id_testing_matriks_sample', $validated['id_testing_matriks_sample'])
+            ->where('nama', $validated['nama'])
+            ->whereNull('deleted_at')
+            ->exists();
+        if ($duplicateExists) {
+            return response()->json([
+                'message' => 'Testing Point dengan kombinasi Standard + Matriks Sample + Nama ini sudah ada',
+            ], 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $newId = DB::table('testing_points')->insertGetId([
+                ...$validated,
+                'attachment'  => null,
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+
+            $judul_indonesia = $request->judul_indonesia ?? [];
+            $judul_inggris   = $request->judul_inggris   ?? [];
+            $parameter       = $request->parameter       ?? [];
+            $unit            = $request->unit            ?? [];
+            $nilai           = $request->nilai           ?? [];
+            $item_keterangan = $request->item_keterangan ?? [];
+            $status          = $request->status          ?? [];
+            $nomor           = $request->nomor           ?? [];
+
+            foreach ($judul_indonesia as $i => $val) {
+                DB::table('testing_items')->insert([
+                    'id_testing_point'     => $newId,
+                    'nomor'                => (int) ($nomor[$i] ?? ($i + 1)),
+                    'judul_indonesia'      => $val,
+                    'judul_inggris'        => $judul_inggris[$i]   ?? null,
+                    'id_testing_parameter' => $parameter[$i]       ?? null,
+                    'id_testing_unit'      => $unit[$i]            ?? null,
+                    'nilai'                => $nilai[$i]           ?? null,
+                    'keterangan'           => $item_keterangan[$i] ?? null,
+                    'is_aktif'             => isset($status[$i]) ? $status[$i] : 0,
+                    'created_at'           => now(),
+                    'updated_at'           => now(),
+                ]);
+            }
+
+            $after = DB::table('testing_points')->where('id_testing_point', $newId)->get()->toJson();
+            saveAudit('testing_points', $newId, 'Create', '', $after);
+
+            DB::commit();
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan server'], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Testing Point berhasil disalin',
+            'id'      => $newId,
+        ]);
+    }
+
     public function destroy($id)
     {
         $before = DB::table('testing_points')->where('id_testing_point', $id)->get()->toJson();

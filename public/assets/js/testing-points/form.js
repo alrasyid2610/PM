@@ -84,7 +84,14 @@ function renderForm(res) {
                         ${formGroup.sectionCard(
                             { icon: 'fa-table-list', color: 'icon-green', title: 'Testing Items', subtitle: 'Detail item pengujian per point' },
                             `<div class="dynamic-table-wrapper">
-                                <div class="p-3 pb-0">
+                                <div class="p-3 pb-0 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                    <div class="pm-search" data-no-disable>
+                                        <span class="pm-search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                        <input type="text" class="dt-search" placeholder="Cari judul, nilai, keterangan..." data-no-disable>
+                                        <button type="button" class="pm-search-clear dt-search-clear d-none" title="Hapus" data-no-disable>
+                                            <i class="fa-solid fa-times"></i>
+                                        </button>
+                                    </div>
                                     <button type="button" class="btn btn-primary btn-sm btn-add-row">
                                         <i class="fa-solid fa-plus me-1"></i> Tambah Baris
                                     </button>
@@ -102,7 +109,7 @@ function renderForm(res) {
                                                 <th style="min-width:120px">Nilai</th>
                                                 <th style="min-width:140px">Keterangan</th>
                                                 <th style="white-space:nowrap;width:60px">Status</th>
-                                                <th style="white-space:nowrap;width:60px">Aksi</th>
+                                                <th style="white-space:nowrap;width:90px">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -126,9 +133,14 @@ function renderForm(res) {
                                                     <input type="checkbox" class="status-checkbox" value="1">
                                                 </td>
                                                 <td class="text-center">
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary px-2 btn-row-action">
-                                                        <i class="fa-solid fa-ellipsis-vertical"></i>
-                                                    </button>
+                                                    <div class="d-flex gap-1 justify-content-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary px-2 btn-row-action" title="Sisipkan baris">
+                                                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger px-2 btn-row-delete" title="Hapus baris">
+                                                            <i class="fa-solid fa-trash"></i>
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         </tbody>
@@ -155,9 +167,14 @@ function renderForm(res) {
                                             <input type="checkbox" class="status-checkbox" value="1">
                                         </td>
                                         <td class="text-center">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary px-2 btn-row-action">
-                                                <i class="fa-solid fa-ellipsis-vertical"></i>
-                                            </button>
+                                            <div class="d-flex gap-1 justify-content-center">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary px-2 btn-row-action" title="Sisipkan baris">
+                                                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger px-2 btn-row-delete" title="Hapus baris">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 </script>
