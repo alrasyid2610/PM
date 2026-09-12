@@ -688,6 +688,16 @@ Route::prefix('sales-orders')->name('sales-orders.')->group(function () {
         ->name('print')
         ->whereNumber('id');
 
+    Route::get('/{id}/clone', [SalesOrderController::class, 'clonePage'])
+        ->name('clone-page')
+        ->whereNumber('id');
+    Route::get('/{id}/clone-data', [SalesOrderController::class, 'cloneData'])
+        ->name('clone-data')
+        ->whereNumber('id');
+    Route::post('/{id}/clone', [SalesOrderController::class, 'clonePost'])
+        ->name('clone')
+        ->whereNumber('id');
+
     Route::get('/{id}', [SalesOrderController::class, 'show'])->name('show');
     Route::get('/{id}/edit', [SalesOrderController::class, 'edit'])->name('edit');
     Route::put('/{id}', [SalesOrderController::class, 'update'])->name('update');

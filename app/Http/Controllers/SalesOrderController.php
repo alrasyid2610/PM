@@ -656,4 +656,404 @@ class SalesOrderController extends Controller
             ->format('a4')
             ->name("Printout-{$so->no_so}.pdf");
     }
+
+    /**
+     * Clone SO — Fase 1 (SO + WO + BOQ + BOQ Other/Sampling saja).
+     * FWO, Budget, Personnel menyusul di fase berikutnya (disepakati bertahap
+     * dengan user 2026-09-12). Halaman penuh (bukan modal) karena skalanya
+     * bisa banyak WO sekaligus — lihat Sales Order.md untuk konsep lengkap.
+     */
+    public function clonePage($id)
+    {
+        $so = DB::table('sales_orders')->where('id_so', $id)->whereNull('deleted_at')->first();
+        if (!$so) abort(404, 'Sales Order tidak ditemukan');
+
+        return view('sales-order.clone', ['id' => $id]);
+    }
+
+    /**
+     * Data mentah untuk mengisi halaman wizard Clone SO (dibaca via AJAX oleh
+     * sales-order/clone.blade.php) — SO + semua WO-nya + BOQ/BOQ Other/BOQ
+     * Sampling tiap WO, lengkap dengan id mentah (bukan cuma label) supaya
+     * bisa di-preselect di select2 dan dikirim balik sebagai `source_id_*`
+     * saat submit clone.
+     */
+    public function cloneData($id)
+    {
+        // Join sama seperti printPdf()/show() — dibutuhkan label tampilan
+        // (nama Perusahaan/Site/PIC/Office) untuk preselect select2 di wizard.
+        $so = DB::table('sales_orders as so')
+            ->leftJoin('business_relations as pelanggan', 'so.id_pelanggan', '=', 'pelanggan.id_br')
+            ->leftJoin('business_relation_sites as site_pelanggan', 'so.id_site_pelanggan', '=', 'site_pelanggan.id_site')
+            ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'so.id_pic_pelanggan')
+            ->leftJoin('business_relations as del', 'so.id_pelanggan_delivery', '=', 'del.id_br')
+            ->leftJoin('business_relation_sites as site_del', 'so.id_site_pelanggan_delivery', '=', 'site_del.id_site')
+            ->leftJoin('business_relation_contacts as brc_del', 'brc_del.id_contact', '=', 'so.id_pic_pelanggan_delivery')
+            ->leftJoin('business_relations as pay', 'so.id_pelanggan_payment', '=', 'pay.id_br')
+            ->leftJoin('business_relation_sites as site_pay', 'so.id_site_pelanggan_payment', '=', 'site_pay.id_site')
+            ->leftJoin('business_relation_contacts as brc_pay', 'brc_pay.id_contact', '=', 'so.id_pic_pelanggan_payment')
+            ->leftJoin('users as pic_i', 'pic_i.id', '=', 'so.pic_input')
+            ->leftJoin('users as pic_o', 'pic_o.id', '=', 'so.pic_order')
+            ->leftJoin('users as mkt_i', 'mkt_i.id', '=', 'so.pic_marketing_internal')
+            ->leftJoin('users as mkt_e', 'mkt_e.id', '=', 'so.pic_marketing_eksternal')
+            ->where('so.id_so', $id)
+            ->whereNull('so.deleted_at')
+            ->select([
+                'so.*',
+                'pelanggan.nama as nama_pelanggan',
+                'site_pelanggan.nama_lokasi as nama_site_pelanggan',
+                'brc.nama_pic as pic_pelanggan',
+                'del.nama as nama_pelanggan_delivery',
+                'site_del.nama_lokasi as nama_site_delivery',
+                'brc_del.nama_pic as pic_delivery',
+                'pay.nama as nama_pelanggan_payment',
+                'site_pay.nama_lokasi as nama_site_payment',
+                'brc_pay.nama_pic as pic_payment',
+                'pic_i.name as nama_pic_input',
+                'pic_o.name as nama_pic_order',
+                'mkt_i.name as nama_marketing_internal',
+                'mkt_e.name as nama_marketing_eksternal',
+            ])
+            ->first();
+        if (!$so) return response()->json(['message' => 'Sales Order tidak ditemukan'], 404);
+
+        $wos = DB::table('work_orders as wo')
+            ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
+            ->leftJoin('users as pic', 'pic.id', '=', 'wo.id_pic_pelanggan_pekerjaan')
+            ->where('wo.id_so', $id)
+            ->whereNull('wo.deleted_at')
+            ->orderBy('wo.id_wo')
+            ->select([
+                'wo.id_wo', 'wo.no_wo', 'wo.judul_pekerjaan',
+                'wo.id_pelanggan_pekerjaan', 'wo.id_site_pelanggan_pekerjaan', 'brs.nama_lokasi as nama_site',
+                'wo.id_pic_pelanggan_pekerjaan', 'pic.name as nama_pic',
+                'wo.interval_bulan', 'wo.no_urut_period',
+                'wo.tanggal_mulai', 'wo.tanggal_selesai', 'wo.keterangan',
+            ])
+            ->get();
+
+        $woIds = $wos->pluck('id_wo');
+
+        $boqRows = $woIds->isNotEmpty()
+            ? DB::table('boq as b')
+                ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+                ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+                ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
+                ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'b.id_satuan')
+                ->whereIn('b.id_wo', $woIds)
+                ->whereNull('b.deleted_at')
+                ->orderBy('b.id_boq')
+                ->select([
+                    'b.id_boq as source_id_boq', 'b.id_wo', 'b.id_testing_point', 'b.item_produk_alternate',
+                    'tp.nama as nama_testing_point', 'ts.nomor as standard_nomor', 'ts.judul as standard_judul',
+                    'tms.kode as matriks_kode', 'tms.judul_indonesia as matriks_judul',
+                    'b.qty', 'b.id_satuan', 'sat.nama as satuan', 'b.harga', 'b.keterangan',
+                ])
+                ->get()
+                ->groupBy('id_wo')
+            : collect();
+
+        $boqTambahanBase = $woIds->isNotEmpty()
+            ? DB::table('boq_tambahan as bt')
+                ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'bt.id_satuan')
+                ->whereIn('bt.id_wo', $woIds)
+                ->whereNull('bt.deleted_at')
+                ->orderBy('bt.id_boq_tambahan')
+                ->select(['bt.id_boq_tambahan as source_id_boq_tambahan', 'bt.id_wo', 'bt.jenis', 'bt.nama_item', 'bt.qty', 'bt.id_satuan', 'sat.nama as satuan', 'bt.harga', 'bt.keterangan'])
+                ->get()
+            : collect();
+
+        $boqOtherByWo    = $boqTambahanBase->where('jenis', 'lainnya')->groupBy('id_wo');
+        $boqSamplingByWo = $boqTambahanBase->where('jenis', 'sampling')->groupBy('id_wo');
+
+        $wos = $wos->map(function ($wo) use ($boqRows, $boqOtherByWo, $boqSamplingByWo) {
+            $wo->boq          = array_values($boqRows->get($wo->id_wo, collect())->toArray());
+            $wo->boq_other    = array_values($boqOtherByWo->get($wo->id_wo, collect())->toArray());
+            $wo->boq_sampling = array_values($boqSamplingByWo->get($wo->id_wo, collect())->toArray());
+            return $wo;
+        });
+
+        return response()->json(['so' => $so, 'wos' => $wos]);
+    }
+
+    /**
+     * Eksekusi Clone SO — 1 DB::transaction() menyeluruh: gagal di titik mana
+     * pun (baris tengah sekalipun) membatalkan SEMUA insert yang sudah
+     * terjadi di request ini, tidak ada SO/WO/BOQ setengah jadi tersimpan.
+     *
+     * Prinsip keamanan data: field identitas/referensial (id_testing_point,
+     * id_pelanggan_pekerjaan WO, kepemilikan Site ke Perusahaan) DIAMBIL DARI
+     * DB berdasarkan `source_id_*` yang dikirim client, TIDAK dipercaya
+     * langsung dari payload — supaya request yang dimanipulasi tidak bisa
+     * menyisipkan referensi ke record WO/BOQ milik SO lain. Field yang murni
+     * nilai (qty, harga, keterangan, tanggal, dst) baru diambil dari input
+     * user sesuai hasil edit di wizard.
+     */
+    public function clonePost(Request $request, $id)
+    {
+        $sourceSo = DB::table('sales_orders')->where('id_so', $id)->whereNull('deleted_at')->first();
+        if (!$sourceSo) {
+            return response()->json(['message' => 'Sales Order sumber tidak ditemukan'], 404);
+        }
+
+        // ⚠️ PENTING: $request->validate() cuma mengembalikan field yang PUNYA
+        // rule di sini (Laravel Validator::validated() membuang field yang
+        // tidak dideklarasikan) — bug nyata yang sempat kejadian: cuma
+        // tanggal_so & 3 id_pelanggan yang dulu dideklarasikan, jadi semua
+        // field SO lain (judul_order, no_po, id_office, PIC, dst) senyap
+        // hilang saat insert walau terkirim benar dari frontend. Setiap field
+        // SO yang dipakai di insert WAJIB punya baris rule di sini juga.
+        $validated = $request->validate([
+            'so'                              => 'required|array',
+            'so.tanggal_so'                   => 'required|date',
+            'so.judul_order'                  => 'nullable|string|max:255',
+            'so.tidak_ada_po'                 => 'nullable|boolean',
+            'so.no_po'                        => 'nullable|string|max:50',
+            'so.tanggal_po'                   => 'nullable|date',
+            'so.tanggal_mulai'                => 'nullable|date',
+            'so.tanggal_selesai'              => 'nullable|date',
+            'so.id_office'                    => 'nullable|integer',
+            'so.id_pelanggan'                 => 'required|integer',
+            'so.id_site_pelanggan'            => 'nullable|integer',
+            'so.id_pic_pelanggan'             => 'nullable|integer',
+            'so.id_pelanggan_delivery'        => 'nullable|integer',
+            'so.id_site_pelanggan_delivery'   => 'nullable|integer',
+            'so.id_pic_pelanggan_delivery'    => 'nullable|integer',
+            'so.id_pelanggan_payment'         => 'nullable|integer',
+            'so.id_site_pelanggan_payment'    => 'nullable|integer',
+            'so.id_pic_pelanggan_payment'     => 'nullable|integer',
+            'so.pic_input'                    => 'nullable|integer',
+            'so.pic_order'                    => 'nullable|integer',
+            'so.pic_marketing_internal'       => 'nullable|integer',
+            'so.pic_marketing_eksternal'      => 'nullable|integer',
+            'so.keterangan_status'            => 'nullable|string',
+            'so.cara_pembayaran'              => 'nullable|string',
+            'so.keterangan'                   => 'nullable|string',
+            'wos'                             => 'nullable|array',
+            'wos.*.source_id_wo'              => 'required|integer',
+            'wos.*.include'                   => 'required|boolean',
+            'wos.*.judul_pekerjaan'           => 'required|string|max:255',
+            'wos.*.id_site_pelanggan_pekerjaan' => 'nullable|integer',
+            'wos.*.id_pic_pelanggan_pekerjaan'  => 'nullable|integer',
+            'wos.*.interval_bulan'            => 'nullable|integer',
+            'wos.*.no_urut_period'            => 'nullable|integer',
+            'wos.*.tanggal_mulai'             => 'nullable|date',
+            'wos.*.tanggal_selesai'           => 'nullable|date',
+            'wos.*.keterangan'                => 'nullable|string',
+            'wos.*.boq'                       => 'nullable|array',
+            'wos.*.boq.*.source_id_boq'       => 'required|integer',
+            'wos.*.boq.*.include'             => 'required|boolean',
+            'wos.*.boq.*.qty'                 => 'nullable|integer',
+            'wos.*.boq.*.id_satuan'           => 'nullable|integer',
+            'wos.*.boq.*.harga'               => 'nullable|integer',
+            'wos.*.boq.*.keterangan'          => 'nullable|string',
+            'wos.*.boq_other'                 => 'nullable|array',
+            'wos.*.boq_other.*.source_id_boq_tambahan' => 'required|integer',
+            'wos.*.boq_other.*.include'       => 'required|boolean',
+            'wos.*.boq_other.*.nama_item'     => 'required|string|max:255',
+            'wos.*.boq_other.*.qty'           => 'nullable|integer',
+            'wos.*.boq_other.*.id_satuan'     => 'nullable|integer',
+            'wos.*.boq_other.*.harga'         => 'nullable|integer',
+            'wos.*.boq_other.*.keterangan'    => 'nullable|string',
+            'wos.*.boq_sampling'              => 'nullable|array',
+            'wos.*.boq_sampling.*.source_id_boq_tambahan' => 'required|integer',
+            'wos.*.boq_sampling.*.include'    => 'required|boolean',
+            'wos.*.boq_sampling.*.nama_item'  => 'required|string|max:255',
+            'wos.*.boq_sampling.*.qty'        => 'nullable|integer',
+            'wos.*.boq_sampling.*.id_satuan'  => 'nullable|integer',
+            'wos.*.boq_sampling.*.harga'      => 'nullable|integer',
+            'wos.*.boq_sampling.*.keterangan' => 'nullable|string',
+        ]);
+
+        $soInput = $validated['so'];
+        $wosInput = collect($validated['wos'] ?? [])->where('include', true)->values();
+
+        try {
+            $newSoId = DB::transaction(function () use ($id, $soInput, $wosInput) {
+                $newNoSo = $this->generateSoNumber();
+
+                $newSoId = DB::table('sales_orders')->insertGetId([
+                    'id_sq'      => null,
+                    'id_sc'      => null,
+                    'no_so'      => $newNoSo,
+                    'tanggal_so' => $soInput['tanggal_so'],
+                    'judul_order' => $soInput['judul_order'] ?? null,
+                    'tidak_ada_po' => $soInput['tidak_ada_po'] ?? 0,
+                    'no_po' => $soInput['no_po'] ?? null,
+                    'tanggal_po' => $soInput['tanggal_po'] ?? null,
+                    'tanggal_mulai' => $soInput['tanggal_mulai'] ?? null,
+                    'tanggal_selesai' => $soInput['tanggal_selesai'] ?? null,
+                    'id_office' => $soInput['id_office'] ?? null,
+                    'id_pelanggan' => $soInput['id_pelanggan'],
+                    'id_site_pelanggan' => $soInput['id_site_pelanggan'] ?? null,
+                    'id_pic_pelanggan' => $soInput['id_pic_pelanggan'] ?? null,
+                    'id_pelanggan_delivery' => $soInput['id_pelanggan_delivery'] ?? null,
+                    'id_site_pelanggan_delivery' => $soInput['id_site_pelanggan_delivery'] ?? null,
+                    'id_pic_pelanggan_delivery' => $soInput['id_pic_pelanggan_delivery'] ?? null,
+                    'id_pelanggan_payment' => $soInput['id_pelanggan_payment'] ?? null,
+                    'id_site_pelanggan_payment' => $soInput['id_site_pelanggan_payment'] ?? null,
+                    'id_pic_pelanggan_payment' => $soInput['id_pic_pelanggan_payment'] ?? null,
+                    'pic_input' => $soInput['pic_input'] ?? null,
+                    'pic_order' => $soInput['pic_order'] ?? null,
+                    'pic_marketing_internal' => $soInput['pic_marketing_internal'] ?? null,
+                    'pic_marketing_eksternal' => $soInput['pic_marketing_eksternal'] ?? null,
+                    'status' => 'on-progress',
+                    'keterangan_status' => $soInput['keterangan_status'] ?? null,
+                    'cara_pembayaran' => $soInput['cara_pembayaran'] ?? null,
+                    'keterangan' => $soInput['keterangan'] ?? null,
+                    'attachment' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                foreach ($wosInput as $woInput) {
+                    // Ambil ulang WO sumber dari DB (bukan dari payload) untuk
+                    // pastikan benar-benar milik SO ini & ambil Perusahaan
+                    // (id_pelanggan_pekerjaan) yang dikunci ikut sumber, sama
+                    // seperti pola Clone WO yang sudah ada.
+                    $sourceWo = DB::table('work_orders')
+                        ->where('id_wo', $woInput['source_id_wo'])
+                        ->where('id_so', $id)
+                        ->whereNull('deleted_at')
+                        ->first();
+                    if (!$sourceWo) continue;
+
+                    $targetSiteId = $woInput['id_site_pelanggan_pekerjaan'] ?? $sourceWo->id_site_pelanggan_pekerjaan;
+                    if ($targetSiteId) {
+                        $siteBelongsToSameBr = DB::table('business_relation_sites')
+                            ->where('id_site', $targetSiteId)
+                            ->where('id_br', $sourceWo->id_pelanggan_pekerjaan)
+                            ->exists();
+                        if (!$siteBelongsToSameBr) {
+                            throw new \RuntimeException("Site yang dipilih untuk WO \"{$sourceWo->no_wo}\" bukan milik Perusahaan yang sama dengan WO sumber");
+                        }
+                    }
+
+                    $newNoWo = $this->generateNoWo();
+
+                    $newWoId = DB::table('work_orders')->insertGetId([
+                        'no_wo'                       => $newNoWo,
+                        'id_so'                       => $newSoId,
+                        'id_pelanggan_pekerjaan'      => $sourceWo->id_pelanggan_pekerjaan,
+                        'id_site_pelanggan_pekerjaan' => $targetSiteId,
+                        'id_pic_pelanggan_pekerjaan'  => $woInput['id_pic_pelanggan_pekerjaan'] ?? $sourceWo->id_pic_pelanggan_pekerjaan,
+                        'judul_pekerjaan'             => $woInput['judul_pekerjaan'],
+                        'interval_bulan'              => $woInput['interval_bulan'] ?? null,
+                        'no_urut_period'              => $woInput['no_urut_period'] ?? null,
+                        'keterangan'                  => $woInput['keterangan'] ?? null,
+                        'status'                      => 'onprogress',
+                        'tanggal_mulai'               => $woInput['tanggal_mulai'] ?? null,
+                        'tanggal_selesai'             => $woInput['tanggal_selesai'] ?? null,
+                        'created_at'                  => now(),
+                        'updated_at'                  => now(),
+                    ]);
+
+                    foreach (($woInput['boq'] ?? []) as $boqInput) {
+                        if (empty($boqInput['include'])) continue;
+
+                        $sourceBoq = DB::table('boq')
+                            ->where('id_boq', $boqInput['source_id_boq'])
+                            ->where('id_wo', $sourceWo->id_wo)
+                            ->whereNull('deleted_at')
+                            ->first();
+                        if (!$sourceBoq) continue;
+
+                        $newBoqId = DB::table('boq')->insertGetId([
+                            'id_wo'                 => $newWoId,
+                            'id_testing_point'      => $sourceBoq->id_testing_point,
+                            'item_produk_alternate' => $sourceBoq->item_produk_alternate,
+                            'qty'                   => $boqInput['qty'] ?? $sourceBoq->qty,
+                            'id_satuan'             => $boqInput['id_satuan'] ?? $sourceBoq->id_satuan,
+                            'harga'                 => $boqInput['harga'] ?? $sourceBoq->harga,
+                            'keterangan'            => $boqInput['keterangan'] ?? $sourceBoq->keterangan,
+                            'created_at'            => now(),
+                            'updated_at'            => now(),
+                        ]);
+
+                        $sourceBoqItems = DB::table('boq_items')
+                            ->where('id_boq', $sourceBoq->id_boq)
+                            ->whereNull('deleted_at')
+                            ->get(['id_testing_item']);
+                        foreach ($sourceBoqItems as $boqItem) {
+                            DB::table('boq_items')->insert([
+                                'id_boq'           => $newBoqId,
+                                'id_testing_item'  => $boqItem->id_testing_item,
+                                'created_at'       => now(),
+                                'updated_at'       => now(),
+                            ]);
+                        }
+                    }
+
+                    foreach (['boq_other' => 'lainnya', 'boq_sampling' => 'sampling'] as $inputKey => $jenis) {
+                        foreach (($woInput[$inputKey] ?? []) as $btInput) {
+                            if (empty($btInput['include'])) continue;
+
+                            $sourceBt = DB::table('boq_tambahan')
+                                ->where('id_boq_tambahan', $btInput['source_id_boq_tambahan'])
+                                ->where('id_wo', $sourceWo->id_wo)
+                                ->where('jenis', $jenis)
+                                ->whereNull('deleted_at')
+                                ->first();
+                            if (!$sourceBt) continue;
+
+                            DB::table('boq_tambahan')->insert([
+                                'id_wo'      => $newWoId,
+                                'jenis'      => $jenis,
+                                'nama_item'  => $btInput['nama_item'] ?? $sourceBt->nama_item,
+                                'qty'        => $btInput['qty'] ?? $sourceBt->qty,
+                                'id_satuan'  => $btInput['id_satuan'] ?? $sourceBt->id_satuan,
+                                'harga'      => $btInput['harga'] ?? $sourceBt->harga,
+                                'keterangan' => $btInput['keterangan'] ?? $sourceBt->keterangan,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        }
+                    }
+                }
+
+                $after = DB::table('sales_orders')->where('id_so', $newSoId)->get()->toJson();
+                // old_value/new_value punya CHECK constraint JSON valid (MariaDB) —
+                // catatan "clone dari mana" harus dibungkus JSON, tidak bisa
+                // string polos.
+                $cloneNote = json_encode(['note' => "Clone dari SO {$this->sourceNoSoLabel($id)}"]);
+                saveAudit('sales_orders', $newSoId, 'Create', $cloneNote, $after);
+
+                return $newSoId;
+            });
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json([
+                'success' => false,
+                'message' => $e instanceof \RuntimeException ? $e->getMessage() : 'Gagal membuat salinan Sales Order. Tidak ada data yang tersimpan.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Sales Order berhasil disalin',
+            'id_so'   => $newSoId,
+        ]);
+    }
+
+    private function sourceNoSoLabel($id): string
+    {
+        return DB::table('sales_orders')->where('id_so', $id)->value('no_so') ?? "#{$id}";
+    }
+
+    /**
+     * Nomor WO baru untuk hasil clone — pola sama seperti
+     * WorkOrderController::generateNoWo() (private di controller itu,
+     * jadi disalin ke sini, bukan dipanggil lintas controller).
+     */
+    private function generateNoWo(): string
+    {
+        $year = now()->format('y');
+        $prefix = "WO-{$year}-";
+
+        $latest = DB::table('work_orders')->orderByDesc('created_at')->first();
+        if (!$latest) return $prefix . '0001';
+
+        $number = (int) explode('-', $latest->no_wo)[2] + 1;
+        return $prefix . str_pad($number, 4, '0', STR_PAD_LEFT);
+    }
 }

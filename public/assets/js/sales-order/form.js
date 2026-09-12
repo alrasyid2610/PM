@@ -50,6 +50,11 @@ function renderForm(res) {
                 icon: "fa-solid fa-file-pdf",
                 attrs: `onclick="window.open('/sales-orders/${res.id_so}/print','_blank')"`,
             },
+            ...(can('sales-orders', 'can_create') ? [{
+                label: "Clone SO",
+                icon: "fa-solid fa-copy",
+                attrs: `onclick="window.location.href='/sales-orders/${res.id_so}/clone'"`,
+            }] : []),
         ],
         extra: isDeleted
             ? `<span style="font-size:11px;color:#b91c1c;display:flex;align-items:center;gap:5px;">
