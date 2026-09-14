@@ -5,6 +5,8 @@
 
 let cloneSourceData = null;
 let woIndexCounter = 0;
+let fwoIndexCounter = 0;
+const PERSONEL_ROLES = ['Leader', 'Driver', 'Anggota', 'PIC Project'];
 
 $(document).ready(function () {
     loadCloneSourceData();
@@ -271,14 +273,30 @@ function renderWoAccordion(wos) {
             const $collapse = $card.find(`#${collapseId}`);
             const opening = $collapse.hasClass('d-none');
 
+            // Exclusive — sama seperti accordion FWO: cuma 1 WO yang boleh
+            // terbuka sekaligus, supaya halaman tidak menumpuk banyak body WO
+            // kalau 1 SO punya banyak WO (mis. 24 WO kontrak 2 tahun).
+            if (opening) {
+                $accordion.find('.accordion-collapse').not($collapse).addClass('d-none');
+                $accordion.find('.wo-toggle').not($btn).addClass('collapsed');
+            }
+
+            $collapse.toggleClass('d-none', !opening);
+            $btn.toggleClass('collapsed', !opening);
+
+            // Build & init HARUS setelah d-none dilepas — kalau tidak, panel
+            // masih tersembunyi (display:none) saat initWoBodyPlugins jalan,
+            // jadi $th.outerWidth() dkk terbaca 0 dan resize kolom (yang
+            // butuh lebar asli tiap kolom) gagal total.
             if (opening && !$collapse.data('loaded')) {
                 $collapse.find('.accordion-body').html(buildWoBodyHtml(wo));
                 initWoBodyPlugins($card, wo);
                 $collapse.data('loaded', true);
             }
 
-            $collapse.toggleClass('d-none', !opening);
-            $btn.toggleClass('collapsed', !opening);
+            if (opening) {
+                $card[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         });
 
         $card.find('.wo-include').on('change', function () {
@@ -333,30 +351,307 @@ function buildWoBodyHtml(wo) {
             </div>
         </div>
 
-        <h6 class="mb-2"><i class="fa-solid fa-table-list me-1 text-primary"></i> BOQ</h6>
-        ${buildBoqTableHtml(wo.boq || [], 'boq')}
+        <ul class="nav nav-tabs wo-subtabs mb-3">
+            <li class="nav-item">
+                <button type="button" class="nav-link active wo-subtab-btn" data-target="boq">
+                    <i class="fa-solid fa-table-list me-1"></i> BOQ
+                </button>
+            </li>
+            <li class="nav-item">
+                <button type="button" class="nav-link wo-subtab-btn" data-target="fwo">
+                    <i class="fa-solid fa-helmet-safety me-1"></i> Fieldwork Order (FWO)
+                </button>
+            </li>
+        </ul>
 
-        <h6 class="mb-2 mt-3"><i class="fa-solid fa-layer-group me-1 text-warning"></i> BOQ Other</h6>
-        ${buildBoqTambahanTableHtml(wo.boq_other || [], 'boq-other')}
+        <div class="wo-subtab-pane" data-pane="boq">
+            <h6 class="mb-2"><i class="fa-solid fa-table-list me-1 text-primary"></i> BOQ</h6>
+            ${buildBoqTableHtml(wo.boq || [], 'boq')}
 
-        <h6 class="mb-2 mt-3"><i class="fa-solid fa-vial me-1 text-success"></i> BOQ Sampling</h6>
-        ${buildBoqTambahanTableHtml(wo.boq_sampling || [], 'boq-sampling')}
+            <h6 class="mb-2 mt-3"><i class="fa-solid fa-layer-group me-1 text-warning"></i> BOQ Other</h6>
+            ${buildBoqTambahanTableHtml(wo.boq_other || [], 'boq-other')}
+
+            <h6 class="mb-2 mt-3"><i class="fa-solid fa-vial me-1 text-success"></i> BOQ Sampling</h6>
+            ${buildBoqTambahanTableHtml(wo.boq_sampling || [], 'boq-sampling')}
+        </div>
+
+        <div class="wo-subtab-pane d-none" data-pane="fwo">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                <div class="pm-search">
+                    <span class="pm-search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" class="fwo-search" placeholder="Cari No. FWO / Judul...">
+                    <button type="button" class="pm-search-clear d-none fwo-search-clear" title="Hapus"><i class="fa-solid fa-times"></i></button>
+                </div>
+            </div>
+            <div class="mb-2 text-muted small fwo-summary"></div>
+            <div class="accordion fwo-list"></div>
+        </div>
     `;
 }
 
+// ── FWO accordion (nested di dalam body WO) ────────────────────────────────
+// Sama-sama pakai pola manual toggle + lazy-build seperti accordion WO di
+// atas (bukan buka semua FWO), karena alasannya sama: outerWidth()/select2
+// yang di-init saat elemen masih d-none akan salah baca lebar/gagal render.
+function renderFwoAccordion($woBody, wo) {
+    const $list = $woBody.find('.fwo-list');
+    const fwos = wo.fwos || [];
+
+    $woBody.find('.fwo-summary').text(
+        fwos.length
+            ? `${fwos.length} FWO — ${fwos.reduce((s, f) => s + (f.fieldwork_boq?.length || 0), 0)} Fieldwork BOQ, ` +
+              `${fwos.reduce((s, f) => s + (f.personel?.length || 0), 0)} Personel`
+            : ''
+    );
+
+    if (!fwos.length) {
+        $list.html('<p class="text-muted fst-italic mb-0">Tidak ada FWO pada WO ini.</p>');
+        return;
+    }
+
+    fwos.forEach((fwo) => {
+        const idx = fwoIndexCounter++;
+        const collapseId = 'fwoCollapse' + idx;
+        const searchText = [fwo.no_fwo, fwo.judul_pekerjaan].filter(Boolean).join(' ').toLowerCase();
+
+        const $card = $(`
+            <div class="accordion-item fwo-card" data-fwo-index="${idx}" data-source-id-fwo="${fwo.id_fwo}" data-search="${escHtml(searchText)}">
+                <h2 class="accordion-header d-flex align-items-center">
+                    <div class="form-check ms-3 me-1" onclick="event.stopPropagation()">
+                        <input type="checkbox" class="form-check-input fwo-include" checked title="Sertakan FWO ini">
+                    </div>
+                    <button class="accordion-button collapsed fwo-toggle" type="button">
+                        <strong class="me-2">${escHtml(fwo.no_fwo)}</strong> ${escHtml(fwo.judul_pekerjaan || '-')}
+                        <span class="pm-badge pm-badge--blue ms-2">${(fwo.fieldwork_boq || []).length} Fieldwork BOQ</span>
+                        <span class="pm-badge ms-1">${(fwo.personel || []).length} Personel</span>
+                    </button>
+                </h2>
+                <div id="${collapseId}" class="accordion-collapse d-none">
+                    <div class="accordion-body"></div>
+                </div>
+            </div>
+        `);
+
+        $card.find('.fwo-toggle').on('click', function () {
+            const $btn = $(this);
+            const $collapse = $card.find(`#${collapseId}`);
+            const opening = $collapse.hasClass('d-none');
+
+            // Exclusive — cuma 1 FWO yang boleh terbuka sekaligus, supaya WO
+            // card tidak menumpuk banyak body FWO kalau jumlah FWO-nya
+            // banyak (mis. 10+). Tutup semua FWO lain dulu sebelum buka ini.
+            if (opening) {
+                $list.find('.accordion-collapse').not($collapse).addClass('d-none');
+                $list.find('.fwo-toggle').not($btn).addClass('collapsed');
+            }
+
+            $collapse.toggleClass('d-none', !opening);
+            $btn.toggleClass('collapsed', !opening);
+
+            if (opening && !$collapse.data('loaded')) {
+                $collapse.find('.accordion-body').html(buildFwoBodyHtml(fwo));
+                initFwoBodyPlugins($card, fwo, wo, $woBody);
+                $collapse.data('loaded', true);
+            }
+
+            // Karena exclusive (FWO lain otomatis tertutup), tanpa ini posisi
+            // scroll browser tetap di tempat semula — user harus scroll manual
+            // lagi buat lihat dari atas card FWO yang baru dibuka. Scroll
+            // header card-nya ke atas viewport begitu terbuka.
+            if (opening) {
+                $card[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+
+        $card.find('.fwo-include').on('change', function () {
+            const on = $(this).is(':checked');
+            $card.find('.accordion-body').find('input, select, textarea, button').not('.fwo-include').prop('disabled', !on);
+            $card.toggleClass('opacity-50', !on);
+        });
+
+        $list.append($card);
+    });
+}
+
+function buildFwoBodyHtml(fwo) {
+    return `
+        <div class="row g-3 mb-3">
+            <div class="col-md-6 col-12">
+                <label class="form-label">Judul Pekerjaan</label>
+                <input type="text" class="form-control fwo-judul" value="${escHtml(fwo.judul_pekerjaan || '')}">
+            </div>
+            <div class="col-md-6 col-12">
+                <label class="form-label">Site Pekerjaan</label>
+                <select class="form-select fwo-site"></select>
+            </div>
+            <div class="col-md-4 col-12">
+                <label class="form-label">PIC Pekerjaan</label>
+                <select class="form-select fwo-pic"></select>
+            </div>
+            <div class="col-md-4 col-12">
+                <label class="form-label">Tanggal Mulai</label>
+                <input type="text" class="form-control fp-date fwo-tgl-mulai" value="${fwo.tanggal_mulai || ''}" autocomplete="off">
+                <div class="form-text fwo-hint-tgl-mulai" style="display:none;"></div>
+            </div>
+            <div class="col-md-4 col-12">
+                <label class="form-label">Tanggal Selesai</label>
+                <input type="text" class="form-control fp-date fwo-tgl-selesai" value="${fwo.tanggal_selesai || ''}" autocomplete="off">
+                <div class="form-text fwo-hint-tgl-selesai" style="display:none;"></div>
+            </div>
+            <div class="col-md-6 col-12">
+                <label class="form-label">Waktu Kedatangan</label>
+                <input type="text" class="form-control fp-datetime fwo-waktu-kedatangan" value="${fwo.waktu_kedatangan || ''}" autocomplete="off">
+            </div>
+            <div class="col-md-12">
+                <label class="form-label">Keterangan</label>
+                <textarea class="form-control fwo-keterangan" rows="2">${escHtml(fwo.keterangan || '')}</textarea>
+            </div>
+        </div>
+
+        <h6 class="mb-2"><i class="fa-solid fa-table-list me-1 text-primary"></i> Fieldwork BOQ</h6>
+        ${buildFieldworkBoqTableHtml(fwo.fieldwork_boq || [])}
+
+        <h6 class="mb-2 mt-3"><i class="fa-solid fa-layer-group me-1 text-warning"></i> BOQ Other</h6>
+        ${buildBoqTambahanTableHtml(fwo.fwo_boq_other || [], 'fwo-boq-other')}
+
+        <h6 class="mb-2 mt-3"><i class="fa-solid fa-vial me-1 text-success"></i> BOQ Sampling</h6>
+        ${buildBoqTambahanTableHtml(fwo.fwo_boq_sampling || [], 'fwo-boq-sampling')}
+
+        <h6 class="mb-2 mt-3"><i class="fa-solid fa-users me-1 text-secondary"></i> Personel</h6>
+        ${buildPersonelTableHtml(fwo.personel || [])}
+    `;
+}
+
+// Baris Fieldwork BOQ hasil clone: Testing Point tetap (bukan dropdown,
+// mengikuti alokasi sumber). Baris baru (.fieldwork-boq-new-row): Testing
+// Point WAJIB dipilih dari dropdown yang di-restrict ke BOQ milik WO ini
+// sendiri saja (bukan pencarian global seperti "Tambah BOQ" di level WO) —
+// disepakati user karena alokasi Fieldwork BOQ memang cuma boleh mengacu ke
+// BOQ WO-nya sendiri.
+function buildFieldworkBoqTableHtml(items) {
+    const rows = items.map((r) => `
+        <tr class="fieldwork-boq-row" data-source-id-fwo-boq="${r.source_id_fwo_boq}" data-id-testing-point="${r.id_testing_point}">
+            <td class="text-center">
+                <input type="checkbox" class="form-check-input row-include" checked title="Sertakan baris ini">
+            </td>
+            <td>${escHtml(r.nama_testing_point || '-')}</td>
+            <td style="width:90px;"><input type="number" class="form-control form-control-sm row-qty" value="${r.qty ?? ''}"></td>
+            <td><input type="text" class="form-control form-control-sm row-keterangan" value="${escHtml(r.keterangan || '')}"></td>
+            <td style="width:50px;"></td>
+        </tr>`).join('');
+
+    return `
+        <div class="boq-section">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle mb-0 fieldwork-boq-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:36px;"></th>
+                            <th>Testing Point</th>
+                            <th>Qty</th>
+                            <th>Keterangan</th>
+                            <th style="width:50px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+            ${!items.length ? '<p class="text-muted fst-italic small mt-1">Tidak ada Fieldwork BOQ.</p>' : ''}
+            <button type="button" class="btn btn-outline-primary btn-sm mt-2 btn-add-fieldwork-boq">
+                <i class="fa-solid fa-plus me-1"></i> Tambah Fieldwork BOQ
+            </button>
+        </div>`;
+}
+
+function newFieldworkBoqRowHtml() {
+    return `
+        <tr class="fieldwork-boq-row fieldwork-boq-new-row">
+            <td class="text-center">
+                <input type="checkbox" class="form-check-input row-include" checked title="Sertakan baris ini">
+            </td>
+            <td><select class="form-select form-select-sm new-fieldwork-boq-point"></select></td>
+            <td style="width:90px;"><input type="number" class="form-control form-control-sm row-qty" value=""></td>
+            <td><input type="text" class="form-control form-control-sm row-keterangan" value=""></td>
+            <td class="text-center">
+                <button type="button" class="btn btn-outline-danger btn-sm btn-remove-fieldwork-boq" title="Hapus baris ini">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+}
+
+function personelRoleOptions(selected) {
+    return PERSONEL_ROLES.map((r) => `<option value="${r}" ${r === selected ? 'selected' : ''}>${r}</option>`).join('');
+}
+
+function buildPersonelTableHtml(items) {
+    const rows = items.map((r) => `
+        <tr class="personel-row" data-source-id-fwo-personel="${r.source_id_fwo_personel}">
+            <td><select class="form-select form-select-sm row-personnel"></select></td>
+            <td style="width:180px;"><select class="form-select form-select-sm row-role">${personelRoleOptions(r.role)}</select></td>
+            <td style="width:50px;" class="text-center">
+                <button type="button" class="btn btn-outline-danger btn-sm btn-remove-personel" title="Hapus baris ini">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        </tr>`).join('');
+
+    return `
+        <div class="boq-section">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle mb-0 personel-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Personnel</th>
+                            <th>Role</th>
+                            <th style="width:50px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+            ${!items.length ? '<p class="text-muted fst-italic small mt-1">Tidak ada Personel.</p>' : ''}
+            <button type="button" class="btn btn-outline-primary btn-sm mt-2 btn-add-personel">
+                <i class="fa-solid fa-plus me-1"></i> Tambah Personel
+            </button>
+        </div>`;
+}
+
+function newPersonelRowHtml() {
+    return `
+        <tr class="personel-row personel-new-row">
+            <td><select class="form-select form-select-sm row-personnel"></select></td>
+            <td style="width:180px;"><select class="form-select form-select-sm row-role">${personelRoleOptions('')}</select></td>
+            <td style="width:50px;" class="text-center">
+                <button type="button" class="btn btn-outline-danger btn-sm btn-remove-personel" title="Hapus baris ini">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+}
+
+// Testing Point/Standard/Matriks Sample digabung jadi 1 kolom bertumpuk +
+// dipotong (truncate, max 1 baris per teks + tooltip native `title` untuk
+// versi lengkapnya) — sebelumnya 3 kolom lebar sendiri-sendiri, isinya bisa
+// 1 paragraf penuh, bikin tinggi baris melambung & tabel berat dibaca
+// (dilaporkan user via screenshot). Sekarang tinggi baris konsisten pendek,
+// kolom Qty/Satuan/Harga/Keterangan yang memang perlu diedit dapat ruang
+// lebih lega.
 function buildBoqTableHtml(items, rowClass) {
-    if (!items.length) return '<p class="text-muted fst-italic small">Tidak ada BOQ.</p>';
     const rows = items.map((r) => {
-        const standard = [r.standard_nomor, r.standard_judul].filter(Boolean).join(' — ') || '-';
-        const matriks = [r.matriks_kode, r.matriks_judul].filter(Boolean).join(' — ') || '-';
+        const standard = [r.standard_nomor, r.standard_judul].filter(Boolean).join(' — ');
+        const matriks = [r.matriks_kode, r.matriks_judul].filter(Boolean).join(' — ');
+        const pointName = r.nama_testing_point || r.item_produk_alternate || '-';
         return `
-            <tr class="${rowClass}-row" data-source-id-boq="${r.source_id_boq}">
+            <tr class="${rowClass}-row" data-source-id-boq="${r.source_id_boq}" data-id-testing-point="${r.id_testing_point ?? ''}">
                 <td class="text-center">
                     <input type="checkbox" class="form-check-input row-include" checked title="Sertakan baris ini">
                 </td>
-                <td>${escHtml(r.nama_testing_point || r.item_produk_alternate || '-')}</td>
-                <td class="small text-muted">${escHtml(standard)}</td>
-                <td class="small text-muted">${escHtml(matriks)}</td>
+                <td style="max-width:260px;">
+                    <div class="text-truncate fw-semibold" title="${escHtml(pointName)}">${escHtml(pointName)}</div>
+                    ${standard ? `<div class="text-truncate small text-muted" title="${escHtml(standard)}"><i class="fa-solid fa-certificate me-1" style="font-size:9px;"></i>${escHtml(standard)}</div>` : ''}
+                    ${matriks ? `<div class="text-truncate small text-muted" title="${escHtml(matriks)}"><i class="fa-solid fa-table-cells me-1" style="font-size:9px;"></i>${escHtml(matriks)}</div>` : ''}
+                </td>
                 <td style="width:90px;"><input type="number" class="form-control form-control-sm row-qty" value="${r.qty ?? ''}"></td>
                 <td style="width:150px;"><select class="form-select form-select-sm row-satuan"></select></td>
                 <td style="width:130px;"><input type="text" class="form-control form-control-sm input-num-mask input-num-int row-harga" value="${r.harga ?? 0}"></td>
@@ -365,27 +660,63 @@ function buildBoqTableHtml(items, rowClass) {
     }).join('');
 
     return `
-        <div class="table-responsive">
-            <table class="table table-sm table-bordered align-middle mb-0 ${rowClass}-table">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width:36px;"></th>
-                        <th>Testing Point</th>
-                        <th>Standard</th>
-                        <th>Matriks Sample</th>
-                        <th>Qty</th>
-                        <th>Satuan</th>
-                        <th>Harga</th>
-                        <th>Keterangan</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-            </table>
+        <div class="boq-section">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle mb-0 boq-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:36px;"></th>
+                            <th>Testing Point</th>
+                            <th>Qty</th>
+                            <th>Satuan</th>
+                            <th>Harga</th>
+                            <th>Keterangan</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+            ${!items.length ? '<p class="text-muted fst-italic small mt-1">Tidak ada BOQ.</p>' : ''}
+            <button type="button" class="btn btn-outline-primary btn-sm mt-2 btn-add-boq">
+                <i class="fa-solid fa-plus me-1"></i> Tambah BOQ
+            </button>
         </div>`;
 }
 
+// newBoqRowHtml() menghasilkan SEPASANG <tr> — baris field utama + baris
+// checklist Testing Item di bawahnya (spanning) — dipasangkan/dihapus
+// bersamaan. Beda dari baris hasil clone: tidak punya data-source-id-boq
+// sama sekali, jadi backend tahu ini harus divalidasi & di-insert dari nol
+// (bukan disalin dari record sumber).
+function newBoqRowHtml() {
+    return `
+        <tr class="boq-row boq-new-row">
+            <td class="text-center">
+                <input type="checkbox" class="form-check-input row-include" checked title="Sertakan baris ini">
+            </td>
+            <td style="max-width:260px;"><select class="form-select form-select-sm new-boq-point"></select></td>
+            <td style="width:90px;"><input type="number" class="form-control form-control-sm row-qty" value=""></td>
+            <td style="width:150px;"><select class="form-select form-select-sm row-satuan"></select></td>
+            <td style="width:130px;"><input type="text" class="form-control form-control-sm input-num-mask input-num-int row-harga" value="0"></td>
+            <td><input type="text" class="form-control form-control-sm row-keterangan" value=""></td>
+        </tr>
+        <tr class="boq-new-row-items">
+            <td></td>
+            <td colspan="5">
+                <div class="new-boq-items-toggle d-none mb-1" style="cursor:pointer;">
+                    <i class="fa-solid fa-chevron-down me-1 toggle-icon" style="font-size:10px;transition:transform .15s;"></i>
+                    <span class="fw-semibold small">Testing Item</span>
+                    <span class="text-muted small ms-1">(<span class="checked-count">0</span> dipilih)</span>
+                </div>
+                <div class="new-boq-items-checklist text-muted small fst-italic">Pilih Testing Point dulu untuk memilih Testing Item-nya.</div>
+                <button type="button" class="btn btn-outline-danger btn-sm mt-1 btn-remove-new-boq">
+                    <i class="fa-solid fa-trash me-1"></i> Hapus BOQ ini
+                </button>
+            </td>
+        </tr>`;
+}
+
 function buildBoqTambahanTableHtml(items, rowClass) {
-    if (!items.length) return '<p class="text-muted fst-italic small">Tidak ada data.</p>';
     const rows = items.map((r) => `
         <tr class="${rowClass}-row" data-source-id-boq-tambahan="${r.source_id_boq_tambahan}">
             <td class="text-center">
@@ -399,21 +730,41 @@ function buildBoqTambahanTableHtml(items, rowClass) {
         </tr>`).join('');
 
     return `
-        <div class="table-responsive">
-            <table class="table table-sm table-bordered align-middle mb-0 ${rowClass}-table">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width:36px;"></th>
-                        <th>Nama Item</th>
-                        <th>Qty</th>
-                        <th>Satuan</th>
-                        <th>Harga</th>
-                        <th>Keterangan</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-            </table>
+        <div class="boq-section">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle mb-0 ${rowClass}-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:36px;"></th>
+                            <th>Nama Item</th>
+                            <th>Qty</th>
+                            <th>Satuan</th>
+                            <th>Harga</th>
+                            <th>Keterangan</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+            ${!items.length ? '<p class="text-muted fst-italic small mt-1">Tidak ada data.</p>' : ''}
+            <button type="button" class="btn btn-outline-primary btn-sm mt-2 btn-add-boq-tambahan" data-rowclass="${rowClass}">
+                <i class="fa-solid fa-plus me-1"></i> Tambah Item
+            </button>
         </div>`;
+}
+
+function newBoqTambahanRowHtml(rowClass) {
+    return `
+        <tr class="${rowClass}-row">
+            <td class="text-center">
+                <input type="checkbox" class="form-check-input row-include" checked title="Sertakan baris ini">
+            </td>
+            <td><input type="text" class="form-control form-control-sm row-nama" placeholder="Nama item" value=""></td>
+            <td style="width:90px;"><input type="number" class="form-control form-control-sm row-qty" value=""></td>
+            <td style="width:150px;"><select class="form-select form-select-sm row-satuan"></select></td>
+            <td style="width:130px;"><input type="text" class="form-control form-control-sm input-num-mask input-num-int row-harga" value="0"></td>
+            <td><input type="text" class="form-control form-control-sm row-keterangan" value=""></td>
+        </tr>`;
 }
 
 function initWoBodyPlugins($card, wo) {
@@ -421,6 +772,15 @@ function initWoBodyPlugins($card, wo) {
 
     initFpDate($body);
     initNumericMask($body[0]);
+    linkMulaiSelesai($body.find('.wo-tgl-mulai'), $body.find('.wo-tgl-selesai'));
+
+    // Resize kolom ala Excel — kolom Testing Point/Standard/Matriks sudah
+    // dipadatkan, tapi lebar tiap kolom masih bisa beda kebutuhan per user
+    // (ada yang mau Keterangan lebih lebar, ada yang mau Testing Point lebih
+    // lebar) — biarkan user atur sendiri dengan drag pinggir kolom.
+    $body.find('table.boq-table, table.boq-other-table, table.boq-sampling-table').each(function () {
+        makeTableColumnsResizable($(this));
+    });
 
     // Site di-scope ke Perusahaan WO sumber (dikunci, tidak diedit di UI) —
     // id_br diambil dari wo.id_pelanggan_pekerjaan langsung, bukan dari
@@ -461,26 +821,453 @@ function initWoBodyPlugins($card, wo) {
 
     $body.find('.boq-row, .boq-other-row, .boq-sampling-row').each(function () {
         const $row = $(this);
-        const $satuan = $row.find('.row-satuan');
         const sourceRow = findSourceRow($row, wo);
-        $satuan.select2({
-            width: '100%', allowClear: true, placeholder: 'Satuan', minimumInputLength: 0,
-            dropdownParent: $card,
-            ajax: {
-                url: window.cloneRoute.select2Satuan, dataType: 'json', delay: 200,
-                data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }), cache: true,
-            },
-            escapeMarkup: (m) => m,
+        initSatuanSelectForRow($row, $card, sourceRow);
+        bindRowIncludeToggle($row);
+    });
+
+    // ── Tambah BOQ baru (bukan hasil clone) — checklist Testing Item
+    // granular per Testing Point yang dipilih, sama semangatnya dengan
+    // halaman "Kelola BOQ" (`/boq/create`), tapi disederhanakan jadi 1 baris
+    // + panel checklist di bawahnya (bukan modal terpisah) supaya tidak
+    // nambah 1 lapis UI lagi di dalam accordion yang sudah nested.
+    $body.on('click', '.btn-add-boq', function () {
+        const $tbody = $(this).closest('.boq-section').find('.boq-table tbody');
+        const $rows = $(newBoqRowHtml());
+        $tbody.append($rows);
+        initNewBoqRow($rows.first(), $card, $body);
+    });
+
+    $body.on('click', '.btn-remove-new-boq', function () {
+        const $itemsRow = $(this).closest('tr');
+        const $mainRow = $itemsRow.prev('.boq-new-row');
+        $itemsRow.remove();
+        $mainRow.remove();
+    });
+
+    $body.on('click', '.btn-add-boq-tambahan', function () {
+        const rowClass = $(this).data('rowclass');
+        const $tbody = $(this).closest('.boq-section').find(`.${rowClass}-table tbody`);
+        const $row = $(newBoqTambahanRowHtml(rowClass));
+        $tbody.append($row);
+        initSatuanSelectForRow($row, $card, null);
+        bindRowIncludeToggle($row);
+    });
+
+    // Sub-tab BOQ vs FWO — toggle murni d-none (bukan plugin Tab Bootstrap),
+    // konsisten dengan pola manual accordion di atas. Dipisah jadi tab supaya
+    // WO card tidak langsung menampilkan tabel BOQ + list FWO sekaligus
+    // menumpuk vertikal (bisa sangat panjang kalau FWO-nya banyak).
+    $body.on('click', '.wo-subtab-btn', function () {
+        const target = $(this).data('target');
+        $card.find('.wo-subtab-btn').removeClass('active');
+        $(this).addClass('active');
+        $card.find('.wo-subtab-pane').addClass('d-none');
+        $card.find(`.wo-subtab-pane[data-pane="${target}"]`).removeClass('d-none');
+    });
+
+    // FWO ditaruh & di-render di sini (bukan langsung di buildWoBodyHtml)
+    // supaya konsisten dengan pola lazy-build: elemen sudah pasti visible
+    // (d-none sudah dilepas) begitu initWoBodyPlugins jalan.
+    renderFwoAccordion($body, wo);
+
+    $body.on('input', '.fwo-search', function () {
+        const q = $(this).val().toLowerCase().trim();
+        $body.find('.fwo-card').each(function () {
+            const text = ($(this).data('search') || '').toString();
+            $(this).toggle(!q || text.includes(q));
         });
-        if (sourceRow && sourceRow.id_satuan) {
-            $satuan.append(new Option(sourceRow.satuan || ('#' + sourceRow.id_satuan), sourceRow.id_satuan, true, true)).trigger('change');
+        $(this).closest('.pm-search').find('.fwo-search-clear').toggleClass('d-none', !q);
+    });
+    $body.on('click', '.fwo-search-clear', function () {
+        const $wrap = $(this).closest('.pm-search');
+        $wrap.find('.fwo-search').val('').trigger('input');
+    });
+
+    // Tambah Fieldwork BOQ baru — dropdown Testing Point DIBATASI ke BOQ
+    // milik WO ini sendiri (bukan pencarian global), sesuai kesepakatan user.
+    $body.on('click', '.btn-add-fieldwork-boq', function () {
+        const $fwoCard = $(this).closest('.fwo-card');
+        const $tbody = $(this).closest('.boq-section').find('.fieldwork-boq-table tbody');
+        const $row = $(newFieldworkBoqRowHtml());
+        $tbody.append($row);
+        initNewFieldworkBoqRow($row, $fwoCard, $body);
+    });
+
+    $body.on('click', '.btn-remove-fieldwork-boq', function () {
+        $(this).closest('.fieldwork-boq-row').remove();
+    });
+
+    $body.on('click', '.btn-add-personel', function () {
+        const $fwoCard = $(this).closest('.fwo-card');
+        const $tbody = $(this).closest('.boq-section').find('.personel-table tbody');
+        const $row = $(newPersonelRowHtml());
+        $tbody.append($row);
+        initPersonelSelectForRow($row, $fwoCard, null);
+    });
+
+    $body.on('click', '.btn-remove-personel', function () {
+        $(this).closest('.personel-row').remove();
+    });
+}
+
+// Testing Point yang boleh dipilih untuk Fieldwork BOQ baru = Testing Point
+// yang SAAT INI masih aktif di BOQ milik WO ini (baik hasil clone yang masih
+// dicentang "Sertakan" maupun BOQ baru yang sudah dipilih Testing Point-nya)
+// — dibaca langsung dari DOM $woBody, bukan snapshot data sumber, supaya
+// akurat walau user baru saja meng-uncheck/menambah BOQ sebelum expand FWO.
+function availableWoTestingPoints($woBody) {
+    const points = [];
+    const seen = new Set();
+
+    $woBody.find('.boq-section .boq-row:not(.boq-new-row)').each(function () {
+        const $row = $(this);
+        if (!$row.find('.row-include').is(':checked')) return;
+        const id = $row.data('id-testing-point');
+        if (!id || seen.has(String(id))) return;
+        seen.add(String(id));
+        points.push({ id, label: $row.find('td').eq(1).find('.text-truncate').first().attr('title') || $row.find('td').eq(1).text().trim() });
+    });
+
+    $woBody.find('.new-boq-point').each(function () {
+        const $select = $(this);
+        const id = $select.val();
+        if (!id || seen.has(String(id))) return;
+        const $row = $select.closest('.boq-new-row');
+        if (!$row.find('.row-include').is(':checked')) return;
+        seen.add(String(id));
+        const data = $select.select2('data');
+        points.push({ id, label: data && data[0] ? data[0].text : ('#' + id) });
+    });
+
+    return points;
+}
+
+function usedFieldworkBoqTestingPointIds($fwoCard, excludeSelect) {
+    const ids = new Set();
+    $fwoCard.find('.fieldwork-boq-row:not(.fieldwork-boq-new-row)').each(function () {
+        const tp = $(this).data('id-testing-point');
+        if (tp) ids.add(String(tp));
+    });
+    $fwoCard.find('.new-fieldwork-boq-point').each(function () {
+        if (excludeSelect && this === excludeSelect[0]) return;
+        const val = $(this).val();
+        if (val) ids.add(String(val));
+    });
+    return ids;
+}
+
+function initNewFieldworkBoqRow($row, $fwoCard, $woBody) {
+    const $point = $row.find('.new-fieldwork-boq-point');
+    const available = availableWoTestingPoints($woBody);
+    const used = usedFieldworkBoqTestingPointIds($fwoCard, $point);
+
+    $point.append('<option value="">— Pilih Testing Point —</option>');
+    available.forEach((p) => {
+        if (used.has(String(p.id))) return;
+        $point.append(new Option(p.label, p.id));
+    });
+
+    bindRowIncludeToggle($row);
+}
+
+function initPersonelSelectForRow($row, $fwoCard, sourceRow) {
+    const $personnel = $row.find('.row-personnel');
+    $personnel.select2({
+        width: '100%', allowClear: true, placeholder: 'Pilih Personnel', minimumInputLength: 0,
+        dropdownParent: $fwoCard,
+        ajax: {
+            url: window.cloneRoute.select2Personnel, dataType: 'json', delay: 200,
+            data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }), cache: true,
+        },
+        escapeMarkup: (m) => m,
+    });
+    if (sourceRow && sourceRow.id_personnel) {
+        $personnel.append(new Option(sourceRow.nama_personnel || ('#' + sourceRow.id_personnel), sourceRow.id_personnel, true, true)).trigger('change');
+    }
+}
+
+// Tanggal Selesai tidak boleh sebelum Tanggal Mulai — field WO & FWO tidak
+// pakai atribut `name` (dipakai berulang untuk banyak card sekaligus), jadi
+// auto-link bawaan initFpDate (yang mendeteksi pasangan lewat substring nama
+// field) tidak berlaku di sini dan harus dipasang manual (bug nyata: Tanggal
+// Selesai WO sempat bisa diisi lebih kecil dari Tanggal Mulai-nya).
+function linkMulaiSelesai($mulai, $selesai) {
+    if (!$mulai.length || !$selesai.length) return;
+    const fpMulai = $mulai[0]._fp;
+    const fpSelesai = $selesai[0]._fp;
+    if (!fpMulai || !fpSelesai) return;
+
+    if ($mulai.val()) fpSelesai.set('minDate', $mulai.val());
+
+    fpMulai.config.onChange = fpMulai.config.onChange || [];
+    fpMulai.config.onChange.push(function (selectedDates, dateStr) {
+        fpSelesai.set('minDate', dateStr || null);
+        if (dateStr && fpSelesai.selectedDates[0] && $selesai.val() < dateStr) {
+            fpSelesai.clear();
+        }
+    });
+}
+
+const MONTH_FULL_CLONE = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+function fmtDateFullClone(str) {
+    if (!str) return null;
+    const d = new Date(str);
+    if (isNaN(d)) return null;
+    return d.getDate() + ' ' + MONTH_FULL_CLONE[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+// Batasi (disable) tanggal FWO di luar rentang tanggal WO + tampilkan hint —
+// sama persis polanya dengan applyWoDateRange() di fieldworks/create.blade.php.
+function applyFwoDateRange($fwoBody, woMulai, woSelesai) {
+    const $mulai = $fwoBody.find('.fwo-tgl-mulai');
+    const $selesai = $fwoBody.find('.fwo-tgl-selesai');
+    const woMulaiFmt = fmtDateFullClone(woMulai);
+    const woSelesaiFmt = fmtDateFullClone(woSelesai);
+
+    $fwoBody.data('wo-mulai', woMulai || null);
+
+    if ($mulai[0] && $mulai[0]._fp) {
+        $mulai[0]._fp.set('minDate', woMulai || null);
+        $mulai[0]._fp.set('maxDate', woSelesai || null);
+    }
+    if ($selesai[0] && $selesai[0]._fp) {
+        $selesai[0]._fp.set('maxDate', woSelesai || null);
+    }
+    // minDate Tanggal Selesai FWO = yang PALING TELAT antara awal WO dan
+    // Tanggal Mulai FWO sendiri (bukan cuma awal WO) — supaya Tanggal Selesai
+    // FWO juga tidak bisa diisi lebih kecil dari Tanggal Mulai FWO-nya sendiri.
+    recomputeFwoSelesaiMin($fwoBody);
+
+    const $hintMulai = $fwoBody.find('.fwo-hint-tgl-mulai');
+    const $hintSelesai = $fwoBody.find('.fwo-hint-tgl-selesai');
+    if (woMulaiFmt || woSelesaiFmt) {
+        $hintMulai.text(`Rentang WO: ${woMulaiFmt || '-'} s/d ${woSelesaiFmt || '-'}`).show();
+        $hintSelesai.text(`Rentang WO: ${woMulaiFmt || '-'} s/d ${woSelesaiFmt || '-'}`).show();
+    } else {
+        $hintMulai.hide();
+        $hintSelesai.hide();
+    }
+}
+
+function recomputeFwoSelesaiMin($fwoBody) {
+    const $selesai = $fwoBody.find('.fwo-tgl-selesai');
+    if (!$selesai[0] || !$selesai[0]._fp) return;
+    const woMulai = $fwoBody.data('wo-mulai');
+    const ownMulai = $fwoBody.find('.fwo-tgl-mulai').val();
+    const minDate = [woMulai, ownMulai].filter(Boolean).sort().pop() || null;
+    $selesai[0]._fp.set('minDate', minDate);
+    if (minDate && $selesai[0]._fp.selectedDates[0] && $selesai.val() < minDate) {
+        $selesai[0]._fp.clear();
+    }
+}
+
+function initFwoBodyPlugins($fwoCard, fwo, wo, $woBody) {
+    const $body = $fwoCard.find('.accordion-body');
+
+    initFpDate($body);
+    initNumericMask($body[0]);
+
+    // Tanggal Selesai FWO tidak boleh sebelum Tanggal Mulai FWO sendiri.
+    const $fwoMulai = $body.find('.fwo-tgl-mulai');
+    if ($fwoMulai[0] && $fwoMulai[0]._fp) {
+        const fpMulai = $fwoMulai[0]._fp;
+        fpMulai.config.onChange = fpMulai.config.onChange || [];
+        fpMulai.config.onChange.push(function () {
+            recomputeFwoSelesaiMin($body);
+        });
+    }
+
+    $body.find('table.fwo-boq-other-table, table.fwo-boq-sampling-table').each(function () {
+        makeTableColumnsResizable($(this));
+    });
+
+    // Rentang tanggal FWO wajib di dalam rentang tanggal WO-nya sendiri —
+    // aturan sama seperti halaman "Tambah FWO" biasa (fieldworks/create).
+    // Dibaca dari field tanggal WO yang LIVE di $woBody (bisa sudah diedit
+    // user di tab BOQ), bukan snapshot data sumber wo.tanggal_mulai/selesai.
+    applyFwoDateRange($body, $woBody.find('.wo-tgl-mulai').val(), $woBody.find('.wo-tgl-selesai').val());
+    $woBody.on('change.fwoDateRange', '.wo-tgl-mulai, .wo-tgl-selesai', function () {
+        applyFwoDateRange($body, $woBody.find('.wo-tgl-mulai').val(), $woBody.find('.wo-tgl-selesai').val());
+    });
+
+    // Waktu Kedatangan tidak boleh melewati Tanggal Selesai FWO (batas bawah
+    // sudah ditangani initFpDate bawaan lewat field tanggal_mulai-nya).
+    const $fwoSelesai = $body.find('.fwo-tgl-selesai');
+    if ($fwoSelesai[0] && $fwoSelesai[0]._fp) {
+        $fwoSelesai[0]._fp.set('onChange', function (selectedDates, dateStr) {
+            const $tiba = $body.find('.fwo-waktu-kedatangan');
+            if (!$tiba[0] || !$tiba[0]._fp) return;
+            $tiba[0]._fp.set('maxDate', dateStr ? dateStr + ' 23:59' : null);
+            const tibaVal = $tiba.val();
+            if (dateStr && tibaVal && tibaVal.substring(0, 10) > dateStr) {
+                $tiba[0]._fp.clear();
+            }
+        });
+    }
+
+    const $site = $body.find('.fwo-site');
+    $site.select2({
+        width: '100%', allowClear: true, placeholder: 'Pilih Site', minimumInputLength: 0,
+        dropdownParent: $fwoCard,
+        ajax: {
+            url: window.cloneRoute.select2Site, dataType: 'json', delay: 250,
+            data: (p) => ({ q: p.term, id_br: wo.id_pelanggan_pekerjaan || '' }),
+            processResults: (d) => ({ results: d }), cache: false,
+        },
+        escapeMarkup: (m) => m,
+    });
+    if (fwo.id_site_pelanggan_pekerjaan) {
+        $site.append(new Option(fwo.nama_site || ('#' + fwo.id_site_pelanggan_pekerjaan), fwo.id_site_pelanggan_pekerjaan, true, true)).trigger('change');
+    }
+
+    const $pic = $body.find('.fwo-pic');
+    $pic.select2({
+        width: '100%', allowClear: true, placeholder: 'Pilih PIC Pekerjaan', minimumInputLength: 0,
+        dropdownParent: $fwoCard,
+        ajax: {
+            url: window.cloneRoute.select2Contact, dataType: 'json', delay: 250,
+            data: (p) => ({ q: p.term, with_site: 1 }), processResults: (d) => ({ results: d }), cache: false,
+        },
+        escapeMarkup: (m) => m,
+    });
+    if (fwo.id_pic_pelanggan_pekerjaan) {
+        $pic.append(new Option(fwo.nama_pic || ('#' + fwo.id_pic_pelanggan_pekerjaan), fwo.id_pic_pelanggan_pekerjaan, true, true)).trigger('change');
+    }
+
+    $body.find('.fwo-boq-other-row, .fwo-boq-sampling-row').each(function () {
+        const $row = $(this);
+        const sourceRow = (fwo.fwo_boq_other || []).concat(fwo.fwo_boq_sampling || [])
+            .find((r) => String(r.source_id_boq_tambahan) === String($row.data('source-id-boq-tambahan')));
+        initSatuanSelectForRow($row, $fwoCard, sourceRow);
+        bindRowIncludeToggle($row);
+    });
+
+    $body.find('.fieldwork-boq-row:not(.fieldwork-boq-new-row)').each(function () {
+        bindRowIncludeToggle($(this));
+    });
+
+    $body.find('.personel-row').each(function () {
+        const $row = $(this);
+        const sourceRow = (fwo.personel || []).find((r) => String(r.source_id_fwo_personel) === String($row.data('source-id-fwo-personel')));
+        initPersonelSelectForRow($row, $fwoCard, sourceRow);
+    });
+}
+
+function initSatuanSelectForRow($row, $card, sourceRow) {
+    const $satuan = $row.find('.row-satuan');
+    $satuan.select2({
+        width: '100%', allowClear: true, placeholder: 'Satuan', minimumInputLength: 0,
+        dropdownParent: $card,
+        ajax: {
+            url: window.cloneRoute.select2Satuan, dataType: 'json', delay: 200,
+            data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }), cache: true,
+        },
+        escapeMarkup: (m) => m,
+    });
+    if (sourceRow && sourceRow.id_satuan) {
+        $satuan.append(new Option(sourceRow.satuan || ('#' + sourceRow.id_satuan), sourceRow.id_satuan, true, true)).trigger('change');
+    }
+}
+
+function bindRowIncludeToggle($row) {
+    $row.find('.row-include').on('change', function () {
+        const on = $(this).is(':checked');
+        $row.find('input, select').not('.row-include').prop('disabled', !on);
+        $row.toggleClass('opacity-50', !on);
+    });
+}
+
+// Kumpulkan id_testing_point yang SUDAH dipakai di WO ini — baik dari baris
+// hasil clone maupun baris baru lain — supaya tidak ada 2 BOQ dengan Testing
+// Point yang sama dalam 1 WO (aturan yang sama seperti BoqController::store()).
+function usedTestingPointIds($body, excludeSelect) {
+    const ids = new Set();
+    $body.find('.boq-row').each(function () {
+        const tp = $(this).data('id-testing-point');
+        if (tp) ids.add(String(tp));
+    });
+    $body.find('.new-boq-point').each(function () {
+        if (excludeSelect && this === excludeSelect[0]) return;
+        const val = $(this).val();
+        if (val) ids.add(String(val));
+    });
+    return ids;
+}
+
+function initNewBoqRow($mainRow, $card, $body) {
+    const $point = $mainRow.find('.new-boq-point');
+    const $itemsRow = $mainRow.next('.boq-new-row-items');
+    const $toggle = $itemsRow.find('.new-boq-items-toggle');
+    const $checklist = $itemsRow.find('.new-boq-items-checklist');
+    const $count = $toggle.find('.checked-count');
+
+    initSatuanSelectForRow($mainRow, $card, null);
+    bindRowIncludeToggle($mainRow);
+
+    function updateCheckedCount() {
+        $count.text($checklist.find('.new-boq-item-check:checked').length);
+    }
+
+    // Panel checklist bisa di-expand/collapse — begitu Testing Point sudah
+    // punya banyak Testing Item (kadang puluhan), user tidak wajib melihat
+    // semuanya terus-menerus, cukup lihat ringkasan jumlah yang dicentang.
+    $toggle.on('click', function () {
+        const collapsed = $checklist.hasClass('d-none');
+        $checklist.toggleClass('d-none', !collapsed);
+        $toggle.find('.toggle-icon').css('transform', collapsed ? 'rotate(0deg)' : 'rotate(-90deg)');
+    });
+
+    $itemsRow.on('change', '.new-boq-item-check', updateCheckedCount);
+
+    $point.select2({
+        width: '100%', allowClear: true, placeholder: 'Pilih Testing Point', minimumInputLength: 1,
+        dropdownParent: $card,
+        ajax: {
+            url: window.cloneRoute.select2TestingPoint, dataType: 'json', delay: 250,
+            data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }), cache: true,
+        },
+        escapeMarkup: (m) => m,
+    });
+
+    $point.on('select2:select', function (e) {
+        const pointId = e.params.data.id;
+
+        if (usedTestingPointIds($body, $point).has(String(pointId))) {
+            Notify.error('Testing Point ini sudah dipakai di BOQ lain pada WO yang sama.');
+            $point.val(null).trigger('change');
+            $toggle.addClass('d-none');
+            $checklist.removeClass('d-none').html('<span class="text-muted fst-italic">Pilih Testing Point dulu untuk memilih Testing Item-nya.</span>');
+            return;
         }
 
-        $row.find('.row-include').on('change', function () {
-            const on = $(this).is(':checked');
-            $row.find('input, select').not('.row-include').prop('disabled', !on);
-            $row.toggleClass('opacity-50', !on);
+        $toggle.addClass('d-none');
+        $checklist.removeClass('d-none').html('<i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat Testing Item...');
+        $.get(window.cloneRoute.itemsByPoint + pointId, function (res) {
+            const items = res.data || [];
+            if (!items.length) {
+                $checklist.html('<span class="text-muted fst-italic">Testing Point ini belum punya Testing Item.</span>');
+                return;
+            }
+            $checklist.html(items.map((it) => `
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input new-boq-item-check" value="${it.id_testing_item}" id="ntpi_${pointId}_${it.id_testing_item}" checked>
+                    <label class="form-check-label small" for="ntpi_${pointId}_${it.id_testing_item}">
+                        ${escHtml(it.judul_indonesia || '-')} <span class="text-muted">/ ${escHtml(it.judul_inggris || '-')}</span>
+                    </label>
+                </div>
+            `).join(''));
+            $toggle.removeClass('d-none');
+            $toggle.find('.toggle-icon').css('transform', 'rotate(0deg)');
+            updateCheckedCount();
+        }).fail(function () {
+            $checklist.html('<span class="text-danger">Gagal memuat Testing Item.</span>');
         });
+    });
+
+    $point.on('select2:clear', function () {
+        $toggle.addClass('d-none');
+        $checklist.removeClass('d-none').html('<span class="text-muted fst-italic">Pilih Testing Point dulu untuk memilih Testing Item-nya.</span>');
     });
 }
 
@@ -492,6 +1279,41 @@ function findSourceRow($row, wo) {
         return (wo.boq_other || []).concat(wo.boq_sampling || []).find((r) => String(r.source_id_boq_tambahan) === String($row.data('source-id-boq-tambahan')));
     }
     return null;
+}
+
+// ── Resize kolom tabel (ala Excel) ─────────────────────────────────────────
+
+// Tambahkan handle drag di pinggir kanan tiap kolom header — geser untuk
+// mengubah lebar kolom itu. table-layout:fixed dipaksa supaya lebar kolom
+// murni ditentukan lebar <th> (bukan ikut melar mengikuti konten <td>), jadi
+// drag-nya konsisten & tidak "dilawan" oleh isi baris.
+function makeTableColumnsResizable($table) {
+    if (!$table.length || $table.data('resizableInit')) return;
+    $table.data('resizableInit', true);
+    $table.css('table-layout', 'fixed');
+
+    $table.find('thead th').each(function () {
+        const $th = $(this);
+        $th.css({ position: 'relative', width: $th.outerWidth() + 'px' });
+        $th.append('<span class="col-resize-handle"></span>');
+    });
+
+    $table.on('mousedown', '.col-resize-handle', function (e) {
+        e.preventDefault();
+        const $th = $(this).closest('th');
+        const startX = e.pageX;
+        const startWidth = $th.outerWidth();
+        $(this).addClass('resizing');
+
+        $(document).on('mousemove.colResize', function (ev) {
+            const newWidth = Math.max(40, startWidth + (ev.pageX - startX));
+            $th.css('width', newWidth + 'px');
+        });
+        $(document).on('mouseup.colResize', function () {
+            $table.find('.col-resize-handle').removeClass('resizing');
+            $(document).off('mousemove.colResize mouseup.colResize');
+        });
+    });
 }
 
 // ── Submit ──────────────────────────────────────────────────────────────
@@ -508,8 +1330,19 @@ function collectWoPayload($card, wo) {
                 harga: rawNumVal($row.find('.row-harga')[0]) ?? 0,
                 keterangan: $row.find('.row-keterangan').val() || null,
             };
-            base[keyField] = $row.data(keyField.replace(/_/g, '-'));
+            base[keyField] = $row.data(keyField.replace(/_/g, '-')) || null;
             if (nameEditable) base.nama_item = $row.find('.row-nama').val();
+
+            // Baris BOQ baru (bukan hasil clone) — tidak punya source_id_boq,
+            // butuh id_testing_point yang dipilih + Testing Item mana saja
+            // yang dicentang di checklist pasangannya.
+            if ($row.hasClass('boq-new-row')) {
+                base.id_testing_point = $row.find('.new-boq-point').val() || null;
+                base.id_testing_items = $row.next('.boq-new-row-items')
+                    .find('.new-boq-item-check:checked')
+                    .map(function () { return $(this).val(); })
+                    .get();
+            }
             return base;
         }).get();
     };
@@ -528,7 +1361,229 @@ function collectWoPayload($card, wo) {
         boq: collectRows('boq', 'source_id_boq', false),
         boq_other: collectRows('boq-other', 'source_id_boq_tambahan', true),
         boq_sampling: collectRows('boq-sampling', 'source_id_boq_tambahan', true),
+        fwos: collectFwosPayload($body, wo),
     };
+}
+
+// Sama seperti WO yang belum di-expand: kalau card FWO tidak pernah dibuka,
+// body-nya belum ada di DOM — kirim apa adanya dari data sumber supaya tidak
+// diam-diam hilang dari payload.
+function collectFwosPayload($woBody, wo) {
+    const result = [];
+    $woBody.find('.fwo-card').each(function () {
+        const $fwoCard = $(this);
+        const fwo = (wo.fwos || []).find((f) => f.id_fwo === Number($fwoCard.data('source-id-fwo')));
+        if (!fwo) return;
+
+        if (!$fwoCard.find('.accordion-body').children().length) {
+            result.push(fallbackFwoPayload(fwo, $fwoCard.find('.fwo-include').is(':checked')));
+            return;
+        }
+
+        result.push(collectFwoPayload($fwoCard, fwo));
+    });
+    return result;
+}
+
+function fallbackFwoPayload(fwo, include) {
+    return {
+        source_id_fwo: fwo.id_fwo,
+        include: include !== false,
+        judul_pekerjaan: fwo.judul_pekerjaan,
+        id_site_pelanggan_pekerjaan: fwo.id_site_pelanggan_pekerjaan,
+        id_pic_pelanggan_pekerjaan: fwo.id_pic_pelanggan_pekerjaan,
+        tanggal_mulai: fwo.tanggal_mulai,
+        tanggal_selesai: fwo.tanggal_selesai,
+        waktu_kedatangan: fwo.waktu_kedatangan,
+        keterangan: fwo.keterangan,
+        fieldwork_boq: (fwo.fieldwork_boq || []).map((r) => ({ source_id_fwo_boq: r.source_id_fwo_boq, include: true, id_testing_point: r.id_testing_point, qty: r.qty, keterangan: r.keterangan })),
+        fwo_boq_other: (fwo.fwo_boq_other || []).map((r) => ({ source_id_boq_tambahan: r.source_id_boq_tambahan, include: true, nama_item: r.nama_item, qty: r.qty, id_satuan: r.id_satuan, harga: r.harga, keterangan: r.keterangan })),
+        fwo_boq_sampling: (fwo.fwo_boq_sampling || []).map((r) => ({ source_id_boq_tambahan: r.source_id_boq_tambahan, include: true, nama_item: r.nama_item, qty: r.qty, id_satuan: r.id_satuan, harga: r.harga, keterangan: r.keterangan })),
+        personel: (fwo.personel || []).map((r) => ({ source_id_fwo_personel: r.source_id_fwo_personel, include: true, id_personnel: r.id_personnel, role: r.role })),
+    };
+}
+
+function collectFwoPayload($fwoCard, fwo) {
+    const $body = $fwoCard.find('.accordion-body');
+
+    const collectTambahanRows = (rowClass) => $body.find(`.${rowClass}-row`).map(function () {
+        const $row = $(this);
+        return {
+            source_id_boq_tambahan: $row.data('source-id-boq-tambahan') || null,
+            include: $row.find('.row-include').is(':checked'),
+            nama_item: $row.find('.row-nama').val(),
+            qty: rawNumVal($row.find('.row-qty')[0]) ?? null,
+            id_satuan: $row.find('.row-satuan').val() || null,
+            harga: rawNumVal($row.find('.row-harga')[0]) ?? 0,
+            keterangan: $row.find('.row-keterangan').val() || null,
+        };
+    }).get();
+
+    const fieldworkBoq = $body.find('.fieldwork-boq-row').map(function () {
+        const $row = $(this);
+        const base = {
+            source_id_fwo_boq: $row.data('source-id-fwo-boq') || null,
+            include: $row.find('.row-include').is(':checked'),
+            qty: rawNumVal($row.find('.row-qty')[0]) ?? null,
+            keterangan: $row.find('.row-keterangan').val() || null,
+        };
+        if ($row.hasClass('fieldwork-boq-new-row')) {
+            base.id_testing_point = $row.find('.new-fieldwork-boq-point').val() || null;
+        } else {
+            base.id_testing_point = $row.data('id-testing-point') || null;
+        }
+        return base;
+    }).get();
+
+    const personel = $body.find('.personel-row').map(function () {
+        const $row = $(this);
+        return {
+            source_id_fwo_personel: $row.data('source-id-fwo-personel') || null,
+            include: true,
+            id_personnel: $row.find('.row-personnel').val() || null,
+            role: $row.find('.row-role').val() || null,
+        };
+    }).get();
+
+    return {
+        source_id_fwo: fwo.id_fwo,
+        include: $fwoCard.find('.fwo-include').is(':checked'),
+        judul_pekerjaan: $body.find('.fwo-judul').val() || fwo.judul_pekerjaan,
+        id_site_pelanggan_pekerjaan: $body.find('.fwo-site').val() || null,
+        id_pic_pelanggan_pekerjaan: $body.find('.fwo-pic').val() || null,
+        tanggal_mulai: $body.find('.fwo-tgl-mulai').val() || null,
+        tanggal_selesai: $body.find('.fwo-tgl-selesai').val() || null,
+        waktu_kedatangan: $body.find('.fwo-waktu-kedatangan').val() || null,
+        keterangan: $body.find('.fwo-keterangan').val() || null,
+        fieldwork_boq: fieldworkBoq,
+        fwo_boq_other: collectTambahanRows('fwo-boq-other'),
+        fwo_boq_sampling: collectTambahanRows('fwo-boq-sampling'),
+        personel,
+    };
+}
+
+// Validasi di frontend sebelum kirim — supaya field yang salah/kosong dapat
+// pesan yang jelas ("Isi Qty untuk ...") langsung di halaman, bukan baru
+// ketahuan setelah request nyangkut jadi error SQL mentah dari server
+// (dilaporkan user: "Column 'qty' cannot be null" tampil apa adanya).
+// Backend tetap validasi ulang semua ini juga (frontend tidak pernah jadi
+// satu-satunya lapis pertahanan), tapi supaya user tidak perlu submit dulu
+// baru tahu salahnya di mana, dicek juga di sini lebih dulu.
+function validateWosPayload(wosPayload) {
+    const errors = [];
+
+    wosPayload.forEach((wo) => {
+        if (!wo.include) return;
+
+        const source = (cloneSourceData.wos || []).find((w) => w.id_wo === wo.source_id_wo);
+        const woLabel = source ? source.no_wo : `WO #${wo.source_id_wo}`;
+
+        if (!wo.judul_pekerjaan || !String(wo.judul_pekerjaan).trim()) {
+            errors.push(`${woLabel}: Judul Pekerjaan wajib diisi.`);
+        }
+
+        if (wo.tanggal_mulai && wo.tanggal_selesai && String(wo.tanggal_selesai) < String(wo.tanggal_mulai)) {
+            errors.push(`${woLabel}: Tanggal Selesai tidak boleh sebelum Tanggal Mulai.`);
+        }
+
+        (wo.boq || []).forEach((r) => {
+            if (!r.include) return;
+            if (!r.qty || r.qty < 1) {
+                errors.push(`${woLabel}: isi Qty (minimal 1) untuk salah satu baris BOQ.`);
+            }
+            if (!r.source_id_boq) {
+                if (!r.id_testing_point) {
+                    errors.push(`${woLabel}: ada baris BOQ baru yang belum memilih Testing Point.`);
+                } else if (!r.id_testing_items || !r.id_testing_items.length) {
+                    errors.push(`${woLabel}: pilih minimal 1 Testing Item untuk BOQ baru yang ditambahkan.`);
+                }
+            }
+        });
+
+        ['boq_other', 'boq_sampling'].forEach((key) => {
+            const label = key === 'boq_sampling' ? 'BOQ Sampling' : 'BOQ Other';
+            (wo[key] || []).forEach((r) => {
+                if (!r.include) return;
+                if (!r.nama_item || !String(r.nama_item).trim()) {
+                    errors.push(`${woLabel}: isi Nama Item untuk salah satu baris ${label}.`);
+                }
+                if (!r.qty || r.qty < 1) {
+                    errors.push(`${woLabel}: isi Qty (minimal 1) untuk salah satu baris ${label}.`);
+                }
+            });
+        });
+
+        (wo.fwos || []).forEach((fwo) => {
+            const woSource = (cloneSourceData.wos || []).find((w) => w.id_wo === wo.source_id_wo);
+            const fwoSource = woSource ? (woSource.fwos || []).find((f) => f.id_fwo === fwo.source_id_fwo) : null;
+            const fwoLabel = fwoSource ? fwoSource.no_fwo : `FWO #${fwo.source_id_fwo}`;
+
+            if (!fwo.judul_pekerjaan || !String(fwo.judul_pekerjaan).trim()) {
+                errors.push(`${woLabel} — ${fwoLabel}: Judul Pekerjaan wajib diisi.`);
+            }
+            if (!fwo.id_pic_pelanggan_pekerjaan) {
+                errors.push(`${woLabel} — ${fwoLabel}: PIC Pekerjaan wajib diisi.`);
+            }
+
+            // Rentang tanggal FWO wajib di dalam rentang tanggal WO-nya
+            // sendiri — dicek juga di backend, ini supaya user tahu lebih
+            // awal (flatpickr sudah membatasi pilihan, tapi tetap dicek
+            // ulang di sini kalau ada isian lama di luar rentang baru).
+            const woMulaiCmp = wo.tanggal_mulai ? String(wo.tanggal_mulai).substring(0, 10) : null;
+            const woSelesaiCmp = wo.tanggal_selesai ? String(wo.tanggal_selesai).substring(0, 10) : null;
+            const fwoMulaiCmp = fwo.tanggal_mulai ? String(fwo.tanggal_mulai).substring(0, 10) : null;
+            const fwoSelesaiCmp = fwo.tanggal_selesai ? String(fwo.tanggal_selesai).substring(0, 10) : null;
+
+            if (fwoMulaiCmp && woMulaiCmp && fwoMulaiCmp < woMulaiCmp) {
+                errors.push(`${woLabel} — ${fwoLabel}: Tanggal Mulai FWO tidak boleh sebelum Tanggal Mulai WO (${woMulaiCmp}).`);
+            }
+            if (fwoMulaiCmp && woSelesaiCmp && fwoMulaiCmp > woSelesaiCmp) {
+                errors.push(`${woLabel} — ${fwoLabel}: Tanggal Mulai FWO tidak boleh setelah Tanggal Selesai WO (${woSelesaiCmp}).`);
+            }
+            if (fwoSelesaiCmp && woMulaiCmp && fwoSelesaiCmp < woMulaiCmp) {
+                errors.push(`${woLabel} — ${fwoLabel}: Tanggal Selesai FWO tidak boleh sebelum Tanggal Mulai WO (${woMulaiCmp}).`);
+            }
+            if (fwoSelesaiCmp && woSelesaiCmp && fwoSelesaiCmp > woSelesaiCmp) {
+                errors.push(`${woLabel} — ${fwoLabel}: Tanggal Selesai FWO tidak boleh setelah Tanggal Selesai WO (${woSelesaiCmp}).`);
+            }
+
+            (fwo.fieldwork_boq || []).forEach((r) => {
+                if (!r.include) return;
+                if (!r.qty || r.qty < 1) {
+                    errors.push(`${woLabel} — ${fwoLabel}: isi Qty (minimal 1) untuk salah satu baris Fieldwork BOQ.`);
+                }
+                if (!r.source_id_fwo_boq && !r.id_testing_point) {
+                    errors.push(`${woLabel} — ${fwoLabel}: ada baris Fieldwork BOQ baru yang belum memilih Testing Point.`);
+                }
+            });
+
+            ['fwo_boq_other', 'fwo_boq_sampling'].forEach((key) => {
+                const label = key === 'fwo_boq_sampling' ? 'BOQ Sampling' : 'BOQ Other';
+                (fwo[key] || []).forEach((r) => {
+                    if (!r.include) return;
+                    if (!r.nama_item || !String(r.nama_item).trim()) {
+                        errors.push(`${woLabel} — ${fwoLabel}: isi Nama Item untuk salah satu baris ${label}.`);
+                    }
+                    if (!r.qty || r.qty < 1) {
+                        errors.push(`${woLabel} — ${fwoLabel}: isi Qty (minimal 1) untuk salah satu baris ${label}.`);
+                    }
+                });
+            });
+
+            (fwo.personel || []).forEach((r) => {
+                if (!r.id_personnel) {
+                    errors.push(`${woLabel} — ${fwoLabel}: pilih Personnel untuk salah satu baris Personel.`);
+                }
+                if (!r.role) {
+                    errors.push(`${woLabel} — ${fwoLabel}: pilih Role untuk salah satu baris Personel.`);
+                }
+            });
+        });
+    });
+
+    // Hilangkan duplikat pesan (mis. 2 baris BOQ sama-sama kosong Qty di WO
+    // yang sama) supaya tidak muncul notifikasi bertumpuk-tumpuk.
+    return [...new Set(errors)];
 }
 
 function submitClone() {
@@ -566,6 +1621,11 @@ function submitClone() {
         return;
     }
 
+    if (soPayload.tanggal_mulai && soPayload.tanggal_selesai && soPayload.tanggal_selesai < soPayload.tanggal_mulai) {
+        Notify.error('Tanggal Selesai SO tidak boleh sebelum Tanggal Mulai SO.');
+        return;
+    }
+
     const wosPayload = [];
     $('#woAccordion .wo-card').each(function () {
         const idx = $(this).data('wo-index');
@@ -589,12 +1649,19 @@ function submitClone() {
                 boq: (wo.boq || []).map((r) => ({ source_id_boq: r.source_id_boq, include: true, qty: r.qty, id_satuan: r.id_satuan, harga: r.harga, keterangan: r.keterangan })),
                 boq_other: (wo.boq_other || []).map((r) => ({ source_id_boq_tambahan: r.source_id_boq_tambahan, include: true, nama_item: r.nama_item, qty: r.qty, id_satuan: r.id_satuan, harga: r.harga, keterangan: r.keterangan })),
                 boq_sampling: (wo.boq_sampling || []).map((r) => ({ source_id_boq_tambahan: r.source_id_boq_tambahan, include: true, nama_item: r.nama_item, qty: r.qty, id_satuan: r.id_satuan, harga: r.harga, keterangan: r.keterangan })),
+                fwos: (wo.fwos || []).map((fwo) => fallbackFwoPayload(fwo)),
             });
             return;
         }
 
         wosPayload.push(collectWoPayload($(this), wo));
     });
+
+    const validationErrors = validateWosPayload(wosPayload);
+    if (validationErrors.length) {
+        Notify.error(validationErrors.join('<br>'));
+        return;
+    }
 
     const includedCount = wosPayload.filter((w) => w.include).length;
 

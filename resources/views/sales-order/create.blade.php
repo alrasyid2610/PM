@@ -28,12 +28,12 @@
                         <input type="text" name="judul_order" class="form-control" required>
                     </div>
                     <div class="col-md-4 col-12">
-                        <label class="form-label">Tanggal Mulai</label>
-                        <input type="text" name="tanggal_mulai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
+                        <label class="form-label required">Tanggal Mulai</label>
+                        <input type="text" name="tanggal_mulai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off" required>
                     </div>
                     <div class="col-md-4 col-12">
-                        <label class="form-label">Tanggal Selesai</label>
-                        <input type="text" name="tanggal_selesai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
+                        <label class="form-label required">Tanggal Selesai</label>
+                        <input type="text" name="tanggal_selesai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off" required>
                     </div>
                     <div class="col-md-4 col-12">
                         <label class="form-label">Office</label>
@@ -116,8 +116,8 @@
                         </div>
                     </div>
                     <div class="col-md-4 col-12">
-                        <label class="form-label">Perusahaan</label>
-                        <select name="id_pelanggan_delivery" class="form-select">
+                        <label class="form-label required">Perusahaan</label>
+                        <select name="id_pelanggan_delivery" class="form-select" required>
                             <option value="">Pilih Pelanggan</option>
                         </select>
                     </div>
@@ -127,8 +127,8 @@
                         </div>
                     </div>
                     <div class="col-md-4 col-12">
-                        <label class="form-label">Perusahaan</label>
-                        <select name="id_pelanggan_payment" class="form-select">
+                        <label class="form-label required">Perusahaan</label>
+                        <select name="id_pelanggan_payment" class="form-select" required>
                             <option value="">Pilih Pelanggan</option>
                         </select>
                     </div>
@@ -137,20 +137,20 @@
                 <!-- Site -->
                 <div class="row g-3 mb-1">
                     <div class="col-md-4 col-12">
-                        <label class="form-label">Site</label>
-                        <select name="id_site_pelanggan" id="id_site_pelanggan" class="form-select">
+                        <label class="form-label required">Site</label>
+                        <select name="id_site_pelanggan" id="id_site_pelanggan" class="form-select" required>
                             <option value="">Pilih Site</option>
                         </select>
                     </div>
                     <div class="col-md-4 col-12">
-                        <label class="form-label">Site</label>
-                        <select name="id_site_pelanggan_delivery" id="id_site_pelanggan_delivery" class="form-select">
+                        <label class="form-label required">Site</label>
+                        <select name="id_site_pelanggan_delivery" id="id_site_pelanggan_delivery" class="form-select" required>
                             <option value="">Pilih Site</option>
                         </select>
                     </div>
                     <div class="col-md-4 col-12">
-                        <label class="form-label">Site</label>
-                        <select name="id_site_pelanggan_payment" id="id_site_pelanggan_payment_select" class="form-select">
+                        <label class="form-label required">Site</label>
+                        <select name="id_site_pelanggan_payment" id="id_site_pelanggan_payment_select" class="form-select" required>
                             <option value="">Pilih Site</option>
                         </select>
                     </div>
@@ -159,26 +159,26 @@
                 <!-- PIC — Section 3 -->
                 <div class="row g-3">
                     <div class="col-md-4 col-12">
-                        <label class="form-label">PIC</label>
+                        <label class="form-label required">PIC</label>
                         <select name="id_pic_pelanggan"
                             id="id_pic_pelanggan"
-                            class="form-select">
+                            class="form-select" required>
                             <option value="">Pilih PIC</option>
                         </select>
                     </div>
                     <div class="col-md-4 col-12">
-                        <label class="form-label">PIC</label>
+                        <label class="form-label required">PIC</label>
                         <select name="id_pic_pelanggan_delivery"
                             id="id_pic_pelanggan_delivery"
-                            class="form-select">
+                            class="form-select" required>
                             <option value="">Pilih PIC</option>
                         </select>
                     </div>
                     <div class="col-md-4 col-12">
-                        <label class="form-label">PIC</label>
+                        <label class="form-label required">PIC</label>
                         <select name="id_pic_pelanggan_payment"
                             id="id_pic_pelanggan_payment"
-                            class="form-select">
+                            class="form-select" required>
                             <option value="">Pilih PIC</option>
                         </select>
                     </div>
@@ -192,20 +192,20 @@
             <x-section-card icon="fa-users" color="icon-green" title="PIC Internal" subtitle="Penanggung jawab dari Pramatek">
                 <div class="row g-3">
                     <div class="col-md-3 col-12">
-                        <label class="form-label">PIC Input</label>
-                        <select name="pic_input" id="pic_input" class="form-select">
+                        <label class="form-label required">PIC Input</label>
+                        <select name="pic_input" id="pic_input" class="form-select" required>
                             <option value="">Pilih PIC Input</option>
                         </select>
                     </div>
                     <div class="col-md-3 col-12">
-                        <label class="form-label">PIC Order</label>
-                        <select name="pic_order" id="pic_order" class="form-select">
+                        <label class="form-label required">PIC Order</label>
+                        <select name="pic_order" id="pic_order" class="form-select" required>
                             <option value="">Pilih PIC Order</option>
                         </select>
                     </div>
                     <div class="col-md-3 col-12">
-                        <label class="form-label">Marketing Internal</label>
-                        <select name="pic_marketing_internal" id="pic_marketing_internal" class="form-select">
+                        <label class="form-label required">Marketing Internal</label>
+                        <select name="pic_marketing_internal" id="pic_marketing_internal" class="form-select" required>
                             <option value="">Pilih Marketing Internal</option>
                         </select>
                     </div>
@@ -503,6 +503,45 @@
             });
         });
     }
+
+    // Validasi field wajib manual sebelum submit — select2 menyembunyikan
+    // <select> aslinya, jadi atribut HTML `required` tidak selalu memicu
+    // tooltip validasi native browser dengan konsisten. Dipasang SEBELUM
+    // submitCreateForm() supaya handler ini jalan lebih dulu (jQuery
+    // menjalankan handler "submit" sesuai urutan didaftarkan) dan bisa
+    // membatalkan submit dengan stopImmediatePropagation() kalau ada yang
+    // kosong — notifikasi jelas menyebutkan field mana saja yang belum diisi.
+    $('#salesOrderForm').on('submit', function (e) {
+        const requiredFields = [
+            ['input[name="tanggal_so"]', 'Tanggal SO'],
+            ['input[name="judul_order"]', 'Judul Order'],
+            ['input[name="tanggal_mulai"]', 'Tanggal Mulai'],
+            ['input[name="tanggal_selesai"]', 'Tanggal Selesai'],
+            ['select[name="id_pelanggan"]', 'Perusahaan (Data Pemesan)'],
+            ['select[name="id_site_pelanggan"]', 'Site (Data Pemesan)'],
+            ['select[name="id_pic_pelanggan"]', 'PIC (Data Pemesan)'],
+            ['select[name="id_pelanggan_delivery"]', 'Perusahaan (Data Pengiriman)'],
+            ['select[name="id_site_pelanggan_delivery"]', 'Site (Data Pengiriman)'],
+            ['select[name="id_pic_pelanggan_delivery"]', 'PIC (Data Pengiriman)'],
+            ['select[name="id_pelanggan_payment"]', 'Perusahaan (Data Pembayaran)'],
+            ['select[name="id_site_pelanggan_payment"]', 'Site (Data Pembayaran)'],
+            ['select[name="id_pic_pelanggan_payment"]', 'PIC (Data Pembayaran)'],
+            ['select[name="pic_input"]', 'PIC Input'],
+            ['select[name="pic_order"]', 'PIC Order'],
+            ['select[name="pic_marketing_internal"]', 'Marketing Internal'],
+        ];
+
+        const missing = requiredFields
+            .filter(([sel]) => !$(sel).val())
+            .map(([, label]) => label);
+
+        if (missing.length) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            Notify.error('Field berikut wajib diisi:<br>' + missing.map((m) => '• ' + m).join('<br>'));
+            return false;
+        }
+    });
 
     submitCreateForm({
         formId: "#salesOrderForm",

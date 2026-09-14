@@ -8,6 +8,57 @@
     <li class="breadcrumb-item active" aria-current="page">Clone</li>
 @endsection
 
+@section('style')
+    <style>
+        .col-resize-handle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 6px;
+            height: 100%;
+            cursor: col-resize;
+            user-select: none;
+            z-index: 2;
+        }
+        .col-resize-handle:hover,
+        .col-resize-handle.resizing {
+            background: rgba(29, 78, 216, 0.35);
+        }
+        table.boq-table thead th,
+        table.boq-other-table thead th,
+        table.boq-sampling-table thead th {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Header WO tetap kelihatan (sticky) begitu card-nya dibuka —
+           supaya waktu scroll ke bawah lihat BOQ/FWO, user tidak kehilangan
+           konteks "WO mana yang lagi dibuka" karena headernya ikut ter-scroll
+           ke atas dan hilang dari layar. */
+        #woAccordion .wo-card > .accordion-header {
+            position: sticky;
+            top: 0;
+            z-index: 3;
+            background: #fff;
+        }
+
+        /* .detail-section-card (wrapper komponen section-card) pakai overflow:hidden
+           bawaan (buat clip sudut rounded) — tapi overflow selain "visible" di
+           ANCESTOR manapun membatalkan position:sticky pada keturunannya,
+           makanya sticky di atas tidak pernah nyala. Dilepas KHUSUS section
+           WO ini saja (bukan global) supaya section lain tidak kena efek
+           sampingnya, sudut atas dibulatkan manual sebagai gantinya. */
+        #woSectionWrap .detail-section-card {
+            overflow: visible;
+        }
+        #woSectionWrap .detail-section-header {
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+    </style>
+@endsection
+
 @section('content')
 <section class="section">
 
@@ -27,7 +78,7 @@
                 <div>
                     Menyalin dari <strong id="cloneSourceLabel">-</strong>. Semua field di bawah pre-filled dari data sumber
                     dan bisa diedit bebas sebelum disimpan. WO yang tidak dicentang "Sertakan" tidak akan ikut disalin
-                    (beserta seluruh BOQ di dalamnya). <strong>Belum termasuk FWO, Budget, dan Personel</strong> — menyusul di tahap berikutnya.
+                    (beserta seluruh BOQ, FWO, Fieldwork BOQ, dan Personel di dalamnya). <strong>Belum termasuk Budget Plan & Realisasi</strong> — menyusul di tahap berikutnya.
                 </div>
             </div>
         </div>
@@ -175,7 +226,7 @@
         </div>
 
         <!-- SECTION WORK ORDER (hierarki: BOQ menempel di dalam tiap card WO) -->
-        <div class="col-12">
+        <div class="col-12" id="woSectionWrap">
             <x-section-card icon="fa-briefcase" color="icon-blue" title="Work Order" subtitle="Pilih & sesuaikan WO yang ikut disalin">
                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
                     <div class="pm-search">
@@ -217,6 +268,9 @@
         select2Contact:  "{{ route('business-relation-contacts.select2') }}",
         select2User:     "{{ route('users.select2') }}",
         select2Satuan:   "{{ route('satuan.select2') }}",
+        select2TestingPoint: "{{ route('testing-points.select2') }}",
+        itemsByPoint:    "{{ url('testing-items/by-point') }}/",
+        select2Personnel: "{{ route('personnel.select2') }}",
     };
 </script>
 <script src="{{ asset('assets/js/sales-order/clone.js') }}"></script>

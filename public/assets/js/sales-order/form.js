@@ -284,6 +284,7 @@ function renderForm(res) {
                             label: res.nama_pelanggan,
                             className: "col-md-4",
                             createUrl: "/business-relations/create",
+                            required: true,
                         },
                     )}
                     <div class="col-12 d-md-none">
@@ -303,6 +304,7 @@ function renderForm(res) {
                             label: res.pelanggan_delivery,
                             className: "col-md-4",
                             createUrl: "/business-relations/create",
+                            required: true,
                         },
                     )}
                     <div class="col-12 d-md-none">
@@ -322,6 +324,7 @@ function renderForm(res) {
                             label: res.pelanggan_pay,
                             className: "col-md-4",
                             createUrl: "/business-relations/create",
+                            required: true,
                         },
                     )}
                 </div>
@@ -340,6 +343,7 @@ function renderForm(res) {
                             label: res.nama_site_pelanggan,
                             className: "col-md-4",
                             createUrl: "/business-relations/create",
+                            required: true,
                         },
                     )}
                     ${formGroup.select(
@@ -354,6 +358,7 @@ function renderForm(res) {
                             label: res.pelanggan_site_delivery,
                             className: "col-md-4",
                             createUrl: "/business-relations/create",
+                            required: true,
                         },
                     )}
                     ${formGroup.select(
@@ -368,6 +373,7 @@ function renderForm(res) {
                             label: res.pelanggan_site_pay,
                             className: "col-md-4",
                             createUrl: "/business-relations/create",
+                            required: true,
                         },
                     )}
                 </div>
@@ -375,22 +381,22 @@ function renderForm(res) {
                 <!-- PIC -->
                 <div class="row g-3 form-1">
                     <div class="mb-3 col-md-4">
-                        <label class="form-label">PIC</label>
-                        <select name="id_pic_pelanggan" id="detail_id_pic_pelanggan" class="form-select disabled">
+                        <label class="form-label required">PIC</label>
+                        <select name="id_pic_pelanggan" id="detail_id_pic_pelanggan" class="form-select disabled" required>
                             <option value=""></option>
                             ${res.id_pic_pelanggan ? `<option value="${res.id_pic_pelanggan}" selected>${escHtml(res.pic_pelanggan ?? '')}</option>` : ''}
                         </select>
                     </div>
                     <div class="mb-3 col-md-4">
-                        <label class="form-label">PIC</label>
-                        <select name="id_pic_pelanggan_delivery" id="detail_id_pic_pelanggan_delivery" class="form-select disabled">
+                        <label class="form-label required">PIC</label>
+                        <select name="id_pic_pelanggan_delivery" id="detail_id_pic_pelanggan_delivery" class="form-select disabled" required>
                             <option value=""></option>
                             ${res.id_pic_pelanggan_delivery ? `<option value="${res.id_pic_pelanggan_delivery}" selected>${escHtml(res.pic_pelanggan_del ?? '')}</option>` : ''}
                         </select>
                     </div>
                     <div class="mb-3 col-md-4">
-                        <label class="form-label">PIC</label>
-                        <select name="id_pic_pelanggan_payment" id="detail_id_pic_pelanggan_payment" class="form-select disabled">
+                        <label class="form-label required">PIC</label>
+                        <select name="id_pic_pelanggan_payment" id="detail_id_pic_pelanggan_payment" class="form-select disabled" required>
                             <option value=""></option>
                             ${res.id_pic_pelanggan_payment ? `<option value="${res.id_pic_pelanggan_payment}" selected>${escHtml(res.pic_pelanggan_pay ?? '')}</option>` : ''}
                         </select>
@@ -419,6 +425,7 @@ function renderForm(res) {
                             placeholder: "Pilih Data",
                             label: res.pic_input_name,
                             className: "col-md-3",
+                            required: true,
                         },
                     )}
                     ${formGroup.select(
@@ -432,6 +439,7 @@ function renderForm(res) {
                             placeholder: "Pilih Data",
                             label: res.pic_ordername,
                             className: "col-md-3",
+                            required: true,
                         },
                     )}
                     ${formGroup.select(
@@ -445,6 +453,7 @@ function renderForm(res) {
                             placeholder: "Pilih Data",
                             label: res.marketing_internal_name,
                             className: "col-md-3",
+                            required: true,
                         },
                     )}
                     ${formGroup.select(
