@@ -513,8 +513,14 @@ class WorkOrderController extends Controller
 
         $prefix = "WO-{$year}-";
 
+        // Filter prefix tahun ini + urut by id_wo (bukan created_at) — kalau
+        // ada beberapa WO yang created_at-nya sama persis (presisi detik),
+        // ORDER BY created_at jadi ambigu dan bisa mengembalikan nomor yang
+        // sama berulang (duplicate entry). id_wo (PK auto-increment) selalu
+        // unik & monoton.
         $latest = DB::table('work_orders')
-            ->orderByDesc('created_at')
+            ->where('no_wo', 'like', $prefix . '%')
+            ->orderByDesc('id_wo')
             ->first();
 
         if (!$latest) {

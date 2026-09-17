@@ -279,10 +279,12 @@ function renderWoAccordion(wos) {
             if (opening) {
                 $accordion.find('.accordion-collapse').not($collapse).addClass('d-none');
                 $accordion.find('.wo-toggle').not($btn).addClass('collapsed');
+                $accordion.find('.wo-card').not($card).removeClass('wo-active');
             }
 
             $collapse.toggleClass('d-none', !opening);
             $btn.toggleClass('collapsed', !opening);
+            $card.toggleClass('wo-active', opening);
 
             // Build & init HARUS setelah d-none dilepas — kalau tidak, panel
             // masih tersembunyi (display:none) saat initWoBodyPlugins jalan,
@@ -443,10 +445,12 @@ function renderFwoAccordion($woBody, wo) {
             if (opening) {
                 $list.find('.accordion-collapse').not($collapse).addClass('d-none');
                 $list.find('.fwo-toggle').not($btn).addClass('collapsed');
+                $list.find('.fwo-card').not($card).removeClass('fwo-active');
             }
 
             $collapse.toggleClass('d-none', !opening);
             $btn.toggleClass('collapsed', !opening);
+            $card.toggleClass('fwo-active', opening);
 
             if (opening && !$collapse.data('loaded')) {
                 $collapse.find('.accordion-body').html(buildFwoBodyHtml(fwo));

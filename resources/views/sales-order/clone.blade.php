@@ -56,6 +56,24 @@
             border-top-left-radius: 12px;
             border-top-right-radius: 12px;
         }
+
+        /* Penanda visual card yang lagi dibuka — supaya user yang scroll
+           panjang ke bawah tetap jelas ini isi WO/FWO yang mana (bukan cuma
+           mengandalkan header sticky di atas). */
+        #woAccordion .wo-card.wo-active {
+            background: #f5f8ff;
+            border-left: 4px solid #5a8dee;
+        }
+        #woAccordion .wo-card.wo-active > .accordion-header {
+            background: #eef3ff;
+        }
+        .fwo-card.fwo-active {
+            background: #f5fbf8;
+            border-left: 4px solid #39da8a;
+        }
+        .fwo-card.fwo-active > .accordion-header {
+            background: #e9f9f1;
+        }
     </style>
 @endsection
 

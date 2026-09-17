@@ -1591,7 +1591,16 @@ class SalesOrderController extends Controller
         $year = now()->format('y');
         $prefix = "WO-{$year}-";
 
-        $latest = DB::table('work_orders')->orderByDesc('created_at')->first();
+        // Filter prefix tahun ini + urut by id_wo (bukan created_at) — WAJIB,
+        // karena clone bisa insert banyak WO dalam 1 request yang created_at-
+        // nya bisa sama persis (presisi detik), bikin ORDER BY created_at
+        // ambigu dan generateNoWo() sempat mengembalikan nomor yang sama utk
+        // beberapa WO sekaligus (duplicate entry 'WO-xx-xxxx'). id_wo (PK
+        // auto-increment) selalu unik & monoton, jadi tidak ambigu.
+        $latest = DB::table('work_orders')
+            ->where('no_wo', 'like', $prefix . '%')
+            ->orderByDesc('id_wo')
+            ->first();
         if (!$latest) return $prefix . '0001';
 
         $number = (int) explode('-', $latest->no_wo)[2] + 1;
