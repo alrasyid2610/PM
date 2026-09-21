@@ -39,11 +39,16 @@ class CheckMenuPermission
         'fwo-budget-actuals'         => 'fieldworks',
         'lab-samples'                => 'fieldworks',
         'fieldwork-boq'              => 'fieldworks',
+        'fwo-boq-other'              => 'fieldworks',
+        'fwo-boq-sampling'           => 'fieldworks',
         'output-pekerjaan'           => 'work-orders',
         'boq'                        => 'work-orders',
         'wo-budgets'                 => 'work-orders',
         'wo-budget-actuals'          => 'work-orders',
         'wo-samples'                 => 'work-orders',
+        'wo-boq-other'               => 'work-orders',
+        'wo-boq-sampling'            => 'work-orders',
+        'wo-output-other'            => 'work-orders',
     ];
 
     public function handle(Request $request, Closure $next): mixed
