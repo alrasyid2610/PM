@@ -30,6 +30,15 @@ function renderForm(res) {
            </a>`
         : "";
 
+    // SO Reference — traceability manual (bukan otomatis dari Clone SO),
+    // ditampilkan sebagai badge klik-able di action bar kalau terisi.
+    const soReferensiTag = res.id_so_referensi
+        ? `<a href="/sales-orders?open=${res.id_so_referensi}" class="pm-badge" style="background:#f5f3ff;color:#6d28d9;text-decoration:none;">
+               <i class="fa-solid fa-link" style="font-size:10px;"></i>
+               Reference: ${escHtml(res.no_so_referensi || ('#' + res.id_so_referensi))}
+           </a>`
+        : "";
+
     return `
 <form id="detailForm">
     <input type="hidden" name="_token" value="${window.route.csrf}">
@@ -43,7 +52,7 @@ function renderForm(res) {
         deleteId: isDeleted ? null : res.id_so,
         editText: isDeleted ? '' : 'Edit SO',
         statusBadge: statusBadge,
-        tags: pelangganTag,
+        tags: pelangganTag + soReferensiTag,
         moreActions: [
             {
                 label: "Printout SO (Sementara)",
@@ -180,11 +189,16 @@ function renderForm(res) {
                         "id_office",
                         "Office",
                         res.id_office,
-                        [
-                            { value: 1, label: "Pramatek Jakarta" },
-                            { value: 2, label: "Pramatek Bandung" },
-                        ],
-                        { className: "col-md-4" },
+                        [],
+                        {
+                            mode: "ajax",
+                            url: "/office/select2",
+                            placeholder: "Pilih Office",
+                            label: res.name_office || null,
+                            className: "col-md-4",
+                            allowClear: true,
+                            createUrl: "/office/create",
+                        },
                     )}
                     ${formGroup.select(
                         "id_sc",

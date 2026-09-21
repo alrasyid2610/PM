@@ -2861,3 +2861,24 @@ body.perm-no-create .btn-create,
 body.perm-no-create [data-perm="can_create"] {
     display: none !important;
 }
+
+/* Overlay loading di modal "Tambah X" yang muat form lewat iframe (Tambah
+   Work Order/Termin/FWO/BOQ) — iframe.src sengaja ditunda sampai modal
+   full-visible (shown.bs.modal) supaya Select2 di dalamnya tidak salah baca
+   lebar container, jadi ada jeda singkat sebelum form kelihatan. Overlay ini
+   mengisi jeda itu supaya tidak terlihat blank/macet ke user. */
+.iframe-loading-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    color: #6c757d;
+    font-size: 13px;
+}
+.iframe-loading-overlay[hidden] {
+    display: none;
+}

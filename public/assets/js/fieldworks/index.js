@@ -75,7 +75,12 @@ function renderBoqTambahanList(jenis, rows, total, isLocked) {
         </div>`;
     }
 
-    const boqTambahanSlug = jenis === 'sampling' ? 'fwo-boq-sampling' : 'fwo-boq-other';
+    // Permission BOQ Other/Sampling ikut slug 'fieldworks' (bukan slug
+    // per-jenis yang dulu dipakai — 'fwo-boq-other'/'fwo-boq-sampling' tidak
+    // pernah ada di config/menus.php, jadi tidak pernah bisa di-grant admin
+    // manapun lewat UI Grup Menu/User Management, sama seperti bug WO BOQ
+    // Other/Sampling di work-order/index.js).
+    const boqTambahanSlug = 'fieldworks';
 
     const rowsHtml = rows.map(function (r, i) {
         const subtotal = (r.qty || 0) * (r.harga || 0);

@@ -48,7 +48,11 @@
                 </span>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-0" style="overflow:hidden;">
+            <div class="modal-body p-0" style="overflow:hidden;position:relative;">
+                <div id="loaderCreateTermin" class="iframe-loading-overlay">
+                    <i class="fa-solid fa-spinner fa-spin fa-2x mb-2 text-primary"></i>
+                    <span>Memuat form...</span>
+                </div>
                 <iframe id="iframeCreateTermin" src="" frameborder="0"
                     style="width:100%;height:100%;border:none;"></iframe>
             </div>
@@ -67,7 +71,11 @@
                 </span>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-0" style="overflow:hidden;">
+            <div class="modal-body p-0" style="overflow:hidden;position:relative;">
+                <div id="loaderCreateWo" class="iframe-loading-overlay">
+                    <i class="fa-solid fa-spinner fa-spin fa-2x mb-2 text-primary"></i>
+                    <span>Memuat form...</span>
+                </div>
                 <iframe id="iframeCreateWo" src="" frameborder="0"
                     style="width:100%;height:100%;border:none;"></iframe>
             </div>

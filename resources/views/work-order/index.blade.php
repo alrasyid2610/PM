@@ -21,14 +21,18 @@
 {{-- Modal: Create FWO --}}
 <div class="modal fade" id="modalCreateFwo" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width:92vw;">
-        <div class="modal-content">
+        <div class="modal-content" style="height:90vh;">
             <div class="modal-header py-2">
                 <h6 class="modal-title"><i class="fa-solid fa-hard-hat me-2 text-primary"></i> Tambah Fieldwork Order</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"
                     onclick="document.getElementById('iframeCreateFwo').src=''"></button>
             </div>
-            <div class="modal-body p-0" style="min-height:500px;">
-                <iframe id="iframeCreateFwo" src="" style="width:100%;height:75vh;border:none;"></iframe>
+            <div class="modal-body p-0" style="overflow:hidden;position:relative;">
+                <div id="loaderCreateFwo" class="iframe-loading-overlay">
+                    <i class="fa-solid fa-spinner fa-spin fa-2x mb-2 text-primary"></i>
+                    <span>Memuat form...</span>
+                </div>
+                <iframe id="iframeCreateFwo" src="" style="width:100%;height:100%;border:none;"></iframe>
             </div>
         </div>
     </div>
@@ -37,14 +41,18 @@
 {{-- Modal: Create BOQ --}}
 <div class="modal fade" id="modalCreateBoq" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width:92vw;">
-        <div class="modal-content">
+        <div class="modal-content" style="height:90vh;">
             <div class="modal-header py-2">
                 <h6 class="modal-title"><i class="fa-solid fa-layer-group me-2 text-success"></i> Tambah BOQ</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"
                     onclick="document.getElementById('iframeCreateBoq').src=''"></button>
             </div>
-            <div class="modal-body p-0" style="min-height:500px;">
-                <iframe id="iframeCreateBoq" src="" style="width:100%;height:75vh;border:none;"></iframe>
+            <div class="modal-body p-0" style="overflow:hidden;position:relative;">
+                <div id="loaderCreateBoq" class="iframe-loading-overlay">
+                    <i class="fa-solid fa-spinner fa-spin fa-2x mb-2 text-primary"></i>
+                    <span>Memuat form...</span>
+                </div>
+                <iframe id="iframeCreateBoq" src="" style="width:100%;height:100%;border:none;"></iframe>
             </div>
         </div>
     </div>
@@ -140,6 +148,7 @@
         fwoBoqDetail:  "{{ url('fieldwork-boq/by-fwo') }}/",
         fwoBoqForCopy: "{{ url('fieldwork-boq/for-copy') }}/",
         usersSelect2:  "{{ route('users.select2') }}",
+        personnelSelect2: "{{ route('personnel.select2') }}",
         tpSelect2:     "{{ route('testing-points.select2') }}",
         outputBase:    "{{ url('output-pekerjaan') }}",
     }

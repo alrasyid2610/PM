@@ -179,7 +179,12 @@ function renderWoBoqTambahanList(jenis, rows, total, isLocked) {
         </div>`;
     }
 
-    const boqTambahanSlug = jenis === 'sampling' ? 'wo-boq-sampling' : 'wo-boq-other';
+    // Permission BOQ Other/Sampling ikut slug 'work-orders' (bukan slug per-jenis
+    // yang dulu dipakai — 'wo-boq-other'/'wo-boq-sampling' tidak pernah ada di
+    // config/menus.php, jadi tidak pernah bisa di-grant admin manapun lewat UI
+    // Grup Menu/User Management, bikin tab ini selalu tersembunyi walau akses
+    // ke WO sudah diberikan. Bug nyata dilaporkan user 2026-09-20).
+    const boqTambahanSlug = 'work-orders';
 
     const rowsHtml = rows.map(function (r, i) {
         const subtotal = (r.qty || 0) * (r.harga || 0);
@@ -440,12 +445,12 @@ function renderOutputOtherList(rows, total, isLocked) {
             <td style="font-size:11px;white-space:nowrap;color:#64748b;">${periode}</td>
             <td style="font-size:11px;">${filesHtml}${drive}</td>
             <td class="text-center" style="width:72px;white-space:nowrap;">
-                ${!isLocked && can('wo-output-other', 'can_update') ? `
+                ${!isLocked && can('work-orders', 'can_update') ? `
                 <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-output-other-edit"
                     data-id="${r.id_output_tambahan}" title="Edit" style="font-size:11px;">
                     <i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i>
                 </button>` : ''}
-                ${!isLocked && can('wo-output-other', 'can_delete') ? `
+                ${!isLocked && can('work-orders', 'can_delete') ? `
                 <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-output-other-delete"
                     data-id="${r.id_output_tambahan}" data-nama="${escHtml(r.nama_item)}"
                     title="Hapus" style="font-size:11px;">
@@ -1669,16 +1674,22 @@ $(document).on('click', '.btn-wo-sample-delete', function (e) {
 
 $(document).on("click", ".btn-add-fwo-modal", function () {
     var woId = $(this).data("wo-id");
-    document.getElementById("iframeCreateFwo").src =
-        "/fieldworks/create?id_wo=" + woId + "&embed=1";
-    new bootstrap.Modal(document.getElementById("modalCreateFwo")).show();
+    openIframeModal(
+        "#modalCreateFwo",
+        "iframeCreateFwo",
+        "loaderCreateFwo",
+        "/fieldworks/create?id_wo=" + woId + "&embed=1",
+    );
 });
 
 $(document).on("click", ".btn-add-boq-modal", function () {
     var woId = $(this).data("wo-id");
-    document.getElementById("iframeCreateBoq").src =
-        "/boq/create?id_wo=" + woId + "&embed=1";
-    new bootstrap.Modal(document.getElementById("modalCreateBoq")).show();
+    openIframeModal(
+        "#modalCreateBoq",
+        "iframeCreateBoq",
+        "loaderCreateBoq",
+        "/boq/create?id_wo=" + woId + "&embed=1",
+    );
 });
 
 // ── BOQ Summary Card ───────────────────────────────────────────────────────────
@@ -2820,7 +2831,7 @@ $(document).ready(function () {
             const userId = $(this).find(".copy-personel-user-select").val();
             const role = $(this).find(".copy-personel-role-select").val();
             if (userId) {
-                personels.push({ id_user: parseInt(userId), role: role || null });
+                personels.push({ id_personnel: parseInt(userId), role: role || null });
             }
         });
 
@@ -3082,7 +3093,7 @@ $(document).ready(function () {
 });
 
 // ── Copy FWO helpers ───────────────────────────────────────────────────────────
-function renderCopyPersonelRow(userId, userName, role) {
+function renderCopyPersonelRow(personnelId, personnelName, role) {
     const idx = copyFwoPersonelIdx++;
     const roleOptions = ["Leader", "Driver", "Anggota"]
         .map(function (r) {
@@ -3092,7 +3103,7 @@ function renderCopyPersonelRow(userId, userName, role) {
     return `<div class="copy-personel-row d-flex align-items-start gap-2" data-idx="${idx}">
         <div style="flex:1;min-width:0;">
             <select class="form-select form-select-sm copy-personel-user-select"
-                data-user-id="${userId || ""}" data-user-name="${escHtml(userName || "")}"></select>
+                data-personnel-id="${personnelId || ""}" data-personnel-name="${escHtml(personnelName || "")}"></select>
         </div>
         <div style="width:130px;flex-shrink:0;">
             <select class="form-select form-select-sm copy-personel-role-select">
@@ -3109,8 +3120,14 @@ function renderCopyPersonelRow(userId, userName, role) {
 }
 
 function initCopyPersonelSelect2($select) {
-    const userId = $select.data("user-id");
-    const userName = $select.data("user-name");
+    // Personel FWO merujuk tabel master `personnel` (PIC/Sampling lapangan,
+    // BUKAN akun sistem `users`) — dulu salah pakai users.select2 + payload
+    // key `id_user`, padahal backend (FieldworkController::duplicate())
+    // insert ke fieldwork_personels.id_personnel. Bug nyata: submit selalu
+    // gagal "The personels.0.id_personnel field is required." karena field
+    // yang dikirim namanya `id_user`, bukan `id_personnel`.
+    const personnelId = $select.data("personnel-id");
+    const personnelName = $select.data("personnel-name");
     $select.select2({
         width: "100%",
         placeholder: "Ketik nama personel...",
@@ -3118,7 +3135,7 @@ function initCopyPersonelSelect2($select) {
         minimumInputLength: 0,
         dropdownParent: $("#modalCopyFwo"),
         ajax: {
-            url: window.route.usersSelect2,
+            url: window.route.personnelSelect2,
             dataType: "json",
             delay: 200,
             data: function (p) {
@@ -3130,8 +3147,8 @@ function initCopyPersonelSelect2($select) {
             cache: true,
         },
     });
-    if (userId) {
-        const opt = new Option(userName, userId, true, true);
+    if (personnelId) {
+        const opt = new Option(personnelName, personnelId, true, true);
         $select.append(opt).trigger("change");
     }
 }
@@ -3430,7 +3447,7 @@ function fillCopyFwoModal(fwo, boqs) {
 
     let personelHtml = (fwo.personels || [])
         .map(function (p) {
-            return renderCopyPersonelRow(p.id_user, p.user_name, p.role);
+            return renderCopyPersonelRow(p.id_personnel, p.user_name, p.role);
         })
         .join("");
     if (!personelHtml) {

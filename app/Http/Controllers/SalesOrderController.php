@@ -220,10 +220,12 @@ class SalesOrderController extends Controller
             ->leftJoin('users as marketing_internal', 'marketing_internal.id', '=', 'so.pic_marketing_internal')
             ->leftJoin('users as marketing_eksternal', 'marketing_eksternal.id', '=', 'so.pic_marketing_eksternal')
             ->leftJoin('contracts as ct', 'ct.id_contract', '=', 'so.id_sc')
+            ->leftJoin('sales_orders as ref', 'ref.id_so', '=', 'so.id_so_referensi')
             ->select(
                 'so.*',
                 'ct.no_contract as contract_no',
                 'ct.no_contract_client as contract_no_client',
+                'ref.no_so as no_so_referensi',
                 'pelanggan.nama as nama_pelanggan',
                 'site_pelanggan.nama_lokasi as nama_site_pelanggan',
                 'o.id_office',
@@ -730,10 +732,12 @@ class SalesOrderController extends Controller
             ->leftJoin('users as pic_o', 'pic_o.id', '=', 'so.pic_order')
             ->leftJoin('users as mkt_i', 'mkt_i.id', '=', 'so.pic_marketing_internal')
             ->leftJoin('users as mkt_e', 'mkt_e.id', '=', 'so.pic_marketing_eksternal')
+            ->leftJoin('office as o', 'o.id_office', '=', 'so.id_office')
             ->where('so.id_so', $id)
             ->whereNull('so.deleted_at')
             ->select([
                 'so.*',
+                'o.name as nama_office',
                 'pelanggan.nama as nama_pelanggan',
                 'site_pelanggan.nama_lokasi as nama_site_pelanggan',
                 'brc.nama_pic as pic_pelanggan',
@@ -779,8 +783,11 @@ class SalesOrderController extends Controller
                 ->orderBy('b.id_boq')
                 ->select([
                     'b.id_boq as source_id_boq', 'b.id_wo', 'b.id_testing_point', 'b.item_produk_alternate',
-                    'tp.nama as nama_testing_point', 'ts.nomor as standard_nomor', 'ts.judul as standard_judul',
-                    'tms.kode as matriks_kode', 'tms.judul_indonesia as matriks_judul',
+                    'tp.nama as nama_testing_point',
+                    // Nama gabungan Matriks Sample + Standard + Testing Point jadi
+                    // 1 baris — persis logic yang sama dipakai WorkOrderController::
+                    // detail() (tab BOQ WO), supaya konsisten penamaannya.
+                    DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
                     'b.qty', 'b.id_satuan', 'sat.nama as satuan', 'b.harga', 'b.keterangan',
                 ])
                 ->get()
@@ -825,12 +832,16 @@ class SalesOrderController extends Controller
         $fieldworkBoqRows = $fwoIds->isNotEmpty()
             ? DB::table('fieldwork_boq as fb')
                 ->leftJoin('testing_points as tp', 'fb.id_testing_point', '=', 'tp.id_testing_point')
+                ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+                ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
                 ->whereIn('fb.id_fwo', $fwoIds)
                 ->whereNull('fb.deleted_at')
                 ->orderBy('fb.id_fwo_boq')
                 ->select([
                     'fb.id_fwo_boq as source_id_fwo_boq', 'fb.id_fwo', 'fb.id_testing_point',
-                    'tp.nama as nama_testing_point', 'fb.qty', 'fb.keterangan',
+                    'tp.nama as nama_testing_point',
+                    DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
+                    'fb.qty', 'fb.keterangan',
                 ])
                 ->get()
                 ->groupBy('id_fwo')
@@ -919,6 +930,7 @@ class SalesOrderController extends Controller
             'so.tanggal_mulai'                => 'nullable|date',
             'so.tanggal_selesai'              => 'nullable|date|after_or_equal:so.tanggal_mulai',
             'so.id_office'                    => 'nullable|integer',
+            'so.id_so_referensi'              => 'required|integer|exists:sales_orders,id_so',
             'so.id_pelanggan'                 => 'required|integer',
             'so.id_site_pelanggan'            => 'nullable|integer',
             'so.id_pic_pelanggan'             => 'nullable|integer',
@@ -1022,6 +1034,9 @@ class SalesOrderController extends Controller
             'wos.*.fwos.*.personel.*.include'                => 'required|boolean',
             'wos.*.fwos.*.personel.*.id_personnel'           => 'required|integer',
             'wos.*.fwos.*.personel.*.role'                   => 'nullable|string|max:500',
+        ], [
+            'so.id_so_referensi.required' => 'SO Reference wajib dipilih.',
+            'so.id_so_referensi.exists'   => 'SO Reference yang dipilih tidak valid.',
         ]);
 
         $soInput = $validated['so'];
@@ -1043,6 +1058,10 @@ class SalesOrderController extends Controller
                     'tanggal_mulai' => $soInput['tanggal_mulai'] ?? null,
                     'tanggal_selesai' => $soInput['tanggal_selesai'] ?? null,
                     'id_office' => $soInput['id_office'] ?? null,
+                    // Traceability manual — user pilih sendiri SO
+                    // referensinya (kalau perlu), TIDAK otomatis diisi
+                    // dengan SO sumber clone ini ($id).
+                    'id_so_referensi' => $soInput['id_so_referensi'] ?? null,
                     'id_pelanggan' => $soInput['id_pelanggan'],
                     'id_site_pelanggan' => $soInput['id_site_pelanggan'] ?? null,
                     'id_pic_pelanggan' => $soInput['id_pic_pelanggan'] ?? null,

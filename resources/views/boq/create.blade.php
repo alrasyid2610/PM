@@ -66,16 +66,23 @@
             </div>
         </div>
 
-        {{-- Action Bar --}}
-        <div class="d-flex justify-content-between align-items-center mt-2">
-            <button type="button" id="btnAddSection" class="btn btn-outline-primary" disabled>
-                <i class="fa-solid fa-plus me-1"></i> Tambah Item
-            </button>
-            <button type="button" id="btnSave" class="btn btn-primary" disabled>
-                <i class="fa-solid fa-floppy-disk me-1"></i> Simpan BOQ
-            </button>
-        </div>
+        {{-- spacer supaya BOQ terakhir tidak ketutup action bar sticky --}}
+        <div style="height:64px;"></div>
+    </div>
 
+    {{-- Action Bar — sticky di bawah viewport, supaya tetap kelihatan &
+         terjangkau walau daftar BOQ-nya panjang (dilaporkan user: harus
+         scroll sampai bawah dulu buat nemu tombol Tambah Item/Simpan). --}}
+    <div class="d-flex justify-content-between align-items-center"
+        style="position:sticky;bottom:0;z-index:100;background:#fff;
+               border-top:1px solid #e2e8f0;padding:12px 16px;margin-top:8px;
+               box-shadow:0 -2px 10px rgba(0,0,0,.06);">
+        <button type="button" id="btnAddSection" class="btn btn-outline-primary" disabled>
+            <i class="fa-solid fa-plus me-1"></i> Tambah Item
+        </button>
+        <button type="button" id="btnSave" class="btn btn-primary" disabled>
+            <i class="fa-solid fa-floppy-disk me-1"></i> Simpan BOQ
+        </button>
     </div>
 </section>
 

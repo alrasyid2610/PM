@@ -103,9 +103,9 @@ $(document).ready(function () {
     form.on('submit', function (e) {
         e.preventDefault();
 
-        btn.prop('disabled', true).text('Menyimpan...');
-
         Notify.confirm('Simpan Data?', function() {
+            btn.prop('disabled', true).text('Menyimpan...');
+
             $.ajax({
                 url: "{{ route('commercial-buildings.update', ':id') }}".replace(':id', id),
                 type: "POST",

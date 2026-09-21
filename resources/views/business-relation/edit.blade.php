@@ -200,9 +200,9 @@ $('#createBusinessRelationForm').on('submit', function (e) {
     const form = $(this);
     const btn  = $('#btnSubmit');
 
-    btn.prop('disabled', true).text('Menyimpan...');
-
     Notify.confirm('Simpan Data?', function() {
+        btn.prop('disabled', true).text('Menyimpan...');
+
         $.ajax({
             url: "/business-relations/" + $("#site_id_hidden").val(),
             type: "PUT",

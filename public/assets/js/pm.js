@@ -585,3 +585,29 @@ function loadItems(res, itemsTable) {
         );
     });
 }
+
+// Buka modal Bootstrap yang isinya iframe form "Tambah X" (Tambah Work
+// Order/Termin/FWO/BOQ, dst). iframe.src SENGAJA ditunda sampai shown.bs.modal
+// (bukan bersamaan dengan modal.show()) — kalau dibarengkan, Select2 di
+// dalam form yang di-embed sempat ke-init saat modal masih display:none/
+// dalam transisi dan salah baca lebar container-nya (lihat Project
+// Reference.md > Pola Implementasi). Overlay `#loaderId` dipakai mengisi
+// jeda singkat itu supaya tidak kelihatan blank ke user.
+function openIframeModal(modalSelector, iframeId, loaderId, src) {
+    const $modalEl = $(modalSelector);
+    const $iframe = $("#" + iframeId);
+    const $loader = loaderId ? $("#" + loaderId) : $();
+    const modal = new bootstrap.Modal($modalEl[0]);
+
+    $loader.prop("hidden", false);
+
+    $iframe.off("load.iframeModal").one("load.iframeModal", function () {
+        $loader.prop("hidden", true);
+    });
+
+    $modalEl.one("shown.bs.modal", function () {
+        document.getElementById(iframeId).src = src;
+    });
+
+    modal.show();
+}

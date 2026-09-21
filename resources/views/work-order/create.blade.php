@@ -249,6 +249,7 @@
                         $(item.id).append(new Option(opt.text, opt.id));
                     });
                     $(item.id).select2({
+                        width: '100%',
                         placeholder: item.placeholder,
                         allowClear: true,
                     });
@@ -293,6 +294,7 @@
 
     function initBrSelect2() {
         $('#id_sales_order').select2({
+            width: '100%',
             placeholder: 'Pilih atau ketik Sales Order',
             allowClear: true,
             minimumInputLength: 0,
@@ -328,6 +330,7 @@
                     $("select[name='id_pelanggan']").append(new Option(item.text, item.id));
                 });
                 $("select[name='id_pelanggan']").select2({
+                    width: '100%',
                     placeholder: "Pilih Pelanggan",
                     allowClear: true
                 });
@@ -353,6 +356,7 @@
             : "{{ url('business-relations/sites/select2') }}";
 
         $site.select2({
+            width: '100%',
             placeholder: 'Pilih Site Pelanggan',
             allowClear: true,
             ajax: {

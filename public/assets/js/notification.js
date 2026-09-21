@@ -6,7 +6,7 @@ window.Notify = {
             icon: "success",
             title: "Berhasil",
             text: message,
-            timer: 1500,
+            timer: 3000,
             showConfirmButton: false,
         });
     },

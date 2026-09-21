@@ -237,20 +237,22 @@ window.addEventListener("storage", function (e) {
 
 $(document).on("click", ".btn-add-wo-modal", function () {
     var soId = $(this).data("so-id");
-    document.getElementById("iframeCreateWo").src =
-        "/work-orders/create?id_so=" + soId + "&embed=1";
-    var modal = new bootstrap.Modal(document.getElementById("modalCreateWo"));
-    modal.show();
+    openIframeModal(
+        "#modalCreateWo",
+        "iframeCreateWo",
+        "loaderCreateWo",
+        "/work-orders/create?id_so=" + soId + "&embed=1",
+    );
 });
 
 $(document).on("click", ".btn-add-termin-modal", function () {
     var soId = $(this).data("so-id");
-    document.getElementById("iframeCreateTermin").src =
-        "/termin/create?id_so=" + soId + "&embed=1";
-    var modal = new bootstrap.Modal(
-        document.getElementById("modalCreateTermin"),
+    openIframeModal(
+        "#modalCreateTermin",
+        "iframeCreateTermin",
+        "loaderCreateTermin",
+        "/termin/create?id_so=" + soId + "&embed=1",
     );
-    modal.show();
 });
 
 function loadWoProgress(id_so, onDone) {

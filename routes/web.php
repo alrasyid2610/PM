@@ -23,6 +23,7 @@ use App\Http\Controllers\KepemilikanController;
 use App\Http\Controllers\KategoriBisnisController;
 use App\Http\Controllers\SubKategoriBisnisController;
 use App\Http\Controllers\SatuanController;
+use App\Http\Controllers\OfficeController;
 use App\Http\Controllers\FwoBoqOtherController;
 use App\Http\Controllers\FwoBoqSamplingController;
 use App\Http\Controllers\BoqOtherController;
@@ -241,6 +242,19 @@ Route::prefix('documentations')->name('documentations.')->group(function () {
     Route::get('/{id}/history', [DocumentationController::class, 'history'])->name('history')->whereNumber('id');
     Route::put('/{id}', [DocumentationController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}', [DocumentationController::class, 'destroy'])->name('destroy')->whereNumber('id');
+});
+
+Route::prefix('office')->name('office.')->group(function () {
+    Route::get('/select2', [OfficeController::class, 'select2'])->name('select2');
+    Route::get('/', [OfficeController::class, 'index'])->name('index');
+    Route::get('/data', [OfficeController::class, 'data'])->name('data');
+    Route::get('/create', [OfficeController::class, 'create'])->name('create');
+    Route::post('/', [OfficeController::class, 'store'])->name('store');
+    Route::get('/{id}', [OfficeController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [OfficeController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [OfficeController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/detail', [OfficeController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::get('/{id}/history', [OfficeController::class, 'history'])->name('history')->whereNumber('id');
 });
 
 Route::prefix('satuan')->name('satuan.')->group(function () {

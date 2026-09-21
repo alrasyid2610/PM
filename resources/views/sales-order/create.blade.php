@@ -37,11 +37,7 @@
                     </div>
                     <div class="col-md-4 col-12">
                         <label class="form-label">Office</label>
-                        <select name="id_office" class="form-select">
-                            <option value="">Pilih Office</option>
-                            <option value="1">Pramatek Jakarta</option>
-                            <option value="2">Pramatek Bandung</option>
-                        </select>
+                        <select name="id_office" class="form-select"></select>
                     </div>
                     <div class="col-md-6 col-12">
                         <label class="form-label">Sales Contract</label>
@@ -260,7 +256,26 @@
     $(document).ready(function () {
         initFpDate(document);
         createFileUploader(".filepond");
-        $('select[name="id_office"]').select2({ placeholder: 'Pilih Office', allowClear: true, width: '100%' });
+        $('select[name="id_office"]').select2({
+            width: '100%',
+            placeholder: 'Pilih Office',
+            allowClear: true,
+            minimumInputLength: 0,
+            ajax: {
+                url: "{{ route('office.select2') }}",
+                dataType: 'json',
+                delay: 200,
+                data: (params) => ({ q: params.term }),
+                processResults: (data) => ({ results: data }),
+                cache: true,
+            },
+            language: {
+                noResults: function () {
+                    return `<span>Tidak ditemukan. <a href="{{ route('office.create') }}" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>`;
+                },
+            },
+            escapeMarkup: function (m) { return m; },
+        });
 
         $('#id_sc').select2({
             width: '100%',

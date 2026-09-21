@@ -528,9 +528,13 @@
         const form = $(this);
         const btn = $('#btnSubmit');
 
-        btn.prop('disabled', true).text('Menyimpan...');
-
+        // Disable tombol HARUS di dalam callback konfirmasi (setelah user
+        // klik "Ya"), bukan sebelum modal ditampilkan — kalau di luar, klik
+        // "Tidak" tidak pernah memicu apa pun yang mengembalikan tombol,
+        // jadi macet permanen di "Menyimpan..." (bug nyata dilaporkan user).
         Notify.confirm('Simpan Data?', function() {
+            btn.prop('disabled', true).text('Menyimpan...');
+
             $.ajax({
                 url: "{{ route('business-relations.store') }}",
                 type: "POST",

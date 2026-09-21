@@ -105,6 +105,24 @@ function renderFwoForm(res) {
                         Fieldwork BOQ
                     </button>
                 </li>
+                ${can('fieldworks', 'can_read') ? `
+                <li role="presentation">
+                    <button class="pm-tab-btn" type="button" role="tab"
+                        data-bs-toggle="tab" data-bs-target="#tabFwoBoqOther"
+                        data-id-fwo="${res.id_fwo}">
+                        <i class="fa-solid fa-file-invoice me-1" style="color:#b45309;font-size:11px;"></i>
+                        BOQ Other
+                    </button>
+                </li>` : ''}
+                ${can('fieldworks', 'can_read') ? `
+                <li role="presentation">
+                    <button class="pm-tab-btn" type="button" role="tab"
+                        data-bs-toggle="tab" data-bs-target="#tabFwoBoqSampling"
+                        data-id-fwo="${res.id_fwo}">
+                        <i class="fa-solid fa-vial-virus me-1" style="color:#be185d;font-size:11px;"></i>
+                        BOQ Sampling
+                    </button>
+                </li>` : ''}
                 <li role="presentation">
                     <button class="pm-tab-btn" type="button" role="tab"
                         data-bs-toggle="tab" data-bs-target="#tabFwoAttachment">
@@ -128,24 +146,6 @@ function renderFwoForm(res) {
                         Sample
                     </button>
                 </li>
-                ${can('fwo-boq-other', 'can_read') ? `
-                <li role="presentation">
-                    <button class="pm-tab-btn" type="button" role="tab"
-                        data-bs-toggle="tab" data-bs-target="#tabFwoBoqOther"
-                        data-id-fwo="${res.id_fwo}">
-                        <i class="fa-solid fa-file-invoice me-1" style="color:#b45309;font-size:11px;"></i>
-                        BOQ Other
-                    </button>
-                </li>` : ''}
-                ${can('fwo-boq-sampling', 'can_read') ? `
-                <li role="presentation">
-                    <button class="pm-tab-btn" type="button" role="tab"
-                        data-bs-toggle="tab" data-bs-target="#tabFwoBoqSampling"
-                        data-id-fwo="${res.id_fwo}">
-                        <i class="fa-solid fa-vial-virus me-1" style="color:#be185d;font-size:11px;"></i>
-                        BOQ Sampling
-                    </button>
-                </li>` : ''}
             </ul>
             <div class="pm-tab-actions">
                 <div id="fwoTabActionsInfo" class="d-flex align-items-center gap-2">
@@ -202,7 +202,7 @@ function renderFwoForm(res) {
                 </div>
                 <div id="fwoTabActionsBoqOther" class="d-none align-items-center gap-2">
                     ${isDeleted ? '' : !isCompleted
-                        ? (can('fwo-boq-other', 'can_create') ? `
+                        ? (can('fieldworks', 'can_create') ? `
                         <button type="button" class="pm-btn-pill pm-btn-pill--amber btn-boq-tambahan-add"
                             data-jenis="other" data-id-fwo="${res.id_fwo}" data-no-disable>
                             <i class="fa-solid fa-plus" style="font-size:10px;"></i>
@@ -216,7 +216,7 @@ function renderFwoForm(res) {
                 </div>
                 <div id="fwoTabActionsBoqSampling" class="d-none align-items-center gap-2">
                     ${isDeleted ? '' : !isCompleted
-                        ? (can('fwo-boq-sampling', 'can_create') ? `
+                        ? (can('fieldworks', 'can_create') ? `
                         <button type="button" class="pm-btn-pill pm-btn-pill--purple btn-boq-tambahan-add"
                             data-jenis="sampling" data-id-fwo="${res.id_fwo}" data-no-disable>
                             <i class="fa-solid fa-plus" style="font-size:10px;"></i>

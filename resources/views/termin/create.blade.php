@@ -96,7 +96,7 @@
             </x-section-card>
         </div>
 
-        <x-form-actions back-route="{{ route('termin.index') }}" submit-label="Simpan Termin" />
+        <x-form-actions :back-route="request('embed') ? null : route('termin.index')" submit-label="Simpan Termin" />
 
     </form>
 </section>

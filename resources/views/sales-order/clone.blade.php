@@ -26,7 +26,8 @@
         }
         table.boq-table thead th,
         table.boq-other-table thead th,
-        table.boq-sampling-table thead th {
+        table.boq-sampling-table thead th,
+        table.fieldwork-boq-table thead th {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -73,6 +74,19 @@
         }
         .fwo-card.fwo-active > .accordion-header {
             background: #e9f9f1;
+        }
+
+        /* Header FWO juga sticky, sama alasannya seperti header WO — persis
+           kasus yang sama tapi 1 level lebih dalam (kalau 1 WO punya banyak
+           FWO). `top` mengikuti tinggi header WO (variabel --wo-header-h,
+           di-set JS saat WO card dibuka) supaya nempel PAS di bawah header
+           WO tanpa saling menutupi, bukan ke top:0 mentah (yang akan
+           menumpuk/menutupi header WO). */
+        .fwo-card > .accordion-header {
+            position: sticky;
+            top: var(--wo-header-h, 0px);
+            z-index: 2;
+            background: #fff;
         }
     </style>
 @endsection
@@ -123,11 +137,12 @@
                     </div>
                     <div class="col-md-4 col-12">
                         <label class="form-label">Office</label>
-                        <select name="id_office" id="so_id_office" class="form-select">
-                            <option value="">Pilih Office</option>
-                            <option value="1">Pramatek Jakarta</option>
-                            <option value="2">Pramatek Bandung</option>
-                        </select>
+                        <select name="id_office" id="so_id_office" class="form-select"></select>
+                    </div>
+                    <div class="col-md-8 col-12">
+                        <label class="form-label required">SO Reference</label>
+                        <select name="id_so_referensi" id="so_id_so_referensi" class="form-select" required></select>
+                        <div class="form-text">Wajib dipilih — untuk traceability manual ke SO lain (mis. SO master/kontrak awal). Tidak otomatis terisi dari SO sumber clone ini.</div>
                     </div>
                 </div>
             </x-section-card>
@@ -289,6 +304,9 @@
         select2TestingPoint: "{{ route('testing-points.select2') }}",
         itemsByPoint:    "{{ url('testing-items/by-point') }}/",
         select2Personnel: "{{ route('personnel.select2') }}",
+        select2Office: "{{ route('office.select2') }}",
+        createOffice: "{{ route('office.create') }}",
+        select2SalesOrder: "{{ route('sales-orders.select2') }}",
     };
 </script>
 <script src="{{ asset('assets/js/sales-order/clone.js') }}"></script>

@@ -107,7 +107,7 @@ function renderForm(res) {
                             BOQ
                         </button>
                     </li>
-                    ${can('wo-boq-other', 'can_read') ? `
+                    ${can('work-orders', 'can_read') ? `
                     <li role="presentation">
                         <button class="pm-tab-btn" id="tab-boq-other-btn" type="button" role="tab"
                             data-bs-toggle="tab" data-bs-target="#tabBoqOther"
@@ -116,7 +116,7 @@ function renderForm(res) {
                             BOQ Other
                         </button>
                     </li>` : ''}
-                    ${can('wo-boq-sampling', 'can_read') ? `
+                    ${can('work-orders', 'can_read') ? `
                     <li role="presentation">
                         <button class="pm-tab-btn" id="tab-boq-sampling-btn" type="button" role="tab"
                             data-bs-toggle="tab" data-bs-target="#tabBoqSampling"
@@ -139,7 +139,7 @@ function renderForm(res) {
                             Output Pekerjaan
                         </button>
                     </li>
-                    ${can('wo-output-other', 'can_read') ? `
+                    ${can('work-orders', 'can_read') ? `
                     <li role="presentation">
                         <button class="pm-tab-btn" id="tab-output-other-btn" type="button" role="tab"
                             data-bs-toggle="tab" data-bs-target="#tabOutputOther"
@@ -226,7 +226,7 @@ function renderForm(res) {
                     </div>
                     <div id="woTabActionsBoqOther" class="d-none align-items-center gap-2">
                         ${res.status !== 'completed'
-                            ? (can('wo-boq-other', 'can_create') ? `
+                            ? (can('work-orders', 'can_create') ? `
                             <button type="button" class="pm-btn-pill pm-btn-pill--amber btn-boq-tambahan-add"
                                 data-jenis="other" data-wo-id="${res.id_wo}" data-no-disable>
                                 <i class="fa-solid fa-plus" style="font-size:10px;"></i>
@@ -237,7 +237,7 @@ function renderForm(res) {
                     </div>
                     <div id="woTabActionsBoqSampling" class="d-none align-items-center gap-2">
                         ${res.status !== 'completed'
-                            ? (can('wo-boq-sampling', 'can_create') ? `
+                            ? (can('work-orders', 'can_create') ? `
                             <button type="button" class="pm-btn-pill pm-btn-pill--purple btn-boq-tambahan-add"
                                 data-jenis="sampling" data-wo-id="${res.id_wo}" data-no-disable>
                                 <i class="fa-solid fa-plus" style="font-size:10px;"></i>
@@ -248,7 +248,7 @@ function renderForm(res) {
                     </div>
                     <div id="woTabActionsOutputOther" class="d-none align-items-center gap-2">
                         ${res.status !== 'completed'
-                            ? (can('wo-output-other', 'can_create') ? `
+                            ? (can('work-orders', 'can_create') ? `
                             <button type="button" id="btnAddOutputOther" data-wo-id="${res.id_wo}"
                                 class="pm-btn-pill pm-btn-pill--teal" data-no-disable>
                                 <i class="fa-solid fa-plus" style="font-size:10px;"></i>

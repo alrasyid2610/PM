@@ -79,6 +79,7 @@ return [
         'items'   => [
             ['slug' => 'satuan',          'label' => 'Satuan',         'icon' => 'fa-ruler-combined'],
             ['slug' => 'budget-accounts', 'label' => 'Budget Account', 'icon' => 'fa-layer-group'],
+            ['slug' => 'office',          'label' => 'Office',         'icon' => 'fa-building'],
         ],
     ],
     [
