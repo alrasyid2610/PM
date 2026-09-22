@@ -279,10 +279,11 @@ function renderWoAccordion(wos) {
         return;
     }
 
-    wos.forEach((wo) => {
+    wos.forEach((wo, woPos) => {
         const idx = woIndexCounter++;
         const collapseId = 'woCollapse' + idx;
         const searchText = [wo.no_wo, wo.judul_pekerjaan, wo.nama_site].filter(Boolean).join(' ').toLowerCase();
+        const noUrut = woPos + 1;
 
         // Toggle expand/collapse ditangani manual (bukan lewat plugin Collapse
         // Bootstrap) — class accordion-button/accordion-collapse tetap
@@ -295,6 +296,7 @@ function renderWoAccordion(wos) {
                     <div class="form-check ms-3 me-1" onclick="event.stopPropagation()">
                         <input type="checkbox" class="form-check-input wo-include" checked title="Sertakan WO ini">
                     </div>
+                    <span class="me-2" style="color:#94a3b8;font-size:12px;font-weight:600;min-width:20px;text-align:center;flex-shrink:0;">${noUrut}</span>
                     <button class="accordion-button collapsed wo-toggle" type="button">
                         <strong class="me-2">${escHtml(wo.no_wo)}</strong> ${escHtml(wo.judul_pekerjaan || '-')}
                         <span class="pm-badge pm-badge--blue ms-2">${(wo.boq || []).length} BOQ</span>
@@ -410,6 +412,11 @@ function buildWoBodyHtml(wo) {
                     <i class="fa-solid fa-helmet-safety me-1"></i> Fieldwork Order (FWO)
                 </button>
             </li>
+            <li class="nav-item">
+                <button type="button" class="nav-link wo-subtab-btn" data-target="budget">
+                    <i class="fa-solid fa-wallet me-1"></i> Budget
+                </button>
+            </li>
         </ul>
 
         <div class="wo-subtab-pane" data-pane="boq">
@@ -434,6 +441,10 @@ function buildWoBodyHtml(wo) {
             <div class="mb-2 text-muted small fwo-summary"></div>
             <div class="accordion fwo-list"></div>
         </div>
+
+        <div class="wo-subtab-pane d-none" data-pane="budget">
+            <div class="wo-budget-list">${buildBudgetPlanListHtml(wo.budgets || [], 'wo-budget')}</div>
+        </div>
     `;
 }
 
@@ -457,10 +468,11 @@ function renderFwoAccordion($woBody, wo) {
         return;
     }
 
-    fwos.forEach((fwo) => {
+    fwos.forEach((fwo, fwoPos) => {
         const idx = fwoIndexCounter++;
         const collapseId = 'fwoCollapse' + idx;
         const searchText = [fwo.no_fwo, fwo.judul_pekerjaan].filter(Boolean).join(' ').toLowerCase();
+        const noUrut = fwoPos + 1;
 
         const $card = $(`
             <div class="accordion-item fwo-card" data-fwo-index="${idx}" data-source-id-fwo="${fwo.id_fwo}" data-search="${escHtml(searchText)}">
@@ -468,6 +480,7 @@ function renderFwoAccordion($woBody, wo) {
                     <div class="form-check ms-3 me-1" onclick="event.stopPropagation()">
                         <input type="checkbox" class="form-check-input fwo-include" checked title="Sertakan FWO ini">
                     </div>
+                    <span class="me-2" style="color:#94a3b8;font-size:12px;font-weight:600;min-width:20px;text-align:center;flex-shrink:0;">${noUrut}</span>
                     <button class="accordion-button collapsed fwo-toggle" type="button">
                         <strong class="me-2">${escHtml(fwo.no_fwo)}</strong> ${escHtml(fwo.judul_pekerjaan || '-')}
                         <span class="pm-badge pm-badge--blue ms-2">${(fwo.fieldwork_boq || []).length} Fieldwork BOQ</span>
@@ -569,6 +582,9 @@ function buildFwoBodyHtml(fwo) {
 
         <h6 class="mb-2 mt-3"><i class="fa-solid fa-users me-1 text-secondary"></i> Personel</h6>
         ${buildPersonelTableHtml(fwo.personel || [])}
+
+        <h6 class="mb-2 mt-3"><i class="fa-solid fa-wallet me-1" style="color:#0f766e;"></i> Budget</h6>
+        <div class="fwo-budget-list">${buildBudgetPlanListHtml(fwo.budgets || [], 'fwo-budget')}</div>
     `;
 }
 
@@ -681,6 +697,78 @@ function newPersonelRowHtml() {
                 </button>
             </td>
         </tr>`;
+}
+
+// ── Fase 3: Budget Plan (WO & FWO, reusable — struktur & behavior identik,
+// cuma beda konteks kepemilikan) ─────────────────────────────────────────
+// Granularitas checklist cuma di level Plan (disepakati user): centang
+// "Sertakan" per Plan, field Label/Keterangan/Tanggal bisa diedit, tapi Item
+// & Actual/Realisasi di dalamnya cuma ditampilkan read-only (ikut utuh kalau
+// Plan-nya disertakan, tidak dipilah/diedit satu-satu) — konsisten dengan
+// keputusan user, dan backend juga TIDAK menerima item/actual dari client
+// (di-re-fetch dari DB berdasarkan source_id_budget).
+function formatRupiah(n) {
+    return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+}
+
+function buildBudgetPlanListHtml(budgets, rowClass) {
+    if (!budgets.length) {
+        return '<p class="text-muted fst-italic mb-0">Tidak ada Budget Plan.</p>';
+    }
+    return budgets.map((b) => buildBudgetPlanCardHtml(b, rowClass)).join('');
+}
+
+function buildBudgetPlanCardHtml(b, rowClass) {
+    const items = b.items || [];
+    const totalBudget = items.reduce((s, it) => s + Number(it.nominal_budget || 0), 0);
+    const totalActual = items.reduce((s, it) => s + (it.actuals || []).reduce((s2, a) => s2 + Number(a.nominal_actual || 0), 0), 0);
+
+    const itemRows = items.map((it) => `
+        <tr>
+            <td>${escHtml(it.nama_account || '-')} ${it.is_cash_advance ? '<span class="pm-badge pm-badge--blue ms-1" style="font-size:9px;">CA</span>' : ''}</td>
+            <td class="text-end" style="white-space:nowrap;">${formatRupiah(it.nominal_budget)}</td>
+            <td class="text-end" style="white-space:nowrap;">${formatRupiah((it.actuals || []).reduce((s, a) => s + Number(a.nominal_actual || 0), 0))}</td>
+        </tr>`).join('');
+
+    return `
+        <div class="boq-section ${rowClass}-row" data-source-id-budget="${b.source_id_budget}"
+            style="background:#fff;border:1px solid #d6dce5;border-left:4px solid #0f766e;
+                   border-radius:10px;padding:14px 16px;margin-bottom:16px;
+                   box-shadow:0 1px 3px rgba(15,23,42,.06);">
+            <div class="d-flex align-items-start gap-2 mb-2">
+                <input type="checkbox" class="form-check-input row-include mt-1" checked title="Sertakan Plan ini">
+                <div class="flex-grow-1 row g-2">
+                    <div class="col-md-6 col-12">
+                        <label class="form-label small mb-1">Label Plan</label>
+                        <input type="text" class="form-control form-control-sm row-label" value="${escHtml(b.label || '')}">
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <label class="form-label small mb-1">Tanggal Mulai</label>
+                        <input type="text" class="form-control form-control-sm fp-date row-tgl-mulai" value="${b.tanggal_mulai || ''}" autocomplete="off">
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <label class="form-label small mb-1">Tanggal Selesai</label>
+                        <input type="text" class="form-control form-control-sm fp-date row-tgl-selesai" value="${b.tanggal_selesai || ''}" autocomplete="off">
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label small mb-1">Keterangan</label>
+                        <textarea class="form-control form-control-sm row-keterangan" rows="1">${escHtml(b.keterangan || '')}</textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle mb-1">
+                    <thead class="table-light">
+                        <tr><th>Account</th><th class="text-end" style="width:130px;">Budget</th><th class="text-end" style="width:130px;">Realisasi</th></tr>
+                    </thead>
+                    <tbody>${itemRows || '<tr><td colspan="3" class="text-muted fst-italic small">Tidak ada item.</td></tr>'}</tbody>
+                </table>
+            </div>
+            <div class="d-flex justify-content-end gap-3 small text-muted">
+                <span>Total Budget: <b>${formatRupiah(totalBudget)}</b></span>
+                <span>Total Realisasi: <b>${formatRupiah(totalActual)}</b></span>
+            </div>
+        </div>`;
 }
 
 // Testing Point/Standard/Matriks Sample digabung jadi 1 kolom bertumpuk +
@@ -871,6 +959,10 @@ function initWoBodyPlugins($card, wo) {
         const sourceRow = findSourceRow($row, wo);
         initSatuanSelectForRow($row, $card, sourceRow);
         bindRowIncludeToggle($row);
+    });
+
+    $body.find('.wo-budget-row').each(function () {
+        bindRowIncludeToggle($(this));
     });
 
     // Uncheck "Sertakan" di 1 baris BOQ WO harus ikut meng-uncheck (+ disable,
@@ -1246,6 +1338,10 @@ function initFwoBodyPlugins($fwoCard, fwo, wo, $woBody) {
         const sourceRow = (fwo.personel || []).find((r) => String(r.source_id_fwo_personel) === String($row.data('source-id-fwo-personel')));
         initPersonelSelectForRow($row, $fwoCard, sourceRow);
     });
+
+    $body.find('.fwo-budget-row').each(function () {
+        bindRowIncludeToggle($(this));
+    });
 }
 
 function initSatuanSelectForRow($row, $card, sourceRow) {
@@ -1412,6 +1508,23 @@ function makeTableColumnsResizable($table) {
 
 // ── Submit ──────────────────────────────────────────────────────────────
 
+// Reusable buat WO maupun FWO — baca baris Budget Plan (rowClass beda:
+// 'wo-budget-row' / 'fwo-budget-row'), granularitas cuma di level Plan jadi
+// tidak perlu baca item/actual sama sekali (backend re-fetch dari DB).
+function collectBudgetsPayload($body, rowClass) {
+    return $body.find(`.${rowClass}-row`).map(function () {
+        const $row = $(this);
+        return {
+            source_id_budget: $row.data('source-id-budget') || null,
+            include: $row.find('.row-include').is(':checked'),
+            label: $row.find('.row-label').val(),
+            keterangan: $row.find('.row-keterangan').val() || null,
+            tanggal_mulai: $row.find('.row-tgl-mulai').val() || null,
+            tanggal_selesai: $row.find('.row-tgl-selesai').val() || null,
+        };
+    }).get();
+}
+
 function collectWoPayload($card, wo) {
     const $body = $card.find('.accordion-body');
     const collectRows = (rowClass, keyField, nameEditable) => {
@@ -1455,6 +1568,7 @@ function collectWoPayload($card, wo) {
         boq: collectRows('boq', 'source_id_boq', false),
         boq_other: collectRows('boq-other', 'source_id_boq_tambahan', true),
         boq_sampling: collectRows('boq-sampling', 'source_id_boq_tambahan', true),
+        budgets: collectBudgetsPayload($body, 'wo-budget'),
         fwos: collectFwosPayload($body, wo),
     };
 }
@@ -1494,6 +1608,7 @@ function fallbackFwoPayload(fwo, include) {
         fwo_boq_other: (fwo.fwo_boq_other || []).map((r) => ({ source_id_boq_tambahan: r.source_id_boq_tambahan, include: true, nama_item: r.nama_item, qty: r.qty, id_satuan: r.id_satuan, harga: r.harga, keterangan: r.keterangan })),
         fwo_boq_sampling: (fwo.fwo_boq_sampling || []).map((r) => ({ source_id_boq_tambahan: r.source_id_boq_tambahan, include: true, nama_item: r.nama_item, qty: r.qty, id_satuan: r.id_satuan, harga: r.harga, keterangan: r.keterangan })),
         personel: (fwo.personel || []).map((r) => ({ source_id_fwo_personel: r.source_id_fwo_personel, include: true, id_personnel: r.id_personnel, role: r.role })),
+        budgets: (fwo.budgets || []).map((b) => ({ source_id_budget: b.source_id_budget, include: true, label: b.label, keterangan: b.keterangan, tanggal_mulai: b.tanggal_mulai, tanggal_selesai: b.tanggal_selesai })),
     };
 }
 
@@ -1553,6 +1668,7 @@ function collectFwoPayload($fwoCard, fwo) {
         fwo_boq_other: collectTambahanRows('fwo-boq-other'),
         fwo_boq_sampling: collectTambahanRows('fwo-boq-sampling'),
         personel,
+        budgets: collectBudgetsPayload($body, 'fwo-budget'),
     };
 }
 
@@ -1579,6 +1695,16 @@ function validateWosPayload(wosPayload) {
         if (wo.tanggal_mulai && wo.tanggal_selesai && String(wo.tanggal_selesai) < String(wo.tanggal_mulai)) {
             errors.push(`${woLabel}: Tanggal Selesai tidak boleh sebelum Tanggal Mulai.`);
         }
+
+        (wo.budgets || []).forEach((b) => {
+            if (!b.include) return;
+            if (!b.label || !String(b.label).trim()) {
+                errors.push(`${woLabel}: isi Label untuk salah satu Budget Plan.`);
+            }
+            if (b.tanggal_mulai && b.tanggal_selesai && String(b.tanggal_selesai) < String(b.tanggal_mulai)) {
+                errors.push(`${woLabel}: Tanggal Selesai Budget Plan tidak boleh sebelum Tanggal Mulai.`);
+            }
+        });
 
         (wo.boq || []).forEach((r) => {
             if (!r.include) return;
@@ -1640,6 +1766,16 @@ function validateWosPayload(wosPayload) {
             if (fwoSelesaiCmp && woSelesaiCmp && fwoSelesaiCmp > woSelesaiCmp) {
                 errors.push(`${woLabel} — ${fwoLabel}: Tanggal Selesai FWO tidak boleh setelah Tanggal Selesai WO (${woSelesaiCmp}).`);
             }
+
+            (fwo.budgets || []).forEach((b) => {
+                if (!b.include) return;
+                if (!b.label || !String(b.label).trim()) {
+                    errors.push(`${woLabel} — ${fwoLabel}: isi Label untuk salah satu Budget Plan.`);
+                }
+                if (b.tanggal_mulai && b.tanggal_selesai && String(b.tanggal_selesai) < String(b.tanggal_mulai)) {
+                    errors.push(`${woLabel} — ${fwoLabel}: Tanggal Selesai Budget Plan tidak boleh sebelum Tanggal Mulai.`);
+                }
+            });
 
             (fwo.fieldwork_boq || []).forEach((r) => {
                 if (!r.include) return;
@@ -1749,6 +1885,7 @@ function submitClone() {
                 boq: (wo.boq || []).map((r) => ({ source_id_boq: r.source_id_boq, include: true, qty: r.qty, id_satuan: r.id_satuan, harga: r.harga, keterangan: r.keterangan })),
                 boq_other: (wo.boq_other || []).map((r) => ({ source_id_boq_tambahan: r.source_id_boq_tambahan, include: true, nama_item: r.nama_item, qty: r.qty, id_satuan: r.id_satuan, harga: r.harga, keterangan: r.keterangan })),
                 boq_sampling: (wo.boq_sampling || []).map((r) => ({ source_id_boq_tambahan: r.source_id_boq_tambahan, include: true, nama_item: r.nama_item, qty: r.qty, id_satuan: r.id_satuan, harga: r.harga, keterangan: r.keterangan })),
+                budgets: (wo.budgets || []).map((b) => ({ source_id_budget: b.source_id_budget, include: true, label: b.label, keterangan: b.keterangan, tanggal_mulai: b.tanggal_mulai, tanggal_selesai: b.tanggal_selesai })),
                 fwos: (wo.fwos || []).map((fwo) => fallbackFwoPayload(fwo)),
             });
             return;

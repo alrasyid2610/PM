@@ -611,3 +611,28 @@ function openIframeModal(modalSelector, iframeId, loaderId, src) {
 
     modal.show();
 }
+
+// Paste koordinat "lat, long" (hasil copy langsung dari Google Maps, mis.
+// "1.6035383960153768, 101.68270022688762") ke salah satu field Latitude/
+// Longitude otomatis kepecah ke keduanya. Delegated global di `document`
+// (bukan per-form) supaya berlaku di semua pasangan Latitude/Longitude di
+// app tanpa perlu wiring manual tiap ada form baru — dikenali lewat
+// `input[type="number"][step="any"]` (konvensi field koordinat di app ini),
+// pasangannya dicari sebagai 2 input number pertama dalam `.row` yang sama.
+$(document).on("paste", 'input[type="number"][step="any"]', function (e) {
+    const clipboard = (e.originalEvent || e).clipboardData;
+    if (!clipboard) return;
+    const pasted = clipboard.getData("text").trim();
+    const m = pasted.match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
+    if (!m) return; // bukan format "lat, long" — biarkan paste apa adanya
+
+    const $numberInputs = $(this).closest(".row").find('input[type="number"][step="any"]');
+    if ($numberInputs.length < 2) return;
+
+    e.preventDefault();
+    // Trigger 'input' & 'change' sekaligus — beberapa form dengar 'input'
+    // buat live preview (mis. DMS di modal Sampling Point), yang lain
+    // dengar 'change' (mis. dirty-check form Koordinat Site).
+    $numberInputs.eq(0).val(m[1]).trigger("input").trigger("change");
+    $numberInputs.eq(1).val(m[2]).trigger("input").trigger("change");
+});

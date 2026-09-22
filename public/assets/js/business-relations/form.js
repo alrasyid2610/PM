@@ -251,29 +251,19 @@ function initSamplingTabEvents() {
         $('#spModal-coord-wrap').toggle(this.checked);
     });
 
-    // Paste koordinat gabungan dari Google Maps (cth: "-6.1957, 106.9190")
-    // ke field Latitude → otomatis kesplit ke Latitude + Longitude
-    $(document).off('paste.sp-coord', '#spModal-latitude, #spModal-longitude')
-        .on('paste.sp-coord', '#spModal-latitude, #spModal-longitude', function (e) {
-            const text = (e.originalEvent || e).clipboardData.getData('text');
-            const match = text.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
-            if (!match) return; // bukan format "lat, lng" — biarkan paste normal jalan
-
-            e.preventDefault();
-            $('#spModal-latitude').val(match[1]);
-            $('#spModal-longitude').val(match[2]);
-            if (!$('#spModal-has-coord-wrap').is(':hidden')) {
-                $('#spModal-has-coord').prop('checked', true).trigger('change');
-            }
-            $('#spModal-latitude').trigger('input');
-        });
-
-    // Preview DMS live saat Latitude/Longitude diketik/diubah
+    // Split "lat, long" hasil paste dari Google Maps sekarang ditangani
+    // generik di pm.js (berlaku di semua pasangan Latitude/Longitude di app,
+    // termasuk Koordinat Site) — lihat listener global `paste` di sana.
+    // Di sini cukup ikuti event 'input'/'change' yang di-trigger-nya buat
+    // efek khusus modal ini: preview DMS live + auto-centang "Ada Koordinat".
     $(document).off('input.sp-dms', '#spModal-latitude, #spModal-longitude')
         .on('input.sp-dms', '#spModal-latitude, #spModal-longitude', function () {
             const lat = $('#spModal-latitude').val();
             const lng = $('#spModal-longitude').val();
             $('#spModal-dms-preview').text(coordToDms(lat, lng));
+            if (lat && lng && !$('#spModal-has-coord-wrap').is(':hidden')) {
+                $('#spModal-has-coord').prop('checked', true).trigger('change');
+            }
         });
 
     // Tombol Simpan di modal
@@ -1264,6 +1254,31 @@ function loadSitePickerList(idBr) {
         });
 }
 
+// Kumpulkan nilai form Informasi Site saat ini — dipakai buat payload Simpan
+// MAUPUN snapshot dirty-check (bandingkan nilai saat mulai Edit vs saat klik
+// Simpan, supaya tidak ada request kalau tidak ada yang benar-benar berubah).
+function collectSiteFormValues() {
+    const $wrap = $('#site-info-wrap');
+    return {
+        nama_lokasi:        $wrap.find('[name="si_nama_lokasi"]').val().trim(),
+        npwp_cabang:        $wrap.find('[name="si_npwp_cabang"]').val().trim(),
+        is_kantor_pusat:    $wrap.find('[name="si_is_kantor_pusat"]').is(':checked') ? 1 : 0,
+        provinsi:           $wrap.find('[name="provinsi"]').val(),
+        kota_kabupaten:     $wrap.find('[name="kota_kabupaten"]').val(),
+        kecamatan:          $wrap.find('[name="kecamatan"]').val(),
+        kelurahan:          $wrap.find('[name="kelurahan"]').val(),
+        kode_pos:           $wrap.find('[name="kode_pos"]').val(),
+        kawasan_bisnis:     $wrap.find('[name="si_kawasan_bisnis"]').val() || null,
+        gedung:             $wrap.find('[name="si_gedung"]').val() || null,
+        is_aktif:           $wrap.find('[name="si_is_aktif"]').val(),
+        nama_jalan:         $wrap.find('[name="si_nama_jalan"]').val(),
+        alamat_lengkap:     $wrap.find('[name="si_alamat_lengkap"]').val(),
+        keterangan_alamat:  $wrap.find('[name="si_keterangan_alamat"]').val(),
+        latitude:           $wrap.find('[name="si_latitude"]').val() || null,
+        longitude:          $wrap.find('[name="si_longitude"]').val() || null,
+    };
+}
+
 function renderSiteInfoTab(site) {
     return `
     <div class="card card-body" id="site-info-wrap" data-id-site="${site.id_site}">
@@ -1416,6 +1431,9 @@ function openSiteWorkspace(idSite) {
             $('#site-info-wrap').find('input, select, textarea')
                 .attr('data-no-disable', 'true')
                 .prop('disabled', true);
+            // Disimpan supaya tombol "Batal" bisa restore LOKAL (tanpa
+            // request ulang ke server) — lihat handler #btn-cancel-site-info.
+            $('#site-info-wrap').data('site-obj', site);
 
             initDynamicSelect('#site-info-wrap');
             WilayahEngine.init('#site-info-wrap');
@@ -1423,6 +1441,17 @@ function openSiteWorkspace(idSite) {
             // Reset tombol Edit/Simpan/Batal Site ke kondisi awal (view mode)
             $('#btn-edit-site-info').removeClass('d-none');
             $('#btn-save-site-info, #btn-cancel-site-info').addClass('d-none').removeClass('d-inline-flex');
+
+            // Tampilkan action bar "Informasi Site" SECARA LANGSUNG di sini,
+            // tidak cukup andalkan event shown.bs.tab — tab "Informasi Site"
+            // sudah `active` sejak markup awal (renderSiteWorkspace), jadi
+            // bootstrap.Tab().show() di bawah ini jadi no-op (Bootstrap tidak
+            // memicu shown.bs.tab untuk tab yang sudah aktif) dan tombol
+            // "Edit Site" tidak pernah muncul sama sekali kalau Site dibuka
+            // langsung dari URL (?tab=tabBrsSite / ?site=), bukan hasil klik
+            // user berpindah tab (bug nyata dilaporkan user).
+            hideAllBrTabActions();
+            $('#brTabActionsSiteInfo').removeClass('d-none').addClass('d-flex');
 
             new bootstrap.Tab(document.querySelector('#siteSubTabs [data-bs-target="#tabSiteInfo"]')).show();
         })
@@ -1483,57 +1512,76 @@ function initSiteTabEvents() {
 
     // Toggle Edit Site
     $panel.on('click', '#btn-edit-site-info', function () {
-        $('#site-info-wrap').find('input, select, textarea').prop('disabled', false);
+        // formGroup.text/select/wilayah/dst selalu membawa class CSS
+        // "disabled" di markup awal (dipakai bareng attribute disabled buat
+        // styling abu-abu) — attribute-nya saja yang dilepas tidak cukup,
+        // class-nya juga harus di-removeClass, kalau tidak form kelihatan
+        // tetap abu-abu walau sebenarnya sudah bisa diisi (bug nyata
+        // dilaporkan user: "formnya masih ke disable" setelah klik Edit).
+        $('#site-info-wrap').find('input, select, textarea').prop('disabled', false).removeClass('disabled');
+        $('#site-info-wrap').data('snapshot', collectSiteFormValues());
         $(this).addClass('d-none');
         $('#btn-save-site-info, #btn-cancel-site-info').removeClass('d-none').addClass('d-inline-flex');
     });
 
+    // Batal — restore LOKAL dari data yang sudah dimuat sebelumnya (di-simpan
+    // di $('#site-info-wrap').data('site-obj') saat openSiteWorkspace()),
+    // BUKAN request ulang ke server — sama seperti pola "Batal" di modul lain
+    // (mis. bindEditToggle) yang cuma mengembalikan nilai lokal, tidak perlu
+    // muat ulang data (dilaporkan user: sebelumnya "Batal" malah reload).
     $panel.on('click', '#btn-cancel-site-info', function () {
-        const idSite = $('#site-info-wrap').data('id-site');
-        openSiteWorkspace(idSite);
+        const $oldWrap = $('#site-info-wrap');
+        const site = $oldWrap.data('site-obj');
+        if (!site) return;
+
+        $oldWrap.replaceWith(renderSiteInfoTab(site));
+        $('#site-info-wrap').find('input, select, textarea').attr('data-no-disable', 'true').prop('disabled', true);
+        $('#site-info-wrap').data('site-obj', site);
+        initDynamicSelect('#site-info-wrap');
+        WilayahEngine.init('#site-info-wrap');
+
+        $('#btn-edit-site-info').removeClass('d-none');
+        $('#btn-save-site-info, #btn-cancel-site-info').addClass('d-none').removeClass('d-inline-flex');
     });
 
     $panel.on('click', '#btn-save-site-info', function () {
-        const idSite = $('#site-info-wrap').data('id-site');
-        const $wrap  = $('#site-info-wrap');
+        const idSite  = $('#site-info-wrap').data('id-site');
+        const current = collectSiteFormValues();
 
-        const payload = {
-            _token:             window.route.csrf,
-            _method:            'PUT',
-            nama_lokasi:        $wrap.find('[name="si_nama_lokasi"]').val().trim(),
-            npwp_cabang:        $wrap.find('[name="si_npwp_cabang"]').val().trim(),
-            is_kantor_pusat:    $wrap.find('[name="si_is_kantor_pusat"]').is(':checked') ? 1 : 0,
-            provinsi:           $wrap.find('[name="provinsi"]').val(),
-            kota_kabupaten:     $wrap.find('[name="kota_kabupaten"]').val(),
-            kecamatan:          $wrap.find('[name="kecamatan"]').val(),
-            kelurahan:          $wrap.find('[name="kelurahan"]').val(),
-            kode_pos:           $wrap.find('[name="kode_pos"]').val(),
-            kawasan_bisnis:     $wrap.find('[name="si_kawasan_bisnis"]').val() || null,
-            gedung:             $wrap.find('[name="si_gedung"]').val() || null,
-            is_aktif:           $wrap.find('[name="si_is_aktif"]').val(),
-            nama_jalan:         $wrap.find('[name="si_nama_jalan"]').val(),
-            alamat_lengkap:     $wrap.find('[name="si_alamat_lengkap"]').val(),
-            keterangan_alamat:  $wrap.find('[name="si_keterangan_alamat"]').val(),
-            latitude:           $wrap.find('[name="si_latitude"]').val() || null,
-            longitude:          $wrap.find('[name="si_longitude"]').val() || null,
-        };
+        if (!current.nama_lokasi) return Swal.fire('Perhatian', 'Nama Site wajib diisi.', 'warning');
 
-        if (!payload.nama_lokasi) return Swal.fire('Perhatian', 'Nama Site wajib diisi.', 'warning');
+        // Tidak ada perubahan sama sekali dari saat mulai edit → tidak perlu
+        // request ke server, cukup keluar dari mode edit (pola sama seperti
+        // data lain: tidak ada aksi kalau tidak ada yang diubah, dilaporkan
+        // user sebelumnya "Simpan" tetap jalan walau tidak ada perubahan).
+        const snapshot = $('#site-info-wrap').data('snapshot') || {};
+        const changed = Object.keys(current).some(
+            (k) => String(current[k] ?? '') !== String(snapshot[k] ?? '')
+        );
+        if (!changed) {
+            Notify.toast('Tidak ada perubahan untuk disimpan.', 'info');
+            $('#btn-cancel-site-info').trigger('click');
+            return;
+        }
 
-        $('#btn-save-site-info').prop('disabled', true);
-        $.post(`/business-relation-sites/${idSite}`, payload)
-            .done(function () {
-                Swal.fire({ icon: 'success', title: 'Tersimpan', timer: 1200, showConfirmButton: false });
-                openSiteWorkspace(idSite);
-            })
-            .fail(function (xhr) {
-                const errs = xhr.responseJSON?.errors;
-                const msg  = errs ? Object.values(errs).flat().join('<br>') : (xhr.responseJSON?.message || 'Terjadi kesalahan.');
-                Swal.fire('Gagal', msg, 'error');
-            })
-            .always(function () {
-                $('#btn-save-site-info').prop('disabled', false);
-            });
+        Notify.confirm('Simpan perubahan Site?', function () {
+            const payload = Object.assign({ _token: window.route.csrf, _method: 'PUT' }, current);
+
+            $('#btn-save-site-info').prop('disabled', true);
+            $.post(`/business-relation-sites/${idSite}`, payload)
+                .done(function () {
+                    Swal.fire({ icon: 'success', title: 'Tersimpan', timer: 1200, showConfirmButton: false });
+                    openSiteWorkspace(idSite);
+                })
+                .fail(function (xhr) {
+                    const errs = xhr.responseJSON?.errors;
+                    const msg  = errs ? Object.values(errs).flat().join('<br>') : (xhr.responseJSON?.message || 'Terjadi kesalahan.');
+                    Swal.fire('Gagal', msg, 'error');
+                })
+                .always(function () {
+                    $('#btn-save-site-info').prop('disabled', false);
+                });
+        });
     });
 
     // Hapus Site
@@ -1644,22 +1692,18 @@ function renderForm(res) {
                 </div>
                 <div id="brTabActionsSiteInfo" class="d-none align-items-center gap-2">
                     ${can('business-relations', 'can_update') ? `
-                    <button type="button" class="pm-btn-pill" id="btn-edit-site-info" data-no-disable
-                        style="border-color:#1a3a6e;color:#1a3a6e;">
-                        <i class="fa-solid fa-pen" style="font-size:11px;"></i> Edit Site
+                    <button type="button" class="btn-action-edit" id="btn-edit-site-info" data-no-disable>
+                        <i class="fa-solid fa-pen"></i> Edit Site
                     </button>
-                    <button type="button" class="pm-btn-pill d-none" id="btn-save-site-info" data-no-disable
-                        style="border-color:#166534;color:#166534;">
-                        <i class="fa-solid fa-check" style="font-size:11px;"></i> Simpan
+                    <button type="button" class="btn-action-save d-none" id="btn-save-site-info" data-no-disable>
+                        <i class="fa-solid fa-check"></i> Simpan
                     </button>
-                    <button type="button" class="pm-btn-pill d-none" id="btn-cancel-site-info" data-no-disable
-                        style="border-color:#64748b;color:#64748b;">
-                        <i class="fa-solid fa-xmark" style="font-size:11px;"></i> Batal
+                    <button type="button" class="btn-action-edit editing d-none" id="btn-cancel-site-info" data-no-disable>
+                        <i class="fa-solid fa-xmark"></i> Batal
                     </button>` : ''}
                     ${can('business-relations', 'can_delete') ? `
-                    <button type="button" class="pm-btn-pill" id="btn-delete-site-info" data-no-disable
-                        style="border-color:#dc2626;color:#dc2626;">
-                        <i class="fa-solid fa-trash" style="font-size:11px;"></i> Hapus Site
+                    <button type="button" class="btn-action-danger" id="btn-delete-site-info" data-no-disable>
+                        <i class="fa-solid fa-trash"></i> Hapus Site
                     </button>` : ''}
                 </div>
                 <div id="brTabActionsEnv" class="d-none align-items-center gap-2">

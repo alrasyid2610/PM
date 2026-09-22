@@ -869,21 +869,108 @@ class SalesOrderController extends Controller
                 ->groupBy('id_fwo')
             : collect();
 
+        // ── Fase 3: Budget Plan + Realisasi (WO & FWO) ──
+        // Granularitas checklist cuma di level Plan (disepakati user) — Item
+        // & Actual di dalam Plan yang disertakan ikut utuh, tidak dipilah
+        // satu-satu. Plan/Item/Actual TETAP full data-nya dikirim ke frontend
+        // (bukan cuma ringkasan) supaya user masih bisa lihat & edit field
+        // Plan (label/keterangan/tanggal) sebelum simpan.
+        $woBudgets = $woIds->isNotEmpty()
+            ? DB::table('wo_budgets')
+                ->whereIn('id_wo', $woIds)
+                ->whereNull('deleted_at')
+                ->orderBy('id_budget')
+                ->select(['id_budget as source_id_budget', 'id_wo', 'label', 'keterangan', 'tanggal_mulai', 'tanggal_selesai'])
+                ->get()
+                ->groupBy('id_wo')
+            : collect();
+        $woBudgetIds = $woIds->isNotEmpty()
+            ? DB::table('wo_budgets')->whereIn('id_wo', $woIds)->whereNull('deleted_at')->pluck('id_budget')
+            : collect();
+        $woBudgetItems = $woBudgetIds->isNotEmpty()
+            ? DB::table('wo_budget_items as bi')
+                ->leftJoin('budget_accounts as ba', 'ba.id_account', '=', 'bi.id_account')
+                ->whereIn('bi.id_budget', $woBudgetIds)
+                ->orderBy('bi.id_budget_item')
+                ->select(['bi.id_budget_item as source_id_budget_item', 'bi.id_budget', 'bi.id_account', 'ba.nama as nama_account', 'bi.nominal_budget', 'bi.keterangan', 'bi.is_cash_advance'])
+                ->get()
+                ->groupBy('id_budget')
+            : collect();
+        $woBudgetItemIds = $woBudgetItems->flatten(1)->pluck('source_id_budget_item');
+        $woBudgetActuals = $woBudgetItemIds->isNotEmpty()
+            ? DB::table('wo_budget_actuals')
+                ->whereIn('id_budget_item', $woBudgetItemIds)
+                ->orderBy('id_actual')
+                ->select(['id_actual as source_id_actual', 'id_budget_item', 'nominal_actual', 'keterangan'])
+                ->get()
+                ->groupBy('id_budget_item')
+            : collect();
+
+        $fwoBudgets = $fwoIds->isNotEmpty()
+            ? DB::table('fwo_budgets')
+                ->whereIn('id_fwo', $fwoIds)
+                ->whereNull('deleted_at')
+                ->orderBy('id_budget')
+                ->select(['id_budget as source_id_budget', 'id_fwo', 'label', 'keterangan', 'tanggal_mulai', 'tanggal_selesai'])
+                ->get()
+                ->groupBy('id_fwo')
+            : collect();
+        $fwoBudgetIds = $fwoIds->isNotEmpty()
+            ? DB::table('fwo_budgets')->whereIn('id_fwo', $fwoIds)->whereNull('deleted_at')->pluck('id_budget')
+            : collect();
+        $fwoBudgetItems = $fwoBudgetIds->isNotEmpty()
+            ? DB::table('fwo_budget_items as bi')
+                ->leftJoin('budget_accounts as ba', 'ba.id_account', '=', 'bi.id_account')
+                ->whereIn('bi.id_budget', $fwoBudgetIds)
+                ->orderBy('bi.id_budget_item')
+                ->select(['bi.id_budget_item as source_id_budget_item', 'bi.id_budget', 'bi.id_account', 'ba.nama as nama_account', 'bi.nominal_budget', 'bi.keterangan', 'bi.is_cash_advance'])
+                ->get()
+                ->groupBy('id_budget')
+            : collect();
+        $fwoBudgetItemIds = $fwoBudgetItems->flatten(1)->pluck('source_id_budget_item');
+        $fwoBudgetActuals = $fwoBudgetItemIds->isNotEmpty()
+            ? DB::table('fwo_budget_actuals')
+                ->whereIn('id_budget_item', $fwoBudgetItemIds)
+                ->orderBy('id_actual')
+                ->select(['id_actual as source_id_actual', 'id_budget_item', 'nominal_actual', 'keterangan'])
+                ->get()
+                ->groupBy('id_budget_item')
+            : collect();
+
         $wos = $wos->map(function ($wo) use (
             $boqRows, $boqOtherByWo, $boqSamplingByWo,
-            $fwos, $fieldworkBoqRows, $fwoBoqOtherByFwo, $fwoBoqSamplingByFwo, $fwoPersonelRows
+            $fwos, $fieldworkBoqRows, $fwoBoqOtherByFwo, $fwoBoqSamplingByFwo, $fwoPersonelRows,
+            $woBudgets, $woBudgetItems, $woBudgetActuals, $fwoBudgets, $fwoBudgetItems, $fwoBudgetActuals
         ) {
             $wo->boq          = array_values($boqRows->get($wo->id_wo, collect())->toArray());
             $wo->boq_other    = array_values($boqOtherByWo->get($wo->id_wo, collect())->toArray());
             $wo->boq_sampling = array_values($boqSamplingByWo->get($wo->id_wo, collect())->toArray());
 
+            $wo->budgets = $woBudgets->get($wo->id_wo, collect())->map(function ($b) use ($woBudgetItems, $woBudgetActuals) {
+                $b->items = $woBudgetItems->get($b->source_id_budget, collect())->map(function ($it) use ($woBudgetActuals) {
+                    $it->actuals = array_values($woBudgetActuals->get($it->source_id_budget_item, collect())->toArray());
+                    return $it;
+                })->values()->toArray();
+                return $b;
+            })->values()->toArray();
+
             $wo->fwos = $fwos->get($wo->id_wo, collect())->map(function ($fwo) use (
-                $fieldworkBoqRows, $fwoBoqOtherByFwo, $fwoBoqSamplingByFwo, $fwoPersonelRows
+                $fieldworkBoqRows, $fwoBoqOtherByFwo, $fwoBoqSamplingByFwo, $fwoPersonelRows,
+                $fwoBudgets, $fwoBudgetItems, $fwoBudgetActuals
             ) {
                 $fwo->fieldwork_boq    = array_values($fieldworkBoqRows->get($fwo->id_fwo, collect())->toArray());
                 $fwo->fwo_boq_other    = array_values($fwoBoqOtherByFwo->get($fwo->id_fwo, collect())->toArray());
                 $fwo->fwo_boq_sampling = array_values($fwoBoqSamplingByFwo->get($fwo->id_fwo, collect())->toArray());
                 $fwo->personel         = array_values($fwoPersonelRows->get($fwo->id_fwo, collect())->toArray());
+
+                $fwo->budgets = $fwoBudgets->get($fwo->id_fwo, collect())->map(function ($b) use ($fwoBudgetItems, $fwoBudgetActuals) {
+                    $b->items = $fwoBudgetItems->get($b->source_id_budget, collect())->map(function ($it) use ($fwoBudgetActuals) {
+                        $it->actuals = array_values($fwoBudgetActuals->get($it->source_id_budget_item, collect())->toArray());
+                        return $it;
+                    })->values()->toArray();
+                    return $b;
+                })->values()->toArray();
+
                 return $fwo;
             })->values()->toArray();
 
@@ -991,6 +1078,19 @@ class SalesOrderController extends Controller
             'wos.*.boq_sampling.*.harga'      => 'nullable|integer',
             'wos.*.boq_sampling.*.keterangan' => 'nullable|string',
 
+            // ── Fase 3: Budget WO — granularitas checklist cuma di level
+            // Plan (disepakati user). Item & Actual TIDAK dikirim dari
+            // frontend sama sekali (tidak diedit per-baris) — di-re-fetch
+            // langsung dari DB berdasarkan source_id_budget, konsisten
+            // dengan prinsip "identitas tidak dipercaya dari client payload".
+            'wos.*.budgets'                    => 'nullable|array',
+            'wos.*.budgets.*.source_id_budget' => 'required|integer',
+            'wos.*.budgets.*.include'          => 'required|boolean',
+            'wos.*.budgets.*.label'            => 'required|string|max:255',
+            'wos.*.budgets.*.keterangan'       => 'nullable|string',
+            'wos.*.budgets.*.tanggal_mulai'    => 'nullable|date',
+            'wos.*.budgets.*.tanggal_selesai'  => 'nullable|date|after_or_equal:wos.*.budgets.*.tanggal_mulai',
+
             // ── Fase 2: FWO ── (source_id_fwo_* nullable = baris baru,
             // sama pola seperti source_id_boq di BOQ — lihat catatan di sana)
             'wos.*.fwos'                             => 'nullable|array',
@@ -1034,6 +1134,15 @@ class SalesOrderController extends Controller
             'wos.*.fwos.*.personel.*.include'                => 'required|boolean',
             'wos.*.fwos.*.personel.*.id_personnel'           => 'required|integer',
             'wos.*.fwos.*.personel.*.role'                   => 'nullable|string|max:500',
+
+            // ── Fase 3: FWO Budget — sama pola seperti Budget WO di atas.
+            'wos.*.fwos.*.budgets'                    => 'nullable|array',
+            'wos.*.fwos.*.budgets.*.source_id_budget' => 'required|integer',
+            'wos.*.fwos.*.budgets.*.include'          => 'required|boolean',
+            'wos.*.fwos.*.budgets.*.label'            => 'required|string|max:255',
+            'wos.*.fwos.*.budgets.*.keterangan'       => 'nullable|string',
+            'wos.*.fwos.*.budgets.*.tanggal_mulai'    => 'nullable|date',
+            'wos.*.fwos.*.budgets.*.tanggal_selesai'  => 'nullable|date|after_or_equal:wos.*.fwos.*.budgets.*.tanggal_mulai',
         ], [
             'so.id_so_referensi.required' => 'SO Reference wajib dipilih.',
             'so.id_so_referensi.exists'   => 'SO Reference yang dipilih tidak valid.',
@@ -1306,6 +1415,67 @@ class SalesOrderController extends Controller
                         }
                     }
 
+                    // ── Fase 3: Budget WO — Plan + Item + Actual. Granularitas
+                    // checklist cuma di level Plan (disepakati user): kalau
+                    // Plan disertakan, SEMUA Item + Actual di dalamnya ikut
+                    // utuh (tidak dipilah satu-satu, tidak diedit per-baris —
+                    // makanya diambil langsung dari sourceItem/sourceActual,
+                    // bukan dari input user). Status Plan selalu direset 'open',
+                    // status_verifikasi Actual selalu direset 'menunggu',
+                    // dokumen_realisasi & attachments TIDAK PERNAH ikut disalin
+                    // (konsisten pola attachment di seluruh fitur Clone SO).
+                    foreach (($woInput['budgets'] ?? []) as $budgetInput) {
+                        if (empty($budgetInput['include'])) continue;
+
+                        $sourceBudget = DB::table('wo_budgets')
+                            ->where('id_budget', $budgetInput['source_id_budget'])
+                            ->where('id_wo', $sourceWo->id_wo)
+                            ->whereNull('deleted_at')
+                            ->first();
+                        if (!$sourceBudget) continue;
+
+                        $newBudgetId = DB::table('wo_budgets')->insertGetId([
+                            'id_wo'             => $newWoId,
+                            'label'             => $budgetInput['label'] ?? $sourceBudget->label,
+                            'keterangan'        => $budgetInput['keterangan'] ?? $sourceBudget->keterangan,
+                            'tanggal_mulai'     => $budgetInput['tanggal_mulai'] ?? $sourceBudget->tanggal_mulai,
+                            'tanggal_selesai'   => $budgetInput['tanggal_selesai'] ?? $sourceBudget->tanggal_selesai,
+                            'status'            => 'open',
+                            'dokumen_realisasi' => null,
+                            'created_at'        => now(),
+                            'updated_at'        => now(),
+                        ]);
+
+                        $sourceItems = DB::table('wo_budget_items')->where('id_budget', $sourceBudget->id_budget)->get();
+                        foreach ($sourceItems as $sourceItem) {
+                            $newItemId = DB::table('wo_budget_items')->insertGetId([
+                                'id_budget'       => $newBudgetId,
+                                'id_account'      => $sourceItem->id_account,
+                                'nominal_budget'  => $sourceItem->nominal_budget,
+                                'keterangan'      => $sourceItem->keterangan,
+                                'is_cash_advance' => $sourceItem->is_cash_advance,
+                                'created_at'      => now(),
+                                'updated_at'      => now(),
+                            ]);
+
+                            $sourceActuals = DB::table('wo_budget_actuals')->where('id_budget_item', $sourceItem->id_budget_item)->get();
+                            foreach ($sourceActuals as $sourceActual) {
+                                DB::table('wo_budget_actuals')->insert([
+                                    'id_budget_item'     => $newItemId,
+                                    'nominal_actual'     => $sourceActual->nominal_actual,
+                                    'keterangan'         => $sourceActual->keterangan,
+                                    'attachments'        => null,
+                                    'status_verifikasi'  => 'menunggu',
+                                    'catatan_verifikasi' => null,
+                                    'verified_by'        => null,
+                                    'verified_at'        => null,
+                                    'created_at'         => now(),
+                                    'updated_at'         => now(),
+                                ]);
+                            }
+                        }
+                    }
+
                     // ── Fase 2: FWO + Fieldwork BOQ + FWO BOQ Other/Sampling + Personel ──
                     foreach (($woInput['fwos'] ?? []) as $fwoInput) {
                         if (empty($fwoInput['include'])) continue;
@@ -1532,6 +1702,62 @@ class SalesOrderController extends Controller
                                 'created_at'    => now(),
                                 'updated_at'    => now(),
                             ]);
+                        }
+
+                        // ── Fase 3: FWO Budget — sama pola persis seperti
+                        // Budget WO di atas (Plan+Item+Actual, granularitas
+                        // cuma level Plan, status selalu direset, attachment
+                        // tidak pernah ikut).
+                        foreach (($fwoInput['budgets'] ?? []) as $budgetInput) {
+                            if (empty($budgetInput['include'])) continue;
+
+                            $sourceBudget = DB::table('fwo_budgets')
+                                ->where('id_budget', $budgetInput['source_id_budget'])
+                                ->where('id_fwo', $sourceFwo->id_fwo)
+                                ->whereNull('deleted_at')
+                                ->first();
+                            if (!$sourceBudget) continue;
+
+                            $newBudgetId = DB::table('fwo_budgets')->insertGetId([
+                                'id_fwo'            => $newFwoId,
+                                'label'             => $budgetInput['label'] ?? $sourceBudget->label,
+                                'keterangan'        => $budgetInput['keterangan'] ?? $sourceBudget->keterangan,
+                                'tanggal_mulai'     => $budgetInput['tanggal_mulai'] ?? $sourceBudget->tanggal_mulai,
+                                'tanggal_selesai'   => $budgetInput['tanggal_selesai'] ?? $sourceBudget->tanggal_selesai,
+                                'status'            => 'open',
+                                'dokumen_realisasi' => null,
+                                'created_at'        => now(),
+                                'updated_at'        => now(),
+                            ]);
+
+                            $sourceItems = DB::table('fwo_budget_items')->where('id_budget', $sourceBudget->id_budget)->get();
+                            foreach ($sourceItems as $sourceItem) {
+                                $newItemId = DB::table('fwo_budget_items')->insertGetId([
+                                    'id_budget'       => $newBudgetId,
+                                    'id_account'      => $sourceItem->id_account,
+                                    'nominal_budget'  => $sourceItem->nominal_budget,
+                                    'keterangan'      => $sourceItem->keterangan,
+                                    'is_cash_advance' => $sourceItem->is_cash_advance,
+                                    'created_at'      => now(),
+                                    'updated_at'      => now(),
+                                ]);
+
+                                $sourceActuals = DB::table('fwo_budget_actuals')->where('id_budget_item', $sourceItem->id_budget_item)->get();
+                                foreach ($sourceActuals as $sourceActual) {
+                                    DB::table('fwo_budget_actuals')->insert([
+                                        'id_budget_item'     => $newItemId,
+                                        'nominal_actual'     => $sourceActual->nominal_actual,
+                                        'keterangan'         => $sourceActual->keterangan,
+                                        'attachments'        => null,
+                                        'status_verifikasi'  => 'menunggu',
+                                        'catatan_verifikasi' => null,
+                                        'verified_by'        => null,
+                                        'verified_at'        => null,
+                                        'created_at'         => now(),
+                                        'updated_at'         => now(),
+                                    ]);
+                                }
+                            }
                         }
                     }
                 }

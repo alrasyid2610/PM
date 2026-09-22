@@ -278,7 +278,10 @@
             </x-section-card>
         </div>
 
-        <div class="col-12 d-flex justify-content-between align-items-center mt-2">
+        <div class="col-12 d-flex justify-content-between align-items-center"
+            style="position:sticky;bottom:0;z-index:100;background:#fff;
+                   border-top:1px solid #e2e8f0;padding-block:12px;margin-top:8px;
+                   box-shadow:0 -2px 10px rgba(0,0,0,.06);">
             <a href="{{ url('sales-orders') }}?open={{ $id }}" class="btn btn-secondary btn-sm">
                 <i class="fa-solid fa-arrow-left me-1"></i> Batal
             </a>
