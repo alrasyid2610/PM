@@ -731,17 +731,28 @@ function buildBudgetPlanCardHtml(b, rowClass) {
         </tr>`).join('');
 
     return `
-        <div class="boq-section ${rowClass}-row" data-source-id-budget="${b.source_id_budget}"
+        <div class="boq-section budget-card ${rowClass}-row" data-source-id-budget="${b.source_id_budget}"
             style="background:#fff;border:1px solid #d6dce5;border-left:4px solid #0f766e;
                    border-radius:10px;padding:14px 16px;margin-bottom:16px;
                    box-shadow:0 1px 3px rgba(15,23,42,.06);">
-            <div class="d-flex align-items-start gap-2 mb-2">
+            <div class="d-flex align-items-start gap-2">
                 <input type="checkbox" class="form-check-input row-include mt-1" checked title="Sertakan Plan ini">
-                <div class="flex-grow-1 row g-2">
-                    <div class="col-md-6 col-12">
+                <div class="flex-grow-1 row g-2 align-items-center">
+                    <div class="col-md-6 col-9">
                         <label class="form-label small mb-1">Label Plan</label>
                         <input type="text" class="form-control form-control-sm row-label" value="${escHtml(b.label || '')}">
                     </div>
+                    <div class="col-md-3 col-3 text-end">
+                        <div class="small text-muted">Total Budget</div>
+                        <div class="fw-semibold">${formatRupiah(totalBudget)}</div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary budget-card-toggle" title="Tampilkan/sembunyikan detail">
+                    <i class="fa-solid fa-chevron-up"></i>
+                </button>
+            </div>
+            <div class="budget-card-body mt-2">
+                <div class="row g-2">
                     <div class="col-md-3 col-6">
                         <label class="form-label small mb-1">Tanggal Mulai</label>
                         <input type="text" class="form-control form-control-sm fp-date row-tgl-mulai" value="${b.tanggal_mulai || ''}" autocomplete="off">
@@ -750,25 +761,34 @@ function buildBudgetPlanCardHtml(b, rowClass) {
                         <label class="form-label small mb-1">Tanggal Selesai</label>
                         <input type="text" class="form-control form-control-sm fp-date row-tgl-selesai" value="${b.tanggal_selesai || ''}" autocomplete="off">
                     </div>
-                    <div class="col-md-12">
+                    <div class="col-md-6 col-12">
                         <label class="form-label small mb-1">Keterangan</label>
                         <textarea class="form-control form-control-sm row-keterangan" rows="1">${escHtml(b.keterangan || '')}</textarea>
                     </div>
                 </div>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-sm table-bordered align-middle mb-1">
-                    <thead class="table-light">
-                        <tr><th>Account</th><th class="text-end" style="width:130px;">Budget</th><th class="text-end" style="width:130px;">Realisasi</th></tr>
-                    </thead>
-                    <tbody>${itemRows || '<tr><td colspan="3" class="text-muted fst-italic small">Tidak ada item.</td></tr>'}</tbody>
-                </table>
-            </div>
-            <div class="d-flex justify-content-end gap-3 small text-muted">
-                <span>Total Budget: <b>${formatRupiah(totalBudget)}</b></span>
-                <span>Total Realisasi: <b>${formatRupiah(totalActual)}</b></span>
+                <div class="table-responsive mt-2">
+                    <table class="table table-sm table-bordered align-middle mb-1">
+                        <thead class="table-light">
+                            <tr><th>Account</th><th class="text-end" style="width:130px;">Budget</th><th class="text-end" style="width:130px;">Realisasi</th></tr>
+                        </thead>
+                        <tbody>${itemRows || '<tr><td colspan="3" class="text-muted fst-italic small">Tidak ada item.</td></tr>'}</tbody>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-end gap-3 small text-muted">
+                    <span>Total Budget: <b>${formatRupiah(totalBudget)}</b></span>
+                    <span>Total Realisasi: <b>${formatRupiah(totalActual)}</b></span>
+                </div>
             </div>
         </div>`;
+}
+
+function bindBudgetCardToggle($body) {
+    $body.off('click.budgetCardToggle', '.budget-card-toggle').on('click.budgetCardToggle', '.budget-card-toggle', function () {
+        const $card = $(this).closest('.budget-card');
+        const $icon = $(this).find('i');
+        $card.find('.budget-card-body').slideToggle(150);
+        $icon.toggleClass('fa-chevron-up fa-chevron-down');
+    });
 }
 
 // Testing Point/Standard/Matriks Sample digabung jadi 1 kolom bertumpuk +
@@ -964,6 +984,7 @@ function initWoBodyPlugins($card, wo) {
     $body.find('.wo-budget-row').each(function () {
         bindRowIncludeToggle($(this));
     });
+    bindBudgetCardToggle($body.find('.wo-budget-list'));
 
     // Uncheck "Sertakan" di 1 baris BOQ WO harus ikut meng-uncheck (+ disable,
     // supaya tidak bisa dicentang manual lagi selama BOQ-nya masih di-exclude)
@@ -1342,6 +1363,7 @@ function initFwoBodyPlugins($fwoCard, fwo, wo, $woBody) {
     $body.find('.fwo-budget-row').each(function () {
         bindRowIncludeToggle($(this));
     });
+    bindBudgetCardToggle($body.find('.fwo-budget-list'));
 }
 
 function initSatuanSelectForRow($row, $card, sourceRow) {
