@@ -47,7 +47,11 @@ $(window).on('load', function () {
 
     function applyFixed() {
         if (isFixed || !wrap) return;
-        var h = wrap.offsetHeight;
+        // Placeholder harus menggantikan SELURUH ruang elemen (termasuk margin) —
+        // margin dilepas saat fixed, kalau tidak ikut dihitung tinggi dokumen
+        // menyusut → scroll ter-clamp → unstuck → tinggi balik → glitch loop.
+        var cs = getComputedStyle(wrap);
+        var h = wrap.offsetHeight + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
         placeholder = document.createElement('div');
         placeholder.style.height = h + 'px';
         wrap.parentNode.insertBefore(placeholder, wrap);
@@ -153,7 +157,9 @@ $(window).on('load', function () {
 
     function applyFixed() {
         if (isFixed || !tabHeader) return;
-        var h = tabHeader.offsetHeight;
+        // Sama seperti action bar: hitung margin-top (16px, dilepas oleh .is-stuck)
+        var cs = getComputedStyle(tabHeader);
+        var h = tabHeader.offsetHeight + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
         placeholder = document.createElement('div');
         placeholder.style.height = h + 'px';
         tabHeader.parentNode.insertBefore(placeholder, tabHeader);
