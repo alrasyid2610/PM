@@ -122,15 +122,7 @@ class BusinessRelationController extends Controller
 
             // Nama BR + prefix
             ->editColumn('nama', function ($row) {
-                $prefix = match ($row->entitas) {
-                    'Perseroan Terbatas' => 'PT.',
-                    'Commanditaire Vennootschap' => 'CV.',
-                    'Firma' => 'FA.',
-                    'Koperasi' => 'KOP.',
-                    default => ''
-                };
-
-                return trim($prefix . ' ' . $row->nama);
+                return brDisplayName($row->entitas, $row->nama);
             })
 
             // Jumlah Site
@@ -417,7 +409,7 @@ class BusinessRelationController extends Controller
             $data->map(function ($item) {
                 return [
                     'id'                       => $item->id_br,
-                    'text'                     => $item->nama,
+                    'text'                     => brDisplayName($item->nama_entitas, $item->nama),
                     'id_entitas'               => $item->id_entitas,
                     'nama_entitas'             => $item->nama_entitas,
                     'id_kepemilikan'           => $item->id_kepemilikan,
@@ -502,6 +494,12 @@ class BusinessRelationController extends Controller
                 ->where('id_br', $id)
                 ->whereNull('deleted_at')
                 ->count();
+
+            // nama_display khusus untuk judul action bar — nama_br sendiri dibiarkan
+            // apa adanya karena dipakai juga sebagai value input edit "Nama Business
+            // Relation"; kalau di-prefix di sini, prefix-nya bisa ikut kesimpan
+            // permanen ke kolom nama saat user save tanpa mengubah field itu.
+            $data->nama_display = brDisplayName($data->nama_entitas, $data->nama_br);
         }
 
         return response()->json($data);
@@ -587,7 +585,7 @@ class BusinessRelationController extends Controller
             $br->map(function ($item) {
                 return [
                     'id'                       => $item->id_br,
-                    'text'                     => $item->nama,
+                    'text'                     => brDisplayName($item->nama_entitas, $item->nama),
                     'id_entitas'               => $item->id_entitas,
                     'nama_entitas'             => $item->nama_entitas,
                     'id_kepemilikan'           => $item->id_kepemilikan,

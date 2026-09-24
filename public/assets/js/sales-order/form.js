@@ -26,7 +26,7 @@ function renderForm(res) {
     const pelangganTag = res.nama_pelanggan
         ? `<a href="/business-relations${pelangganTagParams}" class="pm-badge" style="background:#f1f5f9;color:#475569;text-decoration:none;">
                <i class="fa-solid fa-building" style="font-size:10px;"></i>
-               ${escHtml(res.nama_pelanggan)}
+               ${escHtml(res.nama_pelanggan_display ?? res.nama_pelanggan)}
            </a>`
         : "";
 
@@ -295,7 +295,7 @@ function renderForm(res) {
                             mode: "ajax",
                             url: "business-relations/select2",
                             placeholder: "Pilih Data",
-                            label: res.nama_pelanggan,
+                            label: res.nama_pelanggan_display ?? res.nama_pelanggan,
                             className: "col-md-4",
                             createUrl: "/business-relations/create",
                             required: true,
@@ -315,7 +315,7 @@ function renderForm(res) {
                             mode: "ajax",
                             url: "business-relations/select2",
                             placeholder: "Pilih Data",
-                            label: res.pelanggan_delivery,
+                            label: res.pelanggan_delivery_display ?? res.pelanggan_delivery,
                             className: "col-md-4",
                             createUrl: "/business-relations/create",
                             required: true,
@@ -335,7 +335,7 @@ function renderForm(res) {
                             mode: "ajax",
                             url: "business-relations/select2",
                             placeholder: "Pilih Data",
-                            label: res.pelanggan_pay,
+                            label: res.pelanggan_pay_display ?? res.pelanggan_pay,
                             className: "col-md-4",
                             createUrl: "/business-relations/create",
                             required: true,

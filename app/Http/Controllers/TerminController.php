@@ -147,12 +147,15 @@ class TerminController extends Controller
             ->leftJoin('sales_orders as so', 'so.id_so', '=', 't.id_so')
             ->leftJoin('business_relations as br', 'br.id_br', '=', 'so.id_pelanggan')
             ->where('t.id_termin', $id)
-            ->select('t.*', 'so.no_so', 'so.judul_order', 'br.nama as nama_pelanggan_billing')
+            ->leftJoin('entitas as ent', 'ent.id_entitas', '=', 'br.id_entitas')
+            ->select('t.*', 'so.no_so', 'so.judul_order', 'br.nama as nama_pelanggan_billing', 'ent.nama as entitas_pelanggan_billing')
             ->first();
 
         if (!$data) {
             return response()->json(['message' => 'Data tidak ditemukan'], 404);
         }
+
+        $data->nama_pelanggan_billing = brDisplayName($data->entitas_pelanggan_billing, $data->nama_pelanggan_billing);
 
         $data->assigned_outputs = DB::table('output_pekerjaan as op')
             ->leftJoin('work_orders as wo', 'wo.id_wo', '=', 'op.id_wo')
@@ -171,12 +174,15 @@ class TerminController extends Controller
             ->leftJoin('sales_orders as so', 'so.id_so', '=', 't.id_so')
             ->leftJoin('business_relations as br', 'br.id_br', '=', 'so.id_pelanggan')
             ->where('t.id_termin', $id)
-            ->select('t.*', 'so.no_so', 'so.judul_order', 'br.nama as nama_pelanggan_billing')
+            ->leftJoin('entitas as ent', 'ent.id_entitas', '=', 'br.id_entitas')
+            ->select('t.*', 'so.no_so', 'so.judul_order', 'br.nama as nama_pelanggan_billing', 'ent.nama as entitas_pelanggan_billing')
             ->first();
 
         if (!$data) {
             return response()->json(['success' => false, 'message' => 'Data tidak ditemukan'], 404);
         }
+
+        $data->nama_pelanggan_billing = brDisplayName($data->entitas_pelanggan_billing, $data->nama_pelanggan_billing);
 
         $data->assigned_outputs = DB::table('output_pekerjaan as op')
             ->leftJoin('work_orders as wo', 'wo.id_wo', '=', 'op.id_wo')

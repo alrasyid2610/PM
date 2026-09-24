@@ -58,6 +58,17 @@
             ],
             dom: 'rtip',
             language: { emptyTable: 'Belum ada data Site.' },
+            createdRow: function (row, data) {
+                $(row)
+                    .css('cursor', 'pointer')
+                    .attr('data-href', '/business-relations?open=' + data.id_br + '&tab=tabBrsSite&site=' + data.id_site);
+            },
+        });
+
+        $('#siteDirectoryTable tbody').on('click', 'tr', function (e) {
+            if ($(e.target).closest('a, button').length) return;
+            const href = $(this).data('href');
+            if (href) window.location.href = href;
         });
 
         $('#siteDirectorySearch').on('input', function () {

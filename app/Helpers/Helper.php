@@ -64,6 +64,28 @@ function userCan(string $slug, string $action = 'can_read'): bool
     return (bool) ($perms[$slug][$action] ?? false);
 }
 
+/**
+ * Prefix badan usaha (PT/CV/FA/KOP) tanpa titik untuk nama Business Relation.
+ * Terima nama panjang maupun singkatan langsung, case-insensitive — isi master
+ * `entitas` di tiap environment bisa beda. Entitas lain/kosong → ''.
+ */
+function entitasPrefix(?string $entitas): string
+{
+    return match (strtoupper(trim(str_replace('.', '', (string) $entitas)))) {
+        'PERSEROAN TERBATAS', 'PT'         => 'PT',
+        'COMMANDITAIRE VENNOOTSCHAP', 'CV' => 'CV',
+        'FIRMA', 'FA'                      => 'FA',
+        'KOPERASI', 'KOP'                  => 'KOP',
+        default                            => '',
+    };
+}
+
+/** Nama BR untuk tampilan: "{Entitas} {Nama}" — mis. entitas PT + DNP → "PT DNP". */
+function brDisplayName(?string $entitas, ?string $nama): string
+{
+    return trim(entitasPrefix($entitas) . ' ' . (string) $nama);
+}
+
 function uploadAttachment($fieldAttachments, $table)
 {
     $files = [];

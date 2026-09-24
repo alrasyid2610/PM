@@ -753,6 +753,7 @@ class WorkOrderController extends Controller
             ->leftJoin('business_relations as br', 'br.id_br', '=', 'wo.id_pelanggan_pekerjaan')
             ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
             ->leftJoin('users as pic', 'pic.id', '=', 'wo.id_pic_pelanggan_pekerjaan')
+            ->leftJoin('entitas as ent', 'ent.id_entitas', '=', 'br.id_entitas')
             ->where('wo.id_wo', $id)
             ->select([
                 'wo.id_wo',
@@ -763,6 +764,7 @@ class WorkOrderController extends Controller
                 'wo.keterangan',
                 'wo.id_pelanggan_pekerjaan',
                 'br.nama as nama_pelanggan_pekerjaan',
+                'ent.nama as entitas_pelanggan_pekerjaan',
                 'wo.id_site_pelanggan_pekerjaan',
                 'brs.nama_lokasi as nama_site_pelanggan_pekerjaan',
                 'wo.id_pic_pelanggan_pekerjaan',
@@ -783,6 +785,9 @@ class WorkOrderController extends Controller
         if (!$testingUnit) {
             return response()->json(['message' => 'Testing unit tidak ditemukan'], 404);
         }
+
+        // Khusus badge action bar — nama_pelanggan_pekerjaan tetap mentah (label select edit)
+        $testingUnit->nama_pelanggan_display = brDisplayName($testingUnit->entitas_pelanggan_pekerjaan, $testingUnit->nama_pelanggan_pekerjaan);
 
         return response()->json($testingUnit);
     }

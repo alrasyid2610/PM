@@ -85,11 +85,15 @@ class FieldworkController extends Controller
             ->leftJoin('business_relation_contacts as brc', 'fw.id_pic_pelanggan_pekerjaan', '=', 'brc.id_contact')
             ->where('fw.id_fwo', $id)
             ->leftJoin('business_relation_sites as brs_wo', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs_wo.id_site')
+            ->leftJoin('business_relations as br_wo', 'br_wo.id_br', '=', 'wo.id_pelanggan_pekerjaan')
+            ->leftJoin('entitas as ent_wo', 'ent_wo.id_entitas', '=', 'br_wo.id_entitas')
             ->select([
                 'fw.*',
                 'wo.no_wo as wo_no_wo',
                 'wo.id_so',
                 'wo.id_pelanggan_pekerjaan',
+                'br_wo.nama as nama_pelanggan_pekerjaan',
+                'ent_wo.nama as entitas_pelanggan_pekerjaan',
                 'wo.judul_pekerjaan as wo_judul_pekerjaan',
                 'wo.status as wo_status',
                 'so.no_so',
@@ -102,6 +106,8 @@ class FieldworkController extends Controller
         if (!$data) {
             return response()->json(['message' => 'Data tidak ditemukan'], 404);
         }
+
+        $data->nama_pelanggan_display = brDisplayName($data->entitas_pelanggan_pekerjaan, $data->nama_pelanggan_pekerjaan);
 
         $data->personels = DB::table('fieldwork_personels as fp')
             ->join('personnel as p', 'fp.id_personnel', '=', 'p.id_personnel')

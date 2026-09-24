@@ -11,7 +11,7 @@ use Yajra\DataTables\Facades\DataTables;
  * lintas Perusahaan, supaya tidak perlu buka BR satu-satu buat cari site
  * tertentu. Ditambahkan 2026-09-07 (BR & BRS tetap 1 workspace gabungan,
  * lihat BR.md — ini cuma jalan pintas navigasi, bukan modul CRUD baru).
- * Klik baris → lompat ke /business-relations?open={id_br}&tab=tabBrsSite&site={id_site}
+ * Klik baris (atau tombol Buka) → lompat ke /business-relations?open={id_br}&tab=tabBrsSite&site={id_site}
  */
 class SiteDirectoryController extends Controller
 {
@@ -24,6 +24,7 @@ class SiteDirectoryController extends Controller
     {
         $query = DB::table('business_relation_sites as s')
             ->join('business_relations as br', 'br.id_br', '=', 's.id_br')
+            ->leftJoin('entitas as ent', 'ent.id_entitas', '=', 'br.id_entitas')
             ->leftJoin('business_estates as be', 'be.id_bestate', '=', 's.kawasan_bisnis')
             ->leftJoin('commercial_buildings as cb', 'cb.id_building', '=', 's.gedung')
             ->whereNull('s.deleted_at')
@@ -31,6 +32,7 @@ class SiteDirectoryController extends Controller
                 's.id_site',
                 's.id_br',
                 'br.nama as nama_br',
+                'ent.nama as entitas_br',
                 's.nama_lokasi',
                 's.kota_kabupaten',
                 'be.nama as nama_kawasan_bisnis',
@@ -41,6 +43,7 @@ class SiteDirectoryController extends Controller
 
         return DataTables::of($query)
             ->addIndexColumn()
+            ->editColumn('nama_br', fn ($row) => brDisplayName($row->entitas_br, $row->nama_br))
             ->addColumn('lokasi_gedung', fn ($row) => $row->nama_gedung ?: ($row->nama_kawasan_bisnis ?: '—'))
             ->addColumn('tipe_label', fn ($row) => $row->is_kantor_pusat
                 ? '<span class="pm-badge pm-badge--blue">Pusat</span>'

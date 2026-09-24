@@ -1620,7 +1620,7 @@ function renderForm(res) {
     <input type="hidden" name="id_br" value="${res.id_br}">
 
     ${formGroup.actionBar({
-        number: escHtml(res.nama_br ?? '—'),
+        number: escHtml(res.nama_display ?? res.nama_br ?? '—'),
         editText: 'Edit Business Relation',
         noWrap: true,
         subtitle: `

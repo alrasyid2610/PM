@@ -23,10 +23,11 @@ function renderFwoForm(res) {
     const siteBadgeParams = res.id_pelanggan_pekerjaan
         ? "?open=" + res.id_pelanggan_pekerjaan + (res.id_site_pelanggan_pekerjaan ? "&tab=tabBrsSite&site=" + res.id_site_pelanggan_pekerjaan : "")
         : "";
-    const siteBadge = res.site_name
+    const siteLabel = brSiteLabel(res.nama_pelanggan_display, res.nama_pelanggan_pekerjaan, res.site_name);
+    const siteBadge = siteLabel
         ? `<a href="/business-relations${siteBadgeParams}" class="pm-badge" style="background:#f1f5f9;color:#475569;text-decoration:none;">
                <i class="fa-solid fa-location-dot" style="font-size:10px;"></i>
-               ${escHtml(res.site_name)}
+               ${escHtml(siteLabel)}
            </a>`
         : "";
 

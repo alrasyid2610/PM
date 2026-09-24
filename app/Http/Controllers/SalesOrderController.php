@@ -221,12 +221,18 @@ class SalesOrderController extends Controller
             ->leftJoin('users as marketing_eksternal', 'marketing_eksternal.id', '=', 'so.pic_marketing_eksternal')
             ->leftJoin('contracts as ct', 'ct.id_contract', '=', 'so.id_sc')
             ->leftJoin('sales_orders as ref', 'ref.id_so', '=', 'so.id_so_referensi')
+            ->leftJoin('entitas as ent_pelanggan', 'ent_pelanggan.id_entitas', '=', 'pelanggan.id_entitas')
+            ->leftJoin('entitas as ent_del', 'ent_del.id_entitas', '=', 'del.id_entitas')
+            ->leftJoin('entitas as ent_pay', 'ent_pay.id_entitas', '=', 'pay.id_entitas')
             ->select(
                 'so.*',
                 'ct.no_contract as contract_no',
                 'ct.no_contract_client as contract_no_client',
                 'ref.no_so as no_so_referensi',
                 'pelanggan.nama as nama_pelanggan',
+                'ent_pelanggan.nama as entitas_pelanggan',
+                'ent_del.nama as entitas_delivery',
+                'ent_pay.nama as entitas_pay',
                 'site_pelanggan.nama_lokasi as nama_site_pelanggan',
                 'o.id_office',
                 'o.name as name_office',
@@ -254,6 +260,11 @@ class SalesOrderController extends Controller
                 'message' => 'Sales Order tidak ditemukan'
             ], 404);
         }
+
+        // Khusus tampilan action bar — nama_pelanggan tetap mentah (dipakai label select edit)
+        $so->nama_pelanggan_display   = brDisplayName($so->entitas_pelanggan, $so->nama_pelanggan);
+        $so->pelanggan_delivery_display = brDisplayName($so->entitas_delivery, $so->pelanggan_delivery);
+        $so->pelanggan_pay_display    = brDisplayName($so->entitas_pay, $so->pelanggan_pay);
 
         return response()->json($so);
     }

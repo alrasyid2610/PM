@@ -593,6 +593,17 @@ function loadItems(res, itemsTable) {
 // dalam transisi dan salah baca lebar container-nya (lihat Project
 // Reference.md > Pola Implementasi). Overlay `#loaderId` dipakai mengisi
 // jeda singkat itu supaya tidak kelihatan blank ke user.
+// Label badge "Perusahaan · Site" untuk action bar WO/FWO: nama BR berprefix entitas
+// (mis. "PT DNP"), site ditambahkan hanya kalau namanya beda dari nama BR (site kantor
+// pusat biasanya bernama sama dengan perusahaannya — jangan ditampilkan dobel).
+function brSiteLabel(brDisplay, brRaw, siteName) {
+    const br   = (brDisplay || '').trim();
+    const site = (siteName || '').trim();
+    if (!br) return site;
+    if (!site || site.toLowerCase() === (brRaw || '').trim().toLowerCase()) return br;
+    return br + ' · ' + site;
+}
+
 function openIframeModal(modalSelector, iframeId, loaderId, src) {
     const $modalEl = $(modalSelector);
     const $iframe = $("#" + iframeId);

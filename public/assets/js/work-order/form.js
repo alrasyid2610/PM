@@ -45,10 +45,11 @@ function renderForm(res) {
     const pelangganTagParams = res.id_pelanggan_pekerjaan
         ? '?open=' + res.id_pelanggan_pekerjaan + (res.id_site_pelanggan_pekerjaan ? '&tab=tabBrsSite&site=' + res.id_site_pelanggan_pekerjaan : '')
         : '';
-    const pelangganTag = res.nama_site_pelanggan_pekerjaan
+    const pelangganLabel = brSiteLabel(res.nama_pelanggan_display, res.nama_pelanggan_pekerjaan, res.nama_site_pelanggan_pekerjaan);
+    const pelangganTag = pelangganLabel
         ? `<a href="/business-relations${pelangganTagParams}" class="pm-badge" style="background:#f1f5f9;color:#475569;text-decoration:none;">
                <i class="fa-solid fa-location-dot" style="font-size:10px;"></i>
-               ${escHtml(res.nama_site_pelanggan_pekerjaan)}
+               ${escHtml(pelangganLabel)}
            </a>`
         : '';
 
@@ -296,7 +297,7 @@ function renderForm(res) {
             </div>
             ${formGroup.select("id_pelanggan", "Pelanggan", res.id_pelanggan_pekerjaan, [], {
                 mode: "ajax", url: "/business-relations/select2",
-                placeholder: "Pilih Pelanggan", label: res.nama_pelanggan_pekerjaan,
+                placeholder: "Pilih Pelanggan", label: res.nama_pelanggan_display ?? res.nama_pelanggan_pekerjaan,
                 className: "col-md-6", createUrl: "/business-relations/create",
             })}
             ${formGroup.select("id_site_pelanggan", "Site Pelanggan", res.id_site_pelanggan_pekerjaan, [], {
