@@ -312,6 +312,7 @@ class SalesOrderController extends Controller
             'id_office' => 'nullable|integer',
             'pic_marketing_eksternal' => 'nullable|integer',
             'id_sc' => 'nullable|integer',
+            'discount' => 'nullable|integer|min:0',
             'keterangan_status' => 'nullable|string',
             'cara_pembayaran'   => 'nullable|string',
             'keterangan'        => 'nullable|string',
@@ -320,7 +321,10 @@ class SalesOrderController extends Controller
             'attachments.*'          => 'nullable|file|max:153600',
             'existing_attachments'   => 'nullable|array',
             'existing_attachments.*' => 'nullable|string',
-        ]), $this->soRequiredMessages());
+        ]), array_merge($this->soRequiredMessages(), [
+            'discount.integer' => 'Discount harus berupa angka bulat (Rupiah).',
+            'discount.min'     => 'Discount tidak boleh negatif.',
+        ]));
 
         // Gabungan attachment lama (yang tidak dihapus user) + file baru yang diupload
         $existingAtt = $request->existing_attachments ?? [];
@@ -342,6 +346,7 @@ class SalesOrderController extends Controller
                 ->where('id_so', $id)
                 ->update([
                     'id_sc'      => !empty($validated['id_sc']) ? (int)$validated['id_sc'] : null,
+                    'discount'   => (int) ($validated['discount'] ?? 0),
                     'tanggal_so' => $validated['tanggal_so'],
                     'judul_order' => $validated['judul_order'] ?? null,
                     'tidak_ada_po' => $validated['tidak_ada_po'] ?? 0,
@@ -417,7 +422,7 @@ class SalesOrderController extends Controller
             ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'b.id_satuan')
             ->whereIn('b.id_wo', $woIds)
             ->whereNull('b.deleted_at')
-            ->select(['b.id_boq', 'b.id_wo', 'tp.nama as point_name', 'b.qty as boq_qty', 'sat.nama as satuan', 'b.harga'])
+            ->select(['b.id_boq', 'b.id_wo', 'tp.nama as point_name', 'b.qty as boq_qty', 'sat.nama as satuan', 'b.harga', 'b.discount'])
             ->get();
 
         $boqIds = $boqSections->pluck('id_boq');
@@ -458,7 +463,7 @@ class SalesOrderController extends Controller
             $totalBoqQty      = (int) $sections->sum('boq_qty');
             $totalFwoQty      = (int) $sections->sum(fn($s) => (int)($fwoQtyByBoq[$s->id_boq] ?? 0));
             $pct              = $totalBoqQty > 0 ? round($totalFwoQty / $totalBoqQty * 100) : 0;
-            $totalBoqAmount   = (int) $sections->sum(fn($s) => (int)($s->boq_qty ?? 0) * (int)($s->harga ?? 0));
+            $totalBoqAmount   = (int) $sections->sum(fn($s) => max(0, (int)($s->boq_qty ?? 0) * (int)($s->harga ?? 0) - (int)($s->discount ?? 0)));
 
             $fwos = ($fwoRows->get($wo->id_wo) ?? collect())->map(fn($f) => [
                 'id_fwo'             => $f->id_fwo,
@@ -491,7 +496,8 @@ class SalesOrderController extends Controller
                     'boq_qty'       => (int)($s->boq_qty ?? 0),
                     'satuan'        => $s->satuan,
                     'harga'         => (int)($s->harga ?? 0),
-                    'total_amount'  => (int)($s->boq_qty ?? 0) * (int)($s->harga ?? 0),
+                    'discount'      => (int)($s->discount ?? 0),
+                    'total_amount'  => max(0, (int)($s->boq_qty ?? 0) * (int)($s->harga ?? 0) - (int)($s->discount ?? 0)),
                     'fwo_qty'       => (int)($fwoQtyByBoq[$s->id_boq] ?? 0),
                     'progress_pct'  => ($s->boq_qty ?? 0) > 0
                         ? round((int)($fwoQtyByBoq[$s->id_boq] ?? 0) / $s->boq_qty * 100)
@@ -669,6 +675,7 @@ class SalesOrderController extends Controller
                     'b.qty',
                     'sat.nama as satuan',
                     'b.harga',
+                    'b.discount',
                     'b.keterangan',
                 ])
                 ->get()
@@ -701,6 +708,7 @@ class SalesOrderController extends Controller
             'intervalLabels'  => $intervalLabels,
         ])
             ->format('a4')
+            ->landscape() // tabel BOQ 10 kolom tidak muat di portrait
             ->name("Printout-{$so->no_so}.pdf");
     }
 
@@ -799,7 +807,7 @@ class SalesOrderController extends Controller
                     // 1 baris — persis logic yang sama dipakai WorkOrderController::
                     // detail() (tab BOQ WO), supaya konsisten penamaannya.
                     DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
-                    'b.qty', 'b.id_satuan', 'sat.nama as satuan', 'b.harga', 'b.keterangan',
+                    'b.qty', 'b.id_satuan', 'sat.nama as satuan', 'b.harga', 'b.discount', 'b.keterangan',
                 ])
                 ->get()
                 ->groupBy('id_wo')
@@ -1296,6 +1304,11 @@ class SalesOrderController extends Controller
                                 'qty'                   => $boqInput['qty'] ?? $sourceBoq->qty,
                                 'id_satuan'             => $boqInput['id_satuan'] ?? $sourceBoq->id_satuan,
                                 'harga'                 => $boqInput['harga'] ?? $sourceBoq->harga,
+                                // Discount ikut disalin dari BOQ sumber, dibatasi maks. qty × harga baru
+                                'discount'              => max(0, min(
+                                    (int) ($sourceBoq->discount ?? 0),
+                                    (int) ($boqInput['qty'] ?? $sourceBoq->qty) * (int) ($boqInput['harga'] ?? $sourceBoq->harga)
+                                )),
                                 'keterangan'            => $boqInput['keterangan'] ?? $sourceBoq->keterangan,
                                 'created_at'            => now(),
                                 'updated_at'            => now(),

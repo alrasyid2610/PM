@@ -481,6 +481,7 @@ class WorkOrderController extends Controller
                     'qty'                   => $qty,
                     'id_satuan'             => $item['id_satuan'] !== '' ? $item['id_satuan'] : null,
                     'harga'                 => $item['harga'],
+                    'discount'              => max(0, min((int) ($item['discount'] ?? 0), $qty * (int) $item['harga'])),
                     'keterangan'            => $item['keterangan'] ?? null,
                     'created_at'            => now(),
                     'updated_at'            => now(),
@@ -610,6 +611,7 @@ class WorkOrderController extends Controller
                 'b.id_satuan',
                 'sat.nama as satuan',
                 'b.harga',
+                'b.discount',
                 'b.keterangan',
                 'b.item_produk_alternate',
                 DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
@@ -631,6 +633,7 @@ class WorkOrderController extends Controller
                 'id_satuan'             => $b->id_satuan,
                 'satuan'                => $b->satuan,
                 'harga'                 => $b->harga,
+                'discount'              => (int) ($b->discount ?? 0),
                 'keterangan'            => $b->keterangan,
                 'item_produk_alternate' => $b->item_produk_alternate,
                 'testing_item_ids'      => ($boqItemsByBoq->get($b->id_boq) ?? collect())->pluck('id_testing_item')->toArray(),
@@ -659,8 +662,12 @@ class WorkOrderController extends Controller
                 'b.qty as boq_qty',
                 'sat.nama as satuan',
                 'b.harga',
+                'b.discount',
             ])
             ->get();
+
+        // Nilai bersih per item BOQ = qty × harga − discount (minimal 0)
+        $netAmount = fn($s) => max(0, (int)($s->boq_qty ?? 0) * (int)($s->harga ?? 0) - (int)($s->discount ?? 0));
 
         $tpIds = $boqSections->pluck('id_testing_point');
 
@@ -681,7 +688,7 @@ class WorkOrderController extends Controller
         $totalBoqQty    = (int) $boqSections->sum('boq_qty');
         $totalFwoQty    = (int) $boqSections->sum(fn($s) => (int)($fwoQtyByTp[$s->id_testing_point] ?? 0));
         $pct            = $totalBoqQty > 0 ? round($totalFwoQty / $totalBoqQty * 100) : 0;
-        $totalBoqAmount = (int) $boqSections->sum(fn($s) => (int)($s->boq_qty ?? 0) * (int)($s->harga ?? 0));
+        $totalBoqAmount = (int) $boqSections->sum($netAmount);
 
         $fwoDetailsByBoq = collect();
 
@@ -730,7 +737,8 @@ class WorkOrderController extends Controller
                 'boq_qty'      => (int)($s->boq_qty ?? 0),
                 'satuan'       => $s->satuan,
                 'harga'        => (int)($s->harga ?? 0),
-                'total_amount' => (int)($s->boq_qty ?? 0) * (int)($s->harga ?? 0),
+                'discount'     => (int)($s->discount ?? 0),
+                'total_amount' => $netAmount($s),
                 'fwo_qty'      => (int)($fwoQtyByTp[$s->id_testing_point] ?? 0),
                 'progress_pct' => ($s->boq_qty ?? 0) > 0
                     ? round((int)($fwoQtyByTp[$s->id_testing_point] ?? 0) / $s->boq_qty * 100)

@@ -62,6 +62,7 @@ class BoqController extends Controller
                 'b.id_satuan',
                 'sat.nama as satuan',
                 'b.harga',
+                'b.discount',
                 'b.keterangan',
                 DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
             ])
@@ -114,6 +115,7 @@ class BoqController extends Controller
                 'id_satuan'             => $boq->id_satuan,
                 'satuan'                => $boq->satuan,
                 'harga'                 => $boq->harga,
+                'discount'              => (int) ($boq->discount ?? 0),
                 'keterangan'            => $boq->keterangan,
                 'items'                 => $items,
                 'has_fwo'               => $boqWithFwo->has($boq->id_boq),
@@ -160,6 +162,22 @@ class BoqController extends Controller
         ]);
     }
 
+    // Discount per item BOQ (nominal Rp) tidak boleh melebihi qty × harga item itu.
+    private function discountExceedsSubtotal(array $sections): ?string
+    {
+        foreach ($sections as $s) {
+            $discount = (int) ($s['discount'] ?? 0);
+            $gross    = (float) ($s['qty'] ?? 0) * (float) ($s['harga'] ?? 0);
+            if ($discount > $gross) {
+                $nama = !empty($s['id_testing_point'])
+                    ? (DB::table('testing_points')->where('id_testing_point', $s['id_testing_point'])->value('nama') ?? 'item BOQ')
+                    : 'item BOQ';
+                return "Discount pada \"{$nama}\" tidak boleh melebihi nilai qty × harga.";
+            }
+        }
+        return null;
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -170,10 +188,15 @@ class BoqController extends Controller
             'sections.*.qty'                   => 'nullable|integer',
             'sections.*.id_satuan'             => 'nullable|integer|exists:satuan,id_satuan',
             'sections.*.harga'                 => 'nullable|numeric',
+            'sections.*.discount'              => 'nullable|integer|min:0',
             'sections.*.keterangan'            => 'nullable|string',
             'sections.*.items'                 => 'required|array|min:1',
             'sections.*.items.*'               => 'required|integer',
         ]);
+
+        if ($msg = $this->discountExceedsSubtotal($validated['sections'])) {
+            return response()->json(['success' => false, 'message' => $msg], 422);
+        }
 
         $idWo       = $validated['id_wo'];
         $incomingPtIds = collect($validated['sections'])->pluck('id_testing_point');
@@ -212,6 +235,7 @@ class BoqController extends Controller
                 'qty'                   => $section['qty'] ?? null,
                 'id_satuan'             => $section['id_satuan'] ?? null,
                 'harga'                 => $section['harga'] ?? null,
+                'discount'              => (int) ($section['discount'] ?? 0),
                 'keterangan'            => $section['keterangan'] ?? null,
                 'created_at'            => now(),
                 'updated_at'            => now(),
@@ -242,10 +266,15 @@ class BoqController extends Controller
             'sections.*.qty'                   => 'nullable|integer',
             'sections.*.id_satuan'             => 'nullable|integer|exists:satuan,id_satuan',
             'sections.*.harga'                 => 'nullable|numeric',
+            'sections.*.discount'              => 'nullable|integer|min:0',
             'sections.*.keterangan'            => 'nullable|string',
             'sections.*.items'                 => 'required|array|min:1',
             'sections.*.items.*'               => 'required|integer',
         ]);
+
+        if ($msg = $this->discountExceedsSubtotal($validated['sections'])) {
+            return response()->json(['success' => false, 'message' => $msg], 422);
+        }
 
         // Existing active BOQ records for this WO, keyed by id_testing_point
         $existingBoqs = DB::table('boq')
@@ -315,6 +344,10 @@ class BoqController extends Controller
                     'qty'                   => $section['qty'] ?? null,
                     'id_satuan'             => $section['id_satuan'] ?? null,
                     'harga'                 => $section['harga'] ?? null,
+                    // discount tidak dikirim client lama → pertahankan nilai yang sudah tersimpan
+                    'discount'              => array_key_exists('discount', $section)
+                        ? (int) ($section['discount'] ?? 0)
+                        : (int) ($existingBoqs[$ptId]->discount ?? 0),
                     'keterangan'            => $section['keterangan'] ?? null,
                     'updated_at'            => now(),
                 ]);
@@ -364,6 +397,7 @@ class BoqController extends Controller
                     'qty'                   => $section['qty'] ?? null,
                     'id_satuan'             => $section['id_satuan'] ?? null,
                     'harga'                 => $section['harga'] ?? null,
+                    'discount'              => (int) ($section['discount'] ?? 0),
                     'keterangan'            => $section['keterangan'] ?? null,
                     'created_at'            => now(),
                     'updated_at'            => now(),
@@ -453,7 +487,7 @@ class BoqController extends Controller
                     ];
                 }
 
-                foreach (['item_produk_alternate', 'qty', 'id_satuan', 'harga', 'keterangan'] as $field) {
+                foreach (['item_produk_alternate', 'qty', 'id_satuan', 'harga', 'discount', 'keterangan'] as $field) {
                     $oldVal = $oldSec[$field] ?? null;
                     $newVal = $newSec[$field] ?? null;
                     if ((string)$oldVal !== (string)$newVal) {

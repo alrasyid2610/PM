@@ -37,6 +37,15 @@
     .wo-boq-tambahan-table th, .wo-boq-tambahan-table td {
         word-wrap: break-word; overflow-wrap: break-word;
     }
+
+    /* Halaman landscape + padding sel diperkecil supaya 10 kolom BOQ muat.
+       Header & kolom pendek/angka dilarang bungkus (nowrap) — cuma kolom teks
+       bebas (Testing Point/Standard/Matriks/Keterangan) yang boleh bungkus. */
+    .wo-boq-table .boq-th, .wo-boq-table .boq-td,
+    .wo-boq-tambahan-table .boq-th, .wo-boq-tambahan-table .boq-td { padding: 5px 6px; }
+    .wo-boq-table .boq-th, .wo-boq-tambahan-table .boq-th { white-space: nowrap; font-size: 10.5px; }
+    .boq-nowrap { white-space: nowrap; word-break: keep-all; overflow-wrap: normal; word-wrap: normal; }
+    .pct-note { font-size: 9px; color: #94a3b8; }
 @endsection
 
 @section('content')
@@ -148,7 +157,8 @@
         @foreach ($wos as $wo)
         @php
             $items = $boqRows->get($wo->id_wo, collect());
-            $totalNilai = $items->sum(fn($r) => (int) ($r->qty ?? 0) * (int) ($r->harga ?? 0));
+            // Nilai BOQ bersih per item = qty × harga − discount item (minimal 0)
+            $totalNilai = $items->sum(fn($r) => max(0, (int) ($r->qty ?? 0) * (int) ($r->harga ?? 0) - (int) ($r->discount ?? 0)));
             $otherItems = $boqOtherRows->get($wo->id_wo, collect());
             $totalOther = $otherItems->sum(fn($r) => (int) ($r->qty ?? 0) * (int) ($r->harga ?? 0));
             $samplingItems = $boqSamplingRows->get($wo->id_wo, collect());
@@ -183,15 +193,16 @@
             @else
                 <table class="boq-table wo-boq-table">
                     <colgroup>
-                        <col style="width:4%">
-                        <col style="width:15%">
+                        <col style="width:3%">
+                        <col style="width:12%">
                         <col style="width:17%">
-                        <col style="width:17%">
-                        <col style="width:5%">
-                        <col style="width:7%">
-                        <col style="width:11%">
-                        <col style="width:11%">
                         <col style="width:13%">
+                        <col style="width:4%">
+                        <col style="width:6%">
+                        <col style="width:10%">
+                        <col style="width:15%">
+                        <col style="width:11%">
+                        <col style="width:9%">
                     </colgroup>
                     <thead>
                         <tr>
@@ -202,6 +213,7 @@
                             <th class="boq-th boq-center">Qty</th>
                             <th class="boq-th">Satuan</th>
                             <th class="boq-th text-right">Harga</th>
+                            <th class="boq-th text-right">Discount</th>
                             <th class="boq-th text-right">Subtotal</th>
                             <th class="boq-th">Keterangan</th>
                         </tr>
@@ -209,7 +221,7 @@
                     <tbody>
                         @foreach ($items as $j => $r)
                         <tr>
-                            <td class="boq-td boq-center">{{ $j + 1 }}</td>
+                            <td class="boq-td boq-center boq-nowrap">{{ $j + 1 }}</td>
                             <td class="boq-td">{{ $r->nama_testing_point ?? $r->item_produk_alternate ?? '-' }}</td>
                             <td class="boq-td">
                                 @if ($r->standard_nomor || $r->standard_judul)
@@ -225,18 +237,26 @@
                                     <span class="text-muted">-</span>
                                 @endif
                             </td>
-                            <td class="boq-td boq-center">{{ $r->qty }}</td>
-                            <td class="boq-td">{{ $r->satuan ?? '-' }}</td>
-                            <td class="boq-td text-right">{{ $fmtMoney($r->harga) }}</td>
-                            <td class="boq-td text-right">{{ $fmtMoney(($r->qty ?? 0) * ($r->harga ?? 0)) }}</td>
+                            <td class="boq-td boq-center boq-nowrap">{{ $r->qty }}</td>
+                            <td class="boq-td boq-nowrap">{{ $r->satuan ?? '-' }}</td>
+                            <td class="boq-td text-right boq-nowrap">{{ $fmtMoney($r->harga) }}</td>
+                            @php
+                                $rGross = (int) ($r->qty ?? 0) * (int) ($r->harga ?? 0);
+                                $rDisc  = min((int) ($r->discount ?? 0), $rGross);
+                                $rPct   = ($rDisc > 0 && $rGross > 0)
+                                    ? ' (' . rtrim(rtrim(number_format($rDisc / $rGross * 100, 2, ',', '.'), '0'), ',') . '%)'
+                                    : '';
+                            @endphp
+                            <td class="boq-td text-right boq-nowrap">{!! $rDisc > 0 ? '- ' . e($fmtMoney($rDisc)) . ' <span class="pct-note">' . e(trim($rPct)) . '</span>' : '-' !!}</td>
+                            <td class="boq-td text-right boq-nowrap">{{ $fmtMoney($rGross - $rDisc) }}</td>
                             <td class="boq-td">{{ $r->keterangan ?? '-' }}</td>
                         </tr>
                         @endforeach
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td class="boq-td text-right" colspan="7">Total Nilai BOQ</td>
-                            <td class="boq-td text-right">{{ $fmtMoney($totalNilai) }}</td>
+                            <td class="boq-td text-right" colspan="8">Total Nilai BOQ (setelah discount)</td>
+                            <td class="boq-td text-right boq-nowrap">{{ $fmtMoney($totalNilai) }}</td>
                             <td class="boq-td"></td>
                         </tr>
                     </tfoot>
@@ -259,5 +279,90 @@
         </div>
         @endforeach
     @endif
+
+    {{-- Grand Total: akumulasi nilai semua WO (BOQ + BOQ Other + BOQ Sampling)
+         dikurangi Discount level SO (sales_orders.discount, nominal Rp). --}}
+    @php
+        $rekapWo = $wos->map(function ($wo) use ($boqRows, $boqOtherRows, $boqSamplingRows) {
+            $sum = fn($rows) => $rows->sum(fn($r) => (int) ($r->qty ?? 0) * (int) ($r->harga ?? 0));
+            $boq      = $sum($boqRows->get($wo->id_wo, collect()));
+            $other    = $sum($boqOtherRows->get($wo->id_wo, collect()));
+            $sampling = $sum($boqSamplingRows->get($wo->id_wo, collect()));
+            $discBoq  = $boqRows->get($wo->id_wo, collect())->sum(fn($r) => min((int) ($r->discount ?? 0), (int) ($r->qty ?? 0) * (int) ($r->harga ?? 0)));
+            return (object) [
+                'no_wo'    => $wo->no_wo,
+                'judul'    => $wo->judul_pekerjaan,
+                'boq'      => $boq,
+                'disc_boq' => $discBoq,
+                'other'    => $other,
+                'sampling' => $sampling,
+                'total'    => ($boq - $discBoq) + $other + $sampling,
+            ];
+        });
+        $subtotalSo = $rekapWo->sum('total');
+        $discountSo = (int) ($so->discount ?? 0);
+        $grandTotal = max(0, $subtotalSo - $discountSo);
+        $discountPctLabel = ($subtotalSo > 0 && $discountSo > 0)
+            ? ' (' . rtrim(rtrim(number_format($discountSo / $subtotalSo * 100, 2, ',', '.'), '0'), ',') . '%)'
+            : '';
+    @endphp
+    <div style="page-break-inside: avoid;">
+        <div class="section-title">Grand Total</div>
+        @if ($rekapWo->isNotEmpty())
+        <table class="boq-table wo-boq-table" style="margin-bottom:8px;">
+            <colgroup>
+                <col style="width:4%">
+                <col style="width:24%">
+                <col style="width:14%">
+                <col style="width:12%">
+                <col style="width:14%">
+                <col style="width:14%">
+                <col style="width:18%">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="boq-th boq-no">No</th>
+                    <th class="boq-th">Work Order</th>
+                    <th class="boq-th text-right">BOQ</th>
+                    <th class="boq-th text-right">Disc. BOQ</th>
+                    <th class="boq-th text-right">BOQ Other</th>
+                    <th class="boq-th text-right">BOQ Sampling</th>
+                    <th class="boq-th text-right">Total WO</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($rekapWo as $i => $r)
+                <tr>
+                    <td class="boq-td boq-center">{{ $i + 1 }}</td>
+                    <td class="boq-td">{{ $r->no_wo }} — {{ $r->judul ?? '-' }}</td>
+                    <td class="boq-td text-right boq-nowrap">{{ $fmtMoney($r->boq) }}</td>
+                    <td class="boq-td text-right boq-nowrap">{{ $r->disc_boq > 0 ? '- ' . $fmtMoney($r->disc_boq) : '-' }}</td>
+                    <td class="boq-td text-right boq-nowrap">{{ $fmtMoney($r->other) }}</td>
+                    <td class="boq-td text-right boq-nowrap">{{ $fmtMoney($r->sampling) }}</td>
+                    <td class="boq-td text-right boq-nowrap">{{ $fmtMoney($r->total) }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+        @endif
+        <table class="boq-table" style="width:55%; margin-left:45%;">
+            <tbody>
+                <tr>
+                    <td class="boq-td">Subtotal (semua WO)</td>
+                    <td class="boq-td text-right boq-nowrap">{{ $fmtMoney($subtotalSo) }}</td>
+                </tr>
+                <tr>
+                    <td class="boq-td">Discount{{ $discountPctLabel }}</td>
+                    <td class="boq-td text-right boq-nowrap">- {{ $fmtMoney($discountSo) }}</td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td class="boq-td">GRAND TOTAL</td>
+                    <td class="boq-td text-right boq-nowrap">{{ $fmtMoney($grandTotal) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
 </div>
 @endsection

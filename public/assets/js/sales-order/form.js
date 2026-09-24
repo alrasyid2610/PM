@@ -221,6 +221,16 @@ function renderForm(res) {
                             createUrl: "/contracts/create",
                         },
                     )}
+                    ${formGroup.text(
+                        "discount",
+                        "Discount (Rp)",
+                        res.discount ?? 0,
+                        false,
+                        {
+                            className: "col-md-6",
+                            inputClass: "input-num-mask input-num-int",
+                        },
+                    )}
                 </div>`,
     )}
 

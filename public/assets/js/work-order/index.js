@@ -1933,12 +1933,23 @@ function renderBoqProgressTable(data, id_wo) {
                 ? `<i class="fa-solid fa-chevron-right boq-chevron" style="font-size:10px;color:#94a3b8;transition:transform .2s;margin-right:4px;"></i>`
                 : '';
 
+            const gross    = (sec.boq_qty || 0) * (sec.harga || 0);
+            const discHtml = sec.discount > 0
+                ? `<span style="color:#dc2626;">− Rp ${Number(sec.discount).toLocaleString("en-US")}</span>` +
+                  (gross > 0
+                      ? `<div style="font-size:10px;color:#94a3b8;">${(sec.discount / gross * 100).toFixed(2).replace(/\.?0+$/, "")}%</div>`
+                      : "")
+                : '<span style="color:#cbd5e1;">—</span>';
+
             const boqRow = `<tr class="boq-data-row${hasFwos ? " boq-expandable" : ""}" data-boq-id="${sec.id_boq}"
             style="cursor:${hasFwos ? "pointer" : "default"};">
             <td ${TD} style="width:40px;text-align:center;color:#94a3b8;">${idx + 1}</td>
             <td ${TD}>${chevron}<a href="/boq?open=${id_wo}" class="text-decoration-none fw-semibold" style="color:#1a56db;">${escHtml(sec.point_name)}</a></td>
             <td ${TD} style="color:#64748b;">${satuan}</td>
             <td ${TD} style="text-align:right;font-weight:600;">${sec.boq_qty}</td>
+            <td ${TD} style="text-align:right;">${sec.harga > 0 ? "Rp " + Number(sec.harga).toLocaleString("en-US") : '<span style="color:#cbd5e1;">—</span>'}</td>
+            <td ${TD} style="text-align:right;">${discHtml}</td>
+            <td ${TD} style="text-align:right;font-weight:600;color:#1d4ed8;">${sec.harga > 0 ? "Rp " + Number(sec.total_amount).toLocaleString("en-US") : '<span style="color:#cbd5e1;">—</span>'}</td>
             <td ${TD} style="text-align:right;color:#7c3aed;font-weight:600;">${sec.fwo_qty}</td>
             <td ${TD} style="text-align:right;font-weight:600;color:${sisa > 0 ? "#dc2626" : "#16a34a"};">${sisa}</td>
         </tr>`;
@@ -1967,13 +1978,16 @@ function renderBoqProgressTable(data, id_wo) {
         summaryHtml +
         searchBar +
         `<div class="table-responsive">
-        <table class="table table-sm table-hover mb-0" style="font-size:13px;min-width:700px;white-space:nowrap;">
+        <table class="table table-sm table-hover mb-0" style="font-size:13px;min-width:960px;white-space:nowrap;">
             <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
                 <tr>
                     <th ${TH} style="width:40px;">No</th>
                     <th ${TH} style="min-width:200px;">Item BOQ</th>
                     <th ${TH} style="min-width:80px;">Satuan</th>
                     <th ${TH} style="min-width:80px;text-align:right;">BOQ Qty</th>
+                    <th ${TH} style="min-width:110px;text-align:right;">Harga</th>
+                    <th ${TH} style="min-width:110px;text-align:right;">Discount</th>
+                    <th ${TH} style="min-width:120px;text-align:right;">Subtotal</th>
                     <th ${TH} style="min-width:80px;text-align:right;">FWO Qty</th>
                     <th ${TH} style="min-width:70px;text-align:right;">Sisa</th>
                 </tr>
@@ -2066,6 +2080,7 @@ function renderBoqProgressContent(data, id_wo) {
                 Rp ${Number(sec.harga).toLocaleString("en-US")}${satuan ? " / " + satuan : ""}
                 <span style="margin:0 3px;color:#cbd5e1;">×</span>
                 ${sec.boq_qty}${satuan ? " " + satuan : ""}
+                ${sec.discount > 0 ? `<span style="margin:0 3px;color:#cbd5e1;">−</span><span style="color:#dc2626;">Rp ${Number(sec.discount).toLocaleString("en-US")} (discount)</span>` : ""}
                 <span style="margin:0 3px;color:#cbd5e1;">=</span>
                 <strong style="color:#1d4ed8;">Rp ${Number(sec.total_amount).toLocaleString("en-US")}</strong>
                </div>`
@@ -2973,6 +2988,7 @@ $(document).ready(function () {
                 qty:                   qty ? parseInt(qty) : null,
                 satuan:                $row.attr('data-satuan') || null,
                 harga:                 $row.attr('data-harga') || null,
+                discount:              $row.attr('data-discount') || 0,
                 keterangan:            $row.attr('data-keterangan') || null,
                 item_produk_alternate: $row.attr('data-item-produk-alternate') || null,
                 testing_item_ids:      testingItemIds,
@@ -3361,6 +3377,7 @@ function renderCopyWoBoq(sourceItems) {
                 data-testing-item-ids="${escHtml(JSON.stringify(item.testing_item_ids || []))}"
                 data-satuan="${escHtml(item.satuan || '')}"
                 data-harga="${item.harga || ''}"
+                data-discount="${item.discount || 0}"
                 data-keterangan="${escHtml(item.keterangan || '')}"
                 data-item-produk-alternate="${escHtml(item.item_produk_alternate || '')}">
                 <div style="flex:1;min-width:0;">

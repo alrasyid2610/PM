@@ -589,7 +589,7 @@ function addSection(pointId, pointText, items) {
             <div class="card-body px-3 py-3" style="display:none;">
                 <div class="section-fields">
                     <div class="row g-2">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label form-label-sm text-muted mb-1">Item Produk Alternatif</label>
                             <input type="text" class="form-control form-control-sm input-item-produk"
                                 placeholder="opsional">
@@ -606,6 +606,11 @@ function addSection(pointId, pointText, items) {
                         <div class="col-md-2">
                             <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
                             <input type="text" inputmode="numeric" class="form-control form-control-sm input-harga input-num-mask"
+                                placeholder="0">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label form-label-sm text-muted mb-1">Discount (Rp)</label>
+                            <input type="text" inputmode="numeric" class="form-control form-control-sm input-discount input-num-mask input-num-int"
                                 placeholder="0">
                         </div>
                         <div class="col-md-12">
@@ -683,12 +688,13 @@ function renderExistingItemsHtml(items) {
 
 function renderExistingViewBody(sec) {
     const harga  = sec.harga ? Number(sec.harga).toLocaleString('en-US') : '—';
+    const discount = Number(sec.discount) > 0 ? Number(sec.discount).toLocaleString('en-US') : '—';
     const qty    = sec.qty ?? '—';
     const satuan = sec.satuan ?? '—';
     return `
         <div style="background:#f8fafc;border:1px solid #e9ecef;border-radius:6px;padding:10px 14px;margin-bottom:12px;">
             <div class="row g-2">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label form-label-sm text-muted mb-1">Item Produk Alternatif</label>
                     <p class="form-control form-control-sm mb-0">${escHtml(sec.item_produk_alternate ?? '—')}</p>
                 </div>
@@ -703,6 +709,10 @@ function renderExistingViewBody(sec) {
                 <div class="col-md-2">
                     <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
                     <p class="form-control form-control-sm mb-0">${harga}</p>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label form-label-sm text-muted mb-1">Discount (Rp)</label>
+                    <p class="form-control form-control-sm mb-0">${discount}</p>
                 </div>
                 <div class="col-md-12">
                     <label class="form-label form-label-sm text-muted mb-1">Keterangan</label>
@@ -728,7 +738,7 @@ function renderExistingEditBody(sec) {
     return `
         <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 14px;margin-bottom:12px;">
             <div class="row g-2">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label form-label-sm text-muted mb-1">Item Produk Alternatif</label>
                     <input type="text" class="form-control form-control-sm existing-edit-item-produk"
                         value="${escHtml(sec.item_produk_alternate ?? '')}">
@@ -746,6 +756,11 @@ function renderExistingEditBody(sec) {
                     <label class="form-label form-label-sm text-muted mb-1">Harga (Rp)</label>
                     <input type="text" inputmode="numeric" class="form-control form-control-sm existing-edit-harga input-num-mask"
                         value="${sec.harga ?? ''}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label form-label-sm text-muted mb-1">Discount (Rp)</label>
+                    <input type="text" inputmode="numeric" class="form-control form-control-sm existing-edit-discount input-num-mask input-num-int"
+                        value="${sec.discount ?? 0}">
                 </div>
                 <div class="col-md-12">
                     <div class="existing-edit-total-line text-end" style="font-size:12px;color:#64748b;min-height:18px;margin-bottom:2px;"></div>
@@ -837,6 +852,7 @@ function buildExistingSectionsPayload(overridePtId, overrideFields, excludePtId)
                 qty:                   fields.qty ?? null,
                 id_satuan:             fields.id_satuan ?? null,
                 harga:                 fields.harga ?? null,
+                discount:              fields.discount ?? 0,
                 keterangan:            fields.keterangan ?? null,
                 items:                 (s.items ?? []).map(it => it.id_testing_item),
             };
@@ -865,6 +881,7 @@ function saveExistingSectionItems(ptId, checkedItems) {
             qty:                   s.qty ?? null,
             id_satuan:             s.id_satuan ?? null,
             harga:                 s.harga ?? null,
+            discount:              s.discount ?? 0,
             keterangan:            s.keterangan ?? null,
             items:                 itemIds,
         };
@@ -979,22 +996,27 @@ $(document).on("click", ".btn-existing-cancel", function () {
     $sec.find(".existing-section-body").html(renderExistingViewBody(sec));
 });
 
-$(document).on("input", ".existing-edit-qty, .existing-edit-harga", function () {
+$(document).on("input", ".existing-edit-qty, .existing-edit-harga, .existing-edit-discount", function () {
     updateExistingItemTotal($(this).closest(".existing-section-body"));
 });
 
-function updateExistingItemTotal($body) {
-    const qty   = rawNumVal($body.find(".existing-edit-qty")[0]) || 0;
-    const harga = rawNumVal($body.find(".existing-edit-harga")[0]) || 0;
-    const $line = $body.find(".existing-edit-total-line");
-    if (qty && harga) {
-        $line.html(
-            Number(qty).toLocaleString('en-US') + ' qty &times; Rp ' + Number(harga).toLocaleString('en-US') +
-            ' = <strong style="color:#1d4ed8;">Rp ' + Number(qty * harga).toLocaleString('en-US') + '</strong>'
-        );
-    } else {
-        $line.html('');
+// Baris total per item: qty × harga − discount = subtotal (discount tampil hanya kalau > 0)
+function boqTotalHtml(qty, harga, discount) {
+    if (!(qty && harga)) return '';
+    const gross = qty * harga;
+    const disc  = Math.min(Number(discount) || 0, gross);
+    let html = Number(qty).toLocaleString('en-US') + ' qty &times; Rp ' + Number(harga).toLocaleString('en-US');
+    if (disc > 0) {
+        html += ' &minus; Rp ' + disc.toLocaleString('en-US') + ' (discount)';
     }
+    return html + ' = <strong style="color:#1d4ed8;">Rp ' + (gross - disc).toLocaleString('en-US') + '</strong>';
+}
+
+function updateExistingItemTotal($body) {
+    const qty      = rawNumVal($body.find(".existing-edit-qty")[0]) || 0;
+    const harga    = rawNumVal($body.find(".existing-edit-harga")[0]) || 0;
+    const discount = rawNumVal($body.find(".existing-edit-discount")[0]) || 0;
+    $body.find(".existing-edit-total-line").html(boqTotalHtml(qty, harga, discount));
 }
 
 $(document).on("click", ".btn-existing-save", function () {
@@ -1010,6 +1032,7 @@ $(document).on("click", ".btn-existing-save", function () {
         qty:                   rawNumVal($body.find(".existing-edit-qty")[0]),
         id_satuan:             $body.find(".existing-edit-satuan").val() || null,
         harga:                 rawNumVal($body.find(".existing-edit-harga")[0]),
+        discount:              rawNumVal($body.find(".existing-edit-discount")[0]) || 0,
         keterangan:            $body.find(".existing-edit-ket").val() || null,
     };
 
@@ -1107,6 +1130,7 @@ function collectSections() {
             qty:                   rawNumVal($sec.find(".input-qty")[0]),
             id_satuan:             $sec.find(".input-satuan").val() || null,
             harga:                 rawNumVal($sec.find(".input-harga")[0]),
+            discount:              rawNumVal($sec.find(".input-discount")[0]) || 0,
             keterangan:            $sec.find(".input-ket").val() || null,
             items:                 items,
         });
@@ -1123,25 +1147,22 @@ function escHtml(str) {
 }
 
 function updateSectionTotal($sec) {
-    const qty   = rawNumVal($sec.find('.input-qty')[0]) || 0;
-    const harga = rawNumVal($sec.find('.input-harga')[0]) || 0;
-    const $line = $sec.find('.section-total-line');
-    if (qty && harga) {
-        $line.html(
-            Number(qty).toLocaleString('en-US') + ' qty &times; Rp ' + Number(harga).toLocaleString('en-US') +
-            ' = <strong style="color:#1d4ed8;">Rp ' + Number(qty * harga).toLocaleString('en-US') + '</strong>'
-        );
-    } else {
-        $line.html('');
-    }
+    const qty      = rawNumVal($sec.find('.input-qty')[0]) || 0;
+    const harga    = rawNumVal($sec.find('.input-harga')[0]) || 0;
+    const discount = rawNumVal($sec.find('.input-discount')[0]) || 0;
+    $sec.find('.section-total-line').html(boqTotalHtml(qty, harga, discount));
 }
 
-$(document).on('input', '.input-qty, .input-harga', function () {
+$(document).on('input', '.input-qty, .input-harga, .input-discount', function () {
     updateSectionTotal($(this).closest('.boq-section'));
 });
 
 $(document).on('click', '.boq-items-toggle', function () {
-    const $items = $(this).next('.boq-items');
+    // Section baru: .boq-items adalah sibling langsung toggle. Section tersimpan
+    // (mode lihat/edit): toggle dibungkus 1 baris bersama tombol "Ubah Item",
+    // jadi .boq-items adalah sibling dari pembungkusnya.
+    let $items = $(this).next('.boq-items');
+    if (!$items.length) $items = $(this).parent().next('.boq-items');
     const $icon  = $(this).find('.boq-items-chevron');
     $items.slideToggle(180);
     $icon.toggleClass('collapsed');

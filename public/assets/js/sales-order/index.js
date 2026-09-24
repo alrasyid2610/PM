@@ -914,6 +914,7 @@ $(document).ready(function () {
         useAttachment: true,
         initSelect: function () {
             initSoPicFields();
+            initNumericMask(document.getElementById('detailContent'));
         },
         afterLoad: function (res) {
             // Site pakai class .form-select-dynamic (mode ajax generik) yang

@@ -28,12 +28,12 @@
     <tbody>
         @foreach ($items as $j => $r)
         <tr>
-            <td class="boq-td boq-center">{{ $j + 1 }}</td>
+            <td class="boq-td boq-center boq-nowrap">{{ $j + 1 }}</td>
             <td class="boq-td">{{ $r->nama_item ?? '-' }}</td>
-            <td class="boq-td boq-center">{{ $r->qty }}</td>
-            <td class="boq-td">{{ $r->satuan ?? '-' }}</td>
-            <td class="boq-td text-right">{{ $fmtMoney($r->harga) }}</td>
-            <td class="boq-td text-right">{{ $fmtMoney(($r->qty ?? 0) * ($r->harga ?? 0)) }}</td>
+            <td class="boq-td boq-center boq-nowrap">{{ $r->qty }}</td>
+            <td class="boq-td boq-nowrap">{{ $r->satuan ?? '-' }}</td>
+            <td class="boq-td text-right boq-nowrap">{{ $fmtMoney($r->harga) }}</td>
+            <td class="boq-td text-right boq-nowrap">{{ $fmtMoney(($r->qty ?? 0) * ($r->harga ?? 0)) }}</td>
             <td class="boq-td">{{ $r->keterangan ?? '-' }}</td>
         </tr>
         @endforeach
@@ -41,7 +41,7 @@
     <tfoot>
         <tr>
             <td class="boq-td text-right" colspan="5">Total Nilai</td>
-            <td class="boq-td text-right">{{ $fmtMoney($total) }}</td>
+            <td class="boq-td text-right boq-nowrap">{{ $fmtMoney($total) }}</td>
             <td class="boq-td"></td>
         </tr>
     </tfoot>
