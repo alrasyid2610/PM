@@ -12,6 +12,7 @@ use App\Http\Controllers\BusinessEstateController;
 use App\Http\Controllers\BusinessRelationContactController;
 use App\Http\Controllers\CommercialBuildingController;
 use App\Http\Controllers\SalesOrderController;
+use App\Http\Controllers\SalesQuotationController;
 use App\Http\Controllers\TestingItemController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkOrderController;
@@ -675,6 +676,22 @@ Route::prefix('/business-relation-contacts')
 
 
 
+
+Route::prefix('sales-quotations')->name('sales-quotations.')->group(function () {
+
+    Route::get('/', [SalesQuotationController::class, 'index'])->name('index');
+    Route::get('/data', [SalesQuotationController::class, 'data'])->name('data');
+
+    Route::get('/create', [SalesQuotationController::class, 'create'])->name('create');
+    Route::post('/', [SalesQuotationController::class, 'store'])->name('store');
+
+    Route::get('/select2', [SalesQuotationController::class, 'select2'])->name('select2');
+
+    Route::get('/{id}', [SalesQuotationController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [SalesQuotationController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [SalesQuotationController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/history', [SalesQuotationController::class, 'history'])->name('history')->whereNumber('id');
+});
 
 Route::prefix('sales-orders')->name('sales-orders.')->group(function () {
 
