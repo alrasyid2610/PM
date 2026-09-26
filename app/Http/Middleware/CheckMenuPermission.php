@@ -49,6 +49,9 @@ class CheckMenuPermission
         'wo-boq-other'               => 'work-orders',
         'wo-boq-sampling'            => 'work-orders',
         'wo-output-other'            => 'work-orders',
+        'sq-boq'                     => 'sq-work-orders',
+        'sq-boq-tambahan'            => 'sq-work-orders',
+        'sq-wo-budgets'              => 'sq-work-orders',
     ];
 
     public function handle(Request $request, Closure $next): mixed

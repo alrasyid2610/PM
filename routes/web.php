@@ -13,6 +13,10 @@ use App\Http\Controllers\BusinessRelationContactController;
 use App\Http\Controllers\CommercialBuildingController;
 use App\Http\Controllers\SalesOrderController;
 use App\Http\Controllers\SalesQuotationController;
+use App\Http\Controllers\SqWorkOrderController;
+use App\Http\Controllers\SqBoqController;
+use App\Http\Controllers\SqBoqTambahanController;
+use App\Http\Controllers\SqWoBudgetController;
 use App\Http\Controllers\TestingItemController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkOrderController;
@@ -691,6 +695,39 @@ Route::prefix('sales-quotations')->name('sales-quotations.')->group(function () 
     Route::put('/{id}', [SalesQuotationController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}', [SalesQuotationController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/history', [SalesQuotationController::class, 'history'])->name('history')->whereNumber('id');
+    Route::get('/{id}/print', [SalesQuotationController::class, 'printPdf'])->name('print')->whereNumber('id');
+});
+
+Route::prefix('sq-work-orders')->name('sq-work-orders.')->group(function () {
+    Route::get('/', [SqWorkOrderController::class, 'index'])->name('index');
+    Route::get('/data', [SqWorkOrderController::class, 'data'])->name('data');
+    Route::get('/create', [SqWorkOrderController::class, 'create'])->name('create');
+    Route::post('/', [SqWorkOrderController::class, 'store'])->name('store');
+    Route::get('/{id_sq}/list', [SqWorkOrderController::class, 'bySq'])->name('list')->whereNumber('id_sq');
+    Route::get('/{id}', [SqWorkOrderController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [SqWorkOrderController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [SqWorkOrderController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/history', [SqWorkOrderController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('sq-boq')->name('sq-boq.')->group(function () {
+    Route::get('/{id_sq_wo}', [SqBoqController::class, 'show'])->name('show')->whereNumber('id_sq_wo');
+    Route::post('/{id_sq_wo}', [SqBoqController::class, 'save'])->name('save')->whereNumber('id_sq_wo');
+});
+
+Route::prefix('sq-boq-tambahan')->name('sq-boq-tambahan.')->group(function () {
+    Route::get('/{id_sq_wo}/list', [SqBoqTambahanController::class, 'listByWo'])->name('list')->whereNumber('id_sq_wo');
+    Route::post('/', [SqBoqTambahanController::class, 'store'])->name('store');
+    Route::put('/{id}', [SqBoqTambahanController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [SqBoqTambahanController::class, 'destroy'])->name('destroy')->whereNumber('id');
+});
+
+Route::prefix('sq-wo-budgets')->name('sq-wo-budgets.')->group(function () {
+    Route::get('/{id_sq_wo}/list', [SqWoBudgetController::class, 'listByWo'])->name('list')->whereNumber('id_sq_wo');
+    Route::post('/', [SqWoBudgetController::class, 'store'])->name('store');
+    Route::get('/{id}', [SqWoBudgetController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [SqWoBudgetController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [SqWoBudgetController::class, 'destroy'])->name('destroy')->whereNumber('id');
 });
 
 Route::prefix('sales-orders')->name('sales-orders.')->group(function () {

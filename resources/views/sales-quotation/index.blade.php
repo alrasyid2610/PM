@@ -36,6 +36,30 @@
         ]],
     ]"
 />
+
+{{-- Modal iframe: Create SQ Work Order (pola sama dengan "+ WO" di Sales Order) --}}
+<div class="modal fade" id="modalCreateSqWo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width:92vw;">
+        <div class="modal-content" style="height:90vh;">
+            <div class="modal-header py-2 px-3" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+                <span class="fw-semibold" style="font-size:14px;">
+                    <i class="fa-solid fa-briefcase me-2" style="color:#1a56db;"></i>
+                    Tambah SQ Work Order
+                </span>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                    onclick="document.getElementById('iframeCreateSqWo').src=''"></button>
+            </div>
+            <div class="modal-body p-0" style="overflow:hidden;position:relative;">
+                <div id="loaderCreateSqWo" class="iframe-loading-overlay">
+                    <i class="fa-solid fa-spinner fa-spin fa-2x mb-2 text-primary"></i>
+                    <span>Memuat form...</span>
+                </div>
+                <iframe id="iframeCreateSqWo" src="" frameborder="0"
+                    style="width:100%;height:100%;border:none;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('custom-script')

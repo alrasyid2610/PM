@@ -48,6 +48,13 @@ function renderForm(res) {
         editText: isDeleted ? '' : 'Edit SQ',
         statusBadge: sqStatusBadge(res),
         tags: revBadge + pelangganTag,
+        moreActions: [
+            {
+                label: "Printout SQ (Sementara)",
+                icon: "fa-solid fa-file-pdf",
+                attrs: `onclick="window.open('/sales-quotations/${res.id_sq}/print','_blank')"`,
+            },
+        ],
         extra: isDeleted
             ? `<span style="font-size:11px;color:#b91c1c;display:flex;align-items:center;gap:5px;">
                    <i class="fa-solid fa-trash" style="font-size:10px;"></i>
@@ -59,15 +66,36 @@ function renderForm(res) {
 
     <div class="pm-tab-card">
         <div class="pm-tab-header">
-            <ul class="pm-tab-nav" role="tablist">
+            <ul class="pm-tab-nav" id="sqDetailTabs" role="tablist">
                 <li role="presentation">
-                    <button class="pm-tab-btn active" type="button" role="tab"
+                    <button class="pm-tab-btn active" id="tab-info-sq-btn" type="button" role="tab"
                         data-bs-toggle="tab" data-bs-target="#tabInfoSq">
                         <i class="fa-solid fa-circle-info me-1" style="color:#6366f1;font-size:11px;"></i>
                         Informasi
                     </button>
                 </li>
+                <li role="presentation">
+                    <button class="pm-tab-btn" type="button" role="tab"
+                        data-bs-toggle="tab" data-bs-target="#tabSqWo" data-sq-id="${res.id_sq}">
+                        <i class="fa-solid fa-briefcase me-1" style="color:#1a56db;font-size:11px;"></i>
+                        Work Order
+                    </button>
+                </li>
             </ul>
+            <div class="pm-tab-actions">
+                <div id="sqTabActionsInfo" class="d-flex align-items-center gap-2"></div>
+                <div id="sqTabActionsWo" class="d-flex align-items-center gap-2 d-none">
+                    <button type="button" id="btnRefreshSqWo" data-sq-id="${res.id_sq}"
+                        class="pm-btn-icon" title="Refresh" data-no-disable>
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                    ${!isDeleted ? `<button type="button" class="pm-btn-pill pm-btn-pill--blue btn-add-sq-wo-modal"
+                        data-sq-id="${res.id_sq}" data-no-disable>
+                        <i class="fa-solid fa-plus" style="font-size:10px;"></i>
+                        <i class="fa-solid fa-briefcase" style="font-size:11px;"></i> WO
+                    </button>` : ''}
+                </div>
+            </div>
         </div>
         <div class="pm-tab-body">
             <div class="tab-content">
@@ -185,9 +213,26 @@ function renderForm(res) {
 
                     </div>
                 </div>
+                <!-- TAB: WORK ORDER (Estimasi) -->
+                <div class="tab-pane fade" id="tabSqWo" role="tabpanel">
+                    <div class="card card-body">
+                        <div class="pm-search mb-3">
+                            <span class="pm-search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+                            <input type="text" id="sqWoSearch" placeholder="Cari No. WO / Judul..." data-no-disable>
+                            <button type="button" id="btnClearSqWoSearch" class="pm-search-clear d-none" title="Hapus"><i class="fa-solid fa-times"></i></button>
+                        </div>
+                        <div id="sqWoContent">
+                            <div class="text-center text-muted py-4">
+                                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
 </form>
 `;
 }
+

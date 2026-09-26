@@ -2323,6 +2323,11 @@ tr.shown td.dt-control i {
     border-bottom-color: var(--primary-700);
     background: transparent;
 }
+.pm-tab-btn:disabled,
+.pm-tab-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
 
 .pm-tab-actions {
     display: flex;

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistory;
 use App\Traits\HasOrderPartyFields;
+use Spatie\LaravelPdf\Facades\Pdf;
 
 /**
  * Sales Quotation (SQ) — Fase 1: header CRUD saja (No SQ, Data
@@ -269,5 +270,105 @@ class SalesQuotationController extends Controller
             ]);
 
         return DataTables::of($query)->addIndexColumn()->make(true);
+    }
+
+    public function printPdf($id)
+    {
+        $sq = DB::table('sales_quotations as sq')
+            ->leftJoin('business_relations as pelanggan', 'sq.id_pelanggan', '=', 'pelanggan.id_br')
+            ->leftJoin('business_relation_sites as site_pelanggan', 'sq.id_site_pelanggan', '=', 'site_pelanggan.id_site')
+            ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'sq.id_pic_pelanggan')
+            ->leftJoin('business_relations as del', 'sq.id_pelanggan_delivery', '=', 'del.id_br')
+            ->leftJoin('business_relation_sites as site_del', 'sq.id_site_pelanggan_delivery', '=', 'site_del.id_site')
+            ->leftJoin('business_relation_contacts as brc_del', 'brc_del.id_contact', '=', 'sq.id_pic_pelanggan_delivery')
+            ->leftJoin('business_relations as pay', 'sq.id_pelanggan_payment', '=', 'pay.id_br')
+            ->leftJoin('business_relation_sites as site_pay', 'sq.id_site_pelanggan_payment', '=', 'site_pay.id_site')
+            ->leftJoin('business_relation_contacts as brc_pay', 'brc_pay.id_contact', '=', 'sq.id_pic_pelanggan_payment')
+            ->leftJoin('office as o', 'o.id_office', '=', 'sq.id_office')
+            ->leftJoin('users as pic_i', 'pic_i.id', '=', 'sq.pic_input')
+            ->leftJoin('users as mkt_i', 'mkt_i.id', '=', 'sq.pic_marketing_internal')
+            ->leftJoin('users as mkt_e', 'mkt_e.id', '=', 'sq.pic_marketing_eksternal')
+            ->where('sq.id_sq', $id)
+            ->whereNull('sq.deleted_at')
+            ->select([
+                'sq.*',
+                'pelanggan.nama as nama_pelanggan',
+                'site_pelanggan.nama_lokasi as nama_site_pelanggan',
+                'brc.nama_pic as pic_pelanggan',
+                'del.nama as nama_pelanggan_delivery',
+                'site_del.nama_lokasi as nama_site_delivery',
+                'brc_del.nama_pic as pic_delivery',
+                'pay.nama as nama_pelanggan_payment',
+                'site_pay.nama_lokasi as nama_site_payment',
+                'brc_pay.nama_pic as pic_payment',
+                'o.name as nama_office',
+                'pic_i.name as nama_pic_input',
+                'mkt_i.name as nama_marketing_internal',
+                'mkt_e.name as nama_marketing_eksternal',
+            ])
+            ->first();
+
+        if (!$sq) abort(404, 'Sales Quotation tidak ditemukan');
+
+        $wos = DB::table('sq_work_orders as w')
+            ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'w.id_site_pelanggan_pekerjaan')
+            ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'w.id_pic_pelanggan_pekerjaan')
+            ->where('w.id_sq', $id)
+            ->orderBy('w.urutan')
+            ->orderBy('w.id_sq_wo')
+            ->select([
+                'w.id_sq_wo', 'w.no_sq_wo', 'w.judul_pekerjaan', 'w.hari_mulai', 'w.durasi_hari', 'w.keterangan',
+                'brs.nama_lokasi as nama_site',
+                'brc.nama_pic as nama_pic',
+            ])
+            ->get();
+
+        $woIds = $wos->pluck('id_sq_wo');
+
+        $boqRows = $woIds->isNotEmpty()
+            ? DB::table('sq_boq as b')
+                ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+                ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+                ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
+                ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'b.id_satuan')
+                ->whereIn('b.id_sq_wo', $woIds)
+                ->orderBy('b.id_sq_boq')
+                ->select([
+                    'b.id_sq_wo',
+                    'b.item_produk_alternate',
+                    'tp.nama as nama_testing_point',
+                    'ts.nomor as standard_nomor',
+                    'ts.judul as standard_judul',
+                    'tms.kode as matriks_kode',
+                    'tms.judul_indonesia as matriks_judul',
+                    'b.qty',
+                    'sat.nama as satuan',
+                    'b.harga',
+                    'b.discount',
+                    'b.keterangan',
+                ])
+                ->get()
+                ->groupBy('id_sq_wo')
+            : collect();
+
+        $tambahan = $woIds->isNotEmpty()
+            ? DB::table('sq_boq_tambahan as bt')
+                ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'bt.id_satuan')
+                ->whereIn('bt.id_sq_wo', $woIds)
+                ->orderBy('bt.id_sq_boq_tambahan')
+                ->select(['bt.id_sq_wo', 'bt.jenis', 'bt.nama_item', 'bt.qty', 'sat.nama as satuan', 'bt.harga', 'bt.keterangan'])
+                ->get()
+            : collect();
+
+        return Pdf::view('pdf.sales-quotation.printout', [
+            'sq'              => $sq,
+            'wos'             => $wos,
+            'boqRows'         => $boqRows,
+            'boqOtherRows'    => $tambahan->where('jenis', 'lainnya')->groupBy('id_sq_wo'),
+            'boqSamplingRows' => $tambahan->where('jenis', 'sampling')->groupBy('id_sq_wo'),
+        ])
+            ->format('a4')
+            ->landscape()
+            ->name("Printout-{$sq->no_sq}.pdf");
     }
 }

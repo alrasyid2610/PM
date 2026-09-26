@@ -160,6 +160,88 @@ function initSqPicFields() {
     });
 }
 
+// ── Tab "Work Order" — ringkasan read-only, sama pola dengan tab "Work
+// Order" di Sales Order (loadWoProgress): daftar + link ke halaman SQ Work
+// Order sendiri, BUKAN modal/accordion di sini — WO sekarang modul mandiri
+// (menu "SQ Work Order") sejak Fase 0 dibatalkan 2026-09-26.
+function formatRupiahSq(n) {
+    return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+}
+
+function loadSqWoList(idSq, done) {
+    $.get('/sq-work-orders/' + idSq + '/list', function (wos) {
+        renderSqWoSummary(wos || []);
+        if (done) done();
+    }).fail(function () {
+        $('#sqWoContent').html('<div class="text-center text-danger py-4">Gagal memuat data Work Order.</div>');
+        if (done) done();
+    });
+}
+
+function renderSqWoSummary(wos) {
+    if (!wos.length) {
+        $('#sqWoContent').html(`<div class="text-center text-muted py-4">
+            <i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>
+            Belum ada Work Order. Klik tombol "+ WO" untuk mulai.
+        </div>`);
+        return;
+    }
+
+    const rows = wos.map(function (wo, i) {
+        const searchText = [wo.no_sq_wo, wo.judul_pekerjaan].filter(Boolean).join(' ').toLowerCase();
+        return `<tr data-search="${escHtml(searchText)}">
+            <td style="text-align:center;color:#9ca3af;font-size:12px;">${i + 1}</td>
+            <td style="white-space:nowrap;font-weight:600;color:#1a56db;">${escHtml(wo.no_sq_wo || '—')}</td>
+            <td><a href="/sq-work-orders?open=${wo.id_sq_wo}" class="fw-semibold text-decoration-none">${escHtml(wo.judul_pekerjaan || '(belum diberi judul)')}</a></td>
+            <td style="text-align:center;white-space:nowrap;">Ke-${wo.hari_mulai}${wo.durasi_hari ? ' · ' + wo.durasi_hari + ' hr' : ''}</td>
+            <td style="text-align:center;"><span class="pm-badge pm-badge--blue" style="font-size:10px;">${wo.boq_count} item</span></td>
+            <td style="text-align:right;white-space:nowrap;font-weight:600;">${wo.total_boq > 0 ? formatRupiahSq(wo.total_boq) : '—'}</td>
+            <td style="text-align:right;white-space:nowrap;">
+                <a href="/sq-work-orders?open=${wo.id_sq_wo}" class="btn-plan-icon"><i class="fa-solid fa-arrow-up-right-from-square"></i> Buka</a>
+            </td>
+        </tr>`;
+    }).join('');
+
+    $('#sqWoContent').html(`
+    <div class="table-responsive">
+        <table class="pm-table">
+            <thead>
+                <tr>
+                    <th style="width:36px;text-align:center;">#</th>
+                    <th>No WO</th>
+                    <th>Judul Pekerjaan</th>
+                    <th style="text-align:center;">Hari</th>
+                    <th style="text-align:center;">BOQ</th>
+                    <th style="text-align:right;">Total BOQ</th>
+                    <th style="text-align:right;">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </div>`);
+}
+
+// ── "+ WO" — buka modal iframe ke halaman Create SQ Work Order (persis pola
+// "+ WO" di Sales Order yang membuka iframe ke /work-orders/create).
+$(document).on('click', '.btn-add-sq-wo-modal', function () {
+    const sqId = $(this).data('sq-id');
+    openIframeModal('#modalCreateSqWo', 'iframeCreateSqWo', 'loaderCreateSqWo', '/sq-work-orders/create?id_sq=' + sqId + '&embed=1');
+});
+
+window.addEventListener('storage', function (e) {
+    if (e.key === 'sq_wo_created' && e.newValue) {
+        try {
+            const data = JSON.parse(e.newValue);
+            loadSqWoList(data.id_sq);
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalCreateSqWo'));
+            if (modal) {
+                modal.hide();
+                document.getElementById('iframeCreateSqWo').src = '';
+            }
+        } catch (_) {}
+    }
+});
+
 $(document).ready(function () {
     if ($('#sales-quotations-table').length === 0) return;
 
@@ -171,10 +253,35 @@ $(document).ready(function () {
             initSqPicFields();
             initNumericMask(document.getElementById('detailContent'));
         },
-        afterLoad: function () {
+        afterLoad: function (res) {
             initSqSiteFields();
             initFpDate('#detailContent');
+            loadSqWoList(res.id_sq);
         },
+    });
+
+    $(document).on('shown.bs.tab', '#sqDetailTabs button[data-bs-toggle="tab"]', function (e) {
+        const target = $(e.target).data('bs-target');
+        $('#sqTabActionsInfo, #sqTabActionsWo').addClass('d-none').removeClass('d-flex');
+        if (target === '#tabInfoSq') $('#sqTabActionsInfo').removeClass('d-none');
+        if (target === '#tabSqWo') $('#sqTabActionsWo').removeClass('d-none').addClass('d-flex');
+    });
+
+    $(document).on('click', '#btnRefreshSqWo', function () {
+        const $icon = $(this).find('i');
+        $icon.addClass('fa-spin');
+        loadSqWoList($(this).data('sq-id'), function () { $icon.removeClass('fa-spin'); });
+    });
+
+    $(document).on('input', '#sqWoSearch', function () {
+        const q = $(this).val().toLowerCase().trim();
+        $('#sqWoContent tbody tr').each(function () {
+            $(this).toggle(!q || ($(this).data('search') || '').toString().includes(q));
+        });
+        $('#btnClearSqWoSearch').toggleClass('d-none', !q);
+    });
+    $(document).on('click', '#btnClearSqWoSearch', function () {
+        $('#sqWoSearch').val('').trigger('input');
     });
 
     $(document).on('click', '.btn-delete-record', function () {

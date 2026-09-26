@@ -26,12 +26,20 @@ return [
         ],
     ],
     [
-        'group'   => 'Transaksi',
-        'icon'    => 'fa-file-invoice',
+        'group'   => 'Sales Quotation',
+        'icon'    => 'fa-file-signature',
         'type'    => 'submenu',
         'divider' => 'Main Menu',
         'items'   => [
             ['slug' => 'sales-quotations', 'label' => 'Sales Quotation', 'icon' => 'fa-file-signature'],
+            ['slug' => 'sq-work-orders',   'label' => 'SQ Work Order',   'icon' => 'fa-briefcase'],
+        ],
+    ],
+    [
+        'group'   => 'Sales Order',
+        'icon'    => 'fa-file-invoice',
+        'type'    => 'submenu',
+        'items'   => [
             ['slug' => 'sales-orders', 'label' => 'Sales Order', 'icon' => 'fa-file-invoice-dollar'],
             ['slug' => 'contracts',    'label' => 'Contracts',   'icon' => 'fa-file-contract'],
             ['slug' => 'termin',       'label' => 'Termin',      'icon' => 'fa-money-bill-transfer'],
