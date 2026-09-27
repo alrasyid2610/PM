@@ -127,6 +127,9 @@
                 dataType: 'json', delay: 250,
                 data: (p) => ({ q: p.term, with_site: 1, id_site: $('select[name="id_site_pelanggan_pekerjaan"]').val() || '' }), processResults: (d) => ({ results: d }), cache: false,
             },
+            language: {
+                noResults: () => '<span>Tidak ditemukan. <a href="/business-relation-contacts/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>',
+            },
             escapeMarkup: (m) => m,
         });
     });
