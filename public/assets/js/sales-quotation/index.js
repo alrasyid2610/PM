@@ -496,7 +496,7 @@ function openConvertSqModal(idSq) {
                 <td style="text-align:center;color:#94a3b8;">${i + 1}</td>
                 <td>${escHtml(w.no_sq_wo || '—')}</td>
                 <td>${escHtml(w.judul_pekerjaan || '—')}<div style="font-size:11px;color:#94a3b8;">${escHtml(w.nama_site || 'Site: ikut Pemesan')}</div></td>
-                <td style="text-align:center;">${w.boq_count} / ${w.tambahan_count} / ${w.budget_count}</td>
+                <td style="text-align:center;">${w.boq_count} / ${w.tambahan_count} / ${w.budget_count} / ${w.fwo_count}</td>
                 <td class="convert-wo-tgl" style="white-space:nowrap;">—</td>
             </tr>`;
         }).join('') : '<tr><td colspan="5" class="text-center text-muted py-3">Belum ada Work Order</td></tr>';
@@ -525,10 +525,10 @@ function openConvertSqModal(idSq) {
             <div class="col-md-4 convert-po"><label class="form-label">Tanggal PO</label><input type="text" name="tanggal_po" class="form-control fp-date"></div>
             <div class="col-12">
                 <div style="font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;">
-                    Work Order yang dibuat <span style="font-weight:400;color:#94a3b8;">(BOQ / BOQ Other+Sampling / Budget Plan ikut terbawa)</span>
+                    Work Order yang dibuat <span style="font-weight:400;color:#94a3b8;">(BOQ / BOQ Other+Sampling / Budget Plan / FWO ikut terbawa)</span>
                 </div>
                 <div class="table-responsive"><table class="pm-table">
-                    <thead><tr><th style="width:36px;text-align:center;">#</th><th>No SQ WO</th><th>Judul / Site</th><th style="text-align:center;">BOQ / Other+Sampling / Budget</th><th>Jadwal di SO</th></tr></thead>
+                    <thead><tr><th style="width:36px;text-align:center;">#</th><th>No SQ WO</th><th>Judul / Site</th><th style="text-align:center;">BOQ / Other+Sampling / Budget / FWO</th><th>Jadwal di SO</th></tr></thead>
                     <tbody>${woRows}</tbody>
                 </table></div>
                 <div style="font-size:11px;color:#94a3b8;margin-top:6px;">

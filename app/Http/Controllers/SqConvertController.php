@@ -12,12 +12,17 @@ use Illuminate\Support\Facades\DB;
  * 1 SQ hanya boleh diterbitkan jadi SO 1 kali (UI: "Terbitkan SO") (penanda: sales_orders.id_sq, kolom lama
  * yang sebelumnya tidak dipakai). Yang ikut terbawa: header (Pemesan/
  * Delivery/Payment/PIC/Office/discount), WO, BOQ (+items), BOQ Other/
- * Sampling, dan Budget Plan WO (Plan + Item — SQ tidak punya Actual).
- * Tidak dibawa: FWO SQ (Fase 3 belum ada; FWO di SO dibuat belakangan).
+ * Sampling, Budget Plan WO, dan sejak 2026-09-27 juga FWO + Fieldwork BOQ
+ * (+items) + Budget Plan FWO (Plan + Item — SQ tidak pernah punya Actual,
+ * baik di level WO maupun FWO). Tidak dibawa: Personel FWO, BOQ
+ * Other/Sampling FWO, Attachment, Sample (tabel `sq_*` untuk itu tidak ada).
  *
  * "Hari ke-N" SQ diubah jadi tanggal nyata dari 1 Tanggal Mulai yang diisi
  * user di modal: tanggal WO = mulai + (hari_mulai − 1), selesai = mulai +
- * (durasi − 1).
+ * (durasi − 1). FWO ikut terbawa sejak 2026-09-27 (setelah Fase 3 SQ
+ * Fieldwork ada): hari_ke FWO dihitung dari basis hari yang SAMA dengan
+ * hari_mulai WO (lihat SqFieldworkController — hari_ke divalidasi terhadap
+ * rentang hari WO induknya), jadi tanggalnya dihitung dari $start yang sama.
  * hanya SQ berstatus Final yang boleh diterbitkan (kesepakatan 2026-09-27); setelah sukses status SQ otomatis jadi 'completed'.
  */
 class SqConvertController extends Controller
@@ -62,11 +67,13 @@ class SqConvertController extends Controller
         $boq = DB::table('sq_boq')->whereIn('id_sq_wo', $woIds)->selectRaw('id_sq_wo, COUNT(*) c')->groupBy('id_sq_wo')->pluck('c', 'id_sq_wo');
         $tam = DB::table('sq_boq_tambahan')->whereIn('id_sq_wo', $woIds)->selectRaw('id_sq_wo, COUNT(*) c')->groupBy('id_sq_wo')->pluck('c', 'id_sq_wo');
         $bud = DB::table('sq_wo_budgets')->whereIn('id_sq_wo', $woIds)->selectRaw('id_sq_wo, COUNT(*) c')->groupBy('id_sq_wo')->pluck('c', 'id_sq_wo');
+        $fwo = DB::table('sq_fieldworks')->whereIn('id_sq_wo', $woIds)->selectRaw('id_sq_wo, COUNT(*) c')->groupBy('id_sq_wo')->pluck('c', 'id_sq_wo');
 
-        $wos->transform(function ($w) use ($boq, $tam, $bud) {
+        $wos->transform(function ($w) use ($boq, $tam, $bud, $fwo) {
             $w->boq_count = (int) ($boq[$w->id_sq_wo] ?? 0);
             $w->tambahan_count = (int) ($tam[$w->id_sq_wo] ?? 0);
             $w->budget_count = (int) ($bud[$w->id_sq_wo] ?? 0);
+            $w->fwo_count = (int) ($fwo[$w->id_sq_wo] ?? 0);
             return $w;
         });
 
@@ -208,6 +215,10 @@ class SqConvertController extends Controller
                     ]);
                     $totalWo++;
 
+                    // id_sq_boq => id_boq baru — dipakai untuk remap Fieldwork
+                    // BOQ (di bawah) ke BOQ WO hasil salinan yang benar.
+                    $boqIdBySqBoq = [];
+
                     foreach (DB::table('sq_boq')->where('id_sq_wo', $wo->id_sq_wo)->get() as $b) {
                         $idBoq = DB::table('boq')->insertGetId([
                             'id_wo' => $idWo,
@@ -221,6 +232,8 @@ class SqConvertController extends Controller
                             'created_at' => now(),
                             'updated_at' => now(),
                         ]);
+                        $boqIdBySqBoq[$b->id_sq_boq] = $idBoq;
+
                         $items = DB::table('sq_boq_items')->where('id_sq_boq', $b->id_sq_boq)->pluck('id_testing_item');
                         if ($items->isNotEmpty()) {
                             DB::table('boq_items')->insert($items->map(fn($i) => [
@@ -267,6 +280,79 @@ class SqConvertController extends Controller
                             ]);
                         }
                     }
+
+                    // ── FWO + Fieldwork BOQ + Budget FWO ──
+                    foreach (DB::table('sq_fieldworks')->where('id_sq_wo', $wo->id_sq_wo)->orderBy('urutan')->orderBy('id_sq_fwo')->get() as $fwo) {
+                        $fwoMulai = $start->copy()->addDays(max(0, (int) $fwo->hari_ke - 1));
+                        $fwoSelesai = $fwoMulai->copy()->addDays(max(0, (int) ($fwo->durasi_hari ?: 1) - 1));
+
+                        $idFwo = DB::table('fieldworks')->insertGetId([
+                            'id_wo' => $idWo,
+                            'no_fwo' => $this->generateNoFwo(),
+                            'judul_pekerjaan' => $fwo->judul_pekerjaan ?: ($wo->judul_pekerjaan ?: 'Fieldwork'),
+                            // id_site/id_pic_pelanggan_pekerjaan sq_fieldworks sudah
+                            // merujuk business_relation_sites/contacts persis sama
+                            // seperti fieldworks asli — tidak perlu remap.
+                            'id_site_pelanggan_pekerjaan' => $fwo->id_site_pelanggan_pekerjaan,
+                            'id_pic_pelanggan_pekerjaan' => $fwo->id_pic_pelanggan_pekerjaan,
+                            'tanggal_mulai' => $fwoMulai->toDateString(),
+                            'tanggal_selesai' => $fwoSelesai->toDateString(),
+                            'status' => 'planned',
+                            'keterangan' => $fwo->keterangan,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+
+                        foreach (DB::table('sq_fieldwork_boq')->where('id_sq_fwo', $fwo->id_sq_fwo)->get() as $fb) {
+                            if (!isset($boqIdBySqBoq[$fb->id_sq_boq])) continue; // BOQ WO tidak ikut tersalin (harusnya tidak mungkin, tapi dijaga)
+                            $idBoqBaru = $boqIdBySqBoq[$fb->id_sq_boq];
+                            $idTestingPoint = DB::table('boq')->where('id_boq', $idBoqBaru)->value('id_testing_point');
+
+                            $idFwoBoq = DB::table('fieldwork_boq')->insertGetId([
+                                'id_fwo' => $idFwo,
+                                'id_boq' => $idBoqBaru,
+                                'id_testing_point' => $idTestingPoint,
+                                'qty' => $fb->qty,
+                                'keterangan' => $fb->keterangan,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+
+                            // Items selalu disinkron utuh dari boq_items BOQ baru —
+                            // pola sama FieldworkBoqController::update().
+                            $boqItemIds = DB::table('boq_items')->where('id_boq', $idBoqBaru)->pluck('id_testing_item');
+                            if ($boqItemIds->isNotEmpty()) {
+                                DB::table('fieldwork_boq_items')->insert($boqItemIds->map(fn($i) => [
+                                    'id_fwo_boq' => $idFwoBoq, 'id_testing_item' => $i,
+                                    'created_at' => now(), 'updated_at' => now(),
+                                ])->all());
+                            }
+                        }
+
+                        foreach (DB::table('sq_fwo_budgets')->where('id_sq_fwo', $fwo->id_sq_fwo)->get() as $fbp) {
+                            $idFwoBudget = DB::table('fwo_budgets')->insertGetId([
+                                'id_fwo' => $idFwo,
+                                'label' => $fbp->label,
+                                'keterangan' => $fbp->keterangan,
+                                'tanggal_mulai' => $fbp->hari_mulai ? $start->copy()->addDays($fbp->hari_mulai - 1)->toDateString() : null,
+                                'tanggal_selesai' => $fbp->hari_selesai ? $start->copy()->addDays($fbp->hari_selesai - 1)->toDateString() : null,
+                                'status' => 'open',
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                            foreach (DB::table('sq_fwo_budget_items')->where('id_sq_budget', $fbp->id_sq_budget)->get() as $fbi) {
+                                DB::table('fwo_budget_items')->insert([
+                                    'id_budget' => $idFwoBudget,
+                                    'id_account' => $fbi->id_account,
+                                    'nominal_budget' => $fbi->nominal_budget,
+                                    'keterangan' => $fbi->keterangan,
+                                    'is_cash_advance' => $fbi->is_cash_advance,
+                                    'created_at' => now(),
+                                    'updated_at' => now(),
+                                ]);
+                            }
+                        }
+                    }
                 }
 
                 $sqBefore = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
@@ -302,5 +388,19 @@ class SqConvertController extends Controller
         $latest = DB::table('work_orders')->where('no_wo', 'like', $prefix . '%')->orderByDesc('id_wo')->first();
         if (!$latest) return $prefix . '0001';
         return $prefix . str_pad(((int) explode('-', $latest->no_wo)[2]) + 1, 4, '0', STR_PAD_LEFT);
+    }
+
+    // Pola sama SalesOrderController::generateNoFwo() (format FWO.YY.A.NNNN, huruf naik tiap 9999).
+    private function generateNoFwo(): string
+    {
+        $year = now()->format('y');
+        $latest = DB::table('fieldworks')->where('no_fwo', 'like', "FWO.{$year}.%")->orderBy('no_fwo', 'desc')->value('no_fwo');
+        if (!$latest) return "FWO.{$year}.A.0001";
+
+        $parts = explode('.', $latest);
+        $letter = $parts[2] ?? 'A';
+        $number = intval($parts[3] ?? 0);
+        if ($number < 9999) return sprintf('FWO.%s.%s.%04d', $year, $letter, $number + 1);
+        return sprintf('FWO.%s.%s.0001', $year, chr(ord($letter) + 1));
     }
 }
