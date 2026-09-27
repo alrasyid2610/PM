@@ -165,6 +165,12 @@ class SalesQuotationController extends Controller
         $sq->pelanggan_pay_display = brDisplayName($sq->entitas_pay, $sq->pelanggan_pay);
         $sq->attachment = $sq->attachment ? json_decode($sq->attachment) : [];
 
+        $rootId = $sq->id_sq_induk ?: $sq->id_sq;
+        $sq->riwayat_revisi = DB::table('sales_quotations')
+            ->where(fn($q) => $q->where('id_sq', $rootId)->orWhere('id_sq_induk', $rootId))
+            ->orderBy('revisi')
+            ->get(['id_sq', 'no_sq', 'revisi', 'status', 'is_latest', 'created_at']);
+
         return response()->json($sq);
     }
 
@@ -248,6 +254,118 @@ class SalesQuotationController extends Controller
         saveAudit('sales_quotations', $id, 'update', $before, DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson());
 
         return response()->json(['success' => true, 'message' => 'Sales Quotation dibatalkan.']);
+    }
+
+    /**
+     * Revisi SQ Final: bikin SQ baru (row baru, no_sq sama + revisi naik 1)
+     * berstatus Draft, salinan penuh dari SQ sumber (header + WO + BOQ + BOQ
+     * Other/Sampling + Budget Plan). SQ sumber ditandai is_latest=false &
+     * status=cancel — dianggap sudah digantikan, tidak dianggap "batal" karena
+     * alasan bisnis. Completed tidak boleh direvisi (sudah jadi SO).
+     */
+    public function revise($id)
+    {
+        $sq = DB::table('sales_quotations')->where('id_sq', $id)->whereNull('deleted_at')->first();
+        if (!$sq) return response()->json(['message' => 'Sales Quotation tidak ditemukan'], 404);
+        if ($sq->status !== 'final') {
+            return response()->json(['message' => 'Hanya SQ berstatus Final yang bisa direvisi.'], 422);
+        }
+
+        $newId = DB::transaction(function () use ($sq) {
+            $data = (array) $sq;
+            unset($data['id_sq']);
+            $data['revisi'] = $sq->revisi + 1;
+            $data['id_sq_induk'] = $sq->id_sq_induk ?: $sq->id_sq; // selalu rujuk revisi 0 (akar)
+            $data['is_latest'] = true;
+            $data['status'] = 'draft';
+            $data['keterangan_status'] = null;
+            $data['terkirim_at'] = null;
+            $data['diputuskan_at'] = null;
+            $data['attachment'] = json_encode([]);
+            $data['deleted_at'] = null;
+            $data['created_at'] = now();
+            $data['updated_at'] = now();
+
+            $newId = DB::table('sales_quotations')->insertGetId($data);
+
+            $wos = DB::table('sq_work_orders')->where('id_sq', $sq->id_sq)->orderBy('urutan')->orderBy('id_sq_wo')->get();
+            foreach ($wos as $wo) {
+                $wd = (array) $wo;
+                unset($wd['id_sq_wo']);
+                $wd['id_sq'] = $newId;
+                $wd['created_at'] = now();
+                $wd['updated_at'] = now();
+                $newWoId = DB::table('sq_work_orders')->insertGetId($wd);
+
+                foreach (DB::table('sq_boq')->where('id_sq_wo', $wo->id_sq_wo)->get() as $b) {
+                    $bd = (array) $b;
+                    unset($bd['id_sq_boq']);
+                    $bd['id_sq_wo'] = $newWoId;
+                    $bd['created_at'] = now();
+                    $bd['updated_at'] = now();
+                    $newBoqId = DB::table('sq_boq')->insertGetId($bd);
+
+                    $items = DB::table('sq_boq_items')->where('id_sq_boq', $b->id_sq_boq)->pluck('id_testing_item');
+                    if ($items->isNotEmpty()) {
+                        DB::table('sq_boq_items')->insert($items->map(fn($i) => [
+                            'id_sq_boq' => $newBoqId, 'id_testing_item' => $i,
+                            'created_at' => now(), 'updated_at' => now(),
+                        ])->all());
+                    }
+                }
+
+                foreach (DB::table('sq_boq_tambahan')->where('id_sq_wo', $wo->id_sq_wo)->get() as $t) {
+                    $td = (array) $t;
+                    unset($td['id_sq_boq_tambahan']);
+                    $td['id_sq_wo'] = $newWoId;
+                    $td['created_at'] = now();
+                    $td['updated_at'] = now();
+                    DB::table('sq_boq_tambahan')->insert($td);
+                }
+
+                foreach (DB::table('sq_wo_budgets')->where('id_sq_wo', $wo->id_sq_wo)->get() as $bp) {
+                    $bpd = (array) $bp;
+                    unset($bpd['id_sq_budget']);
+                    $bpd['id_sq_wo'] = $newWoId;
+                    $bpd['created_at'] = now();
+                    $bpd['updated_at'] = now();
+                    $newBudgetId = DB::table('sq_wo_budgets')->insertGetId($bpd);
+
+                    foreach (DB::table('sq_wo_budget_items')->where('id_sq_budget', $bp->id_sq_budget)->get() as $bi) {
+                        $bid = (array) $bi;
+                        unset($bid['id_sq_budget_item']);
+                        $bid['id_sq_budget'] = $newBudgetId;
+                        $bid['created_at'] = now();
+                        $bid['updated_at'] = now();
+                        DB::table('sq_wo_budget_items')->insert($bid);
+                    }
+                }
+            }
+
+            $before = DB::table('sales_quotations')->where('id_sq', $sq->id_sq)->get()->toJson();
+            DB::table('sales_quotations')->where('id_sq', $sq->id_sq)->update([
+                'is_latest' => false,
+                'status' => 'cancel',
+                'keterangan_status' => "Digantikan oleh revisi Rev.{$data['revisi']}",
+                'diputuskan_at' => now(),
+                'updated_at' => now(),
+            ]);
+            saveAudit('sales_quotations', $sq->id_sq, 'update', $before, DB::table('sales_quotations')->where('id_sq', $sq->id_sq)->get()->toJson());
+
+            $after = DB::table('sales_quotations')->where('id_sq', $newId)->get()->toJson();
+            saveAudit('sales_quotations', $newId, 'Create', '', $after);
+
+            return $newId;
+        });
+
+        $newNo = DB::table('sales_quotations')->where('id_sq', $newId)->value('no_sq');
+        $newRev = DB::table('sales_quotations')->where('id_sq', $newId)->value('revisi');
+
+        return response()->json([
+            'success' => true,
+            'message' => "Revisi dibuat: {$newNo} Rev.{$newRev} (Draft).",
+            'id_sq' => $newId,
+        ]);
     }
 
     public function destroy($id)

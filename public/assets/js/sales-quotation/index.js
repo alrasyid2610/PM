@@ -398,6 +398,58 @@ function cancelSq(idSq) {
     });
 }
 
+// Revisi: bikin SQ baru (Draft) dari SQ Final ini; SQ ini sendiri jadi Cancel
+// ("digantikan"). Beda dari cancelSq — bukan pembatalan, tapi penerus.
+function reviseSq(idSq) {
+    Swal.fire({
+        title: 'Buat Revisi SQ?',
+        html: 'SQ baru berstatus <strong>Draft</strong> akan dibuat sebagai salinan penuh (WO, BOQ, BOQ Other/Sampling, Budget Plan). SQ ini sendiri otomatis berstatus <strong>Cancel</strong> (digantikan revisi baru).',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Buat Revisi',
+        cancelButtonText: 'Batal',
+        reverseButtons: true,
+    }).then(function (result) {
+        if (!result.isConfirmed) return;
+        $.ajax({
+            url: '/sales-quotations/' + idSq + '/revise',
+            method: 'POST',
+            data: { _token: window.route.csrf },
+            success: function (res) {
+                Notify.success(res.message || 'Revisi dibuat.');
+                setTimeout(function () { window.location.href = '/sales-quotations?open=' + res.id_sq; }, 800);
+            },
+            error: function (xhr) {
+                Notify.error((xhr.responseJSON && xhr.responseJSON.message) || 'Gagal membuat revisi.');
+            },
+        });
+    });
+}
+
+function showRiwayatRevisiSq(idSq) {
+    $.get('/sales-quotations/' + idSq, function (res) {
+        const rows = (res.riwayat_revisi || []).map(function (r) {
+            const badge = { draft: 'secondary', final: 'primary', completed: 'success', cancel: 'warning' }[r.status] || 'secondary';
+            const current = r.id_sq === idSq ? ' <strong>(sedang dibuka)</strong>' : '';
+            return `<tr>
+                <td style="text-align:center;">${r.revisi === 0 ? '—' : 'Rev.' + r.revisi}</td>
+                <td>${r.id_sq === idSq ? escHtml(r.no_sq) : `<a href="/sales-quotations?open=${r.id_sq}">${escHtml(r.no_sq)}</a>`}${current}</td>
+                <td><span class="badge bg-${badge}">${escHtml(r.status)}</span></td>
+                <td>${r.created_at ? new Date(r.created_at).toLocaleDateString('id-ID') : '-'}</td>
+            </tr>`;
+        }).join('');
+        Swal.fire({
+            title: 'Riwayat Revisi',
+            html: `<div class="table-responsive text-start"><table class="table table-sm mb-0">
+                <thead><tr><th>Rev.</th><th>No. SQ</th><th>Status</th><th>Dibuat</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table></div>`,
+            width: 560,
+            confirmButtonText: 'Tutup',
+        });
+    });
+}
+
 // ── Convert SQ → SO ─────────────────────────────────────────────────────
 // Modal kecil: user isi Tanggal SO, Tanggal Mulai (hari ke-1), PIC Order,
 // PO. Hari ke-N tiap WO dihitung jadi tanggal dari Tanggal Mulai itu.

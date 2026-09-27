@@ -32,6 +32,13 @@ function renderForm(res) {
            </a>`
         : '';
 
+    const riwayat = res.riwayat_revisi || [];
+    const riwayatTag = riwayat.length > 1
+        ? `<span class="pm-badge" style="background:#f5f3ff;color:#6d28d9;cursor:pointer;" onclick="showRiwayatRevisiSq(${res.id_sq})" title="Lihat riwayat revisi">
+               <i class="fa-solid fa-clock-rotate-left" style="font-size:10px;"></i> ${riwayat.length} Revisi
+           </span>`
+        : '';
+
     const revBadge = res.revisi > 0
         ? `<span class="pm-badge" style="background:#f5f3ff;color:#6d28d9;">Rev.${res.revisi}</span>`
         : '';
@@ -56,7 +63,7 @@ function renderForm(res) {
         deleteId: (isDeleted || res.status === 'completed') ? null : res.id_sq,
         editText: (isDeleted || !isDraft) ? '' : 'Edit SQ',
         statusBadge: sqStatusBadge(res),
-        tags: revBadge + soTerbitTag + pelangganTag,
+        tags: revBadge + riwayatTag + soTerbitTag + pelangganTag,
         moreActions: [
             {
                 label: "Printout SQ (Sementara)",
@@ -77,6 +84,11 @@ function renderForm(res) {
                 label: "Batalkan SQ",
                 icon: "fa-solid fa-ban",
                 attrs: `onclick="cancelSq(${res.id_sq})"`,
+            }] : []),
+            ...(!isDeleted && isFinal && can('sales-quotations', 'can_create') ? [{
+                label: "Revisi SQ",
+                icon: "fa-solid fa-code-branch",
+                attrs: `onclick="reviseSq(${res.id_sq})"`,
             }] : []),
             ...(!isDeleted && isFinal && can('sales-quotations', 'can_create') && can('sales-orders', 'can_create') ? [{
                 label: "Terbitkan SO",
