@@ -13,11 +13,11 @@ window.datatableHeaderLabels = Object.assign({}, window.datatableHeaderLabels, {
     durasi_hari: 'Durasi',
 });
 
-// PIC Pekerjaan di-scope oleh Site Pekerjaan yang dipilih — pola sama
-// initSqWoPicField() di sq-work-order/index.js.
+// PIC di-scope oleh Perusahaan (id_br) WO induk — pola sama FWO asli
+// (fieldworks/create.blade.php: filter by id_br, BUKAN by Site). id_br
+// diambil dari id_br_pekerjaan yang sudah disertakan show() controller.
 function initSqFwoPicField() {
     const $pic = $('#detail_id_pic_pelanggan_pekerjaan');
-    const $site = $('#detail_id_site_pelanggan_pekerjaan');
     if (!$pic.length) return;
     if ($pic.hasClass('select2-hidden-accessible')) $pic.select2('destroy');
 
@@ -32,7 +32,7 @@ function initSqFwoPicField() {
             dataType: 'json',
             delay: 250,
             data: function (params) {
-                return { q: params.term || '', with_site: 1, id_site: $site.val() || '' };
+                return { q: params.term || '', id_br: (currentSqFwoData && currentSqFwoData.id_br_pekerjaan) || '' };
             },
             processResults: function (data) { return { results: data }; },
             cache: false,
@@ -43,10 +43,6 @@ function initSqFwoPicField() {
             },
         },
         escapeMarkup: function (m) { return m; },
-    });
-
-    $site.off('change.sqFwoPicClear').on('change.sqFwoPicClear', function () {
-        $pic.val(null).trigger('change');
     });
 }
 

@@ -1239,9 +1239,12 @@ function formatRupiahSqFwo(n) {
     return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 }
 
+let sqWoFwoCache = [];
+
 function loadSqWoFwoList(idSqWo, done) {
     $.get('/sq-fieldworks/' + idSqWo + '/list', function (fwos) {
-        renderSqWoFwoSummary(fwos || []);
+        sqWoFwoCache = fwos || [];
+        renderSqWoFwoSummary(sqWoFwoCache);
         if (done) done();
     }).fail(function () {
         $('#sqWoFwoSummary').html('<div class="text-center text-danger py-4">Gagal memuat data FWO.</div>');
@@ -1249,6 +1252,10 @@ function loadSqWoFwoList(idSqWo, done) {
     });
 }
 
+// Struktur & style tabel meniru persis renderFwoProgressTable() di
+// work-order/index.js (tab Fieldwork Orders pada WO asli) — bedanya SQ FWO
+// tidak punya status (tidak pernah "completed" di level estimasi) dan
+// jadwalnya "Hari Ke-/Durasi", bukan Tgl Mulai/Selesai.
 function renderSqWoFwoSummary(fwos) {
     if (!fwos.length) {
         $('#sqWoFwoSummary').html(`<div class="text-center text-muted py-4">
@@ -1258,38 +1265,81 @@ function renderSqWoFwoSummary(fwos) {
         return;
     }
 
-    const rows = fwos.map(function (f, i) {
-        return `<tr>
-            <td style="text-align:center;color:#9ca3af;font-size:12px;">${i + 1}</td>
-            <td style="white-space:nowrap;font-weight:600;color:#dc2626;">${escHtml(f.no_sq_fwo || '—')}</td>
-            <td><a href="/sq-fieldworks?open=${f.id_sq_fwo}" class="fw-semibold text-decoration-none">${escHtml(f.judul_pekerjaan || '(belum diberi judul)')}</a></td>
-            <td style="text-align:center;white-space:nowrap;">Ke-${f.hari_ke}${f.durasi_hari ? ' · ' + f.durasi_hari + ' hr' : ''}</td>
-            <td style="text-align:center;"><span class="pm-badge pm-badge--blue" style="font-size:10px;">${f.boq_count} item</span></td>
-            <td style="text-align:right;white-space:nowrap;font-weight:600;">${f.total_boq > 0 ? formatRupiahSqFwo(f.total_boq) : '—'}</td>
-            <td style="text-align:right;white-space:nowrap;">
-                <a href="/sq-fieldworks?open=${f.id_sq_fwo}" class="btn-plan-icon"><i class="fa-solid fa-arrow-up-right-from-square"></i> Buka</a>
+    const TH = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';
+    const TD = 'style="padding:8px 12px;vertical-align:middle;"';
+
+    const rows = fwos.map(function (f, idx) {
+        const search = [f.no_sq_fwo, f.judul_pekerjaan, f.keterangan].join(' ').toLowerCase();
+        return `<tr class="sq-fwo-data-row" data-search="${escHtml(search)}">
+            <td ${TD} style="text-align:center;color:#94a3b8;">${idx + 1}</td>
+            <td ${TD}>
+                <a href="/sq-fieldworks?open=${f.id_sq_fwo}" class="fw-semibold text-decoration-none" style="color:#dc2626;white-space:nowrap;">
+                    ${escHtml(f.no_sq_fwo ?? '—')}
+                </a>
+            </td>
+            <td ${TD} style="color:#374151;">${escHtml(f.judul_pekerjaan ?? '—')}</td>
+            <td ${TD} style="color:#64748b;">${escHtml(f.keterangan || '—')}</td>
+            <td ${TD} style="color:#64748b;white-space:nowrap;">Ke-${f.hari_ke}</td>
+            <td ${TD} style="color:#64748b;white-space:nowrap;">${f.durasi_hari ? f.durasi_hari + ' hr' : '—'}</td>
+            <td ${TD} style="text-align:center;"><span class="pm-badge pm-badge--blue" style="font-size:10px;">${f.boq_count} item</span></td>
+            <td ${TD} style="text-align:right;white-space:nowrap;font-weight:600;">${f.total_boq > 0 ? formatRupiahSqFwo(f.total_boq) : '—'}</td>
+            <td ${TD} style="white-space:nowrap;">
+                <a href="/sq-fieldworks?open=${f.id_sq_fwo}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;" title="Buka detail FWO">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                </a>
             </td>
         </tr>`;
     }).join('');
 
-    $('#sqWoFwoSummary').html(`
+    const searchBar = `<div class="mb-2 d-flex align-items-center gap-2">
+        <div class="input-group input-group-sm" style="max-width:280px;">
+            <span class="input-group-text" style="background:#f8fafc;border-color:#e2e8f0;">
+                <i class="fa-solid fa-magnifying-glass text-muted" style="font-size:11px;"></i>
+            </span>
+            <input type="text" id="sqWoFwoSearchInput" class="form-control" placeholder="Cari No FWO atau judul..."
+                style="border-color:#e2e8f0;font-size:12px;" data-no-disable>
+            <button type="button" id="btnClearSqWoFwoSearch" class="btn btn-outline-secondary d-none"
+                style="border-color:#e2e8f0;font-size:11px;" title="Hapus pencarian">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+    </div>`;
+
+    $('#sqWoFwoSummary').html(searchBar + `
     <div class="table-responsive">
-        <table class="pm-table">
-            <thead>
+        <table class="table table-sm table-hover mb-0" style="font-size:13px;min-width:760px;">
+            <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
                 <tr>
-                    <th style="width:36px;text-align:center;">#</th>
-                    <th>No FWO</th>
-                    <th>Judul Pekerjaan</th>
-                    <th style="text-align:center;">Hari</th>
-                    <th style="text-align:center;">BOQ</th>
-                    <th style="text-align:right;">Total BOQ</th>
-                    <th style="text-align:right;">Aksi</th>
+                    <th ${TH} style="width:40px;">No</th>
+                    <th ${TH} style="min-width:130px;">No FWO</th>
+                    <th ${TH} style="min-width:180px;">Judul Pekerjaan</th>
+                    <th ${TH} style="min-width:160px;">Keterangan</th>
+                    <th ${TH} style="min-width:80px;">Hari Ke-</th>
+                    <th ${TH} style="min-width:80px;">Durasi</th>
+                    <th ${TH} style="text-align:center;min-width:80px;">BOQ</th>
+                    <th ${TH} style="text-align:right;min-width:120px;">Total BOQ</th>
+                    <th ${TH} style="min-width:70px;">Aksi</th>
                 </tr>
             </thead>
             <tbody>${rows}</tbody>
         </table>
     </div>`);
 }
+
+// Search client-side — pola sama #fwoSearchInput di work-order/index.js.
+$(document).on('input', '#sqWoFwoSearchInput', function () {
+    const q = $(this).val().toLowerCase().trim();
+    let visible = 0;
+    $('#sqWoFwoSummary .sq-fwo-data-row').each(function () {
+        const match = !q || ($(this).data('search') || '').toString().includes(q);
+        $(this).toggle(match);
+        if (match) visible++;
+    });
+    $('#btnClearSqWoFwoSearch').toggleClass('d-none', !q);
+});
+$(document).on('click', '#btnClearSqWoFwoSearch', function () {
+    $('#sqWoFwoSearchInput').val('').trigger('input');
+});
 
 // "+ FWO" — buka modal iframe ke halaman Create SQ Fieldwork (pola sama "+
 // WO" di sales-quotation/index.js).

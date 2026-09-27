@@ -238,7 +238,7 @@ class SqFieldworkController extends Controller
             ->where('f.id_sq_wo', $id_sq_wo)
             ->orderBy('f.urutan')
             ->orderBy('f.id_sq_fwo')
-            ->select(['f.id_sq_fwo', 'f.no_sq_fwo', 'f.judul_pekerjaan', 'f.hari_ke', 'f.durasi_hari'])
+            ->select(['f.id_sq_fwo', 'f.no_sq_fwo', 'f.judul_pekerjaan', 'f.keterangan', 'f.hari_ke', 'f.durasi_hari'])
             ->get();
 
         if ($fwos->isEmpty()) {
