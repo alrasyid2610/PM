@@ -49,7 +49,7 @@
 @php
     $fmtDate = fn($d) => $d ? \Carbon\Carbon::parse($d)->format('d/m/Y') : '-';
     $fmtMoney = fn($v) => 'Rp ' . number_format((float) ($v ?? 0), 0, ',', '.');
-    $statusLabel = ['draft' => 'Draft', 'terkirim' => 'Terkirim', 'diterima' => 'Diterima', 'ditolak' => 'Ditolak', 'cancel' => 'Cancel', 'expired' => 'Expired'];
+    $statusLabel = ['draft' => 'Draft', 'final' => 'Final', 'cancel' => 'Cancel', 'completed' => 'Completed'];
     $hariLabel = fn($wo) => 'Hari ke-' . $wo->hari_mulai . ($wo->durasi_hari ? ' (' . $wo->durasi_hari . ' hari)' : '');
 @endphp
 

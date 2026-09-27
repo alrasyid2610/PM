@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Support\SqLock;
 use Illuminate\Support\Facades\DB;
 use App\Traits\HasAuditHistory;
 
@@ -47,6 +48,7 @@ class SqWoBudgetController extends Controller
 
     public function store(Request $request)
     {
+        if ($lock = SqLock::byWo($request->input('id_sq_wo'))) return $lock;
         $request->validate([
             'id_sq_wo' => 'required|integer|exists:sq_work_orders,id_sq_wo',
             'label' => 'required|string|max:255',
@@ -106,6 +108,7 @@ class SqWoBudgetController extends Controller
 
     public function update(Request $request, $id)
     {
+        if ($lock = SqLock::byBudget($id)) return $lock;
         $budget = DB::table('sq_wo_budgets')->where('id_sq_budget', $id)->first();
         if (!$budget) return response()->json(['message' => 'Tidak ditemukan'], 404);
 
@@ -169,6 +172,7 @@ class SqWoBudgetController extends Controller
 
     public function destroy($id)
     {
+        if ($lock = SqLock::byBudget($id)) return $lock;
         $budget = DB::table('sq_wo_budgets')->where('id_sq_budget', $id)->first();
         if (!$budget) return response()->json(['message' => 'Tidak ditemukan'], 404);
 

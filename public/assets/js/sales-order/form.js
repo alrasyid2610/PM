@@ -39,6 +39,14 @@ function renderForm(res) {
            </a>`
         : "";
 
+    // Asal SQ (kalau SO ini hasil Terbitkan SO dari SQ)
+    const sqAsalTag = res.id_sq
+        ? `<a href="/sales-quotations?open=${res.id_sq}" class="pm-badge pm-badge--blue" style="text-decoration:none;">
+               <i class="fa-solid fa-file-signature" style="font-size:10px;"></i>
+               ${escHtml(res.no_sq_asal || ('SQ #' + res.id_sq))}
+           </a>`
+        : "";
+
     return `
 <form id="detailForm">
     <input type="hidden" name="_token" value="${window.route.csrf}">
@@ -52,7 +60,7 @@ function renderForm(res) {
         deleteId: isDeleted ? null : res.id_so,
         editText: isDeleted ? '' : 'Edit SO',
         statusBadge: statusBadge,
-        tags: pelangganTag + soReferensiTag,
+        tags: pelangganTag + sqAsalTag + soReferensiTag,
         moreActions: [
             {
                 label: "Printout SO (Sementara)",

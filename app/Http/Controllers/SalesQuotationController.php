@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Support\SqLock;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistory;
@@ -131,6 +132,8 @@ class SalesQuotationController extends Controller
             ->leftJoin('entitas as ent_pay', 'ent_pay.id_entitas', '=', 'pay.id_entitas')
             ->select(
                 'sq.*',
+                DB::raw('(SELECT so_t.id_so FROM sales_orders so_t WHERE so_t.id_sq = sq.id_sq AND so_t.deleted_at IS NULL ORDER BY so_t.id_so LIMIT 1) as id_so_terbit'),
+                DB::raw('(SELECT so_t.no_so FROM sales_orders so_t WHERE so_t.id_sq = sq.id_sq AND so_t.deleted_at IS NULL ORDER BY so_t.id_so LIMIT 1) as no_so_terbit'),
                 'pelanggan.nama as nama_pelanggan',
                 'ent_pelanggan.nama as entitas_pelanggan',
                 'ent_del.nama as entitas_delivery',
@@ -167,6 +170,7 @@ class SalesQuotationController extends Controller
 
     public function update(Request $request, $id)
     {
+        if ($lock = SqLock::bySq($id)) return $lock;
         $sq = DB::table('sales_quotations')->where('id_sq', $id)->first();
         if (!$sq) {
             return response()->json(['message' => 'Sales Quotation tidak ditemukan'], 404);
@@ -202,8 +206,55 @@ class SalesQuotationController extends Controller
         return response()->json(['success' => true, 'message' => 'Sales Quotation berhasil diperbarui']);
     }
 
+    /**
+     * Draft → Final. SQ Final terkunci (tidak bisa diedit) dan siap
+     * diterbitkan jadi SO. Validasi minimal: punya judul & minimal 1 WO.
+     */
+    public function finalize($id)
+    {
+        $sq = DB::table('sales_quotations')->where('id_sq', $id)->whereNull('deleted_at')->first();
+        if (!$sq) return response()->json(['message' => 'Sales Quotation tidak ditemukan'], 404);
+        if ($sq->status !== 'draft') {
+            return response()->json(['message' => 'Hanya SQ berstatus Draft yang bisa difinalkan.'], 422);
+        }
+        if (!DB::table('sq_work_orders')->where('id_sq', $id)->exists()) {
+            return response()->json(['message' => 'Tambahkan minimal 1 Work Order sebelum memfinalkan SQ.'], 422);
+        }
+
+        $before = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
+        DB::table('sales_quotations')->where('id_sq', $id)->update(['status' => 'final', 'terkirim_at' => null, 'updated_at' => now()]);
+        saveAudit('sales_quotations', $id, 'update', $before, DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson());
+
+        return response()->json(['success' => true, 'message' => 'Sales Quotation difinalkan. SQ sekarang terkunci dan siap diterbitkan jadi SO.']);
+    }
+
+    /** Draft/Final → Cancel (alasan opsional dicatat di keterangan_status). */
+    public function cancel(Request $request, $id)
+    {
+        $sq = DB::table('sales_quotations')->where('id_sq', $id)->whereNull('deleted_at')->first();
+        if (!$sq) return response()->json(['message' => 'Sales Quotation tidak ditemukan'], 404);
+        if (!in_array($sq->status, ['draft', 'final'], true)) {
+            return response()->json(['message' => 'Hanya SQ berstatus Draft atau Final yang bisa dibatalkan.'], 422);
+        }
+        $request->validate(['keterangan_status' => 'nullable|string|max:1000']);
+
+        $before = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
+        DB::table('sales_quotations')->where('id_sq', $id)->update([
+            'status' => 'cancel',
+            'keterangan_status' => $request->input('keterangan_status') ?: $sq->keterangan_status,
+            'diputuskan_at' => now(),
+            'updated_at' => now(),
+        ]);
+        saveAudit('sales_quotations', $id, 'update', $before, DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson());
+
+        return response()->json(['success' => true, 'message' => 'Sales Quotation dibatalkan.']);
+    }
+
     public function destroy($id)
     {
+        if (DB::table('sales_quotations')->where('id_sq', $id)->value('status') === 'completed') {
+            return response()->json(['message' => 'SQ berstatus Completed (sudah menjadi SO) tidak bisa dihapus.'], 422);
+        }
         $before = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
         DB::table('sales_quotations')->where('id_sq', $id)->update(['deleted_at' => now()]);
         $after = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
@@ -270,6 +321,97 @@ class SalesQuotationController extends Controller
             ]);
 
         return DataTables::of($query)->addIndexColumn()->make(true);
+    }
+
+    /**
+     * Executive Summary (internal) — analisa pendapatan vs biaya operasional
+     * (Budget Plan) dari data SQ yang sudah Completed (SO sudah terbit).
+     * Sumber data = SQ (terkunci, jadi angkanya stabil), bukan SO yang masih
+     * bisa berubah. Pendapatan dihitung bersih setelah discount.
+     */
+    public function executiveSummaryPdf($id)
+    {
+        $sq = DB::table('sales_quotations as sq')
+            ->leftJoin('business_relations as br', 'br.id_br', '=', 'sq.id_pelanggan')
+            ->leftJoin('entitas as ent', 'ent.id_entitas', '=', 'br.id_entitas')
+            ->leftJoin('sales_orders as so', function ($j) {
+                $j->on('so.id_sq', '=', 'sq.id_sq')->whereNull('so.deleted_at');
+            })
+            ->where('sq.id_sq', $id)
+            ->whereNull('sq.deleted_at')
+            ->select(['sq.*', 'br.nama as nama_pelanggan', 'ent.nama as entitas_pelanggan', 'so.no_so', 'so.tanggal_so'])
+            ->first();
+
+        if (!$sq) abort(404, 'Sales Quotation tidak ditemukan');
+        if ($sq->status !== 'completed') {
+            abort(422, 'Executive Summary hanya tersedia untuk SQ berstatus Completed (SO sudah terbit).');
+        }
+        $sq->nama_pelanggan_display = brDisplayName($sq->entitas_pelanggan, $sq->nama_pelanggan);
+
+        $wos = DB::table('sq_work_orders')->where('id_sq', $id)->orderBy('urutan')->orderBy('id_sq_wo')->get();
+        $woIds = $wos->pluck('id_sq_wo');
+
+        $boq = DB::table('sq_boq')->whereIn('id_sq_wo', $woIds)->get()->groupBy('id_sq_wo');
+        $tam = DB::table('sq_boq_tambahan')->whereIn('id_sq_wo', $woIds)->get()->groupBy('id_sq_wo');
+        $budgetItems = DB::table('sq_wo_budgets as b')
+            ->join('sq_wo_budget_items as i', 'i.id_sq_budget', '=', 'b.id_sq_budget')
+            ->leftJoin('budget_accounts as a', 'a.id_account', '=', 'i.id_account')
+            ->whereIn('b.id_sq_wo', $woIds)
+            ->select(['b.id_sq_wo', 'i.nominal_budget', 'i.is_cash_advance', 'i.id_account', 'a.nama as akun_nama', 'a.kode as akun_kode'])
+            ->get();
+
+        $rows = [];
+        $tot = ['boq_gross' => 0, 'boq_disc' => 0, 'other' => 0, 'sampling' => 0, 'biaya' => 0, 'cash_advance' => 0];
+        foreach ($wos as $wo) {
+            $b = $boq->get($wo->id_sq_wo, collect());
+            $gross = (int) $b->sum(fn($r) => (int) $r->qty * (int) $r->harga);
+            $disc = (int) $b->sum(fn($r) => min((int) $r->discount, (int) $r->qty * (int) $r->harga));
+            $t = $tam->get($wo->id_sq_wo, collect());
+            $other = (int) $t->where('jenis', 'lainnya')->sum(fn($r) => (int) $r->qty * (int) $r->harga);
+            $sampling = (int) $t->where('jenis', 'sampling')->sum(fn($r) => (int) $r->qty * (int) $r->harga);
+            $bi = $budgetItems->where('id_sq_wo', $wo->id_sq_wo);
+            $biaya = (int) $bi->sum('nominal_budget');
+            $ca = (int) $bi->where('is_cash_advance', 1)->sum('nominal_budget');
+            $pendapatan = ($gross - $disc) + $other + $sampling;
+
+            $rows[] = (object) [
+                'no' => $wo->no_sq_wo, 'judul' => $wo->judul_pekerjaan,
+                'pendapatan' => $pendapatan, 'biaya' => $biaya,
+                'margin' => $pendapatan - $biaya,
+                'margin_pct' => $pendapatan > 0 ? ($pendapatan - $biaya) / $pendapatan * 100 : null,
+            ];
+            $tot['boq_gross'] += $gross; $tot['boq_disc'] += $disc; $tot['other'] += $other;
+            $tot['sampling'] += $sampling; $tot['biaya'] += $biaya; $tot['cash_advance'] += $ca;
+        }
+
+        $subtotal = ($tot['boq_gross'] - $tot['boq_disc']) + $tot['other'] + $tot['sampling'];
+        $discountSq = (int) ($sq->discount ?? 0);
+        $pendapatan = max(0, $subtotal - $discountSq);
+        $margin = $pendapatan - $tot['biaya'];
+
+        $akun = $budgetItems->groupBy(fn($i) => $i->id_account ?: 0)->map(function ($g) {
+            $f = $g->first();
+            return (object) [
+                'nama' => $f->akun_nama ? trim(($f->akun_kode ? $f->akun_kode . ' — ' : '') . $f->akun_nama) : 'Tanpa akun',
+                'nominal' => (int) $g->sum('nominal_budget'),
+                'cash_advance' => (int) $g->where('is_cash_advance', 1)->sum('nominal_budget'),
+            ];
+        })->sortByDesc('nominal')->values();
+
+        return Pdf::view('pdf.sales-quotation.executive-summary', [
+            'sq' => $sq,
+            'rows' => collect($rows),
+            'tot' => $tot,
+            'subtotal' => $subtotal,
+            'discountSq' => $discountSq,
+            'pendapatan' => $pendapatan,
+            'biaya' => $tot['biaya'],
+            'margin' => $margin,
+            'marginPct' => $pendapatan > 0 ? $margin / $pendapatan * 100 : null,
+            'akun' => $akun,
+        ])
+            ->format('a4')
+            ->name("Executive-Summary-{$sq->no_sq}.pdf");
     }
 
     public function printPdf($id)

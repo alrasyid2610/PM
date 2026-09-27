@@ -5,12 +5,10 @@ function sqStatusBadge(res) {
                </span>`;
     }
     const map = {
-        draft:    { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0', icon: 'fa-pen', label: 'Draft' },
-        terkirim: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-paper-plane', label: 'Terkirim' },
-        diterima: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-circle-check', label: 'Diterima' },
-        ditolak:  { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: 'fa-circle-xmark', label: 'Ditolak' },
-        cancel:   { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa', icon: 'fa-ban', label: 'Cancel' },
-        expired:  { bg: '#fefce8', color: '#a16207', border: '#fde68a', icon: 'fa-clock', label: 'Expired' },
+        draft:     { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0', icon: 'fa-pen', label: 'Draft' },
+        final:     { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-lock', label: 'Final' },
+        completed: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-circle-check', label: 'Completed' },
+        cancel:    { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa', icon: 'fa-ban', label: 'Cancel' },
     };
     const s = map[res.status] || map.draft;
     return `<span class="pm-badge" style="background:${s.bg};color:${s.color};border:1px solid ${s.border};">
@@ -20,6 +18,9 @@ function sqStatusBadge(res) {
 
 function renderForm(res) {
     const isDeleted = !!res.deleted_at;
+    // Hanya Draft yang bisa diedit; Final/Completed/Cancel terkunci
+    const isDraft = res.status === 'draft';
+    const isFinal = res.status === 'final';
 
     const pelangganTagParams = res.id_pelanggan
         ? '?open=' + res.id_pelanggan + (res.id_site_pelanggan ? '&tab=tabBrsSite&site=' + res.id_site_pelanggan : '')
@@ -35,6 +36,14 @@ function renderForm(res) {
         ? `<span class="pm-badge" style="background:#f5f3ff;color:#6d28d9;">Rev.${res.revisi}</span>`
         : '';
 
+    // Link ke SO hasil Terbitkan SO (kalau sudah pernah)
+    const soTerbitTag = res.id_so_terbit
+        ? `<a href="/sales-orders?open=${res.id_so_terbit}" class="pm-badge pm-badge--blue" style="text-decoration:none;">
+               <i class="fa-solid fa-file-invoice-dollar" style="font-size:10px;"></i>
+               ${escHtml(res.no_so_terbit)}
+           </a>`
+        : '';
+
     return `
 <form id="detailForm">
     <input type="hidden" name="_token" value="${window.route.csrf}">
@@ -44,18 +53,43 @@ function renderForm(res) {
         number: escHtml(res.no_sq ?? '—'),
         createdAt: escHtml(res.created_at ?? '—'),
         updatedAt: escHtml(res.updated_at ?? '—'),
-        deleteId: isDeleted ? null : res.id_sq,
-        editText: isDeleted ? '' : 'Edit SQ',
+        deleteId: (isDeleted || res.status === 'completed') ? null : res.id_sq,
+        editText: (isDeleted || !isDraft) ? '' : 'Edit SQ',
         statusBadge: sqStatusBadge(res),
-        tags: revBadge + pelangganTag,
+        tags: revBadge + soTerbitTag + pelangganTag,
         moreActions: [
             {
                 label: "Printout SQ (Sementara)",
                 icon: "fa-solid fa-file-pdf",
                 attrs: `onclick="window.open('/sales-quotations/${res.id_sq}/print','_blank')"`,
             },
+            ...(!isDeleted && res.status === 'completed' ? [{
+                label: "Executive Summary (Internal)",
+                icon: "fa-solid fa-chart-pie",
+                attrs: `onclick="window.open('/sales-quotations/${res.id_sq}/executive-summary','_blank')"`,
+            }] : []),
+            ...(!isDeleted && isDraft && can('sales-quotations', 'can_update') ? [{
+                label: "Finalkan SQ",
+                icon: "fa-solid fa-lock",
+                attrs: `onclick="finalizeSq(${res.id_sq})"`,
+            }] : []),
+            ...(!isDeleted && (isDraft || isFinal) && can('sales-quotations', 'can_update') ? [{
+                label: "Batalkan SQ",
+                icon: "fa-solid fa-ban",
+                attrs: `onclick="cancelSq(${res.id_sq})"`,
+            }] : []),
+            ...(!isDeleted && isFinal && can('sales-quotations', 'can_create') && can('sales-orders', 'can_create') ? [{
+                label: "Terbitkan SO",
+                icon: "fa-solid fa-right-left",
+                attrs: `onclick="openConvertSqModal(${res.id_sq})"`,
+            }] : []),
         ],
-        extra: isDeleted
+        extra: (!isDeleted && !isDraft)
+            ? `<span style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:5px;">
+                   <i class="fa-solid fa-lock" style="font-size:10px;"></i>
+                   SQ berstatus ${escHtml(res.status)} — terkunci, tidak bisa diedit
+               </span>`
+            : isDeleted
             ? `<span style="font-size:11px;color:#b91c1c;display:flex;align-items:center;gap:5px;">
                    <i class="fa-solid fa-trash" style="font-size:10px;"></i>
                    Data ini sudah dihapus pada ${new Date(res.deleted_at).toLocaleString('id-ID')}
@@ -89,7 +123,7 @@ function renderForm(res) {
                         class="pm-btn-icon" title="Refresh" data-no-disable>
                         <i class="fa-solid fa-rotate-right"></i>
                     </button>
-                    ${!isDeleted ? `<button type="button" class="pm-btn-pill pm-btn-pill--blue btn-add-sq-wo-modal"
+                    ${(!isDeleted && isDraft) ? `<button type="button" class="pm-btn-pill pm-btn-pill--blue btn-add-sq-wo-modal"
                         data-sq-id="${res.id_sq}" data-no-disable>
                         <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                         <i class="fa-solid fa-briefcase" style="font-size:11px;"></i> WO

@@ -221,6 +221,7 @@ class SalesOrderController extends Controller
             ->leftJoin('users as marketing_eksternal', 'marketing_eksternal.id', '=', 'so.pic_marketing_eksternal')
             ->leftJoin('contracts as ct', 'ct.id_contract', '=', 'so.id_sc')
             ->leftJoin('sales_orders as ref', 'ref.id_so', '=', 'so.id_so_referensi')
+            ->leftJoin('sales_quotations as sq_asal', 'sq_asal.id_sq', '=', 'so.id_sq')
             ->leftJoin('entitas as ent_pelanggan', 'ent_pelanggan.id_entitas', '=', 'pelanggan.id_entitas')
             ->leftJoin('entitas as ent_del', 'ent_del.id_entitas', '=', 'del.id_entitas')
             ->leftJoin('entitas as ent_pay', 'ent_pay.id_entitas', '=', 'pay.id_entitas')
@@ -229,6 +230,7 @@ class SalesOrderController extends Controller
                 'ct.no_contract as contract_no',
                 'ct.no_contract_client as contract_no_client',
                 'ref.no_so as no_so_referensi',
+                'sq_asal.no_sq as no_sq_asal',
                 'pelanggan.nama as nama_pelanggan',
                 'ent_pelanggan.nama as entitas_pelanggan',
                 'ent_del.nama as entitas_delivery',

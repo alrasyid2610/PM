@@ -15,6 +15,7 @@ use App\Http\Controllers\SalesOrderController;
 use App\Http\Controllers\SalesQuotationController;
 use App\Http\Controllers\SqWorkOrderController;
 use App\Http\Controllers\SqBoqController;
+use App\Http\Controllers\SqConvertController;
 use App\Http\Controllers\SqBoqTambahanController;
 use App\Http\Controllers\SqWoBudgetController;
 use App\Http\Controllers\TestingItemController;
@@ -696,6 +697,11 @@ Route::prefix('sales-quotations')->name('sales-quotations.')->group(function () 
     Route::delete('/{id}', [SalesQuotationController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/history', [SalesQuotationController::class, 'history'])->name('history')->whereNumber('id');
     Route::get('/{id}/print', [SalesQuotationController::class, 'printPdf'])->name('print')->whereNumber('id');
+    Route::get('/{id}/executive-summary', [SalesQuotationController::class, 'executiveSummaryPdf'])->name('executive-summary')->whereNumber('id');
+    Route::post('/{id}/finalize', [SalesQuotationController::class, 'finalize'])->name('finalize')->whereNumber('id');
+    Route::post('/{id}/cancel', [SalesQuotationController::class, 'cancel'])->name('cancel')->whereNumber('id');
+    Route::get('/{id}/convert-preview', [SqConvertController::class, 'preview'])->name('convert-preview')->whereNumber('id');
+    Route::post('/{id}/convert', [SqConvertController::class, 'convert'])->name('convert')->whereNumber('id');
 });
 
 Route::prefix('sq-work-orders')->name('sq-work-orders.')->group(function () {

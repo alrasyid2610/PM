@@ -9,6 +9,11 @@
 
 @section('style')
 <style>
+    /* SQ berstatus Final/Completed/Cancel — sembunyikan semua aksi ubah */
+    .sq-locked .btn-kelola-sq-boq, .sq-locked .btn-sq-tambahan-add, .sq-locked .btn-sq-wo-budget-add,
+    .sq-locked .btn-edit-sq-tambahan, .sq-locked .btn-remove-sq-tambahan,
+    .sq-locked .btn-edit-sq-wo-budget, .sq-locked .btn-remove-sq-wo-budget { display: none !important; }
+
     .col-resize-handle {
         position: absolute; top: 0; right: 0; width: 6px; height: 100%;
         cursor: col-resize; user-select: none; z-index: 2;
@@ -291,6 +296,6 @@
         csrf: "{{ csrf_token() }}",
     }
 </script>
-<script src="{{ asset('assets/js/sq-work-order/index.js') }}"></script>
-<script src="{{ asset('assets/js/sq-work-order/form.js') }}"></script>
+<script src="{{ asset('assets/js/sq-work-order/index.js') }}?v={{ @filemtime(public_path('assets/js/sq-work-order/index.js')) }}"></script>
+<script src="{{ asset('assets/js/sq-work-order/form.js') }}?v={{ @filemtime(public_path('assets/js/sq-work-order/form.js')) }}"></script>
 @endsection

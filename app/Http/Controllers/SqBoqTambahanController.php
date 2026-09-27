@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Support\SqLock;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -30,6 +31,7 @@ class SqBoqTambahanController extends Controller
 
     public function store(Request $request)
     {
+        if ($lock = SqLock::byWo($request->input('id_sq_wo'))) return $lock;
         $validated = $request->validate([
             'id_sq_wo' => 'required|integer|exists:sq_work_orders,id_sq_wo',
             'jenis' => 'required|in:lainnya,sampling',
@@ -50,6 +52,7 @@ class SqBoqTambahanController extends Controller
 
     public function update(Request $request, $id)
     {
+        if ($lock = SqLock::byTambahan($id)) return $lock;
         $row = DB::table('sq_boq_tambahan')->where('id_sq_boq_tambahan', $id)->first();
         if (!$row) return response()->json(['message' => 'Tidak ditemukan'], 404);
 
@@ -70,6 +73,7 @@ class SqBoqTambahanController extends Controller
 
     public function destroy($id)
     {
+        if ($lock = SqLock::byTambahan($id)) return $lock;
         $row = DB::table('sq_boq_tambahan')->where('id_sq_boq_tambahan', $id)->first();
         if (!$row) return response()->json(['message' => 'Tidak ditemukan'], 404);
 

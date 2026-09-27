@@ -45,6 +45,22 @@
                         <label class="form-label">Durasi (hari)</label>
                         <input type="number" min="1" name="durasi_hari" class="form-control">
                     </div>
+                    <div class="col-md-3 col-12">
+                        <label class="form-label">Frekuensi</label>
+                        <select name="interval_bulan" id="interval_bulan" class="form-select">
+                            <option value="">— Tidak ada —</option>
+                            <option value="1">Bulanan</option>
+                            <option value="2">Bimulanan</option>
+                            <option value="3">Triwulan</option>
+                            <option value="4">Caturwulan</option>
+                            <option value="6">Semester</option>
+                            <option value="12">Annual</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 col-12" id="noUrutWrap" style="display:none;">
+                        <label class="form-label required">Urutan ke-</label>
+                        <input type="number" name="no_urut_period" id="no_urut_period" class="form-control" min="1" placeholder="Auto">
+                    </div>
                     <div class="col-md-6 col-12">
                         <label class="form-label">Site Pekerjaan</label>
                         <select name="id_site_pelanggan_pekerjaan" class="form-select">
@@ -81,6 +97,16 @@
                 $('#sqBannerNoSq').text((sq.no_sq ?? '—') + (sq.revisi > 0 ? ' Rev.' + sq.revisi : ''));
                 $('#sqBannerJudul').text(sq.judul_order ?? '—');
                 $('#sqInfoBanner').show();
+
+                // Auto-fill dari SQ: Judul Pekerjaan = Judul Order, Site = Site Pemesan
+                if (sq.judul_order && !$('input[name="judul_pekerjaan"]').val()) {
+                    $('input[name="judul_pekerjaan"]').val(sq.judul_order);
+                }
+                if (sq.id_site_pelanggan && !$('select[name="id_site_pelanggan_pekerjaan"]').val()) {
+                    $('select[name="id_site_pelanggan_pekerjaan"]')
+                        .append(new Option(sq.nama_site_pelanggan || ('#' + sq.id_site_pelanggan), sq.id_site_pelanggan, true, true))
+                        .trigger('change');
+                }
             });
         }
 
@@ -99,10 +125,28 @@
             ajax: {
                 url: "{{ route('business-relation-contacts.select2') }}",
                 dataType: 'json', delay: 250,
-                data: (p) => ({ q: p.term, with_site: 1 }), processResults: (d) => ({ results: d }), cache: false,
+                data: (p) => ({ q: p.term, with_site: 1, id_site: $('select[name="id_site_pelanggan_pekerjaan"]').val() || '' }), processResults: (d) => ({ results: d }), cache: false,
             },
             escapeMarkup: (m) => m,
         });
+    });
+
+    // Ganti Site → PIC lama belum tentu milik Site baru
+    $(document).on('change', 'select[name="id_site_pelanggan_pekerjaan"]', function () {
+        $('select[name="id_pic_pelanggan_pekerjaan"]').val(null).trigger('change');
+    });
+
+    // Urutan ke- otomatis = jumlah WO SQ ini dgn frekuensi sama + 1 (pola sama Create WO)
+    var sqWoExisting = [];
+    if (preselectSqId) {
+        $.get("{{ url('sq-work-orders') }}/" + preselectSqId + "/list", function (rows) { sqWoExisting = rows || []; });
+    }
+    $(document).on('change', '#interval_bulan', function () {
+        var interval = $(this).val();
+        $('#noUrutWrap').toggle(!!interval);
+        if (!interval) { $('#no_urut_period').val(''); return; }
+        var count = sqWoExisting.filter(function (w) { return String(w.interval_bulan) === String(interval); }).length;
+        $('#no_urut_period').val(count + 1);
     });
 
     submitCreateForm({

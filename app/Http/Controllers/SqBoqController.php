@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Support\SqLock;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -49,6 +50,7 @@ class SqBoqController extends Controller
 
     public function save(Request $request, $id_sq_wo)
     {
+        if ($lock = SqLock::byWo($id_sq_wo)) return $lock;
         $wo = DB::table('sq_work_orders')->where('id_sq_wo', $id_sq_wo)->first();
         if (!$wo) return response()->json(['message' => 'SQ Work Order tidak ditemukan'], 404);
 

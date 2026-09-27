@@ -9,6 +9,38 @@ window.datatableHeaderLabels = Object.assign({}, window.datatableHeaderLabels, {
     durasi_hari: 'Durasi',
 });
 
+// PIC Pekerjaan di-scope oleh Site Pekerjaan yang dipilih (PIC milik Site itu
+// atau PIC level Perusahaan) — pola sama initWoSiteField() di work-order/index.js.
+function initSqWoPicField() {
+    const $pic = $('#detail_id_pic_pelanggan_pekerjaan');
+    const $site = $('#detail_id_site_pelanggan_pekerjaan');
+    if (!$pic.length) return;
+    if ($pic.hasClass('select2-hidden-accessible')) $pic.select2('destroy');
+
+    $pic.select2({
+        width: '100%',
+        dropdownParent: $('#detailContent'),
+        placeholder: 'Pilih PIC',
+        allowClear: true,
+        minimumInputLength: 0,
+        ajax: {
+            url: '/business-relation-contacts/select2',
+            dataType: 'json',
+            delay: 250,
+            data: function (params) {
+                return { q: params.term || '', with_site: 1, id_site: $site.val() || '' };
+            },
+            processResults: function (data) { return { results: data }; },
+            cache: false,
+        },
+        escapeMarkup: function (m) { return m; },
+    });
+
+    $site.off('change.sqWoPicClear').on('change.sqWoPicClear', function () {
+        $pic.val(null).trigger('change');
+    });
+}
+
 $(document).ready(function () {
     if ($('#sq-work-orders-table').length === 0) return;
 
@@ -23,6 +55,7 @@ $(document).ready(function () {
             currentSqWoId = res.id_sq_wo;
             currentSqWoData = res;
             initFpDate('#detailContent');
+            initSqWoPicField();
         },
     });
 

@@ -27,11 +27,9 @@
         ['label' => 'Status',          'value' => 'status', 'type' => 'select', 'options' => [
             ['label' => 'All',        'value' => 'all'],
             ['label' => 'Draft',      'value' => 'draft'],
-            ['label' => 'Terkirim',   'value' => 'terkirim'],
-            ['label' => 'Diterima',   'value' => 'diterima'],
-            ['label' => 'Ditolak',    'value' => 'ditolak'],
+            ['label' => 'Final',      'value' => 'final'],
+            ['label' => 'Completed',  'value' => 'completed'],
             ['label' => 'Cancel',     'value' => 'cancel'],
-            ['label' => 'Expired',    'value' => 'expired'],
             ['label' => 'Deleted',    'value' => 'deleted'],
         ]],
     ]"
@@ -60,6 +58,30 @@
         </div>
     </div>
 </div>
+
+{{-- Modal Convert SQ → SO --}}
+<div class="modal fade" id="modalConvertSq" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header py-2 px-3" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+                <span class="fw-semibold" style="font-size:14px;">
+                    <i class="fa-solid fa-right-left me-2" style="color:#1a56db;"></i>
+                    Terbitkan Sales Order dari <span id="convertSqNo"></span>
+                </span>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="convertSqBody">
+                <div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="pm-btn-pill" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="pm-btn-pill pm-btn-pill--blue" id="btnConvertSqSubmit" disabled>
+                    <i class="fa-solid fa-right-left" style="font-size:10px;"></i> Terbitkan SO
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('custom-script')
@@ -71,6 +93,6 @@
         update:  "{{ url('sales-quotations') }}/",
     }
 </script>
-<script src="{{ asset('assets/js/sales-quotation/index.js') }}"></script>
-<script src="{{ asset('assets/js/sales-quotation/form.js') }}"></script>
+<script src="{{ asset('assets/js/sales-quotation/index.js') }}?v={{ @filemtime(public_path('assets/js/sales-quotation/index.js')) }}"></script>
+<script src="{{ asset('assets/js/sales-quotation/form.js') }}?v={{ @filemtime(public_path('assets/js/sales-quotation/form.js')) }}"></script>
 @endsection

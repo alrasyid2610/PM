@@ -193,10 +193,19 @@ class BusinessRelationContactController extends Controller
         $search   = $request->q;
         $idBrList = array_filter((array) $request->input('id_br', []), fn($v) => $v !== null && $v !== '');
         $withSite = $request->boolean('with_site');
+        $idSite   = $request->filled('id_site') ? (int) $request->input('id_site') : null;
+
+        // Filter per Site: PIC milik Site itu, atau PIC level Perusahaan
+        // (id_site NULL) dari Perusahaan pemilik Site tsb.
+        $siteBr = $idSite ? DB::table('business_relation_sites')->where('id_site', $idSite)->value('id_br') : null;
 
         $query = DB::table('business_relation_contacts as brc')
             ->whereNull('brc.deleted_at')
             ->when(!empty($idBrList), fn($q) => $q->whereIn('brc.id_br', $idBrList))
+            ->when($idSite, function ($q) use ($idSite, $siteBr) {
+                $q->where('brc.id_br', $siteBr)
+                  ->where(fn($w) => $w->where('brc.id_site', $idSite)->orWhereNull('brc.id_site'));
+            })
             ->where(function ($q) use ($search) {
                 $q->where('brc.nama_pic', 'like', "%{$search}%")
                   ->orWhere('brc.nomor_telepon_pic', 'like', "%{$search}%");

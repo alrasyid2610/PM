@@ -7,6 +7,8 @@ function formatRupiahSqWo(n) {
 }
 
 function renderForm(res) {
+    // Hanya SQ berstatus Draft yang bisa diubah (lihat SqLock di backend)
+    const locked = res.sq_status && res.sq_status !== 'draft';
     const sqTag = res.no_sq
         ? `<a href="/sales-quotations?open=${res.id_sq}" class="pm-badge pm-badge--blue" style="text-decoration:none;">
                <i class="fa-solid fa-file-signature" style="font-size:10px;"></i>
@@ -27,7 +29,7 @@ function renderForm(res) {
         : '';
 
     return `
-<form id="detailForm">
+<form id="detailForm" class="${locked ? 'sq-locked' : ''}">
     <input type="hidden" name="_token" value="${window.route.csrf}">
     <input type="hidden" name="_method" value="PUT">
 
@@ -35,9 +37,12 @@ function renderForm(res) {
         number: escHtml(res.no_sq_wo ?? '—'),
         createdAt: escHtml(res.created_at ?? '—'),
         updatedAt: escHtml(res.updated_at ?? '—'),
-        deleteId: res.id_sq_wo,
-        editText: 'Edit',
+        deleteId: locked ? null : res.id_sq_wo,
+        editText: locked ? '' : 'Edit',
         tags: sqTag + pelangganTag,
+        extra: locked
+            ? `<span style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:5px;"><i class="fa-solid fa-lock" style="font-size:10px;"></i> SQ berstatus ${escHtml(res.sq_status)} — terkunci</span>`
+            : '',
         noWrap: true,
     })}
 
@@ -112,6 +117,18 @@ function renderForm(res) {
             ${formGroup.text('judul_pekerjaan', 'Judul Pekerjaan', res.judul_pekerjaan, false, { className: 'col-md-12' })}
             ${formGroup.text('hari_mulai', 'Hari Mulai (ke-)', res.hari_mulai, true, { className: 'col-md-3' })}
             ${formGroup.text('durasi_hari', 'Durasi (hari)', res.durasi_hari, false, { className: 'col-md-3' })}
+            <div class="col-md-3">
+                <label class="form-label">Frekuensi</label>
+                <select name="interval_bulan" class="form-select disabled">
+                    <option value="">— Tidak ada —</option>
+                    ${[[1, 'Bulanan'], [2, 'Bimulanan'], [3, 'Triwulan'], [4, 'Caturwulan'], [6, 'Semester'], [12, 'Annual']]
+                        .map(([v, l]) => `<option value="${v}" ${res.interval_bulan == v ? 'selected' : ''}>${l}</option>`).join('')}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Urutan ke-</label>
+                <input type="number" name="no_urut_period" class="form-control disabled" min="1" placeholder="Auto" value="${res.no_urut_period ?? ''}">
+            </div>
             ${formGroup.select('id_site_pelanggan_pekerjaan', 'Site Pekerjaan', res.id_site_pelanggan_pekerjaan, [], {
                 mode: 'ajax', url: '/business-relations/sites/select2', placeholder: 'Pilih Site',
                 label: res.nama_site_pelanggan_pekerjaan, className: 'col-md-6',

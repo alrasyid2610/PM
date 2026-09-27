@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Support\SqLock;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistory;
@@ -38,6 +39,7 @@ class SqWorkOrderController extends Controller
 
     public function store(Request $request)
     {
+        if ($lock = SqLock::bySq($request->input('id_sq'))) return $lock;
         $validated = $request->validate([
             'id_sq' => 'required|integer|exists:sales_quotations,id_sq',
             'judul_pekerjaan' => 'nullable|string|max:255',
@@ -46,8 +48,15 @@ class SqWorkOrderController extends Controller
             'id_pic_pelanggan_pekerjaan' => 'nullable|integer',
             'hari_mulai' => 'required|integer|min:1',
             'durasi_hari' => 'nullable|integer|min:1',
+            'interval_bulan' => 'nullable|integer|in:1,2,3,4,6,12',
+            'no_urut_period' => 'nullable|integer|min:1',
             'keterangan' => 'nullable|string',
         ]);
+
+        if (empty($validated['interval_bulan'])) {
+            $validated['interval_bulan'] = null;
+            $validated['no_urut_period'] = null;
+        }
 
         $urutan = 1 + (int) DB::table('sq_work_orders')->where('id_sq', $validated['id_sq'])->max('urutan');
 
@@ -95,7 +104,7 @@ class SqWorkOrderController extends Controller
             ->where('w.id_sq_wo', $id)
             ->select([
                 'w.*',
-                'sq.no_sq', 'sq.revisi',
+                'sq.no_sq', 'sq.revisi', 'sq.status as sq_status',
                 'br.id_br as id_br_pekerjaan',
                 'br.nama as nama_pelanggan_pekerjaan',
                 'ent.nama as entitas_pelanggan_pekerjaan',
@@ -115,6 +124,7 @@ class SqWorkOrderController extends Controller
 
     public function update(Request $request, $id)
     {
+        if ($lock = SqLock::byWo($id)) return $lock;
         $row = DB::table('sq_work_orders')->where('id_sq_wo', $id)->first();
         if (!$row) return response()->json(['message' => 'Tidak ditemukan'], 404);
 
@@ -125,8 +135,15 @@ class SqWorkOrderController extends Controller
             'id_pic_pelanggan_pekerjaan' => 'nullable|integer',
             'hari_mulai' => 'required|integer|min:1',
             'durasi_hari' => 'nullable|integer|min:1',
+            'interval_bulan' => 'nullable|integer|in:1,2,3,4,6,12',
+            'no_urut_period' => 'nullable|integer|min:1',
             'keterangan' => 'nullable|string',
         ]);
+
+        if (empty($validated['interval_bulan'])) {
+            $validated['interval_bulan'] = null;
+            $validated['no_urut_period'] = null;
+        }
 
         $before = DB::table('sq_work_orders')->where('id_sq_wo', $id)->get()->toJson();
 
@@ -142,6 +159,7 @@ class SqWorkOrderController extends Controller
 
     public function destroy($id)
     {
+        if ($lock = SqLock::byWo($id)) return $lock;
         $row = DB::table('sq_work_orders')->where('id_sq_wo', $id)->first();
         if (!$row) return response()->json(['message' => 'Tidak ditemukan'], 404);
 
@@ -198,10 +216,15 @@ class SqWorkOrderController extends Controller
     public function bySq($id_sq)
     {
         $wos = DB::table('sq_work_orders as w')
+            ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'w.id_site_pelanggan_pekerjaan')
             ->where('w.id_sq', $id_sq)
             ->orderBy('w.urutan')
             ->orderBy('w.id_sq_wo')
-            ->select(['w.id_sq_wo', 'w.no_sq_wo', 'w.judul_pekerjaan', 'w.hari_mulai', 'w.durasi_hari'])
+            ->select([
+                'w.id_sq_wo', 'w.no_sq_wo', 'w.judul_pekerjaan', 'w.keterangan',
+                'w.hari_mulai', 'w.durasi_hari', 'w.interval_bulan', 'w.no_urut_period',
+                'brs.nama_lokasi as nama_site',
+            ])
             ->get();
 
         if ($wos->isEmpty()) {
