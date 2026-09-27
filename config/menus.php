@@ -33,6 +33,7 @@ return [
         'items'   => [
             ['slug' => 'sales-quotations', 'label' => 'Sales Quotation', 'icon' => 'fa-file-signature'],
             ['slug' => 'sq-work-orders',   'label' => 'SQ Work Order',   'icon' => 'fa-briefcase'],
+            ['slug' => 'sq-fieldworks',    'label' => 'SQ Fieldwork',    'icon' => 'fa-helmet-safety'],
         ],
     ],
     [

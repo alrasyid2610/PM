@@ -79,6 +79,12 @@ function renderForm(res) {
                         <i class="fa-solid fa-wallet me-1" style="color:#0f766e;font-size:11px;"></i> Budget
                     </button>
                 </li>
+                <li role="presentation">
+                    <button class="pm-tab-btn" type="button" role="tab"
+                        data-bs-toggle="tab" data-bs-target="#tabFwo" data-id-sq-wo="${res.id_sq_wo}">
+                        <i class="fa-solid fa-helmet-safety me-1" style="color:#dc2626;font-size:11px;"></i> FWO
+                    </button>
+                </li>
             </ul>
             <div class="pm-tab-actions">
                 <div id="sqWoTabActionsInfo" class="d-flex align-items-center gap-2"></div>
@@ -103,6 +109,17 @@ function renderForm(res) {
                 <div id="sqWoTabActionsBudget" class="d-none align-items-center gap-2">
                     <button type="button" class="pm-btn-pill pm-btn-pill--teal btn-sq-wo-budget-add" data-no-disable>
                         <i class="fa-solid fa-plus" style="font-size:10px;"></i> Tambah Budget Plan
+                    </button>
+                </div>
+                <div id="sqWoTabActionsFwo" class="d-none align-items-center gap-2">
+                    <button type="button" id="btnRefreshSqFwo" data-sq-wo-id="${res.id_sq_wo}"
+                        class="pm-btn-icon" title="Refresh" data-no-disable>
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                    <button type="button" class="pm-btn-pill pm-btn-pill--red btn-add-sq-fwo-modal"
+                        data-sq-wo-id="${res.id_sq_wo}" data-no-disable>
+                        <i class="fa-solid fa-plus" style="font-size:10px;"></i>
+                        <i class="fa-solid fa-helmet-safety" style="font-size:11px;"></i> FWO
                     </button>
                 </div>
             </div>
@@ -172,6 +189,15 @@ function renderForm(res) {
                 <div class="tab-pane fade" id="tabBudget" role="tabpanel">
                     <div class="card card-body" id="sqWoBudgetWrap" style="overflow:visible;">
                         <div id="sqWoBudgetContent">
+                            <div class="text-center text-muted py-4">
+                                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="tabFwo" role="tabpanel">
+                    <div class="card card-body">
+                        <div id="sqWoFwoSummary">
                             <div class="text-center text-muted py-4">
                                 <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
                             </div>

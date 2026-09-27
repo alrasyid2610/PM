@@ -18,6 +18,7 @@ use App\Http\Controllers\SqBoqController;
 use App\Http\Controllers\SqConvertController;
 use App\Http\Controllers\SqBoqTambahanController;
 use App\Http\Controllers\SqWoBudgetController;
+use App\Http\Controllers\SqFieldworkController;
 use App\Http\Controllers\TestingItemController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkOrderController;
@@ -735,6 +736,18 @@ Route::prefix('sq-wo-budgets')->name('sq-wo-budgets.')->group(function () {
     Route::get('/{id}', [SqWoBudgetController::class, 'show'])->name('show')->whereNumber('id');
     Route::put('/{id}', [SqWoBudgetController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}', [SqWoBudgetController::class, 'destroy'])->name('destroy')->whereNumber('id');
+});
+
+Route::prefix('sq-fieldworks')->name('sq-fieldworks.')->group(function () {
+    Route::get('/', [SqFieldworkController::class, 'index'])->name('index');
+    Route::get('/data', [SqFieldworkController::class, 'data'])->name('data');
+    Route::get('/create', [SqFieldworkController::class, 'create'])->name('create');
+    Route::post('/', [SqFieldworkController::class, 'store'])->name('store');
+    Route::get('/{id_sq_wo}/list', [SqFieldworkController::class, 'byWo'])->name('list')->whereNumber('id_sq_wo');
+    Route::get('/{id}', [SqFieldworkController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [SqFieldworkController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [SqFieldworkController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/history', [SqFieldworkController::class, 'history'])->name('history')->whereNumber('id');
 });
 
 Route::prefix('sales-orders')->name('sales-orders.')->group(function () {

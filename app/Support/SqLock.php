@@ -40,6 +40,29 @@ class SqLock
         return $idWo ? self::byWo($idWo) : null;
     }
 
+    /** SQ FWO (Fase 3) — sama seperti byWo(), naik lewat sq_fieldworks → sq_work_orders → sales_quotations. */
+    public static function byFwo($idSqFwo): ?JsonResponse
+    {
+        $status = DB::table('sq_fieldworks as f')
+            ->join('sq_work_orders as w', 'w.id_sq_wo', '=', 'f.id_sq_wo')
+            ->join('sales_quotations as sq', 'sq.id_sq', '=', 'w.id_sq')
+            ->where('f.id_sq_fwo', $idSqFwo)
+            ->value('sq.status');
+        return self::check($status);
+    }
+
+    public static function byFwoBoq($id): ?JsonResponse
+    {
+        $idFwo = DB::table('sq_fieldwork_boq')->where('id_sq_fwo_boq', $id)->value('id_sq_fwo');
+        return $idFwo ? self::byFwo($idFwo) : null;
+    }
+
+    public static function byFwoBudget($id): ?JsonResponse
+    {
+        $idFwo = DB::table('sq_fwo_budgets')->where('id_sq_budget', $id)->value('id_sq_fwo');
+        return $idFwo ? self::byFwo($idFwo) : null;
+    }
+
     private static function check(?string $status): ?JsonResponse
     {
         if ($status === null || $status === 'draft') return null;

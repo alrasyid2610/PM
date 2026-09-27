@@ -77,13 +77,20 @@ $(document).ready(function () {
 
     $(document).on('shown.bs.tab', '#sqWoDetailTabs button[data-bs-toggle="tab"]', function (e) {
         const target = $(e.target).data('bs-target');
-        $('#sqWoTabActionsInfo, #sqWoTabActionsBoq, #sqWoTabActionsBoqOther, #sqWoTabActionsBoqSampling, #sqWoTabActionsBudget')
+        $('#sqWoTabActionsInfo, #sqWoTabActionsBoq, #sqWoTabActionsBoqOther, #sqWoTabActionsBoqSampling, #sqWoTabActionsBudget, #sqWoTabActionsFwo')
             .addClass('d-none').removeClass('d-flex');
         if (target === '#tabInfo') $('#sqWoTabActionsInfo').removeClass('d-none');
         if (target === '#tabBoq') { $('#sqWoTabActionsBoq').removeClass('d-none').addClass('d-flex'); loadSqWoBoq(currentSqWoId); }
         if (target === '#tabBoqOther') { $('#sqWoTabActionsBoqOther').removeClass('d-none').addClass('d-flex'); loadSqWoTambahan(currentSqWoId); }
         if (target === '#tabBoqSampling') { $('#sqWoTabActionsBoqSampling').removeClass('d-none').addClass('d-flex'); loadSqWoTambahan(currentSqWoId); }
         if (target === '#tabBudget') { $('#sqWoTabActionsBudget').removeClass('d-none').addClass('d-flex'); loadSqWoBudget(currentSqWoId); }
+        if (target === '#tabFwo') { $('#sqWoTabActionsFwo').removeClass('d-none').addClass('d-flex'); loadSqWoFwoList(currentSqWoId); }
+    });
+
+    $(document).on('click', '#btnRefreshSqFwo', function () {
+        const $icon = $(this).find('i');
+        $icon.addClass('fa-spin');
+        loadSqWoFwoList($(this).data('sq-wo-id'), function () { $icon.removeClass('fa-spin'); });
     });
 
     $(document).on('click', '#btnRefreshSqBoq', function () {
@@ -1225,3 +1232,82 @@ function showStackedModal(modalEl) {
         }, 0);
     }
 }
+
+// ── Tab FWO — ringkasan daftar SQ Fieldwork milik WO ini (Fase 3) ─────────
+// Struktur & style tabel meniru renderSqWoTable() di sales-quotation/index.js.
+function formatRupiahSqFwo(n) {
+    return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+}
+
+function loadSqWoFwoList(idSqWo, done) {
+    $.get('/sq-fieldworks/' + idSqWo + '/list', function (fwos) {
+        renderSqWoFwoSummary(fwos || []);
+        if (done) done();
+    }).fail(function () {
+        $('#sqWoFwoSummary').html('<div class="text-center text-danger py-4">Gagal memuat data FWO.</div>');
+        if (done) done();
+    });
+}
+
+function renderSqWoFwoSummary(fwos) {
+    if (!fwos.length) {
+        $('#sqWoFwoSummary').html(`<div class="text-center text-muted py-4">
+            <i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>
+            Belum ada Fieldwork. Klik tombol "+ FWO" untuk mulai.
+        </div>`);
+        return;
+    }
+
+    const rows = fwos.map(function (f, i) {
+        return `<tr>
+            <td style="text-align:center;color:#9ca3af;font-size:12px;">${i + 1}</td>
+            <td style="white-space:nowrap;font-weight:600;color:#dc2626;">${escHtml(f.no_sq_fwo || '—')}</td>
+            <td><a href="/sq-fieldworks?open=${f.id_sq_fwo}" class="fw-semibold text-decoration-none">${escHtml(f.judul_pekerjaan || '(belum diberi judul)')}</a></td>
+            <td style="text-align:center;white-space:nowrap;">Ke-${f.hari_ke}${f.durasi_hari ? ' · ' + f.durasi_hari + ' hr' : ''}</td>
+            <td style="text-align:center;"><span class="pm-badge pm-badge--blue" style="font-size:10px;">${f.boq_count} item</span></td>
+            <td style="text-align:right;white-space:nowrap;font-weight:600;">${f.total_boq > 0 ? formatRupiahSqFwo(f.total_boq) : '—'}</td>
+            <td style="text-align:right;white-space:nowrap;">
+                <a href="/sq-fieldworks?open=${f.id_sq_fwo}" class="btn-plan-icon"><i class="fa-solid fa-arrow-up-right-from-square"></i> Buka</a>
+            </td>
+        </tr>`;
+    }).join('');
+
+    $('#sqWoFwoSummary').html(`
+    <div class="table-responsive">
+        <table class="pm-table">
+            <thead>
+                <tr>
+                    <th style="width:36px;text-align:center;">#</th>
+                    <th>No FWO</th>
+                    <th>Judul Pekerjaan</th>
+                    <th style="text-align:center;">Hari</th>
+                    <th style="text-align:center;">BOQ</th>
+                    <th style="text-align:right;">Total BOQ</th>
+                    <th style="text-align:right;">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </div>`);
+}
+
+// "+ FWO" — buka modal iframe ke halaman Create SQ Fieldwork (pola sama "+
+// WO" di sales-quotation/index.js).
+$(document).on('click', '.btn-add-sq-fwo-modal', function () {
+    const idSqWo = $(this).data('sq-wo-id');
+    openIframeModal('#modalCreateSqFwo', 'iframeCreateSqFwo', 'loaderCreateSqFwo', '/sq-fieldworks/create?id_sq_wo=' + idSqWo + '&embed=1');
+});
+
+window.addEventListener('storage', function (e) {
+    if (e.key === 'sq_fwo_created' && e.newValue) {
+        try {
+            const data = JSON.parse(e.newValue);
+            loadSqWoFwoList(data.id_sq_wo);
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalCreateSqFwo'));
+            if (modal) {
+                modal.hide();
+                document.getElementById('iframeCreateSqFwo').src = '';
+            }
+        } catch (_) {}
+    }
+});
