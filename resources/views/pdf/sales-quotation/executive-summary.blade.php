@@ -13,7 +13,7 @@
     .band .tag { float: right; border: 1px solid #f2b45c; color: #f2b45c; font-size: 9px; letter-spacing: 1px; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; }
     .body { padding: 16px 15mm 12px; }
 
-    .kpi { width: 100%; border-collapse: separate; border-spacing: 10px 0; margin: 0 -10px; }
+    .kpi { width: calc(100% + 20px); border-collapse: separate; border-spacing: 10px 0; margin: 0 -10px; }
     .kpi td { width: 33.33%; border: 1px solid #d9dee8; border-radius: 8px; padding: 12px 14px; vertical-align: top; }
     .kpi .lbl { font-size: 10px; letter-spacing: .8px; text-transform: uppercase; color: #64748b; font-weight: 600; }
     .kpi .val { font-size: 21px; font-weight: 700; margin-top: 4px; white-space: nowrap; }
