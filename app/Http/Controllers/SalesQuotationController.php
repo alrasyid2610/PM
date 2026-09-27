@@ -95,6 +95,21 @@ class SalesQuotationController extends Controller
         ]);
     }
 
+    /**
+     * Nomor SQ Work Order baru untuk hasil revisi — pola sama persis
+     * SqWorkOrderController::generateNoSqWo() (private di sana, disalin ke
+     * sini seperti pola SqConvertController::generateNoWo()). ORDER BY
+     * id_sq_wo (bukan created_at) supaya aman kalau banyak WO dibuat dalam
+     * 1 transaksi yang timestamp-nya bisa sama persis.
+     */
+    private function generateNoSqWo(): string
+    {
+        $prefix = 'SQWO-' . now()->format('y') . '-';
+        $latest = DB::table('sq_work_orders')->where('no_sq_wo', 'like', $prefix . '%')->orderByDesc('id_sq_wo')->first();
+        $newNumber = $latest ? ((int) substr($latest->no_sq_wo, -4)) + 1 : 1;
+        return $prefix . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
+    }
+
     private function generateNoSq(): string
     {
         $year = now()->format('y');
@@ -293,6 +308,10 @@ class SalesQuotationController extends Controller
                 $wd = (array) $wo;
                 unset($wd['id_sq_wo']);
                 $wd['id_sq'] = $newId;
+                // no_sq_wo TIDAK ikut disalin — nomor identitas WO harus unik
+                // per baris, bukan diwariskan dari WO sumber (bug ditemukan
+                // 2026-09-27: revisi bikin no_sq_wo dobel antara SQ lama & baru).
+                $wd['no_sq_wo'] = $this->generateNoSqWo();
                 $wd['created_at'] = now();
                 $wd['updated_at'] = now();
                 $newWoId = DB::table('sq_work_orders')->insertGetId($wd);
