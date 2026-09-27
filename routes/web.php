@@ -19,6 +19,8 @@ use App\Http\Controllers\SqConvertController;
 use App\Http\Controllers\SqBoqTambahanController;
 use App\Http\Controllers\SqWoBudgetController;
 use App\Http\Controllers\SqFieldworkController;
+use App\Http\Controllers\SqFieldworkBoqController;
+use App\Http\Controllers\SqFwoBudgetController;
 use App\Http\Controllers\TestingItemController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkOrderController;
@@ -748,6 +750,21 @@ Route::prefix('sq-fieldworks')->name('sq-fieldworks.')->group(function () {
     Route::put('/{id}', [SqFieldworkController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}', [SqFieldworkController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/history', [SqFieldworkController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('sq-fwo-boq')->name('sq-fwo-boq.')->group(function () {
+    Route::get('/by-fwo/{id_sq_fwo}', [SqFieldworkBoqController::class, 'byFwo'])->name('by-fwo')->whereNumber('id_sq_fwo');
+    Route::get('/select-by-wo/{id_sq_wo}', [SqFieldworkBoqController::class, 'selectByWo'])->name('select-by-wo')->whereNumber('id_sq_wo');
+    Route::get('/section-items/{id_sq_boq}', [SqFieldworkBoqController::class, 'sectionItems'])->name('section-items')->whereNumber('id_sq_boq');
+    Route::put('/{id_sq_fwo}', [SqFieldworkBoqController::class, 'update'])->name('update')->whereNumber('id_sq_fwo');
+});
+
+Route::prefix('sq-fwo-budgets')->name('sq-fwo-budgets.')->group(function () {
+    Route::get('/{id_sq_fwo}/list', [SqFwoBudgetController::class, 'listByFwo'])->name('list')->whereNumber('id_sq_fwo');
+    Route::post('/', [SqFwoBudgetController::class, 'store'])->name('store');
+    Route::get('/{id}', [SqFwoBudgetController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [SqFwoBudgetController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [SqFwoBudgetController::class, 'destroy'])->name('destroy')->whereNumber('id');
 });
 
 Route::prefix('sales-orders')->name('sales-orders.')->group(function () {
