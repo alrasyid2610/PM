@@ -46,14 +46,14 @@
                         <input type="number" min="1" name="durasi_hari" class="form-control" value="1">
                     </div>
                     <div class="col-md-6 col-12">
-                        <label class="form-label">Site Pekerjaan</label>
-                        <select name="id_site_pelanggan_pekerjaan" class="form-select">
+                        <label class="form-label required">Site Pekerjaan</label>
+                        <select name="id_site_pelanggan_pekerjaan" class="form-select" required>
                             <option value=""></option>
                         </select>
                     </div>
                     <div class="col-md-6 col-12">
-                        <label class="form-label">PIC Pekerjaan</label>
-                        <select name="id_pic_pelanggan_pekerjaan" class="form-select">
+                        <label class="form-label required">PIC Pekerjaan</label>
+                        <select name="id_pic_pelanggan_pekerjaan" class="form-select" required>
                             <option value=""></option>
                         </select>
                     </div>
@@ -122,6 +122,25 @@
             },
             escapeMarkup: (m) => m,
         });
+    });
+
+    // Site & PIC Pekerjaan wajib diisi — dibutuhkan saat Terbitkan SO nanti
+    // (fieldworks.id_site_pelanggan_pekerjaan & id_pic_pelanggan_pekerjaan
+    // NOT NULL di sisi SO), pola sama validasi manual di work-order/create.blade.php.
+    $('#sqFieldworkForm').on('submit', function (e) {
+        var errors = [];
+        if (!$("select[name='id_site_pelanggan_pekerjaan']").val()) errors.push('Site Pekerjaan wajib dipilih');
+        if (!$("select[name='id_pic_pelanggan_pekerjaan']").val()) errors.push('PIC Pekerjaan wajib dipilih');
+
+        if (errors.length) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            Swal.fire({
+                icon: 'warning',
+                title: 'Periksa kembali isian',
+                html: errors.map(function (m) { return '• ' + m; }).join('<br>'),
+            });
+        }
     });
 
     submitCreateForm({

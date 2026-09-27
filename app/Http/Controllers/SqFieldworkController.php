@@ -45,11 +45,14 @@ class SqFieldworkController extends Controller
         $validated = $request->validate([
             'id_sq_wo' => 'required|integer|exists:sq_work_orders,id_sq_wo',
             'judul_pekerjaan' => 'nullable|string|max:500',
-            'id_site_pelanggan_pekerjaan' => 'nullable|integer',
-            'id_pic_pelanggan_pekerjaan' => 'nullable|integer',
+            'id_site_pelanggan_pekerjaan' => 'required|integer',
+            'id_pic_pelanggan_pekerjaan' => 'required|integer',
             'hari_ke' => 'required|integer|min:1',
             'durasi_hari' => 'nullable|integer|min:1',
             'keterangan' => 'nullable|string',
+        ], [
+            'id_site_pelanggan_pekerjaan.required' => 'Site Pekerjaan wajib diisi (dibutuhkan saat Terbitkan SO nanti).',
+            'id_pic_pelanggan_pekerjaan.required' => 'PIC Pekerjaan wajib diisi (dibutuhkan saat Terbitkan SO nanti).',
         ]);
 
         $wo = DB::table('sq_work_orders')->where('id_sq_wo', $validated['id_sq_wo'])->first();
@@ -141,11 +144,14 @@ class SqFieldworkController extends Controller
 
         $validated = $request->validate([
             'judul_pekerjaan' => 'nullable|string|max:500',
-            'id_site_pelanggan_pekerjaan' => 'nullable|integer',
-            'id_pic_pelanggan_pekerjaan' => 'nullable|integer',
+            'id_site_pelanggan_pekerjaan' => 'required|integer',
+            'id_pic_pelanggan_pekerjaan' => 'required|integer',
             'hari_ke' => 'required|integer|min:1',
             'durasi_hari' => 'nullable|integer|min:1',
             'keterangan' => 'nullable|string',
+        ], [
+            'id_site_pelanggan_pekerjaan.required' => 'Site Pekerjaan wajib diisi (dibutuhkan saat Terbitkan SO nanti).',
+            'id_pic_pelanggan_pekerjaan.required' => 'PIC Pekerjaan wajib diisi (dibutuhkan saat Terbitkan SO nanti).',
         ]);
 
         $wo = DB::table('sq_work_orders')->where('id_sq_wo', $row->id_sq_wo)->first();

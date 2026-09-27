@@ -102,11 +102,11 @@ function renderForm(res) {
             </div>
             ${formGroup.select('id_site_pelanggan_pekerjaan', 'Site Pekerjaan', res.id_site_pelanggan_pekerjaan, [], {
                 mode: 'ajax', url: '/business-relations/sites/select2', placeholder: 'Pilih Site',
-                label: res.nama_site_pelanggan_pekerjaan, className: 'col-md-6',
+                label: res.nama_site_pelanggan_pekerjaan, className: 'col-md-6', required: true,
             })}
             ${formGroup.select('id_pic_pelanggan_pekerjaan', 'PIC Pekerjaan', res.id_pic_pelanggan_pekerjaan, [], {
                 mode: 'ajax', url: '/business-relation-contacts/select2', placeholder: 'Pilih PIC',
-                label: res.nama_pic, className: 'col-md-6',
+                label: res.nama_pic, className: 'col-md-6', required: true,
             })}
             ${formGroup.textarea('keterangan', 'Keterangan', res.keterangan, { className: 'col-md-12' })}
         </div>`,
