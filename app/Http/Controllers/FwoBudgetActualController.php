@@ -79,9 +79,17 @@ class FwoBudgetActualController extends Controller
             'attachments.*'  => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:153600',
         ]);
 
-        $existing = json_decode($row->attachments ?? '[]', true) ?: [];
-        $kept     = json_decode($request->input('existing_attachments', '[]'), true) ?: [];
-        $kept     = array_values(array_intersect($existing, $kept));
+        // Attachment lama: yang tidak dikirim balik (dihapus user di modal)
+        // dibuang dari DB dan file fisiknya dihapus SETELAH update berhasil.
+        // Kalau `existing_attachments_sent` tidak ada, semua file lama dibiarkan.
+        $existing = attachmentPathsFromInput($row->attachments);
+        if ($request->has('existing_attachments_sent')) {
+            $kept    = array_values(array_intersect($existing, attachmentPathsFromInput($request->input('existing_attachments', []))));
+            $removed = array_values(array_diff($existing, $kept));
+        } else {
+            $kept    = $existing;
+            $removed = [];
+        }
 
         $newFiles = [];
         if ($request->hasFile('attachments')) {
@@ -99,6 +107,8 @@ class FwoBudgetActualController extends Controller
             'attachments'    => $allFiles ? json_encode($allFiles) : null,
             'updated_at'     => now(),
         ]);
+
+        deleteAttachmentFiles($removed);
 
         $after = DB::table('fwo_budget_actuals')->where('id_actual', $id)->get()->toJson();
         saveAudit('fwo_budget_actuals', $id, 'Update', $before, $after);

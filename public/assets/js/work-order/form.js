@@ -664,10 +664,9 @@ function renderForm(res) {
                         </div>
                         <div class="col-md-12">
                             <label class="form-label">Upload Struk / Bukti</label>
+                            <div id="woActualModal-existing-files" class="mb-2"></div>
                             <input type="file" id="woActualModal-files" multiple
-                                accept=".pdf,.jpg,.jpeg,.png" data-no-disable
-                                class="form-control form-control-sm">
-                            <div id="woActualModal-existing-files" class="mt-2"></div>
+                                accept=".pdf,.jpg,.jpeg,.png" data-no-disable>
                         </div>
                     </div>
                 </div>

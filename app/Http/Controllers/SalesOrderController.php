@@ -444,6 +444,14 @@ class SalesOrderController extends Controller
 
         $sectionsByWo = $boqSections->groupBy('id_wo');
 
+        // BOQ Other & Sampling (boq_tambahan) — ikut masuk Total Nilai WO
+        $tambahanByWo = DB::table('boq_tambahan')
+            ->whereIn('id_wo', $woIds)
+            ->whereNull('deleted_at')
+            ->select(['id_wo', 'jenis', 'qty', 'harga'])
+            ->get()
+            ->groupBy('id_wo');
+
         // FWO list per WO dengan total qty yang dikerjakan
         $fwoRows = DB::table('fieldworks as fw')
             ->leftJoin('fieldwork_boq as fb', 'fw.id_fwo', '=', 'fb.id_fwo')
@@ -460,12 +468,16 @@ class SalesOrderController extends Controller
             ->get()
             ->groupBy('id_wo');
 
-        return response()->json($wos->map(function ($wo) use ($sectionsByWo, $fwoQtyByBoq, $fwoCountByWo, $fwoRows) {
+        return response()->json($wos->map(function ($wo) use ($sectionsByWo, $tambahanByWo, $fwoQtyByBoq, $fwoCountByWo, $fwoRows) {
             $sections         = $sectionsByWo->get($wo->id_wo) ?? collect();
             $totalBoqQty      = (int) $sections->sum('boq_qty');
             $totalFwoQty      = (int) $sections->sum(fn($s) => (int)($fwoQtyByBoq[$s->id_boq] ?? 0));
             $pct              = $totalBoqQty > 0 ? round($totalFwoQty / $totalBoqQty * 100) : 0;
             $totalBoqAmount   = (int) $sections->sum(fn($s) => max(0, (int)($s->boq_qty ?? 0) * (int)($s->harga ?? 0) - (int)($s->discount ?? 0)));
+
+            $tambahan         = $tambahanByWo->get($wo->id_wo) ?? collect();
+            $totalBoqOther    = (int) $tambahan->where('jenis', 'lainnya')->sum(fn($t) => (int)($t->qty ?? 0) * (int)($t->harga ?? 0));
+            $totalBoqSampling = (int) $tambahan->where('jenis', 'sampling')->sum(fn($t) => (int)($t->qty ?? 0) * (int)($t->harga ?? 0));
 
             $fwos = ($fwoRows->get($wo->id_wo) ?? collect())->map(fn($f) => [
                 'id_fwo'             => $f->id_fwo,
@@ -492,6 +504,9 @@ class SalesOrderController extends Controller
                 'total_fwo_qty'   => $totalFwoQty,
                 'progress_pct'    => $pct,
                 'total_boq_amount' => $totalBoqAmount,
+                'total_boq_other_amount'    => $totalBoqOther,
+                'total_boq_sampling_amount' => $totalBoqSampling,
+                'total_nilai_wo'            => $totalBoqAmount + $totalBoqOther + $totalBoqSampling,
                 'sections'        => $sections->map(fn($s) => [
                     'id_boq'        => $s->id_boq,
                     'point_name'    => $s->point_name ?? '—',

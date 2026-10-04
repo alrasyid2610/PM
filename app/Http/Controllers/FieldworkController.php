@@ -28,7 +28,13 @@ class FieldworkController extends Controller
 
     public function create()
     {
-        return view('fieldworks.create', ['title' => 'Tambah Fieldwork']);
+        // Default Penyelia = user "Saldi" (kalau ada). Bisa diganti di form.
+        $defaultPenyelia = DB::table('users')->where('name', 'Saldi')->first(['id', 'name']);
+
+        return view('fieldworks.create', [
+            'title' => 'Tambah Fieldwork',
+            'defaultPenyelia' => $defaultPenyelia,
+        ]);
     }
 
     public function data(Request $request)
@@ -83,6 +89,7 @@ class FieldworkController extends Controller
             ->leftJoin('sales_orders as so', 'wo.id_so', '=', 'so.id_so')
             ->leftJoin('business_relation_sites as brs', 'fw.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
             ->leftJoin('business_relation_contacts as brc', 'fw.id_pic_pelanggan_pekerjaan', '=', 'brc.id_contact')
+            ->leftJoin('users as pny', 'pny.id', '=', 'fw.id_penyelia')
             ->where('fw.id_fwo', $id)
             ->leftJoin('business_relation_sites as brs_wo', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs_wo.id_site')
             ->leftJoin('business_relations as br_wo', 'br_wo.id_br', '=', 'wo.id_pelanggan_pekerjaan')
@@ -100,6 +107,7 @@ class FieldworkController extends Controller
                 'brs.nama_lokasi as site_name',
                 'brc.nama_pic as pic_name',
                 'brs_wo.nama_lokasi as wo_site_name',
+                'pny.name as nama_penyelia',
             ])
             ->first();
 
@@ -150,6 +158,7 @@ class FieldworkController extends Controller
             'judul_pekerjaan'             => 'required|string|max:500',
             'id_site_pelanggan_pekerjaan' => 'required|integer',
             'id_pic_pelanggan_pekerjaan'  => 'required|integer',
+            'id_penyelia'                 => 'nullable|integer|exists:users,id',
             'tanggal_mulai'               => 'nullable|date',
             'tanggal_selesai'             => 'nullable|date',
             'waktu_kedatangan'            => 'nullable|date',
@@ -196,6 +205,7 @@ class FieldworkController extends Controller
             'judul_pekerjaan'             => $validated['judul_pekerjaan'],
             'id_site_pelanggan_pekerjaan' => $validated['id_site_pelanggan_pekerjaan'],
             'id_pic_pelanggan_pekerjaan'  => $validated['id_pic_pelanggan_pekerjaan'],
+            'id_penyelia'                 => $validated['id_penyelia'] ?? null,
             'tanggal_mulai'               => $validated['tanggal_mulai'] ?? null,
             'tanggal_selesai'             => $validated['tanggal_selesai'] ?? null,
             'waktu_kedatangan'            => $validated['waktu_kedatangan'] ?? null,
@@ -231,6 +241,7 @@ class FieldworkController extends Controller
             'judul_pekerjaan'             => 'required|string|max:500',
             'id_site_pelanggan_pekerjaan' => 'required|integer',
             'id_pic_pelanggan_pekerjaan'  => 'required|integer',
+            'id_penyelia'                 => 'nullable|integer|exists:users,id',
             'tanggal_mulai'               => 'nullable|date',
             'tanggal_selesai'             => 'nullable|date',
             'waktu_kedatangan'            => 'nullable|date',
@@ -353,7 +364,53 @@ class FieldworkController extends Controller
             'sections.*.id_boq'     => 'required|integer',
             'sections.*.qty'        => 'nullable|integer|min:1',
             'sections.*.keterangan' => 'nullable|string',
+            'id_penyelia'           => 'nullable|integer|exists:users,id',
+            // Budget Plan yang dipilih user di form clone. Item & account diambil
+            // ulang dari DB (cek kepemilikan), hanya nominal & keterangan dari input.
+            'budgets'                                  => 'nullable|array',
+            'budgets.*.source_id_budget'               => 'required|integer',
+            'budgets.*.label'                          => 'required|string|max:255',
+            'budgets.*.keterangan'                     => 'nullable|string',
+            'budgets.*.items'                          => 'required|array|min:1',
+            'budgets.*.items.*.source_id_budget_item'  => 'required|integer',
+            'budgets.*.items.*.nominal_budget'         => 'required|integer|min:0',
+            'budgets.*.items.*.keterangan'             => 'nullable|string',
         ]);
+
+        // Validasi Budget Plan: harus milik FWO sumber, dan setiap item harus milik Plan itu
+        $budgetsToCopy = [];
+        foreach ($validated['budgets'] ?? [] as $plan) {
+            $sourcePlan = DB::table('fwo_budgets')
+                ->where('id_budget', $plan['source_id_budget'])
+                ->where('id_fwo', $source->id_fwo)
+                ->whereNull('deleted_at')
+                ->first();
+            if (!$sourcePlan) {
+                return response()->json(['message' => "Budget Plan #{$plan['source_id_budget']} tidak ditemukan di FWO ini."], 422);
+            }
+
+            $items = [];
+            foreach ($plan['items'] as $it) {
+                $sourceItem = DB::table('fwo_budget_items')
+                    ->where('id_budget_item', $it['source_id_budget_item'])
+                    ->where('id_budget', $sourcePlan->id_budget)
+                    ->first();
+                if (!$sourceItem) {
+                    return response()->json(['message' => "Item budget #{$it['source_id_budget_item']} tidak termasuk Plan \"{$sourcePlan->label}\"."], 422);
+                }
+                $items[] = [
+                    'source' => $sourceItem,
+                    'nominal_budget' => (int) $it['nominal_budget'],
+                    'keterangan' => $it['keterangan'] ?? $sourceItem->keterangan,
+                ];
+            }
+
+            $budgetsToCopy[] = [
+                'label' => $plan['label'],
+                'keterangan' => $plan['keterangan'] ?? null,
+                'items' => $items,
+            ];
+        }
 
         // Validasi tanggal FWO harus dalam range tanggal WO
         $wo = DB::table('work_orders')->where('id_wo', $source->id_wo)->first();
@@ -402,13 +459,14 @@ class FieldworkController extends Controller
 
         $no_fwo = $this->generateNoFwo();
 
-        DB::transaction(function () use ($source, $no_fwo, $validated, &$newId) {
+        DB::transaction(function () use ($source, $no_fwo, $validated, $budgetsToCopy, &$newId) {
             $newId = DB::table('fieldworks')->insertGetId([
                 'id_wo'                       => $source->id_wo,
                 'no_fwo'                      => $no_fwo,
                 'judul_pekerjaan'             => $validated['judul_pekerjaan'],
                 'id_site_pelanggan_pekerjaan' => $source->id_site_pelanggan_pekerjaan,
                 'id_pic_pelanggan_pekerjaan'  => $source->id_pic_pelanggan_pekerjaan,
+                'id_penyelia'                 => $validated['id_penyelia'] ?? $source->id_penyelia,
                 'tanggal_mulai'               => $validated['tanggal_mulai'] ?? null,
                 'tanggal_selesai'             => $validated['tanggal_selesai'] ?? null,
                 'waktu_kedatangan'            => null,
@@ -453,6 +511,34 @@ class FieldworkController extends Controller
                             'updated_at'      => now(),
                         ])->toArray()
                     );
+                }
+            }
+
+            // Budget Plan terpilih: tanggal dikosongkan, status direset 'open',
+            // realisasi & lampiran TIDAK ikut (rencana baru).
+            foreach ($budgetsToCopy as $plan) {
+                $newBudgetId = DB::table('fwo_budgets')->insertGetId([
+                    'id_fwo'            => $newId,
+                    'label'             => $plan['label'],
+                    'keterangan'        => $plan['keterangan'],
+                    'tanggal_mulai'     => null,
+                    'tanggal_selesai'   => null,
+                    'status'            => 'open',
+                    'dokumen_realisasi' => null,
+                    'created_at'        => now(),
+                    'updated_at'        => now(),
+                ]);
+
+                foreach ($plan['items'] as $item) {
+                    DB::table('fwo_budget_items')->insert([
+                        'id_budget'       => $newBudgetId,
+                        'id_account'      => $item['source']->id_account,
+                        'nominal_budget'  => $item['nominal_budget'],
+                        'keterangan'      => $item['keterangan'],
+                        'is_cash_advance' => $item['source']->is_cash_advance,
+                        'created_at'      => now(),
+                        'updated_at'      => now(),
+                    ]);
                 }
             }
         });
@@ -503,6 +589,7 @@ class FieldworkController extends Controller
             // Pelanggan brsWO
             ->leftJoin('business_relation_sites as brsWO', 'brsWO.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
             ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'fw.id_pic_pelanggan_pekerjaan')
+            ->leftJoin('users as pny', 'pny.id', '=', 'fw.id_penyelia')
 
             ->where('fw.id_fwo', $id)
             ->select([
@@ -516,6 +603,7 @@ class FieldworkController extends Controller
                 'brsWO.alamat_lengkap as alamat_lengkap_wo',
                 'brc.nama_pic',
                 'brc.nomor_telepon_pic',
+                'pny.name as nama_penyelia',
             ])
             ->first();
 

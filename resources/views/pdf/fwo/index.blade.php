@@ -154,8 +154,8 @@
             <p>Bekasi, {{ \Carbon\Carbon::parse($fwo->tanggal_mulai)->translatedFormat('d F Y') }}</p>
             <p>PT Pramatek Andal Analitika</p>
             <div style="height: 60px;"></div>
-            <p><strong><u>Nama Dummy</u></strong></p>
-            <p>Jabatan Dummy</p>
+            <p><strong><u>{{ $fwo->nama_penyelia ?? '-' }}</u></strong></p>
+            <p>PIC Project</p>
         </div>
         <div style="clear: both;"></div>
 

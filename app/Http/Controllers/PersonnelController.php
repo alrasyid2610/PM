@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Support\StatusKepegawaian;
 use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistory;
@@ -49,6 +50,7 @@ class PersonnelController extends Controller
             'no_hp'       => 'nullable|string|max:30',
             'keterangan'  => 'nullable|string',
             'is_aktif'    => 'nullable|boolean',
+            'status_kepegawaian' => StatusKepegawaian::rule(),
         ]);
 
         $id = DB::table('personnel')->insertGetId([
@@ -56,6 +58,7 @@ class PersonnelController extends Controller
             'no_hp'      => $validated['no_hp'] ?? null,
             'keterangan' => $validated['keterangan'] ?? null,
             'is_aktif'   => $request->boolean('is_aktif', true),
+            'status_kepegawaian' => $validated['status_kepegawaian'] ?? null,
             'created_at' => now(),
             'updated_at' => now(),
         ], 'id_personnel');
@@ -91,6 +94,7 @@ class PersonnelController extends Controller
             'no_hp'      => 'nullable|string|max:30',
             'keterangan' => 'nullable|string',
             'is_aktif'   => 'nullable|boolean',
+            'status_kepegawaian' => StatusKepegawaian::rule(),
         ]);
 
         $before = DB::table('personnel')->where('id_personnel', $id)->get()->toJson();
@@ -100,6 +104,7 @@ class PersonnelController extends Controller
             'no_hp'      => $validated['no_hp'] ?? null,
             'keterangan' => $validated['keterangan'] ?? null,
             'is_aktif'   => $request->boolean('is_aktif', true),
+            'status_kepegawaian' => $validated['status_kepegawaian'] ?? null,
             'updated_at' => now(),
         ]);
 

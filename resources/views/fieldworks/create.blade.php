@@ -75,6 +75,17 @@
                     </div>
 
                     <div class="col-md-4">
+                        <label class="form-label">Penyelia</label>
+                        <select name="id_penyelia" id="create_id_penyelia" class="form-select">
+                            @if($defaultPenyelia)
+                                <option value="{{ $defaultPenyelia->id }}" selected>{{ $defaultPenyelia->name }}</option>
+                            @else
+                                <option value="">-- Pilih Penyelia --</option>
+                            @endif
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
                         <label class="form-label">Tanggal Mulai</label>
                         <input type="text" name="tanggal_mulai" class="form-control fp-date" placeholder="Pilih tanggal" autocomplete="off">
                         <small class="text-muted d-block mt-1" id="hintTanggalMulaiWo" style="display:none;font-size:11px;"></small>
@@ -289,6 +300,20 @@
                 cache: true,
             },
             ...noResultsAdd('/business-relations/create'),
+        });
+
+        $('#create_id_penyelia').select2({
+            width: '100%',
+            placeholder: 'Pilih Penyelia',
+            allowClear: true,
+            ajax: {
+                url: "{{ route('users.select2') }}",
+                dataType: 'json',
+                delay: 250,
+                data: p => ({ q: p.term }),
+                processResults: d => ({ results: d }),
+                cache: true,
+            },
         });
 
         $('#create_id_pic').select2({

@@ -300,6 +300,19 @@ function renderFwoForm(res) {
                                             "/business-relation-contacts/create",
                                     },
                                 )}
+                                ${formGroup.select(
+                                    "id_penyelia",
+                                    "Penyelia",
+                                    res.id_penyelia,
+                                    [],
+                                    {
+                                        mode: "ajax",
+                                        url: "/users/select2",
+                                        placeholder: "Pilih Penyelia",
+                                        label: res.nama_penyelia,
+                                        className: "col-md-4",
+                                    },
+                                )}
                                 ${formGroup.date("tanggal_mulai", "Tanggal Mulai", res.tanggal_mulai ?? "", false, { className: "col-md-4" })}
                                 ${formGroup.date("tanggal_selesai", "Tanggal Selesai", res.tanggal_selesai ?? "", false, { className: "col-md-4" })}
                                 <div class="col-md-4 mb-3">
@@ -689,10 +702,9 @@ function renderFwoForm(res) {
                         </div>
                         <div class="col-md-12">
                             <label class="form-label">Upload Struk / Bukti</label>
+                            <div id="actualModal-existing-files" class="mb-2"></div>
                             <input type="file" id="actualModal-files" multiple
-                                accept=".pdf,.jpg,.jpeg,.png" data-no-disable
-                                class="form-control form-control-sm">
-                            <div id="actualModal-existing-files" class="mt-2"></div>
+                                accept=".pdf,.jpg,.jpeg,.png" data-no-disable>
                         </div>
                     </div>
                 </div>

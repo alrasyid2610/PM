@@ -344,12 +344,7 @@ function renderBudgetList(plans, isLocked) {
             const sel         = item.nominal_budget - actualTotal;
             const struks      = item.actuals || [];
             const struksHtml  = struks.map(function (a) {
-                const files = JSON.parse(a.attachments || '[]');
-                const fileLinks = files.map(function (f) {
-                    return `<a href="/storage/${f}" target="_blank" class="badge bg-light text-dark border me-1" style="font-size:10px;">
-                        <i class="fa-solid fa-file me-1"></i>${f.split('/').pop()}
-                    </a>`;
-                }).join('');
+                const fileLinks = renderFilePreviewButton(a.attachments, { title: item.nama_account + ' — Realisasi' });
                 const verifBadge = {
                     menunggu:  `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:500;">Menunggu</span>`,
                     disetujui: `<span class="badge" style="background:#dcfce7;color:#15803d;font-size:10px;font-weight:500;">Disetujui</span>`,
@@ -639,21 +634,26 @@ function openBudgetModal(idFwo, budgetData) {
         if (elMulai._flatpickr)   elMulai._flatpickr.destroy();
         if (elSelesai._flatpickr) elSelesai._flatpickr.destroy();
 
+        // Periode budget plan terikat ke periode FWO: batas kalender = tanggal FWO,
+        // dan plan baru otomatis terisi tanggal FWO.
         const fpMulai = flatpickr(elMulai, {
             dateFormat: 'Y-m-d',
             allowInput: false,
-            defaultDate: isEdit ? (budgetData.tanggal_mulai || null) : null,
+            minDate: fwoMulai || null,
+            maxDate: fwoSelesai || null,
+            defaultDate: isEdit ? (budgetData.tanggal_mulai || null) : (fwoMulai || null),
         });
         const fpSelesai = flatpickr(elSelesai, {
             dateFormat: 'Y-m-d',
             allowInput: false,
-            defaultDate: isEdit ? (budgetData.tanggal_selesai || null) : null,
-            minDate: isEdit && budgetData.tanggal_mulai ? budgetData.tanggal_mulai : null,
+            minDate: isEdit && budgetData.tanggal_mulai ? budgetData.tanggal_mulai : (fwoMulai || null),
+            maxDate: fwoSelesai || null,
+            defaultDate: isEdit ? (budgetData.tanggal_selesai || null) : (fwoSelesai || null),
         });
 
         // Saat tanggal mulai berubah → update minDate selesai
         fpMulai.config.onChange.push(function (dates) {
-            fpSelesai.set('minDate', dates[0] || null);
+            fpSelesai.set('minDate', dates[0] || fwoMulai || null);
             if (fpSelesai.selectedDates[0] && fpSelesai.selectedDates[0] < dates[0]) {
                 fpSelesai.clear();
             }
@@ -884,7 +884,6 @@ $(document).off('click.budget', '.btn-actual-add').on('click.budget', '.btn-actu
     $('#actualModal-id-fwo').val(idFwo);
     $('#actualModal-nominal').val('');
     $('#actualModal-keterangan').val('');
-    $('#actualModal-files').val('');
     $('#actualModal-existing-files').empty();
     $('#actualModalLabel').html('<i class="fa-solid fa-receipt me-2" style="color:#1d4ed8;"></i>Catat Pengeluaran');
     $('#actualModal-account-name').text(accountName);
@@ -892,6 +891,39 @@ $(document).off('click.budget', '.btn-actual-add').on('click.budget', '.btn-actu
     $('#actualModal-budget-info').show();
     initNumericMask(document.getElementById('actualModal'));
     new bootstrap.Modal(document.getElementById('actualModal')).show();
+    initActualModalPond();
+});
+
+// FilePond untuk lampiran realisasi — dibuat setelah modal tampil, dihancurkan saat tutup.
+// Pola sama createFileUploader() di core/attachmentEngine.js.
+let actualModalPond = null;
+function initActualModalPond() {
+    if (actualModalPond) { actualModalPond.destroy(); actualModalPond = null; }
+    // FilePond menyalin file yang di-upload kembali ke <input> asli saat ditutup,
+    // jadi input diganti elemen baru yang kosong sebelum FilePond dipasang lagi.
+    $('#actualModal-files').replaceWith('<input type="file" id="actualModal-files" multiple accept=".pdf,.jpg,.jpeg,.png" data-no-disable>');
+    actualModalPond = createFileUploader('#actualModal-files', {
+        labelIdle: 'Drag & Drop struk/bukti atau <span class="filepond--label-action">Browse</span>',
+        acceptedFileTypes: ['application/pdf', 'image/jpeg', 'image/png'],
+    });
+}
+$('#actualModal').on('hidden.bs.modal', function () {
+    if (actualModalPond) { actualModalPond.destroy(); actualModalPond = null; }
+});
+
+// Satu baris file lama: tombol X = hapus dari daftar (file fisik baru terhapus saat Simpan)
+function renderActualExistingRow(path) {
+    return `<div class="actual-existing-row d-flex align-items-center gap-2 mb-1 p-1 rounded" data-path="${escHtml(path)}" style="font-size:11px;background:#f8fafc;">
+        <i class="fa-solid fa-file text-muted"></i>
+        <span class="flex-grow-1 text-truncate" title="${escHtml(filePreviewName(path))}">${escHtml(filePreviewName(path))}</span>
+        ${renderFilePreviewButton([path], { title: path.split('/').pop() })}
+        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-remove-actual-existing" title="Hapus file ini" data-no-disable>
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>`;
+}
+$(document).off('click.budget', '.btn-remove-actual-existing').on('click.budget', '.btn-remove-actual-existing', function () {
+    $(this).closest('.actual-existing-row').remove();
 });
 
 // ── Edit Actual ──
@@ -905,21 +937,17 @@ $(document).off('click.budget', '.btn-actual-edit').on('click.budget', '.btn-act
             $('#actualModal-id-fwo').val(idFwo);
             $('#actualModal-nominal').val(Number(r.nominal_actual).toLocaleString('en-US'));
             $('#actualModal-keterangan').val(r.keterangan || '');
-            $('#actualModal-files').val('');
             $('#actualModalLabel').html('<i class="fa-solid fa-receipt me-2" style="color:#1d4ed8;"></i>Edit Pengeluaran');
             $('#actualModal-budget-info').hide();
 
-            const files = JSON.parse(r.attachments || '[]');
-            const $ex   = $('#actualModal-existing-files').empty();
-            files.forEach(function (f) {
-                $ex.append(`<div class="d-flex align-items-center gap-2 mb-1" style="font-size:11px;">
-                    <input type="checkbox" class="existing-file-check" value="${f}" checked data-no-disable>
-                    <a href="/storage/${f}" target="_blank">${f.split('/').pop()}</a>
-                </div>`);
-            });
+            const files = normalizeAttachmentList(r.attachments);
+            $('#actualModal-existing-files').html(
+                files.length ? files.map(renderActualExistingRow).join('') : ''
+            );
 
             initNumericMask(document.getElementById('actualModal'));
             new bootstrap.Modal(document.getElementById('actualModal')).show();
+            initActualModalPond();
         });
 });
 
@@ -968,8 +996,10 @@ $(document).off('click.budget', '.btn-bulk-verify').on('click.budget', '.btn-bul
                 <span class="fw-semibold">${escHtml(item.kode_account)}</span>
                 <span class="text-muted ms-1">${escHtml(item.nama_account)}</span>
             </td>
+            <td style="font-size:11px;font-weight:600;color:#374151;">${fmtRp(item.nominal_budget)}</td>
             <td style="font-size:11px;font-weight:600;color:#1d4ed8;">${fmtRp(a.nominal_actual)}</td>
             <td style="font-size:11px;color:#64748b;">${escHtml(a.keterangan || '-')}</td>
+            <td style="font-size:11px;">${renderFilePreviewButton(a.attachments, { title: item.nama_account + ' — Realisasi' })}</td>
             <td style="min-width:160px;">
                 <div class="d-flex gap-1">
                     <button type="button" class="btn btn-sm flex-fill bv-choice" data-value="disetujui"
@@ -999,8 +1029,10 @@ $(document).off('click.budget', '.btn-bulk-verify').on('click.budget', '.btn-bul
                     <tr>
                         <th style="width:30px;">No</th>
                         <th>Account</th>
-                        <th style="min-width:110px;">Nominal</th>
+                        <th style="min-width:110px;">Budget</th>
+                        <th style="min-width:110px;">Realisasi</th>
                         <th style="min-width:120px;">Keterangan</th>
+                        <th style="min-width:90px;">Preview</th>
                         <th style="min-width:160px;">Status</th>
                         <th style="min-width:160px;">Catatan</th>
                     </tr>
@@ -1100,13 +1132,15 @@ $(document).off('click.budget', '#actualModal-btn-save').on('click.budget', '#ac
 
     if (id) fd.append('_method', 'POST');
 
-    // File baru
-    const files = $('#actualModal-files')[0].files;
-    for (let i = 0; i < files.length; i++) fd.append('attachments[]', files[i]);
+    // File baru (dari FilePond)
+    if (actualModalPond) {
+        actualModalPond.getFiles().forEach(function (f) { fd.append('attachments[]', f.file); });
+    }
 
-    // File lama yang tetap disimpan
-    $('#actualModal-existing-files .existing-file-check:checked').each(function () {
-        fd.append('existing_attachments[]', $(this).val());
+    // File lama yang masih ada di daftar (yang dihapus user sudah tidak ada di sini)
+    fd.append('existing_attachments_sent', '1');
+    $('#actualModal-existing-files .actual-existing-row').each(function () {
+        fd.append('existing_attachments[]', $(this).data('path'));
     });
 
     const url = id ? `/fwo-budget-actuals/${id}` : '/fwo-budget-actuals';

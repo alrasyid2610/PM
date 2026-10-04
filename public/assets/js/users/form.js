@@ -1,3 +1,12 @@
+// Pilihan Status Kepegawaian — harus sama dengan App\Support\StatusKepegawaian
+const STATUS_KEPEGAWAIAN_OPTIONS = [
+    { value: "hl", label: "HL" },
+    { value: "kontrak_gol_1", label: "Kontrak Gol. 1" },
+    { value: "kontrak_gol_2", label: "Kontrak Gol. 2" },
+    { value: "kontrak_gol_3", label: "Kontrak Gol. 3" },
+    { value: "magang", label: "Magang" },
+];
+
 let menuConfig  = [];
 let groupOptions = [];
 
@@ -131,6 +140,10 @@ async function renderForm(res) {
                     ${formGroup.select("is_active", "Status", res.is_active,
                         [{ value: 1, label: "Aktif" }, { value: 0, label: "Tidak Aktif" }],
                         { className: "col-md-2" }
+                    )}
+                    ${formGroup.select("status_kepegawaian", "Status Kepegawaian", res.status_kepegawaian,
+                        STATUS_KEPEGAWAIAN_OPTIONS,
+                        { className: "col-md-3" }
                     )}
                     <div class="col-md-5">
                         <label class="form-label">Grup / Departemen</label>

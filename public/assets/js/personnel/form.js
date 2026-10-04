@@ -1,3 +1,12 @@
+// Pilihan Status Kepegawaian — harus sama dengan App\Support\StatusKepegawaian
+const STATUS_KEPEGAWAIAN_OPTIONS = [
+    { value: "hl", label: "HL" },
+    { value: "kontrak_gol_1", label: "Kontrak Gol. 1" },
+    { value: "kontrak_gol_2", label: "Kontrak Gol. 2" },
+    { value: "kontrak_gol_3", label: "Kontrak Gol. 3" },
+    { value: "magang", label: "Magang" },
+];
+
 function renderForm(res) {
     const aksesBody = res.id_user
         ? `<div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
@@ -61,6 +70,10 @@ function renderForm(res) {
                                         { value: 1, label: "Aktif" },
                                         { value: 0, label: "Tidak Aktif" },
                                     ],
+                                    { className: "col-md-3 col-12" }
+                                )}
+                                ${formGroup.select("status_kepegawaian", "Status Kepegawaian", res.status_kepegawaian,
+                                    STATUS_KEPEGAWAIAN_OPTIONS,
                                     { className: "col-md-3 col-12" }
                                 )}
                                 ${formGroup.textarea("keterangan", "Keterangan", res.keterangan, { className: "col-12" })}

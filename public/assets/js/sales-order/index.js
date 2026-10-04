@@ -300,22 +300,39 @@ function renderSoSummary(wos) {
         return s + (w.total_fwo_qty || 0);
     }, 0);
     const totalHarga = wos.reduce(function (s, w) {
-        return s + (w.total_boq_amount || 0);
+        return s + (w.total_nilai_wo || 0);
     }, 0);
+    const totalBoqOnly = wos.reduce((s, w) => s + (w.total_boq_amount || 0), 0);
+    const totalOtherOnly = wos.reduce((s, w) => s + (w.total_boq_other_amount || 0), 0);
+    const totalSamplingOnly = wos.reduce((s, w) => s + (w.total_boq_sampling_amount || 0), 0);
 
     const pct =
         totalBoqQty > 0 ? Math.round((totalFwoQty / totalBoqQty) * 100) : 0;
     const barColor = pct >= 100 ? "#16a34a" : pct > 0 ? "#d97706" : "#94a3b8";
     const pctColor = pct >= 100 ? "#16a34a" : pct > 0 ? "#d97706" : "#94a3b8";
 
-    const harga =
-        totalHarga >= 1e9
-            ? "Rp " + (totalHarga / 1e9).toFixed(1) + " M"
-            : totalHarga >= 1e6
-              ? "Rp " + (totalHarga / 1e6).toFixed(1) + " jt"
-              : totalHarga > 0
-                ? "Rp " + Number(totalHarga).toLocaleString("en-US")
-                : "—";
+    const fmtRp = (n) => "Rp " + Number(n || 0).toLocaleString("en-US");
+    const categories = [
+        { label: "BOQ",          value: totalBoqOnly,      bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" },
+        { label: "BOQ Other",    value: totalOtherOnly,    bg: "#fff7ed", color: "#c2410c", border: "#fed7aa" },
+        { label: "BOQ Sampling", value: totalSamplingOnly, bg: "#f0fdf4", color: "#15803d", border: "#bbf7d0" },
+    ];
+    const badgesHtml = categories
+        .filter((c) => c.value > 0)
+        .map((c) => `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:${c.bg};color:${c.color};border:1px solid ${c.border};white-space:nowrap;">${c.label}: ${fmtRp(c.value)}</span>`)
+        .join("");
+    const totalNilaiCard = `<div class="pm-kpi-card" style="flex-direction:column;align-items:flex-start;gap:8px;min-width:220px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <div class="pm-kpi-icon" style="background:#7c3aed;flex-shrink:0;">
+                <i class="fa-solid fa-sack-dollar"></i>
+            </div>
+            <div>
+                <div class="pm-kpi-label">Total Nilai</div>
+                <div class="pm-kpi-value">${totalHarga > 0 ? fmtRp(totalHarga) : "—"}</div>
+            </div>
+        </div>
+        ${badgesHtml ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${badgesHtml}</div>` : ""}
+    </div>`;
 
     const kpiCard = function (icon, iconBg, label, value) {
         return `<div class="pm-kpi-card">
@@ -359,7 +376,7 @@ function renderSoSummary(wos) {
                 "Total QTY",
                 totalBoqQty + " qty",
             ) +
-            kpiCard("fa-tag", "#0f766e", "Total Nilai", harga) +
+            totalNilaiCard +
             progressCard,
     );
 }

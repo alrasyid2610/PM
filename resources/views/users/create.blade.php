@@ -49,6 +49,15 @@
                         <option value="0">Tidak Aktif</option>
                     </select>
                 </div>
+                <div class="col-md-3">
+                    <label class="form-label">Status Kepegawaian</label>
+                    <select name="status_kepegawaian" class="form-select">
+                        <option value="">-- Pilih --</option>
+                        @foreach(\App\Support\StatusKepegawaian::OPTIONS as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="col-md-5">
                     <label class="form-label">Grup / Departemen</label>
                     <select name="menu_group_id" class="form-select">
@@ -72,6 +81,7 @@
 <script>
     $(document).ready(function () {
         $('select[name="is_active"]').select2({ placeholder: 'Pilih Status', width: '100%' });
+        $('select[name="status_kepegawaian"]').select2({ placeholder: '-- Pilih --', allowClear: true, width: '100%' });
         $('select[name="menu_group_id"]').select2({ placeholder: '-- Tanpa Grup --', allowClear: true, width: '100%' });
     });
 

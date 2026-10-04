@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Yajra\DataTables\Facades\DataTables;
+use App\Support\StatusKepegawaian;
 
 class UserController extends Controller
 {
@@ -62,6 +63,7 @@ class UserController extends Controller
             'password'      => 'required|string|min:8|confirmed',
             'is_active'     => 'required|in:0,1',
             'menu_group_id' => 'nullable|integer|exists:menu_groups,id',
+            'status_kepegawaian' => StatusKepegawaian::rule(),
         ]);
 
         try {
@@ -72,6 +74,7 @@ class UserController extends Controller
                 'email'         => $request->email,
                 'password'      => Hash::make($request->password),
                 'is_active'     => $request->is_active,
+                'status_kepegawaian' => $request->filled('status_kepegawaian') ? $request->status_kepegawaian : null,
                 'menu_group_id' => $request->filled('menu_group_id') ? $request->menu_group_id : null,
                 'created_at'    => now(),
                 'updated_at'    => now(),
@@ -91,7 +94,7 @@ class UserController extends Controller
     public function show($id)
     {
         $user = DB::table('users')
-            ->select(['id', 'name', 'email', 'is_active', 'menu_group_id'])
+            ->select(['id', 'name', 'email', 'is_active', 'menu_group_id', 'status_kepegawaian'])
             ->where('id', $id)
             ->first();
 
@@ -125,6 +128,7 @@ class UserController extends Controller
             'is_active'     => 'required|in:0,1',
             'menu_group_id' => 'nullable|integer|exists:menu_groups,id',
             'permissions'   => 'nullable|string',
+            'status_kepegawaian' => StatusKepegawaian::rule(),
         ]);
 
         $user = DB::table('users')->where('id', $id)->first();
@@ -141,6 +145,7 @@ class UserController extends Controller
                 'name'          => $request->name,
                 'email'         => $request->email,
                 'is_active'     => $request->is_active,
+                'status_kepegawaian' => $request->filled('status_kepegawaian') ? $request->status_kepegawaian : null,
                 'menu_group_id' => $request->filled('menu_group_id') ? $request->menu_group_id : null,
                 'updated_at'    => now(),
             ];

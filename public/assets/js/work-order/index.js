@@ -2805,9 +2805,10 @@ $(document).ready(function () {
         $.when(
             $.get(window.route.fwoDetail + sourceFwoId),
             $.get(window.route.fwoBoqForCopy + sourceFwoId),
+            $.get("/fwo-budgets/" + sourceFwoId + "/list"),
         )
-            .done(function (fwoRes, boqRes) {
-                const allFull = fillCopyFwoModal(fwoRes[0], boqRes[0]);
+            .done(function (fwoRes, boqRes, budgetRes) {
+                const allFull = fillCopyFwoModal(fwoRes[0], boqRes[0], budgetRes[0].data || []);
                 $("#btnConfirmCopyFwo").prop("disabled", allFull);
             })
             .fail(function () {
@@ -2859,13 +2860,43 @@ $(document).ready(function () {
             }
         });
 
+        // Budget Plan yang dicentang beserta nominal tiap item (hasil edit user)
+        const budgets = [];
+        let budgetError = null;
+        $("#copyFwoBudgetContainer .copy-budget-card").each(function () {
+            if (!$(this).find(".copy-budget-check").is(":checked")) return;
+            const items = [];
+            $(this).find(".copy-budget-item-nominal").each(function () {
+                const nominal = parseInt(($(this).val() || "").replace(/,/g, ""), 10);
+                if (isNaN(nominal) || nominal < 0) budgetError = "Nominal budget tidak boleh kosong atau negatif";
+                items.push({
+                    source_id_budget_item: parseInt($(this).data("item-id")),
+                    nominal_budget: isNaN(nominal) ? 0 : nominal,
+                    keterangan: $(this).closest("tr").find(".copy-budget-item-ket").val() || null,
+                });
+            });
+            if (!items.length) budgetError = "Setiap Plan yang dipilih harus punya minimal 1 item";
+            budgets.push({
+                source_id_budget: parseInt($(this).data("budget-id")),
+                label: $(this).data("label"),
+                keterangan: $(this).data("keterangan") || null,
+                items,
+            });
+        });
+        if (budgetError) {
+            Notify.warning(budgetError);
+            return;
+        }
+
         const payload = {
             judul_pekerjaan: judul,
             tanggal_mulai: $("#copyFwoTglMulai").val() || null,
             tanggal_selesai: $("#copyFwoTglSelesai").val() || null,
             keterangan: $("#copyFwoKeterangan").val() || null,
+            id_penyelia: $("#copyFwoPenyelia").val() || null,
             personels,
             sections,
+            budgets,
         };
 
         const $btn = $(this);
@@ -3457,7 +3488,57 @@ function addCopyWoBoqRow(tpId, tpText, satuan) {
     });
 }
 
-function fillCopyFwoModal(fwo, boqs) {
+// Satu kartu Budget Plan di modal Clone FWO: checkbox pilih, nominal item bisa diedit,
+// total dihitung ulang live (total hasil clone = jumlah nominal item yang diedit).
+function renderCopyBudgetCard(plan) {
+    const itemRows = (plan.items || [])
+        .map(function (item) {
+            const ca = item.is_cash_advance
+                ? '<span class="badge ms-1" style="background:#eff6ff;color:#1d4ed8;font-size:10px;">CA</span>'
+                : "";
+            return `<tr>
+                <td style="font-size:12px;"><span class="fw-semibold">${escHtml(item.nama_account || "-")}</span>${ca}</td>
+                <td style="width:160px;">
+                    <input type="text" inputmode="numeric" class="form-control form-control-sm text-end copy-budget-item-nominal input-num-mask input-num-int"
+                        data-item-id="${item.id_budget_item}" value="${Number(item.nominal_budget || 0).toLocaleString("en-US")}">
+                </td>
+                <td style="font-size:11px;"><input type="text" class="form-control form-control-sm copy-budget-item-ket" value="${escHtml(item.keterangan || "")}" placeholder="Opsional"></td>
+            </tr>`;
+        })
+        .join("");
+
+    return `<div class="copy-budget-card border rounded mb-2"
+        data-budget-id="${plan.id_budget}" data-label="${escHtml(plan.label || "")}" data-keterangan="${escHtml(plan.keterangan || "")}">
+        <div class="d-flex align-items-center gap-2 px-3 py-2" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+            <input type="checkbox" class="form-check-input copy-budget-check mt-0" checked>
+            <span class="fw-bold" style="font-size:13px;">${escHtml(plan.label || "-")}</span>
+            ${plan.keterangan ? `<span class="text-muted" style="font-size:11px;">· ${escHtml(plan.keterangan)}</span>` : ""}
+            <span class="ms-auto" style="font-size:12px;">Total: <b class="copy-budget-total" style="color:#1d4ed8;">Rp 0</b></span>
+        </div>
+        <table class="table table-sm mb-0">
+            <thead><tr><th>Account</th><th class="text-end">Nominal</th><th>Keterangan</th></tr></thead>
+            <tbody>${itemRows}</tbody>
+        </table>
+    </div>`;
+}
+
+function recalcCopyBudgetTotals() {
+    $("#copyFwoBudgetContainer .copy-budget-card").each(function () {
+        let total = 0;
+        $(this)
+            .find(".copy-budget-item-nominal")
+            .each(function () {
+                total += parseInt(($(this).val() || "").replace(/,/g, ""), 10) || 0;
+            });
+        $(this)
+            .find(".copy-budget-total")
+            .text("Rp " + total.toLocaleString("id-ID"));
+    });
+}
+
+$(document).on("input", "#copyFwoBudgetContainer .copy-budget-item-nominal", recalcCopyBudgetTotals);
+
+function fillCopyFwoModal(fwo, boqs, budgets) {
     copyFwoPersonelIdx = 0;
     const dateMulai = (fwo.tanggal_mulai || "").substring(0, 10);
     const dateSelesai = (fwo.tanggal_selesai || "").substring(0, 10);
@@ -3597,7 +3678,21 @@ function fillCopyFwoModal(fwo, boqs) {
             <label class="form-label fw-semibold">Keterangan</label>
             <textarea id="copyFwoKeterangan" class="form-control" rows="2">${escHtml(fwo.keterangan || "")}</textarea>
         </div>
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Penyelia</label>
+            <select id="copyFwoPenyelia" class="form-select">
+                ${fwo.id_penyelia ? `<option value="${fwo.id_penyelia}" selected>${escHtml(fwo.nama_penyelia || "#" + fwo.id_penyelia)}</option>` : ""}
+            </select>
+        </div>
         ${boqHtml}
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Budget Plan <span class="text-muted fw-normal" style="font-size:11px;">— centang Plan yang ingin disalin. Realisasi &amp; lampiran tidak ikut.</span></label>
+            <div id="copyFwoBudgetContainer">
+                ${(budgets || []).length
+                    ? budgets.map(renderCopyBudgetCard).join("")
+                    : '<div class="text-muted small py-2">FWO sumber belum punya Budget Plan.</div>'}
+            </div>
+        </div>
         <label class="form-label fw-semibold">Personel</label>
         <div id="copyFwoPersonelContainer" class="d-flex flex-column gap-2 mb-2">${personelHtml}</div>
         <button type="button" id="btnAddCopyPersonel" class="btn btn-outline-primary btn-sm">
@@ -3607,6 +3702,22 @@ function fillCopyFwoModal(fwo, boqs) {
     `);
 
     initFpDate("#modalCopyFwoBody");
+    recalcCopyBudgetTotals();
+
+    $("#copyFwoPenyelia").select2({
+        width: "100%",
+        dropdownParent: $("#modalCopyFwo"),
+        placeholder: "Pilih Penyelia",
+        allowClear: true,
+        ajax: {
+            url: "/users/select2",
+            dataType: "json",
+            delay: 250,
+            data: (p) => ({ q: p.term }),
+            processResults: (d) => ({ results: d }),
+            cache: true,
+        },
+    });
 
     $("#copyFwoPersonelContainer .copy-personel-user-select").each(function () {
         initCopyPersonelSelect2($(this));
@@ -3688,12 +3799,7 @@ function renderWoBudgetList(plans, isLocked) {
             const sel         = item.nominal_budget - actualTotal;
             const struks      = item.actuals || [];
             const struksHtml  = struks.map(function (a) {
-                const files = JSON.parse(a.attachments || '[]');
-                const fileLinks = files.map(function (f) {
-                    return `<a href="/storage/${f}" target="_blank" class="badge bg-light text-dark border me-1" style="font-size:10px;">
-                        <i class="fa-solid fa-file me-1"></i>${f.split('/').pop()}
-                    </a>`;
-                }).join('');
+                const fileLinks = renderFilePreviewButton(a.attachments, { title: item.nama_account + ' — Realisasi' });
                 const verifBadge = {
                     menunggu:  `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:500;">Menunggu</span>`,
                     disetujui: `<span class="badge" style="background:#dcfce7;color:#15803d;font-size:10px;font-weight:500;">Disetujui</span>`,
@@ -4216,7 +4322,6 @@ $(document).off('click.wobudget', '.btn-wo-actual-add').on('click.wobudget', '.b
     $('#woActualModal-id-wo').val(idWo);
     $('#woActualModal-nominal').val('');
     $('#woActualModal-keterangan').val('');
-    $('#woActualModal-files').val('');
     $('#woActualModal-existing-files').empty();
     $('#woActualModalLabel').html('<i class="fa-solid fa-receipt me-2" style="color:#1d4ed8;"></i>Catat Pengeluaran');
     $('#woActualModal-account-name').text(accountName);
@@ -4224,6 +4329,36 @@ $(document).off('click.wobudget', '.btn-wo-actual-add').on('click.wobudget', '.b
     $('#woActualModal-budget-info').show();
     initNumericMask(document.getElementById('woActualModal'));
     new bootstrap.Modal(document.getElementById('woActualModal')).show();
+    initWoActualModalPond();
+});
+
+// FilePond lampiran realisasi WO — pola sama fieldworks/index.js
+let woActualModalPond = null;
+function initWoActualModalPond() {
+    if (woActualModalPond) { woActualModalPond.destroy(); woActualModalPond = null; }
+    // Input diganti elemen baru yang kosong (lihat initActualModalPond di fieldworks/index.js).
+    $('#woActualModal-files').replaceWith('<input type="file" id="woActualModal-files" multiple accept=".pdf,.jpg,.jpeg,.png" data-no-disable>');
+    woActualModalPond = createFileUploader('#woActualModal-files', {
+        labelIdle: 'Drag & Drop struk/bukti atau <span class="filepond--label-action">Browse</span>',
+        acceptedFileTypes: ['application/pdf', 'image/jpeg', 'image/png'],
+    });
+}
+$('#woActualModal').on('hidden.bs.modal', function () {
+    if (woActualModalPond) { woActualModalPond.destroy(); woActualModalPond = null; }
+});
+
+function renderWoActualExistingRow(path) {
+    return `<div class="actual-existing-row d-flex align-items-center gap-2 mb-1 p-1 rounded" data-path="${escHtml(path)}" style="font-size:11px;background:#f8fafc;">
+        <i class="fa-solid fa-file text-muted"></i>
+        <span class="flex-grow-1 text-truncate" title="${escHtml(filePreviewName(path))}">${escHtml(filePreviewName(path))}</span>
+        ${renderFilePreviewButton([path], { title: path.split('/').pop() })}
+        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-remove-wo-actual-existing" title="Hapus file ini" data-no-disable>
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>`;
+}
+$(document).off('click.wobudget', '.btn-remove-wo-actual-existing').on('click.wobudget', '.btn-remove-wo-actual-existing', function () {
+    $(this).closest('.actual-existing-row').remove();
 });
 
 // ── Edit Actual ──
@@ -4237,21 +4372,17 @@ $(document).off('click.wobudget', '.btn-wo-actual-edit').on('click.wobudget', '.
             $('#woActualModal-id-wo').val(idWo);
             $('#woActualModal-nominal').val(Number(r.nominal_actual).toLocaleString('en-US'));
             $('#woActualModal-keterangan').val(r.keterangan || '');
-            $('#woActualModal-files').val('');
             $('#woActualModalLabel').html('<i class="fa-solid fa-receipt me-2" style="color:#1d4ed8;"></i>Edit Pengeluaran');
             $('#woActualModal-budget-info').hide();
 
-            const files = JSON.parse(r.attachments || '[]');
-            const $ex   = $('#woActualModal-existing-files').empty();
-            files.forEach(function (f) {
-                $ex.append(`<div class="d-flex align-items-center gap-2 mb-1" style="font-size:11px;">
-                    <input type="checkbox" class="existing-file-check" value="${f}" checked data-no-disable>
-                    <a href="/storage/${f}" target="_blank">${f.split('/').pop()}</a>
-                </div>`);
-            });
+            const files = normalizeAttachmentList(r.attachments);
+            $('#woActualModal-existing-files').html(
+                files.length ? files.map(renderWoActualExistingRow).join('') : ''
+            );
 
             initNumericMask(document.getElementById('woActualModal'));
             new bootstrap.Modal(document.getElementById('woActualModal')).show();
+            initWoActualModalPond();
         });
 });
 
@@ -4294,11 +4425,13 @@ $(document).off('click.wobudget', '#woActualModal-btn-save').on('click.wobudget'
 
     if (id) fd.append('_method', 'POST');
 
-    const files = $('#woActualModal-files')[0].files;
-    for (let i = 0; i < files.length; i++) fd.append('attachments[]', files[i]);
+    if (woActualModalPond) {
+        woActualModalPond.getFiles().forEach(function (f) { fd.append('attachments[]', f.file); });
+    }
 
-    $('#woActualModal-existing-files .existing-file-check:checked').each(function () {
-        fd.append('existing_attachments[]', $(this).val());
+    fd.append('existing_attachments_sent', '1');
+    $('#woActualModal-existing-files .actual-existing-row').each(function () {
+        fd.append('existing_attachments[]', $(this).data('path'));
     });
 
     const url = id ? `/wo-budget-actuals/${id}` : '/wo-budget-actuals';
@@ -4358,8 +4491,10 @@ $(document).off('click.wobudget', '.btn-wo-bulk-verify').on('click.wobudget', '.
                 <span class="fw-semibold">${escHtml(item.kode_account)}</span>
                 <span class="text-muted ms-1">${escHtml(item.nama_account)}</span>
             </td>
+            <td style="font-size:11px;font-weight:600;color:#374151;">${woFmtRp(item.nominal_budget)}</td>
             <td style="font-size:11px;font-weight:600;color:#1d4ed8;">${woFmtRp(a.nominal_actual)}</td>
             <td style="font-size:11px;color:#64748b;">${escHtml(a.keterangan || '-')}</td>
+            <td style="font-size:11px;">${renderFilePreviewButton(a.attachments, { title: item.nama_account + ' — Realisasi' })}</td>
             <td style="min-width:160px;">
                 <div class="d-flex gap-1">
                     <button type="button" class="btn btn-sm flex-fill bv-choice" data-value="disetujui"
@@ -4389,8 +4524,10 @@ $(document).off('click.wobudget', '.btn-wo-bulk-verify').on('click.wobudget', '.
                     <tr>
                         <th style="width:30px;">No</th>
                         <th>Account</th>
-                        <th style="min-width:110px;">Nominal</th>
+                        <th style="min-width:110px;">Budget</th>
+                        <th style="min-width:110px;">Realisasi</th>
                         <th style="min-width:120px;">Keterangan</th>
+                        <th style="min-width:90px;">Preview</th>
                         <th style="min-width:160px;">Status</th>
                         <th style="min-width:160px;">Catatan</th>
                     </tr>

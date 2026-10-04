@@ -86,6 +86,30 @@ function brDisplayName(?string $entitas, ?string $nama): string
     return trim(entitasPrefix($entitas) . ' ' . (string) $nama);
 }
 
+/**
+ * Daftar path attachment dari input request. Bisa datang sebagai array
+ * (form-data `existing_attachments[]` dari FilePond/JS) atau string JSON.
+ * Jangan json_decode langsung dari request — array akan memicu error
+ * "json_decode(): Argument #1 must be of type string, array given".
+ */
+function attachmentPathsFromInput($value): array
+{
+    if (is_string($value)) {
+        $value = json_decode($value, true) ?: [];
+    }
+    if (!is_array($value)) return [];
+
+    return array_values(array_filter($value, fn($p) => is_string($p) && $p !== ''));
+}
+
+/** Hapus file attachment dari storage public (dipanggil setelah update DB berhasil). */
+function deleteAttachmentFiles(array $paths): void
+{
+    foreach ($paths as $path) {
+        \Illuminate\Support\Facades\Storage::disk('public')->delete($path);
+    }
+}
+
 function uploadAttachment($fieldAttachments, $table)
 {
     $files = [];

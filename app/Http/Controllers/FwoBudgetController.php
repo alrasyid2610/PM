@@ -77,11 +77,18 @@ class FwoBudgetController extends Controller
             'id_fwo'         => 'required|integer',
             'label'          => 'required|string|max:255',
             'keterangan'     => 'nullable|string',
+            'tanggal_mulai'  => 'nullable|date',
+            'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal_mulai',
             'items'          => 'required|array|min:1',
             'items.*.id_account'      => 'required|integer',
             'items.*.nominal_budget'  => 'required|integer|min:0',
             'items.*.keterangan'      => 'nullable|string',
         ]);
+
+        $fwo = DB::table('fieldworks')->where('id_fwo', $request->id_fwo)->first(['tanggal_mulai', 'tanggal_selesai']);
+        if ($msg = $this->planDateError($request, $fwo)) {
+            return response()->json(['success' => false, 'message' => $msg], 422);
+        }
 
         DB::transaction(function () use ($request, &$id) {
             $id = DB::table('fwo_budgets')->insertGetId([
@@ -111,6 +118,21 @@ class FwoBudgetController extends Controller
         saveAudit('fwo_budgets', $id, 'Create', '', $after);
 
         return response()->json(['success' => true, 'id' => $id]);
+    }
+
+    // Periode budget plan harus berada di dalam periode FWO-nya (dibatasi juga di kalender frontend).
+    private function planDateError(Request $request, ?object $fwo): ?string
+    {
+        $mulai   = $request->tanggal_mulai ?: null;
+        $selesai = $request->tanggal_selesai ?: null;
+
+        if ($fwo?->tanggal_mulai && $mulai && $mulai < $fwo->tanggal_mulai) {
+            return 'Tanggal mulai budget tidak boleh sebelum tanggal mulai FWO (' . $fwo->tanggal_mulai . ').';
+        }
+        if ($fwo?->tanggal_selesai && $selesai && $selesai > $fwo->tanggal_selesai) {
+            return 'Tanggal selesai budget tidak boleh setelah tanggal selesai FWO (' . $fwo->tanggal_selesai . ').';
+        }
+        return null;
     }
 
     public function show($id)
@@ -147,11 +169,18 @@ class FwoBudgetController extends Controller
         $request->validate([
             'label'          => 'required|string|max:255',
             'keterangan'     => 'nullable|string',
+            'tanggal_mulai'  => 'nullable|date',
+            'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal_mulai',
             'items'          => 'required|array|min:1',
             'items.*.id_account'     => 'required|integer',
             'items.*.nominal_budget' => 'required|integer|min:0',
             'items.*.keterangan'     => 'nullable|string',
         ]);
+
+        $fwo = DB::table('fieldworks')->where('id_fwo', $budget->id_fwo)->first(['tanggal_mulai', 'tanggal_selesai']);
+        if ($msg = $this->planDateError($request, $fwo)) {
+            return response()->json(['success' => false, 'message' => $msg], 422);
+        }
 
         $before = DB::table('fwo_budgets')->where('id_budget', $id)->get()->toJson();
 

@@ -71,16 +71,43 @@ function renderSpModal() {
                     </div>
                     <div id="spModal-coord-wrap" class="col-md-12" style="display:none;">
                         <div class="row g-2">
+                            <div class="col-md-12">
+                                <label class="form-label" id="spModal-lat-label">Latitude (derajat, menit, detik)</label>
+                                <div class="d-flex align-items-center flex-wrap gap-1">
+                                    <input type="text" inputmode="numeric" class="form-control form-control-sm sp-dms-part" data-coord="lat" data-part="d" placeholder="0" style="width:70px;" data-no-disable>
+                                    <span class="text-muted">°</span>
+                                    <input type="text" inputmode="numeric" class="form-control form-control-sm sp-dms-part" data-coord="lat" data-part="m" placeholder="0" style="width:70px;" data-no-disable>
+                                    <span class="text-muted">'</span>
+                                    <input type="text" inputmode="decimal" class="form-control form-control-sm sp-dms-part" data-coord="lat" data-part="s" placeholder="0.0" style="width:90px;" data-no-disable>
+                                    <span class="text-muted">"</span>
+                                    <select class="form-select form-select-sm sp-dms-dir" data-coord="lat" style="width:72px;" data-no-disable>
+                                        <option value="N">N</option>
+                                        <option value="S">S</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label" id="spModal-lng-label">Longitude (derajat, menit, detik)</label>
+                                <div class="d-flex align-items-center flex-wrap gap-1">
+                                    <input type="text" inputmode="numeric" class="form-control form-control-sm sp-dms-part" data-coord="lng" data-part="d" placeholder="0" style="width:70px;" data-no-disable>
+                                    <span class="text-muted">°</span>
+                                    <input type="text" inputmode="numeric" class="form-control form-control-sm sp-dms-part" data-coord="lng" data-part="m" placeholder="0" style="width:70px;" data-no-disable>
+                                    <span class="text-muted">'</span>
+                                    <input type="text" inputmode="decimal" class="form-control form-control-sm sp-dms-part" data-coord="lng" data-part="s" placeholder="0.0" style="width:90px;" data-no-disable>
+                                    <span class="text-muted">"</span>
+                                    <select class="form-select form-select-sm sp-dms-dir" data-coord="lng" style="width:72px;" data-no-disable>
+                                        <option value="E">E</option>
+                                        <option value="W">W</option>
+                                    </select>
+                                </div>
+                            </div>
                             <div class="col-md-6">
-                                <label class="form-label" id="spModal-lat-label">Latitude</label>
+                                <label class="form-label text-muted" style="font-size:11px;">Desimal (tersimpan)</label>
                                 <input type="number" step="any" class="form-control form-control-sm" id="spModal-latitude" placeholder="-6.12345678" data-no-disable>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label" id="spModal-lng-label">Longitude</label>
+                                <label class="form-label text-muted" style="font-size:11px;">&nbsp;</label>
                                 <input type="number" step="any" class="form-control form-control-sm" id="spModal-longitude" placeholder="106.12345678" data-no-disable>
-                            </div>
-                            <div class="col-md-12">
-                                <small class="text-muted" id="spModal-dms-preview"></small>
                             </div>
                         </div>
                     </div>
@@ -148,6 +175,48 @@ function decimalToDms(deg, isLat) {
 function coordToDms(lat, lng) {
     if (lat === '' || lat === null || lat === undefined || lng === '' || lng === null || lng === undefined) return '';
     return `${decimalToDms(lat, true)} ${decimalToDms(lng, false)}`;
+}
+
+// Input DMS di modal Sampling Point → isi desimal (lat/lng). Bagian yang belum lengkap = desimal dikosongkan.
+function spDmsToDecimal(coord) {
+    const part = (p) => $(`.sp-dms-part[data-coord="${coord}"][data-part="${p}"]`).val().trim();
+    const d = part('d'), m = part('m'), s = part('s');
+    const dir = $(`.sp-dms-dir[data-coord="${coord}"]`).val();
+    const targetId = coord === 'lat' ? '#spModal-latitude' : '#spModal-longitude';
+    if (d === '' || m === '' || s === '') {
+        $(targetId).val('');
+        return;
+    }
+    const dv = parseFloat(d), mv = parseFloat(m), sv = parseFloat(s.replace(',', '.'));
+    if ([dv, mv, sv].some(isNaN) || mv < 0 || mv >= 60 || sv < 0 || sv >= 60) {
+        $(targetId).val('');
+        return;
+    }
+    let dec = dv + mv / 60 + sv / 3600;
+    if (dir === 'S' || dir === 'W') dec = -dec;
+    $(targetId).val(dec.toFixed(8).replace(/\.?0+$/, ''));
+}
+
+// Desimal tersimpan → isi bagian DMS (dipakai saat edit, paste "lat, long", atau ketik desimal).
+function spDecimalToDms(coord) {
+    const targetId = coord === 'lat' ? '#spModal-latitude' : '#spModal-longitude';
+    const raw = $(targetId).val();
+    const set = (p, v) => $(`.sp-dms-part[data-coord="${coord}"][data-part="${p}"]`).val(v);
+    if (raw === '' || raw === null || isNaN(parseFloat(raw))) {
+        ['d', 'm', 's'].forEach((p) => set(p, ''));
+        return;
+    }
+    const v = parseFloat(raw);
+    const totalMs = Math.round(Math.abs(v) * 3600 * 1000);
+    const deg = Math.floor(totalMs / 3600000);
+    const min = Math.floor((totalMs % 3600000) / 60000);
+    const sec = (totalMs % 60000) / 1000;
+    set('d', deg);
+    set('m', min);
+    set('s', String(parseFloat(sec.toFixed(3))));
+    const dirSel = $(`.sp-dms-dir[data-coord="${coord}"]`);
+    if (coord === 'lat') dirSel.val(v >= 0 ? 'N' : 'S');
+    else dirSel.val(v >= 0 ? 'E' : 'W');
 }
 
 // Versi spCoordCell + baris DMS di bawahnya — khusus tabel Sampling Point.
@@ -256,11 +325,18 @@ function initSamplingTabEvents() {
     // termasuk Koordinat Site) — lihat listener global `paste` di sana.
     // Di sini cukup ikuti event 'input'/'change' yang di-trigger-nya buat
     // efek khusus modal ini: preview DMS live + auto-centang "Ada Koordinat".
-    $(document).off('input.sp-dms', '#spModal-latitude, #spModal-longitude')
-        .on('input.sp-dms', '#spModal-latitude, #spModal-longitude', function () {
+    // Input DMS (derajat/menit/detik) → desimal tersimpan. Desimal diisi
+    // langsung (atau lewat paste "lat, long") → balik mengisi bagian DMS.
+    $(document).off('input.sp-dms', '.sp-dms-part, .sp-dms-dir')
+        .on('input.sp-dms change.sp-dms', '.sp-dms-part, .sp-dms-dir', function () {
+            spDmsToDecimal($(this).data('coord'));
+        });
+
+    $(document).off('input.sp-dec', '#spModal-latitude, #spModal-longitude')
+        .on('input.sp-dec', '#spModal-latitude, #spModal-longitude', function () {
+            spDecimalToDms(this.id === 'spModal-latitude' ? 'lat' : 'lng');
             const lat = $('#spModal-latitude').val();
             const lng = $('#spModal-longitude').val();
-            $('#spModal-dms-preview').text(coordToDms(lat, lng));
             if (lat && lng && !$('#spModal-has-coord-wrap').is(':hidden')) {
                 $('#spModal-has-coord').prop('checked', true).trigger('change');
             }
@@ -395,7 +471,8 @@ function _openSpModal({ jenis, idSite, coordRequired, isEdit, data }) {
     $('#spModal-nama').val(isEdit ? data.nama : '');
     $('#spModal-latitude').val(isEdit ? (data.latitude ?? '') : '');
     $('#spModal-longitude').val(isEdit ? (data.longitude ?? '') : '');
-    $('#spModal-dms-preview').text(isEdit ? coordToDms(data.latitude, data.longitude) : '');
+    spDecimalToDms('lat');
+    spDecimalToDms('lng');
     $('#spModal-gedung').val(isEdit ? (data.gedung ?? '') : '');
     $('#spModal-ruangan').val(isEdit ? (data.ruangan ?? '') : '');
     $('#spModal-lantai').val(isEdit ? (data.lantai ?? '') : '');
