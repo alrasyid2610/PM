@@ -74,7 +74,6 @@
             </td>
             <td>
                 <table class="info-table">
-                    <tr><td class="label">PIC Input</td><td class="colon">:</td><td class="value">{{ $sq->nama_pic_input ?? '-' }}</td></tr>
                     <tr><td class="label">Marketing Internal</td><td class="colon">:</td><td class="value">{{ $sq->nama_marketing_internal ?? '-' }}</td></tr>
                     <tr><td class="label">Marketing Eksternal</td><td class="colon">:</td><td class="value">{{ $sq->nama_marketing_eksternal ?? '-' }}</td></tr>
                     <tr><td class="label">Cara Pembayaran</td><td class="colon">:</td><td class="value">{{ $sq->cara_pembayaran ?? '-' }}</td></tr>

@@ -207,6 +207,10 @@
         loadPelangganDetails();
         initPicInternal();
 
+        // PIC Input default = user yang sedang login (tetap bisa diubah)
+        const picAuth = @json(['id' => Auth::id(), 'name' => Auth::user()->name]);
+        $('#pic_input').append(new Option(picAuth.name, picAuth.id, true, true)).trigger('change');
+
         initPicSelect('#id_pic_pelanggan', 'Pilih PIC');
         initPicSelect('#id_pic_pelanggan_delivery', 'Pilih PIC');
         initPicSelect('#id_pic_pelanggan_payment', 'Pilih PIC');

@@ -303,6 +303,7 @@
         select2Site:     "{{ url('business-relations/sites/select2') }}",
         select2Contact:  "{{ route('business-relation-contacts.select2') }}",
         select2User:     "{{ route('users.select2') }}",
+        authUser:        @json(['id' => Auth::id(), 'name' => Auth::user()->name]),
         select2Satuan:   "{{ route('satuan.select2') }}",
         select2TestingPoint: "{{ route('testing-points.select2') }}",
         itemsByPoint:    "{{ url('testing-items/by-point') }}/",

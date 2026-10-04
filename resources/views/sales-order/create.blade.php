@@ -517,6 +517,10 @@
                 },
             });
         });
+
+        // PIC Input default = user yang sedang login (tetap bisa diubah)
+        const picAuth = @json(['id' => Auth::id(), 'name' => Auth::user()->name]);
+        $('#pic_input').append(new Option(picAuth.name, picAuth.id, true, true)).trigger('change');
     }
 
     // Validasi field wajib manual sebelum submit — select2 menyembunyikan

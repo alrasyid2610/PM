@@ -168,7 +168,8 @@ function fillSoForm(so) {
     initPicSelect('#so_id_pic_pelanggan_delivery', soCompanyIds, so.id_pic_pelanggan_delivery, so.pic_delivery);
     initPicSelect('#so_id_pic_pelanggan_payment', soCompanyIds, so.id_pic_pelanggan_payment, so.pic_payment);
 
-    initUserSelect('#so_pic_input', so.pic_input, so.nama_pic_input);
+    // PIC Input = user yang sedang login (bukan dari SO sumber), tetap bisa diubah
+    initUserSelect('#so_pic_input', window.cloneRoute.authUser.id, window.cloneRoute.authUser.name);
     initUserSelect('#so_pic_order', so.pic_order, so.nama_pic_order);
     initUserSelect('#so_pic_marketing_internal', so.pic_marketing_internal, so.nama_marketing_internal);
     initUserSelect('#so_pic_marketing_eksternal', so.pic_marketing_eksternal, so.nama_marketing_eksternal);
