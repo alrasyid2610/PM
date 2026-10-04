@@ -354,11 +354,10 @@ function renderAttachments(attachments) {
         const ic   = iconMap[ext] ?? { icon: "fa-file", bg: "#f3f4f6", color: "#6b7280" };
         const isImage = ["jpg", "jpeg", "png", "gif", "webp"].includes(ext);
 
-        const previewBtn = isImage
-            ? `<button type="button" class="att-btn att-btn-preview attachment-image-trigger" data-src="${url}" title="Preview">
+        // Preview semua jenis file lewat engine umum (core/filePreview.js)
+        const previewBtn = `<button type="button" class="att-btn att-btn-preview btn-file-preview" data-files='${JSON.stringify([file]).replace(/'/g, "&#39;")}' data-title="${name}" title="Preview">
                    <i class="fa-solid fa-eye"></i>
-               </button>`
-            : "";
+               </button>`;
 
         const deleteBtn = isEditing
             ? `<button type="button" class="att-btn att-btn-delete btn-delete-attachment" data-file="${file}" title="Hapus">

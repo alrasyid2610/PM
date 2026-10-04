@@ -798,6 +798,14 @@ function bindBudgetCardToggle($body) {
 // (dilaporkan user via screenshot). Sekarang tinggi baris konsisten pendek,
 // kolom Qty/Satuan/Harga/Keterangan yang memang perlu diedit dapat ruang
 // lebih lega.
+// Persen discount awal dari discount sumber (Rupiah) ÷ (qty × harga)
+function discountPersenOf(r) {
+    const gross = (Number(r.qty) || 0) * (Number(r.harga) || 0);
+    return gross > 0 && Number(r.discount) > 0
+        ? Math.round((Number(r.discount) / gross) * 10000) / 100
+        : '';
+}
+
 function buildBoqTableHtml(items, rowClass) {
     const rows = items.map((r) => {
         const pointName = r.point_name || r.nama_testing_point || r.item_produk_alternate || '-';
@@ -810,6 +818,7 @@ function buildBoqTableHtml(items, rowClass) {
                 <td style="width:90px;"><input type="number" class="form-control form-control-sm row-qty" value="${r.qty ?? ''}"></td>
                 <td style="width:150px;"><select class="form-select form-select-sm row-satuan"></select></td>
                 <td style="width:130px;"><input type="text" class="form-control form-control-sm input-num-mask input-num-int row-harga" value="${r.harga ?? 0}"></td>
+                <td style="width:80px;"><input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm row-disc-persen" value="${discountPersenOf(r)}" placeholder="%"></td>
                 <td><input type="text" class="form-control form-control-sm row-keterangan" value="${escHtml(r.keterangan || '')}"></td>
             </tr>`;
     }).join('');
@@ -825,6 +834,7 @@ function buildBoqTableHtml(items, rowClass) {
                             <th>Qty</th>
                             <th>Satuan</th>
                             <th>Harga</th>
+                            <th style="width:80px;">Disc (%)</th>
                             <th>Keterangan</th>
                         </tr>
                     </thead>
@@ -853,11 +863,12 @@ function newBoqRowHtml() {
             <td style="width:90px;"><input type="number" class="form-control form-control-sm row-qty" value=""></td>
             <td style="width:150px;"><select class="form-select form-select-sm row-satuan"></select></td>
             <td style="width:130px;"><input type="text" class="form-control form-control-sm input-num-mask input-num-int row-harga" value="0"></td>
+            <td style="width:80px;"><input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm row-disc-persen" value="" placeholder="%"></td>
             <td><input type="text" class="form-control form-control-sm row-keterangan" value=""></td>
         </tr>
         <tr class="boq-new-row-items">
             <td></td>
-            <td colspan="5">
+            <td colspan="6">
                 <div class="new-boq-items-toggle d-none mb-1" style="cursor:pointer;">
                     <i class="fa-solid fa-chevron-down me-1 toggle-icon" style="font-size:10px;transition:transform .15s;"></i>
                     <span class="fw-semibold small">Testing Item</span>
@@ -1559,6 +1570,9 @@ function collectWoPayload($card, wo) {
                 harga: rawNumVal($row.find('.row-harga')[0]) ?? 0,
                 keterangan: $row.find('.row-keterangan').val() || null,
             };
+            // Discount per item (persen) — hanya baris BOQ yang punya input-nya
+            const $dp = $row.find('.row-disc-persen');
+            if ($dp.length) base.discount_persen = parseFloat(String($dp.val() || '').replace(',', '.')) || 0;
             base[keyField] = $row.data(keyField.replace(/_/g, '-')) || null;
             if (nameEditable) base.nama_item = $row.find('.row-nama').val();
 

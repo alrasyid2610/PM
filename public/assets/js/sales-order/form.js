@@ -1,4 +1,30 @@
+// Subtotal BOQ SO (product + Other + Sampling) — dasar hitung discount persen ↔ Rupiah.
+// 0 = belum ada BOQ → field Rupiah dibiarkan kosong (dihitung saat print).
+window.soDiscountSubtotal = 0;
+
+// Discount persen ↔ Rupiah saling mengisi (lihat resolveSoDiscount di SalesOrderController)
+$(document).off("input.soDiscount", ".discount-persen-input").on("input.soDiscount", ".discount-persen-input", function () {
+    const sub = window.soDiscountSubtotal || 0;
+    const pct = parseFloat(String(this.value).replace(",", "."));
+    if (!sub || isNaN(pct)) {
+        $(".discount-rp-input").val("");
+        return;
+    }
+    $(".discount-rp-input").val(Math.round((sub * pct) / 100).toLocaleString("en-US"));
+});
+
+$(document).off("input.soDiscount", ".discount-rp-input").on("input.soDiscount", ".discount-rp-input", function () {
+    const sub = window.soDiscountSubtotal || 0;
+    const rp = parseInt(String(this.value).replace(/,/g, ""), 10);
+    if (!sub || isNaN(rp)) {
+        $(".discount-persen-input").val("");
+        return;
+    }
+    $(".discount-persen-input").val(Math.round((rp / sub) * 10000) / 100);
+});
+
 function renderForm(res) {
+    window.soDiscountSubtotal = Number(res.subtotal_so ?? 0);
     const isDeleted = !!res.deleted_at;
     const statusBadge = isDeleted
         ? `<span class="pm-badge" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;">
@@ -230,13 +256,23 @@ function renderForm(res) {
                         },
                     )}
                     ${formGroup.text(
-                        "discount",
-                        "Discount (Rp)",
-                        res.discount ?? 0,
+                        "discount_persen",
+                        "Discount (%)",
+                        res.discount_persen != null ? Number(res.discount_persen) : "",
                         false,
                         {
-                            className: "col-md-6",
-                            inputClass: "input-num-mask input-num-int",
+                            className: "col-md-3",
+                            inputClass: "discount-persen-input",
+                        },
+                    )}
+                    ${formGroup.text(
+                        "discount",
+                        "Discount (Rp)",
+                        (res.subtotal_so ?? 0) > 0 ? (res.discount ?? 0) : "",
+                        false,
+                        {
+                            className: "col-md-3",
+                            inputClass: "input-num-mask input-num-int discount-rp-input",
                         },
                     )}
                 </div>`,

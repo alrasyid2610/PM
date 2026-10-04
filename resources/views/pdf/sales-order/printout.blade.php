@@ -163,6 +163,12 @@
             $totalOther = $otherItems->sum(fn($r) => (int) ($r->qty ?? 0) * (int) ($r->harga ?? 0));
             $samplingItems = $boqSamplingRows->get($wo->id_wo, collect());
             $totalSampling = $samplingItems->sum(fn($r) => (int) ($r->qty ?? 0) * (int) ($r->harga ?? 0));
+            // Kolom Discount hanya tampil bila ada item BOQ yang discount di WO ini
+            $showDisc = $items->contains(fn($r) => min((int) ($r->discount ?? 0), (int) ($r->qty ?? 0) * (int) ($r->harga ?? 0)) > 0);
+            // Lebar kolom BOQ (%); tanpa Discount, sisa lebar dibagi ulang (×100/85)
+            $boqCols = $showDisc
+                ? [3, 12, 17, 13, 4, 6, 10, 15, 11, 9]
+                : [3.53, 14.12, 20, 15.29, 4.71, 7.06, 11.76, 12.94, 10.59];
         @endphp
         <div class="wo-block">
             <span class="wo-block-header">{{ $wo->no_wo }} — {{ $wo->judul_pekerjaan ?? '-' }}</span>
@@ -193,16 +199,9 @@
             @else
                 <table class="boq-table wo-boq-table">
                     <colgroup>
-                        <col style="width:3%">
-                        <col style="width:12%">
-                        <col style="width:17%">
-                        <col style="width:13%">
-                        <col style="width:4%">
-                        <col style="width:6%">
-                        <col style="width:10%">
-                        <col style="width:15%">
-                        <col style="width:11%">
-                        <col style="width:9%">
+                        @foreach ($boqCols as $w)
+                        <col style="width:{{ $w }}%">
+                        @endforeach
                     </colgroup>
                     <thead>
                         <tr>
@@ -213,7 +212,7 @@
                             <th class="boq-th boq-center">Qty</th>
                             <th class="boq-th">Satuan</th>
                             <th class="boq-th text-right">Harga</th>
-                            <th class="boq-th text-right">Discount</th>
+                            @if ($showDisc)<th class="boq-th text-right">Discount</th>@endif
                             <th class="boq-th text-right">Subtotal</th>
                             <th class="boq-th">Keterangan</th>
                         </tr>
@@ -247,7 +246,9 @@
                                     ? ' (' . rtrim(rtrim(number_format($rDisc / $rGross * 100, 2, ',', '.'), '0'), ',') . '%)'
                                     : '';
                             @endphp
-                            <td class="boq-td text-right boq-nowrap">{!! $rDisc > 0 ? '- ' . e($fmtMoney($rDisc)) . ' <span class="pct-note">' . e(trim($rPct)) . '</span>' : '-' !!}</td>
+                            @if ($showDisc)
+                            <td class="boq-td text-right boq-nowrap">{!! $rDisc > 0 ? '(' . e($fmtMoney($rDisc)) . ') <span class="pct-note">' . e(trim($rPct)) . '</span>' : '-' !!}</td>
+                            @endif
                             <td class="boq-td text-right boq-nowrap">{{ $fmtMoney($rGross - $rDisc) }}</td>
                             <td class="boq-td">{{ $r->keterangan ?? '-' }}</td>
                         </tr>
@@ -255,7 +256,7 @@
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td class="boq-td text-right" colspan="8">Total Nilai BOQ (setelah discount)</td>
+                            <td class="boq-td text-right" colspan="{{ $showDisc ? 8 : 7 }}">Total Nilai BOQ (setelah discount)</td>
                             <td class="boq-td text-right boq-nowrap">{{ $fmtMoney($totalNilai) }}</td>
                             <td class="boq-td"></td>
                         </tr>
@@ -305,26 +306,28 @@
         $discountPctLabel = ($subtotalSo > 0 && $discountSo > 0)
             ? ' (' . rtrim(rtrim(number_format($discountSo / $subtotalSo * 100, 2, ',', '.'), '0'), ',') . '%)'
             : '';
+        // Kolom Disc. BOQ di rekap hanya tampil bila ada WO yang punya discount BOQ
+        $showRekapDisc = $rekapWo->contains(fn($r) => $r->disc_boq > 0);
+        // Lebar kolom rekap (%); tanpa Disc. BOQ (12%), sisanya dibagi ulang (×100/88)
+        $rekapCols = $showRekapDisc
+            ? [4, 24, 14, 12, 14, 14, 18]
+            : [4.55, 27.27, 15.91, 15.91, 15.91, 20.45];
     @endphp
     <div style="page-break-inside: avoid;">
         <div class="section-title">Grand Total</div>
         @if ($rekapWo->isNotEmpty())
         <table class="boq-table wo-boq-table" style="margin-bottom:8px;">
             <colgroup>
-                <col style="width:4%">
-                <col style="width:24%">
-                <col style="width:14%">
-                <col style="width:12%">
-                <col style="width:14%">
-                <col style="width:14%">
-                <col style="width:18%">
+                @foreach ($rekapCols as $w)
+                <col style="width:{{ $w }}%">
+                @endforeach
             </colgroup>
             <thead>
                 <tr>
                     <th class="boq-th boq-no">No</th>
                     <th class="boq-th">Work Order</th>
                     <th class="boq-th text-right">BOQ</th>
-                    <th class="boq-th text-right">Disc. BOQ</th>
+                    @if ($showRekapDisc)<th class="boq-th text-right">Disc. BOQ</th>@endif
                     <th class="boq-th text-right">BOQ Other</th>
                     <th class="boq-th text-right">BOQ Sampling</th>
                     <th class="boq-th text-right">Total WO</th>
@@ -336,7 +339,9 @@
                     <td class="boq-td boq-center">{{ $i + 1 }}</td>
                     <td class="boq-td">{{ $r->no_wo }} — {{ $r->judul ?? '-' }}</td>
                     <td class="boq-td text-right boq-nowrap">{{ $fmtMoney($r->boq) }}</td>
-                    <td class="boq-td text-right boq-nowrap">{{ $r->disc_boq > 0 ? '- ' . $fmtMoney($r->disc_boq) : '-' }}</td>
+                    @if ($showRekapDisc)
+                    <td class="boq-td text-right boq-nowrap">{{ $r->disc_boq > 0 ? '(' . $fmtMoney($r->disc_boq) . ')' : '-' }}</td>
+                    @endif
                     <td class="boq-td text-right boq-nowrap">{{ $fmtMoney($r->other) }}</td>
                     <td class="boq-td text-right boq-nowrap">{{ $fmtMoney($r->sampling) }}</td>
                     <td class="boq-td text-right boq-nowrap">{{ $fmtMoney($r->total) }}</td>
@@ -353,7 +358,7 @@
                 </tr>
                 <tr>
                     <td class="boq-td">Discount{{ $discountPctLabel }}</td>
-                    <td class="boq-td text-right boq-nowrap">- {{ $fmtMoney($discountSo) }}</td>
+                    <td class="boq-td text-right boq-nowrap">({{ $fmtMoney($discountSo) }})</td>
                 </tr>
             </tbody>
             <tfoot>

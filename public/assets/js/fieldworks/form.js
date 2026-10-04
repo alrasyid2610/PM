@@ -1034,6 +1034,9 @@ function renderFwoAttachmentView(groups) {
                     <span class="att-ext">${ext.toUpperCase()}</span>
                 </div>
                 <div class="att-actions">
+                    <button type="button" class="att-btn att-btn-preview btn-file-preview" data-files='${escHtml(JSON.stringify([path]))}' data-title="${escHtml(name)}" title="Preview">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
                     <a href="${url}" download class="att-btn att-btn-download" title="Download">
                         <i class="fa-solid fa-download"></i>
                     </a>

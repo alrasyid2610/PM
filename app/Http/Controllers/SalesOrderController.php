@@ -106,7 +106,10 @@ class SalesOrderController extends Controller
         $request->validate(array_merge($this->soRequiredRules(), [
             'attachments'   => 'nullable|array',
             'attachments.*' => 'nullable|file|max:153600',
-        ]), $this->soRequiredMessages());
+            'discount_persen' => 'nullable|numeric|min:0|max:100',
+        ]), array_merge($this->soRequiredMessages(), [
+            'discount_persen.max' => 'Discount persen tidak boleh lebih dari 100.',
+        ]));
 
         $soNumber = $this->generateSoNumber();
 
@@ -131,6 +134,10 @@ class SalesOrderController extends Controller
             'tanggal_selesai' => $request->tanggal_selesai,
 
             'id_office' => $request->id_office,
+
+            // DISCOUNT — SO baru belum punya BOQ, jadi Rupiah 0 & persen disimpan apa adanya
+            'discount' => 0,
+            'discount_persen' => $request->filled('discount_persen') ? round((float) $request->discount_persen, 4) : null,
 
             // CUSTOMER
             'id_pelanggan' => $request->id_pelanggan,
@@ -175,6 +182,53 @@ class SalesOrderController extends Controller
         ]);
     }
 
+
+    /**
+     * Subtotal semua BOQ SO (BOQ product setelah discount per item + BOQ Other
+     * + BOQ Sampling) — dasar perhitungan discount persen. Sama dengan angka
+     * "Subtotal (semua WO)" di printout.
+     */
+    private function soSubtotal($idSo): int
+    {
+        $woIds = DB::table('work_orders')->where('id_so', $idSo)->whereNull('deleted_at')->pluck('id_wo');
+        if ($woIds->isEmpty()) return 0;
+
+        $boq = (int) DB::table('boq')->whereIn('id_wo', $woIds)->whereNull('deleted_at')
+            ->selectRaw('COALESCE(SUM(GREATEST(0, qty * harga - discount)), 0) as t')->value('t');
+        $tambahan = (int) DB::table('boq_tambahan')->whereIn('id_wo', $woIds)->whereNull('deleted_at')
+            ->selectRaw('COALESCE(SUM(qty * harga), 0) as t')->value('t');
+
+        return $boq + $tambahan;
+    }
+
+    /**
+     * Discount SO yang berlaku (Rupiah). Kalau persen tersimpan, persen × subtotal
+     * dihitung SAAT INI (ikut berubah bila BOQ berubah); kalau tidak, pakai Rupiah tersimpan.
+     */
+    private function soEffectiveDiscount($so, int $subtotal): int
+    {
+        if ($so->discount_persen !== null) {
+            return (int) round($subtotal * (float) $so->discount_persen / 100);
+        }
+        return (int) ($so->discount ?? 0);
+    }
+
+    /**
+     * Dari input user (persen ATAU Rupiah) → [Rupiah, persen] yang disimpan.
+     * Persen diutamakan bila diisi. Subtotal 0 → Rupiah 0, persen tetap tersimpan.
+     */
+    private function resolveSoDiscount(?float $persen, ?int $rupiah, int $subtotal): array
+    {
+        if ($persen !== null) {
+            $rp = $subtotal > 0 ? (int) round($subtotal * $persen / 100) : 0;
+            return [$rp, round($persen, 4)];
+        }
+        if ($rupiah !== null) {
+            $pct = $subtotal > 0 ? round($rupiah / $subtotal * 100, 4) : null;
+            return [$rupiah, $pct];
+        }
+        return [0, null];
+    }
 
     private function generateSoNumber()
     {
@@ -268,6 +322,10 @@ class SalesOrderController extends Controller
         $so->pelanggan_delivery_display = brDisplayName($so->entitas_delivery, $so->pelanggan_delivery);
         $so->pelanggan_pay_display    = brDisplayName($so->entitas_pay, $so->pelanggan_pay);
 
+        // Discount: subtotal BOQ (untuk hitung ulang IDR dari persen) & nilai IDR yang berlaku
+        $so->subtotal_so = $this->soSubtotal($id);
+        $so->discount    = $this->soEffectiveDiscount($so, $so->subtotal_so);
+
         return response()->json($so);
     }
 
@@ -315,6 +373,7 @@ class SalesOrderController extends Controller
             'pic_marketing_eksternal' => 'nullable|integer',
             'id_sc' => 'nullable|integer',
             'discount' => 'nullable|integer|min:0',
+            'discount_persen' => 'nullable|numeric|min:0|max:100',
             'keterangan_status' => 'nullable|string',
             'cara_pembayaran'   => 'nullable|string',
             'keterangan'        => 'nullable|string',
@@ -326,6 +385,7 @@ class SalesOrderController extends Controller
         ]), array_merge($this->soRequiredMessages(), [
             'discount.integer' => 'Discount harus berupa angka bulat (Rupiah).',
             'discount.min'     => 'Discount tidak boleh negatif.',
+            'discount_persen.max' => 'Discount persen tidak boleh lebih dari 100.',
         ]));
 
         // Gabungan attachment lama (yang tidak dihapus user) + file baru yang diupload
@@ -336,6 +396,13 @@ class SalesOrderController extends Controller
             $newAtt = $upload['files'];
         }
         $mergedAtt = json_encode(array_values(array_merge($existingAtt, $newAtt)));
+
+        // Discount: persen atau Rupiah → keduanya disimpan (lihat resolveSoDiscount)
+        [$discountRp, $discountPersen] = $this->resolveSoDiscount(
+            $request->filled('discount_persen') ? (float) $request->discount_persen : null,
+            $request->filled('discount') ? (int) $request->discount : null,
+            $this->soSubtotal($id)
+        );
 
         try {
 
@@ -348,7 +415,8 @@ class SalesOrderController extends Controller
                 ->where('id_so', $id)
                 ->update([
                     'id_sc'      => !empty($validated['id_sc']) ? (int)$validated['id_sc'] : null,
-                    'discount'   => (int) ($validated['discount'] ?? 0),
+                    'discount'   => $discountRp,
+                    'discount_persen' => $discountPersen,
                     'tanggal_so' => $validated['tanggal_so'],
                     'judul_order' => $validated['judul_order'] ?? null,
                     'tidak_ada_po' => $validated['tidak_ada_po'] ?? 0,
@@ -715,6 +783,9 @@ class SalesOrderController extends Controller
         $boqSamplingRows = $boqTambahanBase->where('jenis', 'sampling')->groupBy('id_wo');
 
         $intervalLabels = [1 => 'Bulanan', 2 => 'Bimulanan', 3 => 'Triwulan', 4 => 'Caturwulan', 6 => 'Semester', 12 => 'Annual'];
+
+        // Discount dihitung ulang dari persen × subtotal BOQ saat ini (kalau persen tersimpan)
+        $so->discount = $this->soEffectiveDiscount($so, $this->soSubtotal($id));
 
         return Pdf::view('pdf.sales-order.printout', [
             'so'              => $so,
@@ -1091,6 +1162,7 @@ class SalesOrderController extends Controller
             'wos.*.boq.*.source_id_boq'       => 'nullable|integer',
             'wos.*.boq.*.include'             => 'required|boolean',
             'wos.*.boq.*.qty'                 => 'nullable|integer',
+            'wos.*.boq.*.discount_persen'     => 'nullable|numeric|min:0|max:100',
             'wos.*.boq.*.id_satuan'           => 'nullable|integer',
             'wos.*.boq.*.harga'               => 'nullable|integer',
             'wos.*.boq.*.keterangan'          => 'nullable|string',
@@ -1321,11 +1393,19 @@ class SalesOrderController extends Controller
                                 'qty'                   => $boqInput['qty'] ?? $sourceBoq->qty,
                                 'id_satuan'             => $boqInput['id_satuan'] ?? $sourceBoq->id_satuan,
                                 'harga'                 => $boqInput['harga'] ?? $sourceBoq->harga,
-                                // Discount ikut disalin dari BOQ sumber, dibatasi maks. qty × harga baru
-                                'discount'              => max(0, min(
-                                    (int) ($sourceBoq->discount ?? 0),
-                                    (int) ($boqInput['qty'] ?? $sourceBoq->qty) * (int) ($boqInput['harga'] ?? $sourceBoq->harga)
-                                )),
+                                // Discount: persen (kalau diisi user di form clone) × harga kotor baru;
+                                // kalau tidak, Rupiah dari sumber dibatasi maks. harga kotor baru
+                                ...(function () use ($boqInput, $sourceBoq) {
+                                    $qtyBaru   = (int) ($boqInput['qty'] ?? $sourceBoq->qty);
+                                    $hargaBaru = (int) ($boqInput['harga'] ?? $sourceBoq->harga);
+                                    $gross     = $qtyBaru * $hargaBaru;
+                                    if (isset($boqInput['discount_persen']) && $boqInput['discount_persen'] !== '') {
+                                        $p = max(0, min(100, (float) $boqInput['discount_persen']));
+                                        return ['discount' => (int) round($gross * $p / 100), 'discount_persen' => round($p, 4)];
+                                    }
+                                    $rp = max(0, min((int) ($sourceBoq->discount ?? 0), $gross));
+                                    return ['discount' => $rp, 'discount_persen' => $gross > 0 ? round($rp / $gross * 100, 4) : null];
+                                })(),
                                 'keterangan'            => $boqInput['keterangan'] ?? $sourceBoq->keterangan,
                                 'created_at'            => now(),
                                 'updated_at'            => now(),

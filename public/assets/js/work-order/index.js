@@ -427,7 +427,7 @@ function renderOutputOtherList(rows, total, isLocked) {
             : '—';
         const files = r.attachments || [];
         const filesHtml = files.length
-            ? files.map(f => `<a href="/storage/${f}" target="_blank" class="d-block" style="font-size:11px;"><i class="fa-solid fa-paperclip me-1"></i>${escHtml(f.split('/').pop())}</a>`).join('')
+            ? files.map(f => `<div class="d-flex align-items-center gap-1" style="font-size:11px;"><i class="fa-solid fa-paperclip me-1"></i><span class="text-truncate" title="${escHtml(filePreviewName(f))}">${escHtml(filePreviewName(f))}</span>${renderFilePreviewButton([f])}</div>`).join('')
             : '<span class="text-muted" style="font-size:11px;">—</span>';
         const drive = r.link_drive
             ? `<a href="${escHtml(r.link_drive)}" target="_blank" style="font-size:11px;color:#1a56db;"><i class="fa-brands fa-google-drive me-1"></i>Drive</a>`
@@ -567,7 +567,8 @@ $(document).on('click', '.btn-output-other-edit', function (e) {
             const filesHtml = files.length
                 ? files.map(f => `<div class="d-flex align-items-center gap-2 mb-1" style="font-size:12px;">
                         <i class="fa-solid fa-paperclip"></i>
-                        <a href="/storage/${f}" target="_blank">${escHtml(f.split('/').pop())}</a>
+                        <span class="text-truncate" style="max-width:260px;" title="${escHtml(filePreviewName(f))}">${escHtml(filePreviewName(f))}</span>
+                        ${renderFilePreviewButton([f])}
                         <a href="#" class="btn-remove-existing-output-file" style="font-size:11px;color:#dc2626;cursor:pointer;">Hapus</a>
                         <input type="hidden" class="existing-output-file-path" value="${escHtml(f)}">
                     </div>`).join('')
@@ -1552,7 +1553,8 @@ $(document).on('click', '.btn-wo-sample-edit', function (e) {
             const filesHtml = files.length
                 ? files.map(f => `<div class="d-flex align-items-center gap-2 mb-1" style="font-size:12px;">
                         <i class="fa-solid fa-paperclip"></i>
-                        <a href="/storage/${f}" target="_blank">${escHtml(f.split('/').pop())}</a>
+                        <span class="text-truncate" style="max-width:260px;" title="${escHtml(filePreviewName(f))}">${escHtml(filePreviewName(f))}</span>
+                        ${renderFilePreviewButton([f])}
                         <a href="#" class="btn-remove-existing-wo-sample-file" style="font-size:11px;color:#dc2626;cursor:pointer;">Hapus</a>
                         <input type="hidden" class="existing-wo-sample-file-path" value="${escHtml(f)}">
                     </div>`).join('')
@@ -2329,9 +2331,7 @@ function renderOutputTable(outputs) {
                         attachHtml = files
                             .map(function (p) {
                                 return (
-                                    '<a href="/storage/' +
-                                    p +
-                                    '" target="_blank" ' +
+                                    '<a href="#" class="btn-file-preview" data-title="' + escHtml(outputFileName(p)) + '" data-files=\'' + escHtml(JSON.stringify([p])) + '\' ' +
                                     'class="d-inline-flex align-items-center gap-1 me-1" ' +
                                     'style="font-size:11px;color:#1a56db;text-decoration:none;">' +
                                     '<i class="fa-solid fa-paperclip" style="font-size:10px;"></i>' +
@@ -2443,9 +2443,7 @@ function showOutputForm(data) {
                         return (
                             '<div class="d-inline-flex align-items-center gap-1 me-2 mb-1 existing-file-item" ' +
                             'style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:2px 8px;">' +
-                            '<a href="/storage/' +
-                            p +
-                            '" target="_blank" style="font-size:11px;color:#166534;text-decoration:none;">' +
+                            '<a href="#" class="btn-file-preview" data-title="' + escHtml(outputFileName(p)) + '" data-files=\'' + escHtml(JSON.stringify([p])) + '\' style="font-size:11px;color:#166534;text-decoration:none;">' +
                             '<i class="fa-solid fa-paperclip me-1" style="font-size:10px;"></i>' +
                             escHtml(outputFileName(p)) +
                             "</a>" +
@@ -3019,7 +3017,7 @@ $(document).ready(function () {
                 qty:                   qty ? parseInt(qty) : null,
                 satuan:                $row.attr('data-satuan') || null,
                 harga:                 $row.attr('data-harga') || null,
-                discount:              $row.attr('data-discount') || 0,
+                discount_persen:       parseFloat(String($row.find('.copy-wo-boq-discount-persen').val() || '').replace(',', '.')) || 0,
                 keterangan:            $row.attr('data-keterangan') || null,
                 item_produk_alternate: $row.attr('data-item-produk-alternate') || null,
                 testing_item_ids:      testingItemIds,
@@ -3402,6 +3400,11 @@ function renderCopyWoBoq(sourceItems) {
     if (hasSource) {
         sourceHtml = sourceItems.map(function(item, i) {
             const satuan = item.satuan ? escHtml(item.satuan) : '';
+            // Persen awal = discount sumber ÷ (qty × harga) — diedit user, Rupiah dihitung backend
+            const srcGross = (Number(item.qty) || 0) * (Number(item.harga) || 0);
+            const srcPct = srcGross > 0 && Number(item.discount) > 0
+                ? Math.round((Number(item.discount) / srcGross) * 10000) / 100
+                : '';
             return `<div class="copy-wo-boq-row d-flex align-items-center gap-2 p-2"
                 style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;"
                 data-id-testing-point="${item.id_testing_point}"
@@ -3419,6 +3422,10 @@ function renderCopyWoBoq(sourceItems) {
                     <input type="number" class="form-control form-control-sm text-end copy-wo-boq-qty"
                         value="${item.qty || ''}" min="1" placeholder="qty"
                         style="font-size:12px;">
+                </div>
+                <div style="width:80px;flex-shrink:0;" title="Discount (%) dari harga kotor qty × harga">
+                    <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm text-end copy-wo-boq-discount-persen"
+                        value="${srcPct}" placeholder="%" style="font-size:12px;">
                 </div>
                 <button type="button" class="btn btn-outline-danger btn-sm btn-remove-copy-wo-boq py-0 px-2" title="Hapus">
                     <i class="fa-solid fa-times" style="font-size:11px;"></i>
@@ -3514,13 +3521,23 @@ function renderCopyBudgetCard(plan) {
             <span class="fw-bold" style="font-size:13px;">${escHtml(plan.label || "-")}</span>
             ${plan.keterangan ? `<span class="text-muted" style="font-size:11px;">· ${escHtml(plan.keterangan)}</span>` : ""}
             <span class="ms-auto" style="font-size:12px;">Total: <b class="copy-budget-total" style="color:#1d4ed8;">Rp 0</b></span>
+            <button type="button" class="btn btn-sm btn-outline-secondary copy-budget-toggle py-0 px-2" title="Tampilkan/sembunyikan detail">
+                <i class="fa-solid fa-chevron-down" style="font-size:11px;"></i>
+            </button>
         </div>
-        <table class="table table-sm mb-0">
-            <thead><tr><th>Account</th><th class="text-end">Nominal</th><th>Keterangan</th></tr></thead>
-            <tbody>${itemRows}</tbody>
-        </table>
+        <div class="copy-budget-body" style="display:none;">
+            <table class="table table-sm mb-0">
+                <thead><tr><th>Account</th><th class="text-end">Nominal</th><th>Keterangan</th></tr></thead>
+                <tbody>${itemRows}</tbody>
+            </table>
+        </div>
     </div>`;
 }
+
+$(document).on("click", "#copyFwoBudgetContainer .copy-budget-toggle", function () {
+    $(this).closest(".copy-budget-card").find(".copy-budget-body").slideToggle(150);
+    $(this).find("i").toggleClass("fa-chevron-up fa-chevron-down");
+});
 
 function recalcCopyBudgetTotals() {
     $("#copyFwoBudgetContainer .copy-budget-card").each(function () {
@@ -3702,6 +3719,7 @@ function fillCopyFwoModal(fwo, boqs, budgets) {
     `);
 
     initFpDate("#modalCopyFwoBody");
+    initNumericMask(document.getElementById("copyFwoBudgetContainer"));
     recalcCopyBudgetTotals();
 
     $("#copyFwoPenyelia").select2({
@@ -3879,13 +3897,7 @@ function renderWoBudgetList(plans, isLocked) {
                     <span style="font-size:12px;">Budget: <b style="color:#1d4ed8;">${woFmtRp(p.total_budget)}</b></span>
                     <span style="font-size:12px;">Actual: <b>${woFmtRp(p.total_actual)}</b></span>
                     <span style="font-size:12px;">Selisih: <b style="color:${selisihColor};">${woFmtRp(selisih)}</b></span>
-                    ${p.dokumen_realisasi ? `
-                    <a href="/storage/${p.dokumen_realisasi}" target="_blank"
-                        class="btn btn-sm py-0 px-2" data-no-disable
-                        style="font-size:11px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;"
-                        title="Download Dokumen Realisasi yang sudah ditandatangani">
-                        <i class="fa-solid fa-file-arrow-down me-1"></i>Dok. Realisasi
-                    </a>` : ''}
+                    ${p.dokumen_realisasi ? renderFilePreviewButton([p.dokumen_realisasi], { title: 'Dokumen Realisasi (ditandatangani)' }) : ''}
                     ${!planLocked && p.items.some(i => (i.actuals || []).length > 0) && can('wo-budget-verify', 'can_update') ? `
                     <button type="button" class="btn btn-sm btn-plan-verify btn-wo-bulk-verify"
                         data-id-budget="${p.id_budget}" data-label="${escHtml(p.label)}"

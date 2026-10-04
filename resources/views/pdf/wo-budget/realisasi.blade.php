@@ -153,12 +153,6 @@
                     <p style="margin-top:4px;">( __________________________ )</p>
                     <p style="font-size:10px;color:#64748b;">Admin / Finance</p>
                 </td>
-                <td>
-                    <p style="margin-bottom:6px;">Mengetahui,</p>
-                    <div class="ttd-box"></div>
-                    <p style="margin-top:4px;">( __________________________ )</p>
-                    <p style="font-size:10px;color:#64748b;">Kepala / Manajer</p>
-                </td>
             </tr>
         </table>
     </div>

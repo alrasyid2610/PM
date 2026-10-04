@@ -422,13 +422,7 @@ function renderBudgetList(plans, isLocked) {
                     <span style="font-size:12px;">Budget: <b style="color:#1d4ed8;">${fmtRp(p.total_budget)}</b></span>
                     <span style="font-size:12px;">Actual: <b>${fmtRp(p.total_actual)}</b></span>
                     <span style="font-size:12px;">Selisih: <b style="color:${selisihColor};">${fmtRp(selisih)}</b></span>
-                    ${p.dokumen_realisasi ? `
-                    <a href="/storage/${p.dokumen_realisasi}" target="_blank"
-                        class="btn btn-sm py-0 px-2" data-no-disable
-                        style="font-size:11px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;"
-                        title="Download Dokumen Realisasi yang sudah ditandatangani">
-                        <i class="fa-solid fa-file-arrow-down me-1"></i>Dok. Realisasi
-                    </a>` : ''}
+                    ${p.dokumen_realisasi ? renderFilePreviewButton([p.dokumen_realisasi], { title: 'Dokumen Realisasi (ditandatangani)' }) : ''}
                     ${!planLocked && p.items.some(i => (i.actuals || []).length > 0) && can('fwo-budget-verify', 'can_update') ? `
                     <button type="button" class="btn btn-sm btn-plan-verify btn-bulk-verify"
                         data-id-budget="${p.id_budget}" data-label="${escHtml(p.label)}"
@@ -2593,7 +2587,8 @@ $(document).off('click.sample', '.btn-sample-edit').on('click.sample', '.btn-sam
                 const filesHtml = files.length
                     ? files.map(f => `<div class="d-flex align-items-center gap-2 mb-1" style="font-size:12px;">
                             <i class="fa-solid fa-paperclip"></i>
-                            <a href="/storage/${f}" target="_blank">${escHtml(f.split('/').pop())}</a>
+                            <span class="text-truncate" style="max-width:260px;" title="${escHtml(filePreviewName(f))}">${escHtml(filePreviewName(f))}</span>
+                            ${renderFilePreviewButton([f])}
                             <a href="#" class="btn-remove-existing-sample-file" style="font-size:11px;color:#dc2626;cursor:pointer;">Hapus</a>
                             <input type="hidden" class="existing-sample-file-path" value="${escHtml(f)}">
                         </div>`).join('')

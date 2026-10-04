@@ -608,6 +608,11 @@ function addSection(pointId, pointText, items) {
                             <input type="text" inputmode="numeric" class="form-control form-control-sm input-harga input-num-mask"
                                 placeholder="0">
                         </div>
+                        <div class="col-md-1">
+                            <label class="form-label form-label-sm text-muted mb-1">Disc (%)</label>
+                            <input type="text" inputmode="decimal" class="form-control form-control-sm input-discount-persen"
+                                placeholder="0">
+                        </div>
                         <div class="col-md-2">
                             <label class="form-label form-label-sm text-muted mb-1">Discount (Rp)</label>
                             <input type="text" inputmode="numeric" class="form-control form-control-sm input-discount input-num-mask input-num-int"
@@ -757,6 +762,11 @@ function renderExistingEditBody(sec) {
                     <input type="text" inputmode="numeric" class="form-control form-control-sm existing-edit-harga input-num-mask"
                         value="${sec.harga ?? ''}">
                 </div>
+                <div class="col-md-1">
+                    <label class="form-label form-label-sm text-muted mb-1">Disc (%)</label>
+                    <input type="text" inputmode="decimal" class="form-control form-control-sm existing-edit-discount-persen"
+                        value="${sec.discount_persen != null ? Number(sec.discount_persen) : ''}">
+                </div>
                 <div class="col-md-2">
                     <label class="form-label form-label-sm text-muted mb-1">Discount (Rp)</label>
                     <input type="text" inputmode="numeric" class="form-control form-control-sm existing-edit-discount input-num-mask input-num-int"
@@ -882,6 +892,7 @@ function saveExistingSectionItems(ptId, checkedItems) {
             id_satuan:             s.id_satuan ?? null,
             harga:                 s.harga ?? null,
             discount:              s.discount ?? 0,
+            discount_persen:       s.discount_persen ?? null,
             keterangan:            s.keterangan ?? null,
             items:                 itemIds,
         };
@@ -1019,6 +1030,45 @@ function updateExistingItemTotal($body) {
     $body.find(".existing-edit-total-line").html(boqTotalHtml(qty, harga, discount));
 }
 
+// Sama seperti syncItemDiscount() untuk section baru, versi item tersimpan
+function syncExistingItemDiscount($body, from) {
+    const gross = (rawNumVal($body.find(".existing-edit-qty")[0]) || 0) * (rawNumVal($body.find(".existing-edit-harga")[0]) || 0);
+    const $pct = $body.find(".existing-edit-discount-persen");
+    const $rp  = $body.find(".existing-edit-discount");
+
+    if (from === "persen") {
+        const pct = parseFloat(String($pct.val()).replace(",", "."));
+        if (isNaN(pct)) { $rp.val(""); return; }
+        if (!gross) { $rp.val("0"); return; }
+        $rp.val(Math.round((gross * pct) / 100).toLocaleString("en-US"));
+    } else if (from === "rp") {
+        const rp = rawNumVal($rp[0]);
+        if (!gross || rp === null || rp === undefined || isNaN(rp)) { $pct.val(""); return; }
+        $pct.val(Math.round((rp / gross) * 10000) / 100);
+    } else {
+        const pct = parseFloat(String($pct.val()).replace(",", "."));
+        if (!isNaN(pct) && gross) $rp.val(Math.round((gross * pct) / 100).toLocaleString("en-US"));
+    }
+}
+
+$(document).on("input", ".existing-edit-discount-persen", function () {
+    const $body = $(this).closest(".existing-section-body");
+    syncExistingItemDiscount($body, "persen");
+    updateExistingItemTotal($body);
+});
+
+$(document).on("input", ".existing-edit-discount", function () {
+    const $body = $(this).closest(".existing-section-body");
+    syncExistingItemDiscount($body, "rp");
+    updateExistingItemTotal($body);
+});
+
+$(document).on("input", ".existing-edit-qty, .existing-edit-harga", function () {
+    const $body = $(this).closest(".existing-section-body");
+    syncExistingItemDiscount($body, "qty");
+    updateExistingItemTotal($body);
+});
+
 $(document).on("click", ".btn-existing-save", function () {
     const $btn = $(this);
     const $sec = $btn.closest(".boq-section");
@@ -1033,6 +1083,7 @@ $(document).on("click", ".btn-existing-save", function () {
         id_satuan:             $body.find(".existing-edit-satuan").val() || null,
         harga:                 rawNumVal($body.find(".existing-edit-harga")[0]),
         discount:              rawNumVal($body.find(".existing-edit-discount")[0]) || 0,
+        discount_persen:       parseFloat(String($body.find(".existing-edit-discount-persen").val() || "").replace(",", ".")) || null,
         keterangan:            $body.find(".existing-edit-ket").val() || null,
     };
 
@@ -1131,6 +1182,7 @@ function collectSections() {
             id_satuan:             $sec.find(".input-satuan").val() || null,
             harga:                 rawNumVal($sec.find(".input-harga")[0]),
             discount:              rawNumVal($sec.find(".input-discount")[0]) || 0,
+            discount_persen:       parseFloat(String($sec.find(".input-discount-persen").val() || "").replace(",", ".")) || null,
             keterangan:            $sec.find(".input-ket").val() || null,
             items:                 items,
         });
@@ -1146,6 +1198,32 @@ function escHtml(str) {
         .replace(/"/g, "&quot;");
 }
 
+// Discount item: persen ↔ Rupiah saling mengisi, dasar = qty × harga (harga kotor).
+// Kalau persen sudah diisi, Rupiah ikut berubah saat qty/harga diubah.
+function syncItemDiscount($sec, from) {
+    const gross = (rawNumVal($sec.find('.input-qty')[0]) || 0) * (rawNumVal($sec.find('.input-harga')[0]) || 0);
+    const $pct = $sec.find('.input-discount-persen');
+    const $rp  = $sec.find('.input-discount');
+
+    if (from === 'persen') {
+        const pct = parseFloat(String($pct.val()).replace(',', '.'));
+        if (isNaN(pct)) { $rp.val(''); return; }
+        if (!gross) { $rp.val('0'); return; }
+        $rp.val(Math.round(gross * pct / 100).toLocaleString('en-US'));
+    } else if (from === 'rp') {
+        const rp = rawNumVal($rp[0]);
+        if (!gross || rp === null || rp === undefined || isNaN(rp)) {
+            $pct.val('');
+            return;
+        }
+        $pct.val(Math.round((rp / gross) * 10000) / 100);
+    } else {
+        // qty/harga berubah: pertahankan persen, hitung ulang Rupiah
+        const pct = parseFloat(String($pct.val()).replace(',', '.'));
+        if (!isNaN(pct) && gross) $rp.val(Math.round(gross * pct / 100).toLocaleString('en-US'));
+    }
+}
+
 function updateSectionTotal($sec) {
     const qty      = rawNumVal($sec.find('.input-qty')[0]) || 0;
     const harga    = rawNumVal($sec.find('.input-harga')[0]) || 0;
@@ -1153,8 +1231,22 @@ function updateSectionTotal($sec) {
     $sec.find('.section-total-line').html(boqTotalHtml(qty, harga, discount));
 }
 
-$(document).on('input', '.input-qty, .input-harga, .input-discount', function () {
-    updateSectionTotal($(this).closest('.boq-section'));
+$(document).on('input', '.input-discount-persen', function () {
+    const $sec = $(this).closest('.boq-section');
+    syncItemDiscount($sec, 'persen');
+    updateSectionTotal($sec);
+});
+
+$(document).on('input', '.input-discount', function () {
+    const $sec = $(this).closest('.boq-section');
+    syncItemDiscount($sec, 'rp');
+    updateSectionTotal($sec);
+});
+
+$(document).on('input', '.input-qty, .input-harga', function () {
+    const $sec = $(this).closest('.boq-section');
+    syncItemDiscount($sec, 'qty');
+    updateSectionTotal($sec);
 });
 
 $(document).on('click', '.boq-items-toggle', function () {

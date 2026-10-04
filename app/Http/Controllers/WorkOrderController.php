@@ -474,6 +474,16 @@ class WorkOrderController extends Controller
 
                 $qty = (int) $item['qty'];
 
+                // Discount: persen × (qty × harga) bila dikirim; kalau tidak, Rupiah dari sumber (dibatasi maks harga kotor)
+                $gross = $qty * (int) $item['harga'];
+                if (isset($item['discount_persen']) && $item['discount_persen'] !== '') {
+                    $discPersen = max(0, min(100, (float) $item['discount_persen']));
+                    $discRp     = (int) round($gross * $discPersen / 100);
+                } else {
+                    $discRp     = max(0, min((int) ($item['discount'] ?? 0), $gross));
+                    $discPersen = $gross > 0 ? round($discRp / $gross * 100, 4) : null;
+                }
+
                 $newBoqId = DB::table('boq')->insertGetId([
                     'id_wo'                 => $newId,
                     'id_testing_point'      => $item['id_testing_point'],
@@ -481,7 +491,8 @@ class WorkOrderController extends Controller
                     'qty'                   => $qty,
                     'id_satuan'             => $item['id_satuan'] !== '' ? $item['id_satuan'] : null,
                     'harga'                 => $item['harga'],
-                    'discount'              => max(0, min((int) ($item['discount'] ?? 0), $qty * (int) $item['harga'])),
+                    'discount'              => $discRp,
+                    'discount_persen'       => $discPersen,
                     'keterangan'            => $item['keterangan'] ?? null,
                     'created_at'            => now(),
                     'updated_at'            => now(),
