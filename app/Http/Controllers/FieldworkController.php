@@ -325,6 +325,39 @@ class FieldworkController extends Controller
             return response()->json(['message' => 'FWO sudah berstatus Completed'], 422);
         }
 
+        // Syarat: tiap BOQ item FWO harus sudah punya sample sebanyak qty-nya (titik yang direncanakan),
+        // dan semua sample itu sudah diregistrasi di Lab Sample Reg (WO) — id_wo_lab_sample_reg tidak NULL.
+        $totalKurang  = 0; // titik yang belum dibuat sample
+        $totalBelumReg = 0; // sample yang belum diregistrasi di Lab Sample Reg
+        $fwoBoqs = DB::table('fieldwork_boq')
+            ->where('id_fwo', $id)
+            ->whereNull('deleted_at')
+            ->select('id_fwo_boq', 'qty')
+            ->get();
+        foreach ($fwoBoqs as $fb) {
+            $total    = DB::table('lab_samples')->where('id_fwo_boq', $fb->id_fwo_boq)->count();
+            $belumReg = DB::table('lab_samples')->where('id_fwo_boq', $fb->id_fwo_boq)->whereNull('id_wo_lab_sample_reg')->count();
+            $totalKurang   += max(0, (int) $fb->qty - $total);
+            $totalBelumReg += $belumReg;
+        }
+        // Syarat: semua Budget Plan FWO (fwo_budgets) harus sudah completed
+        $budgetBelumSelesai = DB::table('fwo_budgets')
+            ->where('id_fwo', $id)
+            ->whereNull('deleted_at')
+            ->where('status', '!=', 'completed')
+            ->count();
+
+        if ($totalKurang > 0 || $totalBelumReg > 0 || $budgetBelumSelesai > 0) {
+            $alasan = [];
+            if ($totalKurang > 0)        $alasan[] = "{$totalKurang} titik belum dibuat sample";
+            if ($totalBelumReg > 0)      $alasan[] = "{$totalBelumReg} sample belum diregistrasi di Lab Sample Reg";
+            if ($budgetBelumSelesai > 0) $alasan[] = "{$budgetBelumSelesai} Budget Plan belum diselesaikan";
+            return response()->json([
+                'message' => 'FWO belum bisa diselesaikan.',
+                'alasan'  => $alasan,
+            ], 422);
+        }
+
         $before = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
         DB::table('fieldworks')->where('id_fwo', $id)->update([
             'status'     => 'completed',

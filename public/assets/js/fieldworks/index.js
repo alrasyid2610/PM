@@ -1498,7 +1498,19 @@ $(document).ready(function () {
                     page.loadDetail(page.selectedRow.id);
                 },
                 error: function (xhr) {
-                    Notify.error(xhr.responseJSON?.message || 'Gagal menyelesaikan FWO');
+                    const alasan = xhr.responseJSON?.alasan;
+                    if (alasan && alasan.length) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'FWO belum bisa diselesaikan',
+                            html: '<ul style="text-align:left;margin:0;padding-left:18px;">'
+                                + alasan.map(function (a) { return '<li>' + $('<div>').text(a).html() + '</li>'; }).join('')
+                                + '</ul>',
+                            confirmButtonText: 'Oke',
+                        });
+                    } else {
+                        Notify.error(xhr.responseJSON?.message || 'Gagal menyelesaikan FWO');
+                    }
                     $btn.prop('disabled', false).html('<i class="fa-solid fa-circle-check" style="font-size:10px;"></i> Selesaikan');
                 },
             });
