@@ -42,6 +42,17 @@ function _sqGetSelect2Data(selector) {
     return { id: $el.val(), text: data[0].text };
 }
 
+// PIC yang muncul = gabungan PIC dari Site yang dipilih di ketiga kategori
+function _sqSelectedSiteIds() {
+    return [
+        $('#detail_id_site_pelanggan').val(),
+        $('#detail_id_site_pelanggan_delivery').val(),
+        $('#detail_id_site_pelanggan_payment').val(),
+    ].filter(function (v) { return !!v; });
+}
+
+// Pemesan menimpa Pengiriman & Pembayaran (Perusahaan, Site, PIC). PIC yang kosong
+// di Pemesan mengosongkan PIC tujuan.
 function _syncSqPemesanToOthers() {
     const company = _sqGetSelect2Data('#detail_id_pelanggan');
     const site = _sqGetSelect2Data('#detail_id_site_pelanggan');
@@ -56,12 +67,19 @@ function _syncSqPemesanToOthers() {
 
     targets.forEach(function (t) {
         const $c = $(t.company);
-        if ($c.length && !$c.val()) $c.append(new Option(company.text, company.id, true, true)).trigger('change');
+        if ($c.length) {
+            if (!$c.find('option[value="' + company.id + '"]').length) $c.append(new Option(company.text, company.id));
+            $c.val(company.id).trigger('change');
+        }
+        // Site disalin dari Pemesan: opsi lama dibuang, lalu Site Pemesan dipilih
         const $s = $(t.site);
-        if ($s.length && !$s.val()) $s.append(new Option(site.text, site.id, true, true)).trigger('change');
-        if (pic) {
-            const $p = $(t.pic);
-            if ($p.length && !$p.val()) $p.append(new Option(pic.text, pic.id, true, true)).trigger('change');
+        if ($s.length) {
+            $s.empty().append(new Option(site.text, site.id, true, true)).trigger('change');
+        }
+        const $p = $(t.pic);
+        if ($p.length) {
+            if (pic) $p.append(new Option(pic.text, pic.id, true, true)).trigger('change');
+            else $p.val(null).trigger('change');
         }
     });
 }
@@ -88,7 +106,8 @@ function initSqSiteFields() {
                 url: 'business-relations/sites/select2',
                 dataType: 'json',
                 delay: 250,
-                data: function (params) { return { q: params.term || '', id_br: $(pair.company).val() || '' }; },
+                // Belum pilih Perusahaan → tidak ada Site yang tampil
+                data: function (params) { return { q: params.term || '', id_br: $(pair.company).val() || '-1' }; },
                 processResults: function (data) { return { results: data }; },
                 cache: false,
             },
@@ -132,7 +151,7 @@ function initSqPicFields() {
                 url: 'business-relation-contacts/select2',
                 dataType: 'json',
                 delay: 250,
-                data: function (params) { return { q: params.term || '', id_br: _sqSelectedCompanyIds(), with_site: 1 }; },
+                data: function (params) { return { q: params.term || '', id_br: _sqSelectedCompanyIds(), id_sites: _sqSelectedSiteIds(), with_site: 1 }; },
                 processResults: function (data) { return { results: data }; },
                 cache: false,
             },
@@ -153,7 +172,9 @@ function initSqPicFields() {
             });
     });
 
-    ['#detail_id_pelanggan', '#detail_id_site_pelanggan', '#detail_id_pic_pelanggan'].forEach(function (sel) {
+    // Hanya Site & PIC Pemesan yang memicu auto-fill (bukan Perusahaan, karena
+    // ganti Perusahaan juga mengosongkan Site → auto-fill jalan dengan Site lama)
+    ['#detail_id_site_pelanggan', '#detail_id_pic_pelanggan'].forEach(function (sel) {
         $(sel).off('select2:select.sqSyncOthers').on('select2:select.sqSyncOthers', _syncSqPemesanToOthers);
     });
 }

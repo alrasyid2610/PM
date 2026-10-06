@@ -164,9 +164,23 @@ function fillSoForm(so) {
         $('#so_id_pelanggan_payment').val(),
     ].filter(Boolean);
 
-    initPicSelect('#so_id_pic_pelanggan', soCompanyIds, so.id_pic_pelanggan, so.pic_pelanggan);
-    initPicSelect('#so_id_pic_pelanggan_delivery', soCompanyIds, so.id_pic_pelanggan_delivery, so.pic_delivery);
-    initPicSelect('#so_id_pic_pelanggan_payment', soCompanyIds, so.id_pic_pelanggan_payment, so.pic_payment);
+    // PIC yang muncul = gabungan PIC dari Site yang dipilih di ketiga kategori
+    const soSiteIds = () => [
+        $('#so_id_site_pelanggan').val(),
+        $('#so_id_site_pelanggan_delivery').val(),
+        $('#so_id_site_pelanggan_payment').val(),
+    ].filter(Boolean);
+
+    initPicSelect('#so_id_pic_pelanggan', soCompanyIds, soSiteIds, so.id_pic_pelanggan, so.pic_pelanggan);
+    initPicSelect('#so_id_pic_pelanggan_delivery', soCompanyIds, soSiteIds, so.id_pic_pelanggan_delivery, so.pic_delivery);
+    initPicSelect('#so_id_pic_pelanggan_payment', soCompanyIds, soSiteIds, so.id_pic_pelanggan_payment, so.pic_payment);
+
+    // Begitu Pemesan (Perusahaan, Site, PIC) dipilih → disamakan ke Pengiriman & Pembayaran
+    // Hanya Site & PIC Pemesan yang memicu auto-fill (bukan Perusahaan, karena
+    // ganti Perusahaan juga mengosongkan Site → auto-fill jalan dengan Site lama)
+    ['#so_id_site_pelanggan', '#so_id_pic_pelanggan'].forEach(function (sel) {
+        $(sel).on('select2:select', syncCloneSoPemesanToOthers);
+    });
 
     // PIC Input = user yang sedang login (bukan dari SO sumber), tetap bisa diubah
     initUserSelect('#so_pic_input', window.cloneRoute.authUser.id, window.cloneRoute.authUser.name);
@@ -196,7 +210,8 @@ function initSiteSelect(sel, companySel, initialId, initialText) {
         width: '100%', allowClear: true, placeholder: 'Pilih Site', minimumInputLength: 0,
         ajax: {
             url: window.cloneRoute.select2Site, dataType: 'json', delay: 250,
-            data: (p) => ({ q: p.term, id_br: $(companySel).val() || '' }),
+            // Belum pilih Perusahaan → tidak ada Site yang tampil
+            data: (p) => ({ q: p.term, id_br: $(companySel).val() || '-1' }),
             processResults: (d) => ({ results: d }), cache: false,
         },
         escapeMarkup: (m) => m,
@@ -205,13 +220,54 @@ function initSiteSelect(sel, companySel, initialId, initialText) {
     $(companySel).on('select2:select select2:clear', function () { $el.val(null).trigger('change'); });
 }
 
-function initPicSelect(sel, companyIdsFn, initialId, initialText) {
+// Ambil {id, text} dari select2 yang sedang terpilih. null kalau belum diisi.
+function cloneSelect2Data(selector) {
+    const $el = $(selector);
+    if (!$el.length || !$el.val()) return null;
+    const data = $el.select2('data');
+    if (!data || !data.length) return null;
+    return { id: $el.val(), text: data[0].text };
+}
+
+// Pemesan menimpa Pengiriman & Pembayaran (Perusahaan, Site, PIC). PIC yang kosong
+// di Pemesan mengosongkan PIC tujuan.
+function syncCloneSoPemesanToOthers() {
+    const company = cloneSelect2Data('#so_id_pelanggan');
+    const site    = cloneSelect2Data('#so_id_site_pelanggan');
+    if (!company || !site) return;
+
+    const pic = cloneSelect2Data('#so_id_pic_pelanggan');
+
+    const targets = [
+        { company: '#so_id_pelanggan_delivery', site: '#so_id_site_pelanggan_delivery', pic: '#so_id_pic_pelanggan_delivery' },
+        { company: '#so_id_pelanggan_payment',  site: '#so_id_site_pelanggan_payment',  pic: '#so_id_pic_pelanggan_payment' },
+    ];
+
+    targets.forEach(function (t) {
+        const $c = $(t.company);
+        if ($c.length) {
+            if (!$c.find('option[value="' + company.id + '"]').length) $c.append(new Option(company.text, company.id));
+            $c.val(company.id).trigger('change');
+        }
+        const $s = $(t.site);
+        if ($s.length) {
+            $s.empty().append(new Option(site.text, site.id, true, true)).trigger('change');
+        }
+        const $p = $(t.pic);
+        if ($p.length) {
+            if (pic) $p.append(new Option(pic.text, pic.id, true, true)).trigger('change');
+            else $p.val(null).trigger('change');
+        }
+    });
+}
+
+function initPicSelect(sel, companyIdsFn, siteIdsFn, initialId, initialText) {
     const $el = $(sel);
     $el.select2({
         width: '100%', allowClear: true, placeholder: 'Pilih PIC', minimumInputLength: 0,
         ajax: {
             url: window.cloneRoute.select2Contact, dataType: 'json', delay: 250,
-            data: (p) => ({ q: p.term, id_br: companyIdsFn(), with_site: 1 }),
+            data: (p) => ({ q: p.term, id_br: companyIdsFn(), id_sites: siteIdsFn(), with_site: 1 }),
             processResults: (d) => ({ results: d }), cache: false,
         },
         escapeMarkup: (m) => m,

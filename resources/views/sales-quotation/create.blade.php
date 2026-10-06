@@ -179,7 +179,6 @@
 @section('custom-script')
 <script>
     var dataPelanggan = '';
-    var allSites = [];
 
     $(document).ready(function () {
         initFpDate(document);
@@ -215,7 +214,9 @@
         initPicSelect('#id_pic_pelanggan_delivery', 'Pilih PIC');
         initPicSelect('#id_pic_pelanggan_payment', 'Pilih PIC');
 
-        ['#id_pelanggan', 'select[name="id_site_pelanggan"]', '#id_pic_pelanggan'].forEach(function (sel) {
+        // Hanya Site & PIC Pemesan yang memicu auto-fill (bukan Perusahaan, karena
+        // ganti Perusahaan juga mengosongkan Site → auto-fill jalan dengan Site lama)
+        ['select[name="id_site_pelanggan"]', '#id_pic_pelanggan'].forEach(function (sel) {
             $(sel).on('select2:select', syncPemesanToOthers);
         });
 
@@ -237,7 +238,7 @@
         ];
         companySitePairs.forEach(function (pair) {
             $(pair[0]).on('select2:select select2:clear', function () {
-                populateSiteOptions(pair[1], $(pair[0]).val());
+                $(pair[1]).val(null).trigger('change');
             });
         });
     });
@@ -262,14 +263,24 @@
             { company: 'select[name="id_pelanggan_payment"]',  site: 'select[name="id_site_pelanggan_payment"]',  pic: '#id_pic_pelanggan_payment' },
         ];
 
+        // Pemesan selalu menimpa Pengiriman & Pembayaran (disamakan), termasuk PIC.
+        // PIC yang belum dipilih di Pemesan dikosongkan di tujuan, supaya tidak
+        // tertinggal PIC dari Perusahaan lama.
         targets.forEach(function (t) {
             const $c = $(t.company);
-            if ($c.length && !$c.val()) $c.append(new Option(company.text, company.id, true, true)).trigger('change');
+            if ($c.length) {
+                if (!$c.find('option[value="' + company.id + '"]').length) $c.append(new Option(company.text, company.id));
+                $c.val(company.id).trigger('change');
+            }
+            // Site disalin dari Pemesan: opsi lama dibuang, lalu Site Pemesan dipilih
             const $s = $(t.site);
-            if ($s.length && !$s.val()) $s.append(new Option(site.text, site.id, true, true)).trigger('change');
-            if (pic) {
-                const $p = $(t.pic);
-                if ($p.length && !$p.val()) $p.append(new Option(pic.text, pic.id, true, true)).trigger('change');
+            if ($s.length) {
+                $s.empty().append(new Option(site.text, site.id, true, true)).trigger('change');
+            }
+            const $p = $(t.pic);
+            if ($p.length) {
+                if (pic) $p.append(new Option(pic.text, pic.id, true, true)).trigger('change');
+                else $p.val(null).trigger('change');
             }
         });
     }
@@ -279,6 +290,17 @@
             $('#id_pelanggan').val(),
             $('select[name="id_pelanggan_delivery"]').val(),
             $('select[name="id_pelanggan_payment"]').val(),
+        ].filter(function (v) { return !!v; });
+    }
+
+    // PIC yang muncul = union dari Site yang sudah dipilih di ketiga kategori
+    // (Pemesan, Pengiriman, Pembayaran). Sama seperti Perusahaan, Site yang
+    // sama dari kategori berbeda cukup dihitung sekali.
+    function getSelectedSiteIds() {
+        return [
+            $('select[name="id_site_pelanggan"]').val(),
+            $('select[name="id_site_pelanggan_delivery"]').val(),
+            $('select[name="id_site_pelanggan_payment"]').val(),
         ].filter(function (v) { return !!v; });
     }
 
@@ -294,7 +316,7 @@
                 url: "{{ route('business-relation-contacts.select2') }}",
                 dataType: 'json',
                 delay: 200,
-                data: function (params) { return { q: params.term || '', id_br: getSelectedCompanyIds(), with_site: 1 }; },
+                data: function (params) { return { q: params.term || '', id_br: getSelectedCompanyIds(), id_sites: getSelectedSiteIds(), with_site: 1 }; },
                 processResults: function (data) { return { results: data }; },
                 cache: false,
             },
@@ -328,40 +350,35 @@
             error: function () { Notify.error('Gagal memuat data pelanggan'); }
         });
 
-        $.ajax({
-            url: "{{ route('api.get-data-site') }}",
-            method: 'GET',
-            success: function (response) {
-                allSites = response;
-                const pairs = [
-                    ['#id_pelanggan', "select[name='id_site_pelanggan']"],
-                    ['select[name="id_pelanggan_delivery"]', "select[name='id_site_pelanggan_delivery']"],
-                    ['select[name="id_pelanggan_payment"]', "select[name='id_site_pelanggan_payment']"],
-                ];
-                pairs.forEach(function (pair) {
-                    $(pair[1]).select2({ placeholder: 'Pilih Site', allowClear: true });
-                    populateSiteOptions(pair[1], $(pair[0]).val());
-                });
-            },
-            error: function () { Notify.error('Gagal memuat data site'); }
-        });
+        // Site di tiap kategori: ajax, di-scope Perusahaan kategori yang sama
+        initSiteSelect2('select[name="id_site_pelanggan"]', '#id_pelanggan');
+        initSiteSelect2('select[name="id_site_pelanggan_delivery"]', 'select[name="id_pelanggan_delivery"]');
+        initSiteSelect2('select[name="id_site_pelanggan_payment"]', 'select[name="id_pelanggan_payment"]');
     }
 
-    function populateSiteOptions(siteSelector, id_br) {
+    // Select2 Site ajax: daftar selalu diambil ulang dari server dengan id_br
+    // Perusahaan kategori yang sama, jadi tidak ada opsi lama yang tertinggal.
+    // Belum pilih Perusahaan → tidak ada Site yang ditampilkan.
+    function initSiteSelect2(siteSelector, companySelector) {
         const $el = $(siteSelector);
-        const currentVal = $el.val();
+        if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
 
-        const filtered = id_br
-            ? allSites.filter(function (s) { return String(s.id_br) === String(id_br); })
-            : allSites;
-
-        $el.empty();
-        $.each(filtered, function (index, item) {
-            $el.append(new Option(item.nama_lokasi, item.id_site));
+        $el.select2({
+            placeholder: 'Pilih Site',
+            allowClear: true,
+            minimumInputLength: 0,
+            ajax: {
+                url: "{{ route('business-relations.sites.select2') }}",
+                dataType: 'json',
+                delay: 200,
+                data: function (params) {
+                    return { q: params.term || '', id_br: $(companySelector).val() || '-1' };
+                },
+                processResults: function (data) { return { results: data }; },
+                cache: false,
+            },
+            escapeMarkup: function (m) { return m; },
         });
-
-        const stillValid = filtered.some(function (s) { return String(s.id_site) === String(currentVal); });
-        $el.val(stillValid ? currentVal : null).trigger('change');
     }
 
     function initPicInternal() {

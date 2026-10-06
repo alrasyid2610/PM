@@ -13,6 +13,15 @@ function _soSelectedCompanyIds() {
     ].filter(function (v) { return !!v; });
 }
 
+// PIC yang muncul = gabungan PIC dari Site yang dipilih di ketiga kategori
+function _soSelectedSiteIds() {
+    return [
+        $('#detail_id_site_pelanggan').val(),
+        $('#detail_id_site_pelanggan_delivery').val(),
+        $('#detail_id_site_pelanggan_payment').val(),
+    ].filter(function (v) { return !!v; });
+}
+
 // Ambil {id, text} dari select2 yang sedang terpilih. null kalau belum diisi.
 function _soGetSelect2Data(selector) {
     const $el = $(selector);
@@ -36,20 +45,23 @@ function _syncSoPemesanToOthers() {
         { company: '#detail_id_pelanggan_payment',  site: '#detail_id_site_pelanggan_payment',  pic: '#detail_id_pic_pelanggan_payment' },
     ];
 
+    // Pemesan selalu menimpa Pengiriman & Pembayaran (disamakan), termasuk PIC.
+    // PIC yang belum dipilih di Pemesan dikosongkan di tujuan.
     targets.forEach(function (t) {
         const $c = $(t.company);
-        if ($c.length && !$c.val()) {
-            $c.append(new Option(company.text, company.id, true, true)).trigger('change');
+        if ($c.length) {
+            if (!$c.find('option[value="' + company.id + '"]').length) $c.append(new Option(company.text, company.id));
+            $c.val(company.id).trigger('change');
         }
+        // Site disalin dari Pemesan: opsi lama dibuang, lalu Site Pemesan dipilih
         const $s = $(t.site);
-        if ($s.length && !$s.val()) {
-            $s.append(new Option(site.text, site.id, true, true)).trigger('change');
+        if ($s.length) {
+            $s.empty().append(new Option(site.text, site.id, true, true)).trigger('change');
         }
-        if (pic) {
-            const $p = $(t.pic);
-            if ($p.length && !$p.val()) {
-                $p.append(new Option(pic.text, pic.id, true, true)).trigger('change');
-            }
+        const $p = $(t.pic);
+        if ($p.length) {
+            if (pic) $p.append(new Option(pic.text, pic.id, true, true)).trigger('change');
+            else $p.val(null).trigger('change');
         }
     });
 }
@@ -80,7 +92,8 @@ function initSoSiteFields() {
                 dataType: 'json',
                 delay: 250,
                 data: function (params) {
-                    return { q: params.term || '', id_br: $(pair.company).val() || '' };
+                    // Belum pilih Perusahaan → tidak ada Site yang tampil
+                    return { q: params.term || '', id_br: $(pair.company).val() || '-1' };
                 },
                 processResults: function (data) { return { results: data }; },
                 cache: false,
@@ -128,7 +141,7 @@ function initSoPicFields() {
                 dataType: 'json',
                 delay: 250,
                 data: function (params) {
-                    return { q: params.term || '', id_br: _soSelectedCompanyIds(), with_site: 1 };
+                    return { q: params.term || '', id_br: _soSelectedCompanyIds(), id_sites: _soSelectedSiteIds(), with_site: 1 };
                 },
                 processResults: function (data) { return { results: data }; },
                 cache: false,
@@ -145,7 +158,9 @@ function initSoPicFields() {
     // Begitu Perusahaan & Site Pemesan sudah lengkap → salin ke Pengiriman &
     // Pembayaran (PIC ikut kalau sudah dipilih juga). Hanya mengisi field yang
     // MASIH KOSONG di kategori tujuan, tidak menimpa yang sudah diisi manual.
-    ['#detail_id_pelanggan', '#detail_id_site_pelanggan', '#detail_id_pic_pelanggan'].forEach(function (sel) {
+    // Hanya Site & PIC Pemesan yang memicu auto-fill (bukan Perusahaan, karena
+    // ganti Perusahaan juga mengosongkan Site → auto-fill jalan dengan Site lama)
+    ['#detail_id_site_pelanggan', '#detail_id_pic_pelanggan'].forEach(function (sel) {
         $(sel)
             .off('select2:select.soPemesanSync')
             .on('select2:select.soPemesanSync', _syncSoPemesanToOthers);

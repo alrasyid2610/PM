@@ -199,9 +199,17 @@ class BusinessRelationContactController extends Controller
         // (id_site NULL) dari Perusahaan pemilik Site tsb.
         $siteBr = $idSite ? DB::table('business_relation_sites')->where('id_site', $idSite)->value('id_br') : null;
 
+        // Gabungan beberapa Site (mis. Site Pemesan + Site Pengiriman): PIC milik salah satu Site
+        // tersebut, atau PIC level Perusahaan (id_site NULL) dari Perusahaan yang dipilih.
+        $idSites = array_values(array_filter(array_map('intval', (array) $request->input('id_sites', [])), fn($v) => $v > 0));
+
         $query = DB::table('business_relation_contacts as brc')
             ->whereNull('brc.deleted_at')
             ->when(!empty($idBrList), fn($q) => $q->whereIn('brc.id_br', $idBrList))
+            ->when(!empty($idSites), function ($q) use ($idSites, $idBrList) {
+                $q->where(fn($w) => $w->whereIn('brc.id_site', $idSites)
+                    ->orWhere(fn($x) => $x->whereNull('brc.id_site')->whereIn('brc.id_br', $idBrList ?: [0])));
+            })
             ->when($idSite, function ($q) use ($idSite, $siteBr) {
                 $q->where('brc.id_br', $siteBr)
                   ->where(fn($w) => $w->where('brc.id_site', $idSite)->orWhereNull('brc.id_site'));
