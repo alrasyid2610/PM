@@ -57,6 +57,12 @@
                             <option value="12">Annual</option>
                         </select>
                     </div>
+                    <div class="col-12" id="sqWoSchedule" style="display:none;">
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-size:13px;color:#334155;">
+                            <i class="fa-solid fa-calendar-days me-1" style="color:#64748b;"></i>
+                            <span id="sqWoScheduleText"></span>
+                        </div>
+                    </div>
                     <div class="col-md-3 col-12" id="noUrutWrap" style="display:none;">
                         <label class="form-label required">Urutan ke-</label>
                         <input type="number" name="no_urut_period" id="no_urut_period" class="form-control" min="1" placeholder="Auto">
@@ -89,11 +95,61 @@
 @section('custom-script')
 <script>
     var preselectSqId = new URLSearchParams(window.location.search).get('id_sq');
+    // Acuan hari ke-1 dari SQ (Rencana Mulai). Kosong kalau SQ belum punya Rencana Mulai.
+    var sqRencanaMulai = null;
+
+    // "YYYY-MM-DD" → Date lokal (tanpa geser zona waktu)
+    function parseIsoLocal(s) {
+        const p = String(s).slice(0, 10).split('-');
+        return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    }
+
+    function addDaysLocal(d, n) {
+        const x = new Date(d.getTime());
+        x.setDate(x.getDate() + n);
+        return x;
+    }
+
+    function fmtTanggal(d) {
+        return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    // Info tanggal di bawah field Hari Mulai & Durasi: dihitung dari Rencana Mulai SQ
+    function updateSchedulePreview() {
+        const hariMulai = parseInt($('input[name="hari_mulai"]').val(), 10);
+        const durasi    = parseInt($('input[name="durasi_hari"]').val(), 10);
+        const $box = $('#sqWoSchedule');
+
+        if (!hariMulai || hariMulai < 1) { $box.hide(); return; }
+
+        if (!sqRencanaMulai) {
+            $('#sqWoScheduleText').html('Rencana Mulai di SQ belum diisi, tanggal belum bisa dihitung. Hari ke-' + hariMulai + (durasi > 0 ? ' s/d hari ke-' + (hariMulai + durasi - 1) : '') + '.');
+            $box.show();
+            return;
+        }
+
+        const base  = parseIsoLocal(sqRencanaMulai);
+        const mulai = addDaysLocal(base, hariMulai - 1);
+        let teks = '<strong>Mulai:</strong> ' + fmtTanggal(mulai) + ' (hari ke-' + hariMulai + ')';
+
+        if (durasi > 0) {
+            const selesai = addDaysLocal(mulai, durasi - 1);
+            teks += ' &nbsp;·&nbsp; <strong>Selesai:</strong> ' + fmtTanggal(selesai) + ' (hari ke-' + (hariMulai + durasi - 1) + ', ' + durasi + ' hari)';
+        }
+
+        $('#sqWoScheduleText').html(teks);
+        $box.show();
+    }
 
     $(document).ready(function () {
+        $('input[name="hari_mulai"], input[name="durasi_hari"]').on('input change', updateSchedulePreview);
+        updateSchedulePreview();
+
         if (preselectSqId) {
             $('#id_sq').val(preselectSqId);
             $.get("{{ url('sales-quotations') }}/" + preselectSqId, function (sq) {
+                sqRencanaMulai = sq.rencana_mulai || null;
+                updateSchedulePreview();
                 $('#sqBannerNoSq').text((sq.no_sq ?? '—') + (sq.revisi > 0 ? ' Rev.' + sq.revisi : ''));
                 $('#sqBannerJudul').text(sq.judul_order ?? '—');
                 $('#sqInfoBanner').show();

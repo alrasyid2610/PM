@@ -5,7 +5,8 @@
 ])
 
 <div class="d-flex justify-content-between align-items-center">
-    @if($backRoute)
+    {{-- Di dalam modal (embed), tombol Kembali tidak dipakai: malah membuka halaman utama di dalam modal --}}
+    @if($backRoute && !request('embed'))
     <a href="{{ $backRoute }}" class="btn btn-secondary btn-sm">
         <i class="fa-solid fa-arrow-left me-1"></i> Kembali
     </a>

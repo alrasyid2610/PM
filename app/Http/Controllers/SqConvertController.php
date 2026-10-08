@@ -81,6 +81,7 @@ class SqConvertController extends Controller
             'no_sq' => $sq->no_sq,
             'revisi' => $sq->revisi,
             'judul_order' => $sq->judul_order,
+            'rencana_mulai' => $sq->rencana_mulai,
             'pic_marketing_eksternal' => $sq->pic_marketing_eksternal,
             'status' => $sq->status,
             'missing' => $missing,

@@ -559,6 +559,12 @@ function openConvertSqModal(idSq) {
         </form>`);
 
         initFpDate('#convertSqForm');
+        // Default Tanggal Mulai (hari ke-1) = Rencana Mulai SQ, tetap bisa diubah user
+        if (p.rencana_mulai) {
+            const fp = document.getElementById('convertTanggalMulai')._flatpickr;
+            if (fp) fp.setDate(String(p.rencana_mulai).slice(0, 10), true);
+            else $('#convertTanggalMulai').val(String(p.rencana_mulai).slice(0, 10)).trigger('change');
+        }
         $('#convertPicOrder').select2({
             width: '100%', dropdownParent: $('#modalConvertSq'), allowClear: true, placeholder: 'Pilih User', minimumInputLength: 0,
             ajax: { url: '/users/select2', dataType: 'json', delay: 200, data: function (q) { return { q: q.term }; }, processResults: function (d) { return { results: d }; }, cache: true },

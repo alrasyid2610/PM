@@ -66,9 +66,9 @@ function renderForm(res) {
         tags: revBadge + riwayatTag + soTerbitTag + pelangganTag,
         moreActions: [
             {
-                label: "Printout SQ (Sementara)",
-                icon: "fa-solid fa-file-pdf",
-                attrs: `onclick="window.open('/sales-quotations/${res.id_sq}/print','_blank')"`,
+                label: "Penawaran (PDF)",
+                icon: "fa-solid fa-file-invoice",
+                attrs: `onclick="window.open('/sales-quotations/${res.id_sq}/penawaran','_blank')"`,
             },
             ...(!isDeleted && res.status === 'completed' ? [{
                 label: "Executive Summary (Internal)",

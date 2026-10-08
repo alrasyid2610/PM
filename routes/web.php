@@ -699,8 +699,8 @@ Route::prefix('sales-quotations')->name('sales-quotations.')->group(function () 
     Route::put('/{id}', [SalesQuotationController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}', [SalesQuotationController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/history', [SalesQuotationController::class, 'history'])->name('history')->whereNumber('id');
-    Route::get('/{id}/print', [SalesQuotationController::class, 'printPdf'])->name('print')->whereNumber('id');
     Route::get('/{id}/executive-summary', [SalesQuotationController::class, 'executiveSummaryPdf'])->name('executive-summary')->whereNumber('id');
+    Route::get('/{id}/penawaran', [SalesQuotationController::class, 'penawaranPdf'])->name('penawaran')->whereNumber('id');
     Route::post('/{id}/finalize', [SalesQuotationController::class, 'finalize'])->name('finalize')->whereNumber('id');
     Route::post('/{id}/cancel', [SalesQuotationController::class, 'cancel'])->name('cancel')->whereNumber('id');
     Route::post('/{id}/revise', [SalesQuotationController::class, 'revise'])->name('revise')->whereNumber('id');

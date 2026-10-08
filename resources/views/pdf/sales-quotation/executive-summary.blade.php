@@ -4,13 +4,13 @@
 
 @section('styles')
     .page { padding: 0; }
-    .band { background: #203864; color: #fff; padding: 20px 15mm 16px; }
-    .band .kicker { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #a9bbe0; }
-    .band h1 { font-size: 22px; font-weight: 700; margin: 2px 0 8px; }
+    .band { background: #fff; color: #1f2937; padding: 14px 15mm 14px; border-bottom: 2px solid #203864; }
+    .band .kicker { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #64748b; }
+    .band h1 { font-size: 22px; font-weight: 700; color: #203864; margin: 2px 0 8px; }
     .band table { width: 100%; border-collapse: collapse; }
-    .band td { font-size: 11px; color: #dbe4f7; padding: 1px 0; vertical-align: top; }
-    .band td.k { width: 78px; color: #a9bbe0; }
-    .band .tag { float: right; border: 1px solid #f2b45c; color: #f2b45c; font-size: 9px; letter-spacing: 1px; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; }
+    .band td { font-size: 11px; color: #334155; padding: 1px 0; vertical-align: top; }
+    .band td.k { width: 78px; color: #64748b; }
+    .band .tag { float: right; border: 1px solid #b45309; color: #b45309; font-size: 9px; letter-spacing: 1px; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; }
     .body { padding: 16px 15mm 12px; }
 
     .kpi { width: calc(100% + 20px); border-collapse: separate; border-spacing: 10px 0; margin: 0 -10px; }

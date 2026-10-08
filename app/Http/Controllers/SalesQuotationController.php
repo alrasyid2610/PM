@@ -497,6 +497,16 @@ class SalesQuotationController extends Controller
             ->select(['b.id_sq_wo', 'i.nominal_budget', 'i.is_cash_advance', 'i.id_account', 'a.nama as akun_nama', 'a.kode as akun_kode'])
             ->get();
 
+        // Budget FWO (sq_fwo_budgets) ikut dihitung sebagai biaya WO induknya
+        $fwoBudgetItems = DB::table('sq_fwo_budgets as fb')
+            ->join('sq_fieldworks as f', 'f.id_sq_fwo', '=', 'fb.id_sq_fwo')
+            ->join('sq_fwo_budget_items as i', 'i.id_sq_budget', '=', 'fb.id_sq_budget')
+            ->leftJoin('budget_accounts as a', 'a.id_account', '=', 'i.id_account')
+            ->whereIn('f.id_sq_wo', $woIds)
+            ->select(['f.id_sq_wo', 'i.nominal_budget', 'i.is_cash_advance', 'i.id_account', 'a.nama as akun_nama', 'a.kode as akun_kode'])
+            ->get();
+        $budgetItems = $budgetItems->concat($fwoBudgetItems);
+
         $rows = [];
         $tot = ['boq_gross' => 0, 'boq_disc' => 0, 'other' => 0, 'sampling' => 0, 'biaya' => 0, 'cash_advance' => 0];
         foreach ($wos as $wo) {
@@ -547,107 +557,144 @@ class SalesQuotationController extends Controller
             'marginPct' => $pendapatan > 0 ? $margin / $pendapatan * 100 : null,
             'akun' => $akun,
         ])
+            // Kop sama dengan FWO (footer belum dipakai)
+            ->headerView('pdf.layouts.sections.header')
+            ->margins(top: 30, right: 0, bottom: 15, left: 0)
             ->format('a4')
             ->name("Executive-Summary-{$sq->no_sq}.pdf");
     }
 
-    public function printPdf($id)
+    /**
+     * Penawaran resmi ke pelanggan (format mengikuti contoh "SQ.26.A.748").
+     * Nomor = nomor SQ di sistem. Discount SQ tidak ditampilkan terpisah:
+     * Grand Total sudah bersih. Tanda tangan masih dummy.
+     */
+    public function penawaranPdf($id)
     {
         $sq = DB::table('sales_quotations as sq')
-            ->leftJoin('business_relations as pelanggan', 'sq.id_pelanggan', '=', 'pelanggan.id_br')
-            ->leftJoin('business_relation_sites as site_pelanggan', 'sq.id_site_pelanggan', '=', 'site_pelanggan.id_site')
+            ->leftJoin('business_relations as br', 'br.id_br', '=', 'sq.id_pelanggan')
+            ->leftJoin('entitas as ent', 'ent.id_entitas', '=', 'br.id_entitas')
+            ->leftJoin('business_relation_sites as site', 'site.id_site', '=', 'sq.id_site_pelanggan')
             ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'sq.id_pic_pelanggan')
-            ->leftJoin('business_relations as del', 'sq.id_pelanggan_delivery', '=', 'del.id_br')
-            ->leftJoin('business_relation_sites as site_del', 'sq.id_site_pelanggan_delivery', '=', 'site_del.id_site')
-            ->leftJoin('business_relation_contacts as brc_del', 'brc_del.id_contact', '=', 'sq.id_pic_pelanggan_delivery')
-            ->leftJoin('business_relations as pay', 'sq.id_pelanggan_payment', '=', 'pay.id_br')
-            ->leftJoin('business_relation_sites as site_pay', 'sq.id_site_pelanggan_payment', '=', 'site_pay.id_site')
-            ->leftJoin('business_relation_contacts as brc_pay', 'brc_pay.id_contact', '=', 'sq.id_pic_pelanggan_payment')
-            ->leftJoin('office as o', 'o.id_office', '=', 'sq.id_office')
-            ->leftJoin('users as pic_i', 'pic_i.id', '=', 'sq.pic_input')
-            ->leftJoin('users as mkt_i', 'mkt_i.id', '=', 'sq.pic_marketing_internal')
-            ->leftJoin('users as mkt_e', 'mkt_e.id', '=', 'sq.pic_marketing_eksternal')
             ->where('sq.id_sq', $id)
             ->whereNull('sq.deleted_at')
             ->select([
                 'sq.*',
-                'pelanggan.nama as nama_pelanggan',
-                'site_pelanggan.nama_lokasi as nama_site_pelanggan',
+                'br.nama as nama_pelanggan',
+                'ent.nama as entitas_pelanggan',
+                'site.alamat_lengkap as alamat_pelanggan',
                 'brc.nama_pic as pic_pelanggan',
-                'del.nama as nama_pelanggan_delivery',
-                'site_del.nama_lokasi as nama_site_delivery',
-                'brc_del.nama_pic as pic_delivery',
-                'pay.nama as nama_pelanggan_payment',
-                'site_pay.nama_lokasi as nama_site_payment',
-                'brc_pay.nama_pic as pic_payment',
-                'o.name as nama_office',
-                'pic_i.name as nama_pic_input',
-                'mkt_i.name as nama_marketing_internal',
-                'mkt_e.name as nama_marketing_eksternal',
             ])
             ->first();
 
         if (!$sq) abort(404, 'Sales Quotation tidak ditemukan');
+        $sq->nama_pelanggan_display = brDisplayName($sq->entitas_pelanggan, $sq->nama_pelanggan);
 
         $wos = DB::table('sq_work_orders as w')
             ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'w.id_site_pelanggan_pekerjaan')
-            ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'w.id_pic_pelanggan_pekerjaan')
             ->where('w.id_sq', $id)
             ->orderBy('w.urutan')
             ->orderBy('w.id_sq_wo')
-            ->select([
-                'w.id_sq_wo', 'w.no_sq_wo', 'w.judul_pekerjaan', 'w.hari_mulai', 'w.durasi_hari', 'w.keterangan',
-                'brs.nama_lokasi as nama_site',
-                'brc.nama_pic as nama_pic',
-            ])
+            ->select(['w.id_sq_wo', 'brs.kota_kabupaten as kota_site', 'brs.nama_lokasi as nama_site'])
             ->get();
-
         $woIds = $wos->pluck('id_sq_wo');
 
-        $boqRows = $woIds->isNotEmpty()
+        // Lokasi Pekerjaan = kota dari Site pekerjaan WO (unik)
+        $lokasi = $wos->pluck('kota_site')->filter()->unique()->values()->implode(', ');
+
+        $boq = $woIds->isNotEmpty()
             ? DB::table('sq_boq as b')
                 ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
                 ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
                 ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
                 ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'b.id_satuan')
                 ->whereIn('b.id_sq_wo', $woIds)
+                ->orderBy('b.id_sq_wo')
                 ->orderBy('b.id_sq_boq')
                 ->select([
-                    'b.id_sq_wo',
-                    'b.item_produk_alternate',
-                    'tp.nama as nama_testing_point',
-                    'ts.nomor as standard_nomor',
-                    'ts.judul as standard_judul',
-                    'tms.kode as matriks_kode',
+                    'b.id_sq_boq', 'b.id_sq_wo', 'b.item_produk_alternate', 'b.id_testing_point',
+                    'tp.nama as nama_testing_point', 'ts.nomor as standard_nomor', 'ts.judul as standard_judul',
                     'tms.judul_indonesia as matriks_judul',
-                    'b.qty',
-                    'sat.nama as satuan',
-                    'b.harga',
-                    'b.discount',
-                    'b.keterangan',
+                    'b.qty', 'sat.nama as satuan', 'b.harga', 'b.discount',
                 ])
                 ->get()
-                ->groupBy('id_sq_wo')
+            : collect();
+
+        // Parameter per Testing Point = daftar parameter dari Testing Items (options)
+        $parameterByTp = $boq->isNotEmpty()
+            ? DB::table('testing_items as ti')
+                ->join('testing_parameters as p', 'p.id_testing_parameter', '=', 'ti.id_testing_parameter')
+                ->whereIn('ti.id_testing_point', $boq->pluck('id_testing_point')->filter()->unique())
+                ->orderBy('ti.id_testing_item')
+                ->select(['ti.id_testing_point', 'p.judul_indonesia'])
+                ->get()
+                ->groupBy('id_testing_point')
+                ->map(fn ($g) => $g->pluck('judul_indonesia')->filter()->unique()->implode(', '))
             : collect();
 
         $tambahan = $woIds->isNotEmpty()
             ? DB::table('sq_boq_tambahan as bt')
                 ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'bt.id_satuan')
                 ->whereIn('bt.id_sq_wo', $woIds)
+                ->orderBy('bt.id_sq_wo')
                 ->orderBy('bt.id_sq_boq_tambahan')
-                ->select(['bt.id_sq_wo', 'bt.jenis', 'bt.nama_item', 'bt.qty', 'sat.nama as satuan', 'bt.harga', 'bt.keterangan'])
+                ->select(['bt.id_sq_wo', 'bt.jenis', 'bt.nama_item', 'bt.qty', 'sat.nama as satuan', 'bt.harga'])
                 ->get()
             : collect();
 
-        return Pdf::view('pdf.sales-quotation.printout', [
-            'sq'              => $sq,
-            'wos'             => $wos,
-            'boqRows'         => $boqRows,
-            'boqOtherRows'    => $tambahan->where('jenis', 'lainnya')->groupBy('id_sq_wo'),
-            'boqSamplingRows' => $tambahan->where('jenis', 'sampling')->groupBy('id_sq_wo'),
+        // Baris section I (BOQ lab). Harga unit = nilai bersih per unit (setelah discount item).
+        $bagianI = $boq->map(function ($r) use ($parameterByTp) {
+            $gross = (int) $r->qty * (int) $r->harga;
+            $total = max(0, $gross - (int) $r->discount);
+            // Baris 1 (bold) = Matriks Sample; baris 2 = nomor Testing Standard + nama Testing Point
+            $namaBold = $r->matriks_judul ?: ($r->item_produk_alternate ?: 'Item BOQ');
+            $namaSub  = trim(implode(' ', array_filter([$r->standard_nomor, $r->nama_testing_point])));
+            return (object) [
+                'nama'      => $namaBold,
+                'regulasi'  => $namaSub ?: null,
+                'parameter' => $parameterByTp->get($r->id_testing_point) ?: null,
+                'qty'       => (int) $r->qty,
+                'satuan'    => $r->satuan ?: 'Titik',
+                'harga'     => (int) $r->qty > 0 ? (int) round($total / (int) $r->qty) : 0,
+                'total'     => $total,
+            ];
+        })->values();
+
+        // Section II: BOQ Other + BOQ Sampling (sq_boq_tambahan, jenis 'lainnya' & 'sampling')
+        $bagianII = $tambahan->map(function ($r) {
+            $total = (int) $r->qty * (int) $r->harga;
+            return (object) [
+                'nama'      => $r->nama_item,
+                'regulasi'  => null,
+                'parameter' => null,
+                'qty'       => (int) $r->qty,
+                'satuan'    => $r->satuan ?: 'Hari',
+                'harga'     => (int) $r->harga,
+                'total'     => $total,
+            ];
+        })->values();
+
+        $subtotal    = $bagianI->sum('total') + $bagianII->sum('total');
+        $discountSq  = (int) ($sq->discount ?? 0);
+        $grandTotal  = max(0, $subtotal - $discountSq);
+
+        // Nomor & tanggal dicetak di kop tiap halaman
+        $noDok   = $sq->no_sq . ($sq->revisi > 0 ? ' Rev. ' . str_pad($sq->revisi, 2, '0', STR_PAD_LEFT) : ' Rev. 00');
+        $tanggal = $sq->tanggal_sq ? \Carbon\Carbon::parse($sq->tanggal_sq)->locale('id')->translatedFormat('d F Y') : '-';
+
+        return Pdf::view('pdf.sales-quotation.penawaran', [
+            'sq'          => $sq,
+            'lokasi'      => $lokasi,
+            'bagianI'     => $bagianI,
+            'bagianII'    => $bagianII,
+            'totalI'      => $bagianI->sum('total'),
+            'totalII'     => $bagianII->sum('total'),
+            'grandTotal'  => $grandTotal,
         ])
+            ->headerView('pdf.layouts.sections.header-penawaran', ['no' => $noDok, 'tanggal' => $tanggal])
+            ->footerView('pdf.layouts.sections.footer')
+            ->margins(top: 30, right: 0, bottom: 20, left: 0)
             ->format('a4')
-            ->landscape()
-            ->name("Printout-{$sq->no_sq}.pdf");
+            ->name("Penawaran-{$sq->no_sq}.pdf");
     }
 }

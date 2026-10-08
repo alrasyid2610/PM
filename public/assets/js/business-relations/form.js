@@ -187,8 +187,10 @@ function spDmsToDecimal(coord) {
         $(targetId).val('');
         return;
     }
+    // Menit/detik >= 60 tetap dihitung (rumus derajat+menit/60+detik/3600 tetap benar
+    // meski formatnya tidak standar) — cuma ditolak kalau benar-benar bukan angka atau negatif.
     const dv = parseFloat(d), mv = parseFloat(m), sv = parseFloat(s.replace(',', '.'));
-    if ([dv, mv, sv].some(isNaN) || mv < 0 || mv >= 60 || sv < 0 || sv >= 60) {
+    if ([dv, mv, sv].some(isNaN) || mv < 0 || sv < 0) {
         $(targetId).val('');
         return;
     }
