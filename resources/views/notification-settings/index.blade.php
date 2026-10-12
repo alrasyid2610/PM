@@ -13,7 +13,7 @@
         Daftar di bawah ini adalah <b>katalog event</b> notifikasi — baris baru otomatis muncul begitu
         sebuah event pertama kali dipicu dari sistem. Tiap event bisa punya lebih dari satu
         <b>Rule</b> (aturan penerima + template pesan). Placeholder di template pesan ditulis
-        <code>{{'{{nama_field}}'}}</code>.
+        <code>@{{nama_field}}</code>.
     </div>
 
     <div id="notifEventList"></div>
@@ -56,7 +56,7 @@
                     <div class="mb-3">
                         <label class="form-label required">Template Pesan</label>
                         <textarea name="message_template" id="ruleTemplate" class="form-control" rows="2" required
-                                  placeholder="mis. SO baru {{no_so}} dibuat oleh {{nama_user}}"></textarea>
+                                  placeholder="mis. SO baru @{{no_so}} dibuat oleh @{{nama_user}}"></textarea>
                     </div>
 
                     <div class="form-check">
