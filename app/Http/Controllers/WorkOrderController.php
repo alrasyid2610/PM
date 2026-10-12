@@ -332,26 +332,80 @@ class WorkOrderController extends Controller
             return response()->json(['message' => 'Belum ada Fieldwork Order pada WO ini. Tambahkan FWO terlebih dahulu sebelum menyelesaikan WO.'], 422);
         }
 
+        // Kumpulkan semua syarat yang belum terpenuhi supaya user melihatnya sekaligus
+        $alasan = [];
+
         $fwoBelumSelesai = DB::table('fieldworks')
             ->where('id_wo', $id)
             ->whereNull('deleted_at')
             ->where('status', '!=', 'completed')
             ->count();
-
         if ($fwoBelumSelesai > 0) {
-            return response()->json([
-                'message' => "Masih ada {$fwoBelumSelesai} FWO yang belum selesai. Semua FWO harus berstatus Completed sebelum WO dapat diselesaikan.",
-            ], 422);
+            $alasan[] = "{$fwoBelumSelesai} FWO belum selesai (semua FWO harus Completed)";
+        }
+
+        // Sisa BOQ WO harus 0 — qty terealisasi FWO (qty rencana − titik tidak terlaksana) per item BOQ
+        $boqs = DB::table('boq as b')
+            ->leftJoin('testing_points as tp', 'tp.id_testing_point', '=', 'b.id_testing_point')
+            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
+            ->where('b.id_wo', $id)
+            ->whereNull('b.deleted_at')
+            ->get([
+                'b.id_testing_point',
+                'b.qty',
+                DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as nama"),
+            ]);
+        $fwoQtyByTp = DB::table('fieldwork_boq as fb')
+            ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
+            ->where('fw.id_wo', $id)
+            ->whereNull('fw.deleted_at')
+            ->whereNull('fb.deleted_at')
+            ->selectRaw('fb.id_testing_point, SUM(' . fwoBoqEffectiveQtySql() . ') as fwo_qty')
+            ->groupBy('fb.id_testing_point')
+            ->pluck('fwo_qty', 'id_testing_point');
+        $sisaBoq = [];
+        foreach ($boqs as $b) {
+            $sisa = (int) $b->qty - (int) ($fwoQtyByTp[$b->id_testing_point] ?? 0);
+            if ($sisa > 0) $sisaBoq[] = ($b->nama ?: 'Item BOQ') . " (sisa {$sisa})";
+        }
+        if ($sisaBoq) {
+            $alasan[] = 'Sisa BOQ belum terpenuhi: ' . implode('; ', $sisaBoq);
+        }
+
+        // Semua sample WO (dari FWO maupun BOQ WO-langsung) harus sudah diregistrasi di Lab Sample Reg
+        $fwoIds = DB::table('fieldworks')->where('id_wo', $id)->whereNull('deleted_at')->pluck('id_fwo');
+        $sampleBelumReg = DB::table('lab_samples')
+            ->where(fn ($q) => $q->where('id_wo', $id)->orWhereIn('id_fwo', $fwoIds))
+            ->whereNull('id_wo_lab_sample_reg')
+            ->where(fn ($q) => $q->whereNull('status')->orWhere('status', '!=', 'tidak_terlaksana'))
+            ->count();
+        if ($sampleBelumReg > 0) {
+            $alasan[] = "{$sampleBelumReg} sample belum diregistrasi di Lab Sample Reg";
+        }
+
+        // Semua Budget Plan WO harus completed (tanpa Budget Plan boleh)
+        $planBelumSelesai = DB::table('wo_budgets')
+            ->where('id_wo', $id)
+            ->whereNull('deleted_at')
+            ->where('status', '!=', 'completed')
+            ->count();
+        if ($planBelumSelesai > 0) {
+            $alasan[] = "{$planBelumSelesai} Budget Plan WO belum diselesaikan";
         }
 
         $outputBelumSiap = DB::table('output_pekerjaan')
             ->where('id_wo', $id)
             ->where('status', 'belum_siap')
             ->count();
-
         if ($outputBelumSiap > 0) {
+            $alasan[] = "{$outputBelumSiap} Output Pekerjaan belum siap (harus Siap atau Terkirim)";
+        }
+
+        if ($alasan) {
             return response()->json([
-                'message' => "Masih ada {$outputBelumSiap} Output Pekerjaan yang belum siap. Semua Output Pekerjaan harus berstatus Siap atau Terkirim sebelum WO dapat diselesaikan.",
+                'message' => 'Work Order belum bisa diselesaikan.',
+                'alasan'  => $alasan,
             ], 422);
         }
 

@@ -34,6 +34,7 @@ use App\Http\Controllers\SubKategoriBisnisController;
 use App\Http\Controllers\SatuanController;
 use App\Http\Controllers\OfficeController;
 use App\Http\Controllers\AlasanTidakTerlaksanaController;
+use App\Http\Controllers\BankAccountController;
 use App\Http\Controllers\FwoBoqOtherController;
 use App\Http\Controllers\FwoBoqSamplingController;
 use App\Http\Controllers\BoqOtherController;
@@ -265,6 +266,19 @@ Route::prefix('alasan-tidak-terlaksana')->name('alasan-tidak-terlaksana.')->grou
     Route::delete('/{id}', [AlasanTidakTerlaksanaController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/detail', [AlasanTidakTerlaksanaController::class, 'detail'])->name('detail')->whereNumber('id');
     Route::get('/{id}/history', [AlasanTidakTerlaksanaController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('bank-accounts')->name('bank-accounts.')->group(function () {
+    Route::get('/select2', [BankAccountController::class, 'select2'])->name('select2');
+    Route::get('/', [BankAccountController::class, 'index'])->name('index');
+    Route::get('/data', [BankAccountController::class, 'data'])->name('data');
+    Route::get('/create', [BankAccountController::class, 'create'])->name('create');
+    Route::post('/', [BankAccountController::class, 'store'])->name('store');
+    Route::get('/{id}', [BankAccountController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [BankAccountController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [BankAccountController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/detail', [BankAccountController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::get('/{id}/history', [BankAccountController::class, 'history'])->name('history')->whereNumber('id');
 });
 
 Route::prefix('office')->name('office.')->group(function () {
