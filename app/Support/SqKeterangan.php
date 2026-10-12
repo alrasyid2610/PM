@@ -46,7 +46,8 @@ class SqKeterangan
                     $label = self::formatTermin($tahap);
                     // Lengkap hanya bila ada tahap, semua valid, dan total tepat 100%
                     $lengkap = $tahap && collect($tahap)->sum('persen') === 100;
-                    if (!$lengkap) $label = null;
+                    // Tahap yang sudah diisi tetap ditampilkan walau total belum 100% (Final tetap diblokir)
+                    if (!$tahap) $label = null;
                 }
 
                 if ($label !== null && $label !== '') $display[$i['key']] = $label;

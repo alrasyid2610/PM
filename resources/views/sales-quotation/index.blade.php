@@ -93,6 +93,9 @@
         update:  "{{ url('sales-quotations') }}/",
     }
 </script>
+{{-- Dragula: drag-and-drop urutan poin di tab Keterangan (pola sama Testing Points) --}}
+<link href="{{ asset('assets/vendor/dragula/dragula.min.css') }}" rel="stylesheet">
+<script src="{{ asset('assets/vendor/dragula/dragula.min.js') }}"></script>
 <script src="{{ asset('assets/js/sales-quotation/index.js') }}?v={{ @filemtime(public_path('assets/js/sales-quotation/index.js')) }}"></script>
 <script src="{{ asset('assets/js/sales-quotation/form.js') }}?v={{ @filemtime(public_path('assets/js/sales-quotation/form.js')) }}"></script>
 @endsection
