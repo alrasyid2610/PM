@@ -35,6 +35,8 @@ use App\Http\Controllers\SatuanController;
 use App\Http\Controllers\OfficeController;
 use App\Http\Controllers\AlasanTidakTerlaksanaController;
 use App\Http\Controllers\BankAccountController;
+use App\Http\Controllers\PoinKeteranganController;
+use App\Http\Controllers\SqKeteranganController;
 use App\Http\Controllers\FwoBoqOtherController;
 use App\Http\Controllers\FwoBoqSamplingController;
 use App\Http\Controllers\BoqOtherController;
@@ -279,6 +281,19 @@ Route::prefix('bank-accounts')->name('bank-accounts.')->group(function () {
     Route::delete('/{id}', [BankAccountController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/detail', [BankAccountController::class, 'detail'])->name('detail')->whereNumber('id');
     Route::get('/{id}/history', [BankAccountController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('poin-keterangan')->name('poin-keterangan.')->group(function () {
+    Route::get('/select2', [PoinKeteranganController::class, 'select2'])->name('select2');
+    Route::get('/', [PoinKeteranganController::class, 'index'])->name('index');
+    Route::get('/data', [PoinKeteranganController::class, 'data'])->name('data');
+    Route::get('/create', [PoinKeteranganController::class, 'create'])->name('create');
+    Route::post('/', [PoinKeteranganController::class, 'store'])->name('store');
+    Route::get('/{id}', [PoinKeteranganController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [PoinKeteranganController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [PoinKeteranganController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/detail', [PoinKeteranganController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::get('/{id}/history', [PoinKeteranganController::class, 'history'])->name('history')->whereNumber('id');
 });
 
 Route::prefix('office')->name('office.')->group(function () {
@@ -722,6 +737,16 @@ Route::prefix('sales-quotations')->name('sales-quotations.')->group(function () 
     Route::post('/', [SalesQuotationController::class, 'store'])->name('store');
 
     Route::get('/select2', [SalesQuotationController::class, 'select2'])->name('select2');
+
+    // Keterangan penawaran terstruktur (poin dari master Poin Keterangan). Aksi tulis memakai PUT (can_update).
+    Route::get('/keterangan/katalog', [SqKeteranganController::class, 'katalog'])->name('keterangan.katalog');
+    Route::get('/keterangan/opsi', [SqKeteranganController::class, 'opsi'])->name('keterangan.opsi');
+    Route::get('/{id}/keterangan', [SqKeteranganController::class, 'index'])->name('keterangan.index')->whereNumber('id');
+    Route::put('/{id}/keterangan/tambah', [SqKeteranganController::class, 'tambah'])->name('keterangan.tambah')->whereNumber('id');
+    Route::put('/{id}/keterangan/isi-standar', [SqKeteranganController::class, 'isiStandar'])->name('keterangan.isi-standar')->whereNumber('id');
+    Route::put('/{id}/keterangan/urut', [SqKeteranganController::class, 'urut'])->name('keterangan.urut')->whereNumber('id');
+    Route::put('/{id}/keterangan/{row}', [SqKeteranganController::class, 'update'])->name('keterangan.update')->whereNumber(['id', 'row']);
+    Route::put('/{id}/keterangan/{row}/hapus', [SqKeteranganController::class, 'hapus'])->name('keterangan.hapus')->whereNumber(['id', 'row']);
 
     Route::get('/{id}', [SalesQuotationController::class, 'show'])->name('show')->whereNumber('id');
     Route::put('/{id}', [SalesQuotationController::class, 'update'])->name('update')->whereNumber('id');

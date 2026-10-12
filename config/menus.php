@@ -92,6 +92,7 @@ return [
             ['slug' => 'office',          'label' => 'Office',         'icon' => 'fa-building'],
             ['slug' => 'alasan-tidak-terlaksana', 'label' => 'Alasan Tidak Terlaksana', 'icon' => 'fa-ban'],
             ['slug' => 'bank-accounts', 'label' => 'Bank Account', 'icon' => 'fa-building-columns'],
+            ['slug' => 'poin-keterangan', 'label' => 'Poin Keterangan', 'icon' => 'fa-list-ol'],
         ],
     ],
     [

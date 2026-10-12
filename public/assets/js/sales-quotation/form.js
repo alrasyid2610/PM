@@ -132,6 +132,13 @@ function renderForm(res) {
                         Work Order
                     </button>
                 </li>
+                <li role="presentation">
+                    <button class="pm-tab-btn" type="button" role="tab"
+                        data-bs-toggle="tab" data-bs-target="#tabSqKet" data-sq-id="${res.id_sq}">
+                        <i class="fa-solid fa-list-ol me-1" style="color:#7c3aed;font-size:11px;"></i>
+                        Keterangan
+                    </button>
+                </li>
             </ul>
             <div class="pm-tab-actions">
                 <div id="sqTabActionsInfo" class="d-flex align-items-center gap-2"></div>
@@ -258,7 +265,7 @@ function renderForm(res) {
         `<div class="row g-3 form-1">
             ${formGroup.text('keterangan_status', 'Keterangan Status', res.keterangan_status, false, { className: 'col-md-12' })}
             ${formGroup.textarea('cara_pembayaran', 'Cara Pembayaran', res.cara_pembayaran, { className: 'col-md-12' })}
-            ${formGroup.textarea('keterangan', 'Keterangan', res.keterangan, { className: 'col-md-12' })}
+            ${formGroup.textarea('keterangan', 'Catatan Internal (tidak tercetak di penawaran)', res.keterangan, { className: 'col-md-12' })}
         </div>`,
     )}
 
@@ -273,6 +280,17 @@ function renderForm(res) {
                             <button type="button" id="btnClearSqWoSearch" class="pm-search-clear d-none" title="Hapus"><i class="fa-solid fa-times"></i></button>
                         </div>
                         <div id="sqWoContent">
+                            <div class="text-center text-muted py-4">
+                                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- TAB: KETERANGAN PENAWARAN (poin dari master Poin Keterangan) -->
+                <div class="tab-pane fade" id="tabSqKet" role="tabpanel">
+                    <div class="card card-body">
+                        <div id="sqKetToolbar" class="mb-3"></div>
+                        <div id="sqKetContent">
                             <div class="text-center text-muted py-4">
                                 <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
                             </div>

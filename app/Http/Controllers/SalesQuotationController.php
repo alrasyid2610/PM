@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Support\SqLock;
+use App\Support\SqKeterangan;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistory;
@@ -84,6 +85,9 @@ class SalesQuotationController extends Controller
                 'updated_at' => now(),
             ]
         ));
+
+        // SQ baru otomatis memakai paket keterangan standar (bisa ditambah/dikurangi di tab Keterangan)
+        SqKeterangan::isiStandar((int) $id);
 
         $after = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
         saveAudit('sales_quotations', $id, 'Create', '', $after);
@@ -242,7 +246,16 @@ class SalesQuotationController extends Controller
             return response()->json(['message' => 'Tambahkan minimal 1 Work Order sebelum memfinalkan SQ.'], 422);
         }
 
+        // Semua isian poin keterangan (rekening, kontak, dst.) harus terisi sebelum SQ dikunci
+        $belumLengkap = SqKeterangan::yangBelumLengkap((int) $id);
+        if ($belumLengkap) {
+            return response()->json([
+                'message' => 'Keterangan penawaran belum lengkap: ' . implode('; ', $belumLengkap) . '. Lengkapi isian di tab Keterangan.',
+            ], 422);
+        }
+
         $before = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
+        SqKeterangan::snapshot((int) $id); // teks keterangan dikunci
         DB::table('sales_quotations')->where('id_sq', $id)->update(['status' => 'final', 'terkirim_at' => null, 'updated_at' => now()]);
         saveAudit('sales_quotations', $id, 'update', $before, DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson());
 
@@ -302,6 +315,8 @@ class SalesQuotationController extends Controller
             $data['updated_at'] = now();
 
             $newId = DB::table('sales_quotations')->insertGetId($data);
+
+            SqKeterangan::salin((int) $sq->id_sq, (int) $newId);
 
             $wos = DB::table('sq_work_orders')->where('id_sq', $sq->id_sq)->orderBy('urutan')->orderBy('id_sq_wo')->get();
             foreach ($wos as $wo) {
@@ -690,6 +705,8 @@ class SalesQuotationController extends Controller
             'totalI'      => $bagianI->sum('total'),
             'totalII'     => $bagianII->sum('total'),
             'grandTotal'  => $grandTotal,
+            // Poin keterangan terstruktur (teks final bila SQ sudah Final, render langsung bila Draft)
+            'keterangan'  => SqKeterangan::rows((int) $id)->pluck('teks'),
         ])
             ->headerView('pdf.layouts.sections.header-penawaran', ['no' => $noDok, 'tanggal' => $tanggal])
             ->footerView('pdf.layouts.sections.footer')

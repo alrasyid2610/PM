@@ -113,17 +113,16 @@
         </tbody>
     </table>
 
+    @if ($keterangan->isNotEmpty())
     <div class="ket">
         <b>Keterangan :</b>
         <ol>
-            <li>Penjadwalan sampling dilakukan setelah PO diterbitkan dan diterima oleh laboratorium.</li>
-            <li>Penerbitan laporan hasil uji adalah 12 hari kerja setelah sampel diterima laboratorium.</li>
-            <li>Penawaran sudah termasuk biaya pengambilan sampel di lokasi yang disepakati pelanggan.</li>
-            <li>Pelunasan dilakukan segera setelah draft hasil uji dikirimkan.</li>
-            <li>Pembayaran dapat dilakukan dengan tunai atau transfer bank ke Bank BCA, a.n Andriana, No. Rekening : 2820155729.</li>
-            <li>Informasi lebih lanjut dapat menghubungi Ilham 0895-3279-75236.</li>
+            @foreach ($keterangan as $poin)
+            <li>{!! nl2br(e($poin)) !!}</li>
+            @endforeach
         </ol>
     </div>
+    @endif
 
     <table class="sign">
         <tr>

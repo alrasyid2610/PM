@@ -657,6 +657,247 @@ $(document).on('click', '#btnConvertSqSubmit', function () {
     });
 });
 
+// ── Tab "Keterangan" — poin keterangan penawaran terstruktur ─────────────
+// Poin dipilih dari master (Poin Keterangan), hanya isian berparameter (hari,
+// rekening, kontak) yang diubah per SQ. Draft = bisa diubah; selain itu hanya baca
+// (teks sudah dikunci saat Final).
+const SQ_KET_TOKEN = /\{([a-z0-9_]+):([a-z]+)(?:=([^{}]*))?\}/g;
+let sqKetState = { idSq: null, editable: false, rows: [] };
+
+function sqKetText(row, editable) {
+    if (!editable) return escHtml(row.teks).replace(/\n/g, '<br>');
+
+    const byKey = {};
+    row.isian.forEach(function (i) { byKey[i.key] = i; });
+
+    let out = '', last = 0, m;
+    const re = new RegExp(SQ_KET_TOKEN.source, 'g');
+    const plain = function (s) { return escHtml(s).replace(/\n/g, '<br>'); };
+    while ((m = re.exec(row.template)) !== null) {
+        out += plain(row.template.slice(last, m.index));
+        last = re.lastIndex;
+        const i = byKey[m[1]];
+        const base = `data-row="${row.id_sq_keterangan}" data-key="${m[1]}" data-no-disable`;
+        if (!i) { out += escHtml(m[0]); continue; }
+        if (i.tipe === 'angka') {
+            out += `<input type="number" min="0" max="9999" class="form-control form-control-sm d-inline-block sq-ket-angka"
+                style="width:76px;vertical-align:middle;" ${base} value="${escHtml(i.value_label ?? '')}">`;
+        } else if (i.tipe === 'rekening' || i.tipe === 'personel') {
+            const opt = i.value ? `<option value="${i.value}" selected>${escHtml(i.value_label ?? '')}</option>` : '<option value=""></option>';
+            out += `<span class="d-inline-block" style="min-width:320px;vertical-align:middle;">
+                <select class="sq-ket-sel" data-tipe="${i.tipe}" ${base}>${opt}</select></span>`;
+        } else if (i.tipe === 'termin') {
+            out += sqKetTerminEditor(row.id_sq_keterangan, m[1], Array.isArray(i.value) ? i.value : []);
+        } else {
+            out += `<em class="text-muted">[${escHtml(m[1])}]</em>`;
+        }
+    }
+    return out + plain(row.template.slice(last));
+}
+
+// Editor daftar tahap pembayaran (isian bertipe termin): persen + pemicu (pilihan tetap)
+function sqKetTerminRow(n, t) {
+    const opts = (sqKetState.pemicu || []).map(function (p) {
+        return `<option value="${p.value}"${t && t.pemicu === p.value ? ' selected' : ''}>${escHtml(p.label)}</option>`;
+    }).join('');
+    return `<div class="d-flex gap-2 mb-1 align-items-center sq-termin-row">
+        <span style="width:58px;color:#64748b;">Tahap ${n}</span>
+        <input type="number" min="1" max="100" class="form-control form-control-sm sq-termin-persen" style="width:72px;" value="${t ? t.persen : ''}" data-no-disable>
+        <span>%</span>
+        <select class="form-select form-select-sm sq-termin-pemicu" style="width:400px;max-width:100%;" data-no-disable>${opts}</select>
+        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 sq-termin-del" title="Hapus tahap" data-no-disable><i class="fa-solid fa-xmark" style="color:#dc2626;"></i></button>
+    </div>`;
+}
+
+function sqKetTerminEditor(rowId, key, tahap) {
+    const total = tahap.reduce(function (s, t) { return s + (Number(t.persen) || 0); }, 0);
+    const ok = total === 100;
+    return `<div class="sq-ket-termin mt-1" data-row="${rowId}" data-key="${key}">
+        ${tahap.map(function (t, i) { return sqKetTerminRow(i + 1, t); }).join('')}
+        <div class="d-flex gap-2 align-items-center mt-1">
+            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 sq-termin-add" data-no-disable><i class="fa-solid fa-plus me-1"></i>Tahap</button>
+            <span style="font-size:11px;font-weight:600;color:${ok ? '#15803d' : '#b45309'};">Total ${total}%${ok ? '' : ' (harus 100%)'}</span>
+        </div>
+    </div>`;
+}
+
+function sqKetSimpanTermin($wrap) {
+    const key = $wrap.data('key');
+    const data = {};
+    let n = 0;
+    $wrap.find('.sq-termin-row').each(function () {
+        const persen = $(this).find('.sq-termin-persen').val();
+        if (persen === '') return; // baris belum lengkap dilewati
+        data['nilai[' + key + '][' + n + '][persen]'] = persen;
+        data['nilai[' + key + '][' + n + '][pemicu]'] = $(this).find('.sq-termin-pemicu').val();
+        n++;
+    });
+    if (!n) data['nilai[' + key + ']'] = '';
+    sqKetSend('PUT', '/sales-quotations/' + sqKetState.idSq + '/keterangan/' + $wrap.data('row'), data, function () {
+        loadSqKeterangan(sqKetState.idSq);
+    });
+}
+
+$(document).on('change', '#sqKetContent .sq-termin-persen, #sqKetContent .sq-termin-pemicu', function () {
+    sqKetSimpanTermin($(this).closest('.sq-ket-termin'));
+});
+$(document).on('click', '#sqKetContent .sq-termin-del', function () {
+    const $wrap = $(this).closest('.sq-ket-termin');
+    $(this).closest('.sq-termin-row').remove();
+    sqKetSimpanTermin($wrap);
+});
+$(document).on('click', '#sqKetContent .sq-termin-add', function () {
+    const $wrap = $(this).closest('.sq-ket-termin');
+    const n = $wrap.find('.sq-termin-row').length + 1;
+    $(this).closest('div').before(sqKetTerminRow(n, null));
+});
+
+function renderSqKetList() {
+    const { rows, editable } = sqKetState;
+    if (!rows.length) {
+        $('#sqKetContent').html(`<div class="text-center text-muted py-4">
+            <i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>
+            Belum ada poin keterangan.${editable ? ' Tambahkan poin atau gunakan "Isi Poin Standar".' : ''}</div>`);
+        return;
+    }
+
+    const html = rows.map(function (r, idx) {
+        const warn = editable && !r.lengkap
+            ? '<span class="pm-badge" style="background:#fef2f2;color:#b91c1c;font-size:10px;">Isian belum lengkap</span>' : '';
+        const tools = editable ? `<div class="d-flex gap-1 flex-shrink-0">
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 sq-ket-up" data-row="${r.id_sq_keterangan}" ${idx === 0 ? 'disabled' : ''} title="Naikkan" data-no-disable><i class="fa-solid fa-arrow-up"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 sq-ket-down" data-row="${r.id_sq_keterangan}" ${idx === rows.length - 1 ? 'disabled' : ''} title="Turunkan" data-no-disable><i class="fa-solid fa-arrow-down"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 sq-ket-del" data-row="${r.id_sq_keterangan}" title="Hapus" data-no-disable><i class="fa-solid fa-trash" style="color:#dc2626;"></i></button>
+            </div>` : '';
+        return `<div class="d-flex align-items-start gap-3 py-2 sq-ket-row" style="border-bottom:1px solid #e2e8f0;" data-row="${r.id_sq_keterangan}">
+            <div style="width:28px;text-align:center;color:#94a3b8;font-weight:600;padding-top:4px;">${idx + 1}</div>
+            <div class="flex-grow-1" style="font-size:13px;line-height:2;">
+                <span class="pm-badge" style="background:#f5f3ff;color:#6d28d9;font-size:10px;margin-right:6px;">${escHtml(r.kategori_label)}</span>${warn}<br>
+                ${sqKetText(r, editable)}
+            </div>
+            ${tools}
+        </div>`;
+    }).join('');
+    $('#sqKetContent').html(`<div style="border:1px solid #e2e8f0;border-radius:8px;padding:4px 14px;">${html}</div>`);
+
+    if (editable) {
+        $('#sqKetContent .sq-ket-sel').each(function () {
+            const $el = $(this);
+            const tipe = $el.data('tipe');
+            $el.select2({
+                width: '100%', dropdownParent: $('#detailContent'), allowClear: true,
+                placeholder: tipe === 'rekening' ? 'Pilih rekening' : 'Pilih personel', minimumInputLength: 0,
+                ajax: {
+                    url: '/sales-quotations/keterangan/opsi', dataType: 'json', delay: 200,
+                    data: function (p) { return { q: p.term || '', tipe: tipe }; },
+                    processResults: function (d) { return { results: d }; },
+                },
+            });
+        });
+    }
+}
+
+function renderSqKetToolbar() {
+    if (!sqKetState.editable) {
+        $('#sqKetToolbar').html(`<span style="font-size:11px;color:#64748b;"><i class="fa-solid fa-lock me-1"></i>
+            Keterangan terkunci mengikuti status SQ.</span>`);
+        return;
+    }
+    $('#sqKetToolbar').html(`<div class="d-flex flex-wrap gap-2 align-items-center">
+        <div style="width:420px;max-width:100%;"><select id="sqKetTambah" style="width:100%" data-no-disable></select></div>
+        <button type="button" id="btnSqKetStandar" class="btn btn-sm btn-outline-primary" data-no-disable>
+            <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Isi Poin Standar
+        </button>
+        <span class="text-muted" style="font-size:11px;">Poin dipilih dari master; hanya isian (hari, rekening, kontak) yang diubah.</span>
+    </div>`);
+
+    $.get('/sales-quotations/keterangan/katalog', function (list) {
+        const groups = {};
+        list.forEach(function (p) { (groups[p.kategori_label] = groups[p.kategori_label] || []).push({ id: p.id, text: p.text }); });
+        const data = [{ id: '', text: '' }].concat(Object.keys(groups).map(function (g) { return { text: g, children: groups[g] }; }));
+        $('#sqKetTambah').select2({
+            width: '100%', dropdownParent: $('#detailContent'), placeholder: '+ Tambah poin keterangan...', data: data,
+        });
+    });
+}
+
+function sqKetSend(method, url, data, done) {
+    $.ajax({
+        url: url, method: 'POST',
+        data: Object.assign({ _token: window.route.csrf, _method: method }, data || {}),
+        success: function (res) { if (done) done(res); },
+        error: function (xhr) {
+            Notify.error((xhr.responseJSON && xhr.responseJSON.message) || 'Gagal menyimpan keterangan.');
+            loadSqKeterangan(sqKetState.idSq);
+        },
+    });
+}
+
+function loadSqKeterangan(idSq) {
+    sqKetState.idSq = idSq;
+    $.get('/sales-quotations/' + idSq + '/keterangan', function (res) {
+        sqKetState.editable = res.status === 'draft' && can('sales-quotations', 'can_update');
+        sqKetState.rows = res.data || [];
+        sqKetState.pemicu = res.pemicu || [];
+        renderSqKetToolbar();
+        renderSqKetList();
+    }).fail(function () {
+        $('#sqKetContent').html('<div class="text-center text-danger py-4">Gagal memuat keterangan.</div>');
+    });
+}
+
+$(document).on('select2:select', '#sqKetTambah', function () {
+    const id = $(this).val();
+    if (!id) return;
+    sqKetSend('PUT', '/sales-quotations/' + sqKetState.idSq + '/keterangan/tambah', { id_poin: id }, function () {
+        loadSqKeterangan(sqKetState.idSq);
+    });
+});
+
+$(document).on('click', '#btnSqKetStandar', function () {
+    sqKetSend('PUT', '/sales-quotations/' + sqKetState.idSq + '/keterangan/isi-standar', {}, function (res) {
+        Notify.success(res.message);
+        loadSqKeterangan(sqKetState.idSq);
+    });
+});
+
+function sqKetSimpanNilai(row, key, val) {
+    const data = {};
+    data['nilai[' + key + ']'] = val === null ? '' : val;
+    sqKetSend('PUT', '/sales-quotations/' + sqKetState.idSq + '/keterangan/' + row, data, function () {
+        // muat ulang agar penanda "belum lengkap" ikut diperbarui
+        loadSqKeterangan(sqKetState.idSq);
+    });
+}
+
+$(document).on('change', '#sqKetContent .sq-ket-angka', function () {
+    sqKetSimpanNilai($(this).data('row'), $(this).data('key'), $(this).val());
+});
+$(document).on('select2:select select2:clear', '#sqKetContent .sq-ket-sel', function () {
+    sqKetSimpanNilai($(this).data('row'), $(this).data('key'), $(this).val() || null);
+});
+
+function sqKetGeser(row, arah) {
+    const ids = sqKetState.rows.map(function (r) { return r.id_sq_keterangan; });
+    const i = ids.indexOf(Number(row));
+    const j = i + arah;
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    ids.splice(j, 0, ids.splice(i, 1)[0]);
+    sqKetSend('PUT', '/sales-quotations/' + sqKetState.idSq + '/keterangan/urut', { ids: ids }, function () {
+        loadSqKeterangan(sqKetState.idSq);
+    });
+}
+$(document).on('click', '#sqKetContent .sq-ket-up', function () { sqKetGeser($(this).data('row'), -1); });
+$(document).on('click', '#sqKetContent .sq-ket-down', function () { sqKetGeser($(this).data('row'), 1); });
+$(document).on('click', '#sqKetContent .sq-ket-del', function () {
+    const row = $(this).data('row');
+    Notify.confirmDelete('Hapus poin keterangan ini?', function () {
+        sqKetSend('PUT', '/sales-quotations/' + sqKetState.idSq + '/keterangan/' + row + '/hapus', {}, function () {
+            loadSqKeterangan(sqKetState.idSq);
+        });
+    });
+});
+
 $(document).ready(function () {
     if ($('#sales-quotations-table').length === 0) return;
 
@@ -672,6 +913,7 @@ $(document).ready(function () {
             initSqSiteFields();
             initFpDate('#detailContent');
             loadSqWoList(res.id_sq);
+            loadSqKeterangan(res.id_sq);
         },
     });
 

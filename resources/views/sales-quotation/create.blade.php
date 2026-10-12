@@ -163,8 +163,9 @@
                         <textarea name="cara_pembayaran" class="form-control" rows="2"></textarea>
                     </div>
                     <div class="col-md-12">
-                        <label class="form-label">Keterangan</label>
+                        <label class="form-label">Catatan Internal</label>
                         <textarea name="keterangan" class="form-control" rows="3"></textarea>
+                        <div class="form-text">Tidak tercetak di penawaran. Poin keterangan penawaran diatur di tab Keterangan setelah SQ dibuat.</div>
                     </div>
                 </div>
             </x-section-card>
