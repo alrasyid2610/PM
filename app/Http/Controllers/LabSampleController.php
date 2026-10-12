@@ -70,6 +70,10 @@ class LabSampleController extends Controller
                 DB::raw("COALESCE(TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))), b.item_produk_alternate) as nama_boq"),
             ]);
 
+        // Nama alasan tidak terlaksana — termasuk alasan yang sudah dinonaktifkan/dihapus lunak
+        // (data lama tetap terbaca), jadi tidak difilter is_aktif/deleted_at.
+        $alasanNama = DB::table('alasan_tidak_terlaksana')->pluck('nama', 'id_alasan');
+
         foreach ($boqs as $boq) {
             $boq->samples = DB::table('lab_samples')
                 ->where('id_fwo_boq', $boq->id_fwo_boq)
@@ -77,6 +81,9 @@ class LabSampleController extends Controller
                 ->get();
             foreach ($boq->samples as $sample) {
                 $sample->attachments = $sample->attachments ? json_decode($sample->attachments) : [];
+                $sample->alasan_nama = $sample->id_alasan_tidak_terlaksana
+                    ? ($alasanNama[$sample->id_alasan_tidak_terlaksana] ?? null)
+                    : null;
             }
         }
 
@@ -94,6 +101,9 @@ class LabSampleController extends Controller
         $sample = DB::table('lab_samples')->where('id_lab_sample', $id)->first();
         if (!$sample) return response()->json(['message' => 'Tidak ditemukan'], 404);
         $sample->attachments = $sample->attachments ? json_decode($sample->attachments) : [];
+        $sample->alasan_nama = $sample->id_alasan_tidak_terlaksana
+            ? DB::table('alasan_tidak_terlaksana')->where('id_alasan', $sample->id_alasan_tidak_terlaksana)->value('nama')
+            : null;
         return response()->json(['data' => $sample]);
     }
 
@@ -211,7 +221,11 @@ class LabSampleController extends Controller
             return response()->json(['success' => false, 'message' => 'Tidak ada field yang diisi.'], 422);
         }
 
-        DB::table('lab_samples')->where('id_fwo_boq', $id_fwo_boq)->update($update);
+        // Slot Tidak Terlaksana tidak ikut di-overwrite (statusnya hasil keputusan lapangan + alasan)
+        DB::table('lab_samples')
+            ->where('id_fwo_boq', $id_fwo_boq)
+            ->where(fn ($q) => $q->whereNull('status')->orWhere('status', '!=', 'tidak_terlaksana'))
+            ->update($update);
 
         return response()->json(['success' => true]);
     }
@@ -232,10 +246,87 @@ class LabSampleController extends Controller
             return response()->json(['message' => 'Field tidak valid.'], 422);
         }
 
-        DB::table('lab_samples')->where('id_lab_sample', $id)->update([
+        $update = [
             $field       => $request->input('value') ?: null,
             'updated_at' => now(),
+        ];
+
+        if ($field === 'status') {
+            $value = $request->input('value');
+            if ($value === 'tidak_terlaksana') {
+                // Wajib lewat endpoint khusus supaya alasan ikut tercatat
+                return response()->json(['message' => 'Status Tidak Terlaksana harus diisi beserta alasannya.'], 422);
+            }
+            // Status dikembalikan (boleh selama FWO belum selesai) → alasan lama dibuang
+            $update['id_alasan_tidak_terlaksana'] = null;
+        }
+
+        DB::table('lab_samples')->where('id_lab_sample', $id)->update($update);
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Cek isian "Tidak Terlaksana": alasan wajib & aktif, keterangan wajib kalau
+     * alasan menandainya (wajib_keterangan), dan sample yang sudah diregistrasi di
+     * Lab Sample Reg tidak boleh ditandai tidak terlaksana. Return pesan error / null.
+     */
+    private function tidakTerlaksanaError($sample, $idAlasan, $keterangan): ?string
+    {
+        if ($sample->id_wo_lab_sample_reg) {
+            return 'Sample sudah diregistrasi di Lab Sample Reg, tidak bisa ditandai Tidak Terlaksana.';
+        }
+
+        $alasan = $idAlasan
+            ? DB::table('alasan_tidak_terlaksana')->where('id_alasan', $idAlasan)->whereNull('deleted_at')->first()
+            : null;
+
+        if (!$alasan) {
+            return 'Alasan wajib dipilih.';
+        }
+        // Alasan nonaktif hanya boleh dipertahankan kalau memang sudah tercatat di sample ini
+        if (!$alasan->is_aktif && (int) $sample->id_alasan_tidak_terlaksana !== (int) $idAlasan) {
+            return 'Alasan yang dipilih sudah tidak aktif.';
+        }
+        if ($alasan->wajib_keterangan && !trim((string) $keterangan)) {
+            return "Keterangan wajib diisi untuk alasan \"{$alasan->nama}\".";
+        }
+
+        return null;
+    }
+
+    // Tandai 1 titik sample Tidak Terlaksana beserta alasan (master) + keterangan opsional
+    public function tidakTerlaksana(Request $request, $id)
+    {
+        $sample = DB::table('lab_samples')->where('id_lab_sample', $id)->first();
+        if (!$sample) return response()->json(['message' => 'Tidak ditemukan'], 404);
+
+        if ($this->fwoIsCompleted($sample->id_fwo)) {
+            return response()->json(['success' => false, 'message' => 'FWO sudah selesai.'], 403);
+        }
+
+        $request->validate([
+            'id_alasan'  => 'required|integer',
+            'keterangan' => 'nullable|string',
+        ], [
+            'id_alasan.required' => 'Alasan wajib dipilih.',
         ]);
+
+        if ($msg = $this->tidakTerlaksanaError($sample, $request->id_alasan, $request->keterangan)) {
+            return response()->json(['success' => false, 'message' => $msg], 422);
+        }
+
+        $before = DB::table('lab_samples')->where('id_lab_sample', $id)->get()->toJson();
+
+        DB::table('lab_samples')->where('id_lab_sample', $id)->update([
+            'status'                     => 'tidak_terlaksana',
+            'id_alasan_tidak_terlaksana' => (int) $request->id_alasan,
+            'keterangan'                 => $request->keterangan ?: $sample->keterangan,
+            'updated_at'                 => now(),
+        ]);
+
+        $after = DB::table('lab_samples')->where('id_lab_sample', $id)->get()->toJson();
+        saveAudit('lab_samples', $id, 'Update', $before, $after);
 
         return response()->json(['success' => true]);
     }
@@ -254,10 +345,18 @@ class LabSampleController extends Controller
             'tanggal_pengambilan' => 'nullable|date',
             'titik_lokasi'        => 'nullable|string|max:255',
             'kondisi_sample'      => 'nullable|in:baik,rusak,tidak_lengkap',
-            'status'              => 'required|in:belum_diambil,diambil,dikirim',
+            'status'              => 'required|in:belum_diambil,diambil,dikirim,tidak_terlaksana',
+            'id_alasan_tidak_terlaksana' => 'nullable|integer',
             'keterangan'          => 'nullable|string',
             'attachments.*'       => 'nullable|file|max:153600',
         ]);
+
+        $isTidakTerlaksana = $request->status === 'tidak_terlaksana';
+        if ($isTidakTerlaksana) {
+            if ($msg = $this->tidakTerlaksanaError($sample, $request->id_alasan_tidak_terlaksana, $request->keterangan)) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+        }
 
         $existing = $request->input('existing_attachments', []);
         $newFiles = [];
@@ -275,6 +374,7 @@ class LabSampleController extends Controller
             'titik_lokasi'        => $request->titik_lokasi ?: null,
             'kondisi_sample'      => $request->kondisi_sample ?: null,
             'status'              => $request->status,
+            'id_alasan_tidak_terlaksana' => $isTidakTerlaksana ? (int) $request->id_alasan_tidak_terlaksana : null,
             'keterangan'          => $request->keterangan ?: null,
             'attachments'         => $allFiles ? json_encode($allFiles) : null,
             'updated_at'          => now(),

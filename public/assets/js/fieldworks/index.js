@@ -2383,8 +2383,23 @@ function initSampleModalTitikSelect2() {
     });
 }
 
-const SAMPLE_STATUS_LABEL = { belum_diambil: 'Belum Diambil', diambil: 'Diambil', dikirim: 'Dikirim' };
-const SAMPLE_STATUS_COLOR = { belum_diambil: '#64748b', diambil: '#0369a1', dikirim: '#15803d' };
+const SAMPLE_STATUS_LABEL = { belum_diambil: 'Belum Diambil', diambil: 'Diambil', dikirim: 'Dikirim', tidak_terlaksana: 'Tidak Terlaksana' };
+const SAMPLE_STATUS_COLOR = { belum_diambil: '#64748b', diambil: '#0369a1', dikirim: '#15803d', tidak_terlaksana: '#c2410c' };
+
+// Select2 alasan tidak terlaksana: load semua alasan aktif di awal (pola standar), simpan flag wajib_keterangan
+function initAlasanTTSelect2($el, $parent, selectedId) {
+    if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
+    $el.empty();
+    $.get('/alasan-tidak-terlaksana/select2').done(function (rows) {
+        const data = [{ id: '', text: '' }].concat(rows.map(r => ({ id: r.id, text: r.text, wajib_keterangan: r.wajib_keterangan })));
+        $el.select2({ width: '100%', dropdownParent: $parent, placeholder: '-- Pilih Alasan --', allowClear: true, data: data });
+        $el.val(selectedId ? String(selectedId) : null).trigger('change');
+    });
+}
+function alasanWajibKet($el) {
+    const d = $el.select2('data')[0];
+    return !!(d && d.wajib_keterangan);
+}
 const JENIS_LABEL = { env: 'ENV', we: 'WE', mp: 'MP', product: 'Product' };
 const KONDISI_LABEL = { baik: 'Baik', rusak: 'Rusak', tidak_lengkap: 'Tidak Lengkap' };
 const KONDISI_COLOR = { baik: '#15803d', rusak: '#dc2626', tidak_lengkap: '#b45309' };
@@ -2402,9 +2417,11 @@ function renderSampleList(boqs, isLocked) {
         const total    = (boq.samples || []).length;
         const diambil  = (boq.samples || []).filter(s => s.status === 'diambil' || s.status === 'dikirim').length;
         const dikirim  = (boq.samples || []).filter(s => s.status === 'dikirim').length;
+        const tidakTerlaksana = (boq.samples || []).filter(s => s.status === 'tidak_terlaksana').length;
         const pct      = total > 0 ? Math.round((diambil / total) * 100) : 0;
         const barColor = pct === 100 ? '#15803d' : '#0369a1';
         const sisa     = Math.max(0, (boq.qty || 0) - total);
+        const ttText   = tidakTerlaksana > 0 ? ` &nbsp;·&nbsp; <span style="color:#c2410c;font-weight:600;">${tidakTerlaksana} tidak terlaksana</span>` : '';
 
         const slotRows = total === 0
             ? `<tr><td colspan="9" class="text-center text-muted py-3" style="font-size:12px;font-style:italic;">Belum ada sample — gunakan tombol "Tambah Sample" di atas</td></tr>`
@@ -2441,8 +2458,11 @@ function renderSampleList(boqs, isLocked) {
                     ? `<span style="font-size:11px;font-weight:600;color:${KONDISI_COLOR[s.kondisi_sample]||'#64748b'};">${KONDISI_LABEL[s.kondisi_sample]||s.kondisi_sample}</span>`
                     : `<span style="color:#94a3b8;font-style:italic;font-size:11px;">–</span>`;
 
-                const keteranganCell = s.keterangan
-                    ? `<span style="font-size:11px;" title="${escHtml(s.keterangan)}">${escHtml(s.keterangan)}</span>`
+                const alasanTag = s.status === 'tidak_terlaksana' && s.alasan_nama
+                    ? `<span style="font-size:11px;font-weight:600;color:#c2410c;">${escHtml(s.alasan_nama)}</span>${s.keterangan ? ' — ' : ''}`
+                    : '';
+                const keteranganCell = (alasanTag || s.keterangan)
+                    ? `<span style="font-size:11px;" title="${escHtml((s.alasan_nama && s.status === 'tidak_terlaksana' ? s.alasan_nama + ' — ' : '') + (s.keterangan || ''))}">${alasanTag}${s.keterangan ? escHtml(s.keterangan) : ''}</span>`
                     : `<span style="color:#94a3b8;font-style:italic;font-size:11px;">–</span>`;
 
                 return `
@@ -2455,11 +2475,12 @@ function renderSampleList(boqs, isLocked) {
                     <td style="font-size:12px;width:150px;">
                         ${!isLocked
                             ? `<select class="form-select form-select-sm sample-inline-status"
-                                    data-id="${s.id_lab_sample}"
+                                    data-id="${s.id_lab_sample}" data-prev="${statusVal}"
                                     style="font-size:11px;width:140px;">
                                     <option value="belum_diambil"${statusVal==='belum_diambil'?' selected':''}>Belum Diambil</option>
                                     <option value="diambil"${statusVal==='diambil'?' selected':''}>Diambil</option>
                                     <option value="dikirim"${statusVal==='dikirim'?' selected':''}>Dikirim ke Lab</option>
+                                    <option value="tidak_terlaksana"${statusVal==='tidak_terlaksana'?' selected':''}>Tidak Terlaksana</option>
                                </select>`
                             : `<span style="font-size:11px;font-weight:600;color:${SAMPLE_STATUS_COLOR[statusVal]||'#64748b'};">${SAMPLE_STATUS_LABEL[statusVal]||statusVal}</span>`
                         }
@@ -2523,7 +2544,7 @@ function renderSampleList(boqs, isLocked) {
                 style="background:#f8fafc;border-bottom:1px solid #e2e8f0;border-radius:calc(0.375rem - 1px) calc(0.375rem - 1px) 0 0;">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <span style="font-size:13px;font-weight:600;color:#1e293b;">${escHtml(boq.nama_boq)}</span>
-                    <span class="text-muted sample-progress-text" style="font-size:11px;">Target: ${boq.qty || 0} &nbsp;·&nbsp; ${diambil}/${total} diambil &nbsp;·&nbsp; ${dikirim} dikirim</span>
+                    <span class="text-muted sample-progress-text" style="font-size:11px;">Target: ${boq.qty || 0} &nbsp;·&nbsp; ${diambil}/${total} diambil &nbsp;·&nbsp; ${dikirim} dikirim${ttText}</span>
                     ${sisa > 0 && !isLocked ? `<span style="font-size:11px;color:#b45309;background:#fef3c7;border:1px solid #fde68a;border-radius:4px;padding:1px 6px;">${sisa} slot belum dibuat</span>` : ''}
                 </div>
                 <div class="d-flex align-items-center gap-2">
@@ -2599,6 +2620,8 @@ $(document).off('click.sample', '.btn-sample-edit').on('click.sample', '.btn-sam
     $modal.find('#sampleModal-kondisi').val('');
     $modal.find('#sampleModal-status').val('belum_diambil');
     $modal.find('#sampleModal-keterangan').val('');
+    $modal.data('_alasanId', null);
+    $modal.find('#sampleModal-alasan-wrap').addClass('d-none');
     $modal.find('#sampleModal-existing-files').empty();
     if (sampleFilePond) { sampleFilePond.destroy(); sampleFilePond = null; }
 
@@ -2614,6 +2637,7 @@ $(document).off('click.sample', '.btn-sample-edit').on('click.sample', '.btn-sam
                 $modal.find('#sampleModal-kondisi').val(s.kondisi_sample || '');
                 $modal.find('#sampleModal-status').val(s.status || 'belum_diambil');
                 $modal.find('#sampleModal-keterangan').val(s.keterangan || '');
+                $modal.data('_alasanId', s.id_alasan_tidak_terlaksana || null);
 
                 const files = s.attachments || [];
                 const filesHtml = files.length
@@ -2644,6 +2668,7 @@ $(document).off('click.sample', '.btn-sample-edit').on('click.sample', '.btn-sam
                 $el.select2({ ...s2Opts, placeholder: $el.find('option:first').text() || '-- Pilih --' });
                 $el.trigger('change');
             });
+            initAlasanTTSelect2($modal.find('#sampleModal-alasan'), $modal, $modal.data('_alasanId'));
 
             // Re-init Select2 titik lokasi (supaya options ter-refresh & value bisa di-set)
             initSampleModalTitikSelect2();
@@ -2671,6 +2696,11 @@ $(document).off('click.sample', '#sampleModal-btn-save').on('click.sample', '#sa
     fd.append('kondisi_sample', $('#sampleModal-kondisi').val() || '');
     fd.append('status', $('#sampleModal-status').val());
     fd.append('keterangan', $('#sampleModal-keterangan').val().trim());
+    if ($('#sampleModal-status').val() === 'tidak_terlaksana') {
+        const alasan = $('#sampleModal-alasan').val();
+        if (!alasan) return Notify.error('Alasan tidak terlaksana wajib dipilih.');
+        fd.append('id_alasan_tidak_terlaksana', alasan);
+    }
 
     $('#sampleModal-existing-files .existing-sample-file-path').each(function () {
         fd.append('existing_attachments[]', $(this).val());
@@ -2741,6 +2771,20 @@ $(document).off('change.sample-status', '.sample-inline-status').on('change.samp
     const val   = $sel.val();
     const $card = $sel.closest('.mb-3.border.rounded');
 
+    // Tidak Terlaksana wajib alasan → buka modal; batal = muat ulang list (kembalikan pilihan)
+    if (val === 'tidak_terlaksana') {
+        const $m = $('#tidakTerlaksanaModal');
+        const noUrut = $sel.closest('tr').find('td:first').text().trim();
+        $m.find('#ttModal-id').val(id);
+        $m.find('#ttModal-info').text(`Titik #${noUrut} — ${$sel.closest('tr').data('boq-name') || ''}`);
+        $m.find('#ttModal-keterangan').val('');
+        $m.find('#ttModal-ket-wajib').addClass('d-none');
+        $m.data('saved', false);
+        initAlasanTTSelect2($m.find('#ttModal-alasan'), $m);
+        bootstrap.Modal.getOrCreateInstance($m[0]).show();
+        return;
+    }
+
     $.post(`/lab-samples/${id}/field`, { _token: window.route.csrf, field: 'status', value: val })
         .done(function (res) {
             if (res.success) {
@@ -2749,8 +2793,15 @@ $(document).off('change.sample-status', '.sample-inline-status').on('change.samp
                 const total    = $allStatus.length;
                 const diambil  = $allStatus.filter(function () { const v = $(this).val(); return v === 'diambil' || v === 'dikirim'; }).length;
                 const dikirim  = $allStatus.filter(function () { return $(this).val() === 'dikirim'; }).length;
+                const tt       = $allStatus.filter(function () { return $(this).val() === 'tidak_terlaksana'; }).length;
                 const qty      = parseInt($card.find('.sample-progress-text').text().match(/Target:\s*(\d+)/)?.[1] || 0);
-                $card.find('.sample-progress-text').html(`Target: ${qty} &nbsp;·&nbsp; ${diambil}/${total} diambil &nbsp;·&nbsp; ${dikirim} dikirim`);
+                const ttText   = tt > 0 ? ` &nbsp;·&nbsp; <span style="color:#c2410c;font-weight:600;">${tt} tidak terlaksana</span>` : '';
+                $card.find('.sample-progress-text').html(`Target: ${qty} &nbsp;·&nbsp; ${diambil}/${total} diambil &nbsp;·&nbsp; ${dikirim} dikirim${ttText}`);
+                // Alasan lama tidak relevan lagi bila status diubah dari Tidak Terlaksana
+                const idFwo = $('#fwoDetailTabs button[data-bs-target="#tabFwoSample"]').data('id-fwo');
+                const wasTT = $sel.data('prev') === 'tidak_terlaksana';
+                $sel.data('prev', val);
+                if (idFwo && wasTT) loadSampleData(idFwo);
 
                 // Update progress bar
                 const pct      = total > 0 ? Math.round((diambil / total) * 100) : 0;
@@ -2759,6 +2810,48 @@ $(document).off('change.sample-status', '.sample-inline-status').on('change.samp
             }
         })
         .fail(function () { Swal.fire({ icon: 'error', title: 'Gagal menyimpan status', timer: 1500, showConfirmButton: false }); });
+});
+
+// ── Modal Titik Tidak Terlaksana ──
+$(document).off('change.tt', '#ttModal-alasan').on('change.tt', '#ttModal-alasan', function () {
+    const $el = $(this);
+    const wajib = $el.hasClass('select2-hidden-accessible') && $el.val() && alasanWajibKet($el);
+    $('#ttModal-ket-wajib').toggleClass('d-none', !wajib);
+});
+
+$(document).off('click.tt', '#ttModal-btn-save').on('click.tt', '#ttModal-btn-save', function () {
+    const $btn = $(this);
+    const id   = $('#ttModal-id').val();
+    const alasan = $('#ttModal-alasan').val();
+    const ket  = ($('#ttModal-keterangan').val() || '').trim();
+    if (!alasan) return Notify.error('Alasan wajib dipilih.');
+    if (alasanWajibKet($('#ttModal-alasan')) && !ket) return Notify.error('Keterangan wajib diisi untuk alasan ini.');
+
+    $btn.prop('disabled', true);
+    $.post(`/lab-samples/${id}/tidak-terlaksana`, { _token: window.route.csrf, id_alasan: alasan, keterangan: ket })
+        .done(function (res) {
+            if (res.success) {
+                $('#tidakTerlaksanaModal').data('saved', true);
+                bootstrap.Modal.getInstance(document.getElementById('tidakTerlaksanaModal'))?.hide();
+                Notify.success('Titik dicatat tidak terlaksana.');
+            } else {
+                Notify.error(res.message || 'Gagal menyimpan.');
+            }
+        })
+        .fail(function (xhr) { Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan.'); })
+        .always(function () { $btn.prop('disabled', false); });
+});
+
+// Tutup modal (simpan atau batal) → muat ulang list agar select status sinkron dengan data
+$('#tidakTerlaksanaModal').on('hidden.bs.modal', function () {
+    const idFwo = $('#fwoDetailTabs button[data-bs-target="#tabFwoSample"]').data('id-fwo');
+    if (idFwo) loadSampleData(idFwo);
+});
+
+// ── Edit modal: tampilkan field alasan bila status Tidak Terlaksana ──
+$(document).off('change.ttedit', '#sampleModal-status').on('change.ttedit', '#sampleModal-status', function () {
+    const isTT = $(this).val() === 'tidak_terlaksana';
+    $('#sampleModal-alasan-wrap').toggleClass('d-none', !isTT);
 });
 
 // ── Buka modal Isi Bersama ──

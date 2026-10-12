@@ -33,6 +33,7 @@ use App\Http\Controllers\KategoriBisnisController;
 use App\Http\Controllers\SubKategoriBisnisController;
 use App\Http\Controllers\SatuanController;
 use App\Http\Controllers\OfficeController;
+use App\Http\Controllers\AlasanTidakTerlaksanaController;
 use App\Http\Controllers\FwoBoqOtherController;
 use App\Http\Controllers\FwoBoqSamplingController;
 use App\Http\Controllers\BoqOtherController;
@@ -251,6 +252,19 @@ Route::prefix('documentations')->name('documentations.')->group(function () {
     Route::get('/{id}/history', [DocumentationController::class, 'history'])->name('history')->whereNumber('id');
     Route::put('/{id}', [DocumentationController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}', [DocumentationController::class, 'destroy'])->name('destroy')->whereNumber('id');
+});
+
+Route::prefix('alasan-tidak-terlaksana')->name('alasan-tidak-terlaksana.')->group(function () {
+    Route::get('/select2', [AlasanTidakTerlaksanaController::class, 'select2'])->name('select2');
+    Route::get('/', [AlasanTidakTerlaksanaController::class, 'index'])->name('index');
+    Route::get('/data', [AlasanTidakTerlaksanaController::class, 'data'])->name('data');
+    Route::get('/create', [AlasanTidakTerlaksanaController::class, 'create'])->name('create');
+    Route::post('/', [AlasanTidakTerlaksanaController::class, 'store'])->name('store');
+    Route::get('/{id}', [AlasanTidakTerlaksanaController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [AlasanTidakTerlaksanaController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [AlasanTidakTerlaksanaController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/detail', [AlasanTidakTerlaksanaController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::get('/{id}/history', [AlasanTidakTerlaksanaController::class, 'history'])->name('history')->whereNumber('id');
 });
 
 Route::prefix('office')->name('office.')->group(function () {
@@ -927,6 +941,7 @@ Route::prefix('lab-samples')->name('lab-samples.')->group(function () {
     Route::post('/boq/{id_fwo_boq}/add-one',   [LabSampleController::class, 'addOne'])->name('add-one')->whereNumber('id_fwo_boq');
     Route::post('/boq/{id_fwo_boq}/bulk-fill', [LabSampleController::class, 'bulkFill'])->name('bulk-fill')->whereNumber('id_fwo_boq');
     Route::post('/{id}/field',                 [LabSampleController::class, 'updateField'])->name('update-field')->whereNumber('id');
+    Route::post('/{id}/tidak-terlaksana',      [LabSampleController::class, 'tidakTerlaksana'])->name('tidak-terlaksana')->whereNumber('id');
     Route::delete('/{id}',                     [LabSampleController::class, 'destroy'])->name('destroy')->whereNumber('id');
 });
 

@@ -265,6 +265,8 @@ class WoSampleController extends Controller
             $samples = DB::table('lab_samples')
                 ->where('id_fwo_boq', $boq->id_fwo_boq)
                 ->whereNull('id_wo_lab_sample_reg')
+                // titik yang tidak terlaksana tidak ada sample-nya → tidak bisa diregistrasi
+                ->where(fn ($q) => $q->whereNull('status')->orWhere('status', '!=', 'tidak_terlaksana'))
                 ->orderBy('no_urut')
                 ->get(['id_lab_sample', 'no_sample', 'jenis_sample', 'titik_lokasi', 'status']);
 
@@ -327,10 +329,11 @@ class WoSampleController extends Controller
                 $q->whereIn('id_fwo', $fwoIds)->orWhere('id_wo', $id_wo);
             })
             ->whereNull('id_wo_lab_sample_reg')
+            ->where(fn ($q) => $q->whereNull('status')->orWhere('status', '!=', 'tidak_terlaksana'))
             ->count();
 
         if ($validCount !== count($validated['id_lab_sample'])) {
-            return response()->json(['success' => false, 'message' => 'Sebagian sample tidak valid atau sudah diregistrasi sebelumnya.'], 422);
+            return response()->json(['success' => false, 'message' => 'Sebagian sample tidak valid, sudah diregistrasi sebelumnya, atau berstatus Tidak Terlaksana.'], 422);
         }
 
         DB::beginTransaction();

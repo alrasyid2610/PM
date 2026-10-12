@@ -497,10 +497,13 @@ class SalesOrderController extends Controller
 
         $boqIds = $boqSections->pluck('id_boq');
 
-        $fwoQtyByBoq = DB::table('fieldwork_boq')
-            ->whereIn('id_boq', $boqIds)
-            ->selectRaw('id_boq, SUM(COALESCE(qty, 0)) as fwo_qty')
-            ->groupBy('id_boq')
+        $fwoQtyByBoq = DB::table('fieldwork_boq as fb')
+            ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
+            ->whereIn('fb.id_boq', $boqIds)
+            ->whereNull('fw.deleted_at')
+            ->whereNull('fb.deleted_at')
+            ->selectRaw('fb.id_boq, SUM(' . fwoBoqEffectiveQtySql() . ') as fwo_qty')
+            ->groupBy('fb.id_boq')
             ->pluck('fwo_qty', 'id_boq');
 
         $fwoCountByWo = DB::table('fieldworks')

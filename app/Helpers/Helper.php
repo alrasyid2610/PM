@@ -110,6 +110,19 @@ function deleteAttachmentFiles(array $paths): void
     }
 }
 
+/**
+ * Ekspresi SQL qty Fieldwork BOQ yang dihitung "terpakai" untuk sisa BOQ WO.
+ * qty rencana dikurangi jumlah sample berstatus `tidak_terlaksana`, langsung
+ * sejak titik dicatat gagal (FWO belum perlu `completed`) — titik itu kembali
+ * jadi sisa BOQ WO dan bisa dipenuhi lewat FWO baru.
+ * Query pemanggil wajib sudah join `fieldwork_boq` ($fb); parameter $fw dipertahankan demi kompatibilitas.
+ */
+function fwoBoqEffectiveQtySql(string $fb = 'fb', string $fw = 'fw'): string
+{
+    return "GREATEST(0, COALESCE({$fb}.qty, 0) - "
+        . "(SELECT COUNT(*) FROM lab_samples ls_tt WHERE ls_tt.id_fwo_boq = {$fb}.id_fwo_boq AND ls_tt.status = 'tidak_terlaksana'))";
+}
+
 function uploadAttachment($fieldAttachments, $table)
 {
     $files = [];

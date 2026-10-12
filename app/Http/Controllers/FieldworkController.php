@@ -75,10 +75,24 @@ class FieldworkController extends Controller
                 'fw.tanggal_selesai',
                 'fw.waktu_kedatangan',
                 'fw.created_at',
+                // dipakai menghitung kolom "Hasil" lalu dibuang dari output
+                DB::raw("(SELECT COUNT(*) FROM lab_samples ls WHERE ls.id_fwo = fw.id_fwo AND ls.status = 'tidak_terlaksana') as jml_tidak_terlaksana"),
             ]);
 
         return DataTables::of($query)
             ->addIndexColumn()
+            ->addColumn('hasil', function ($row) {
+                if ($row->status === 'deleted') return '';
+                if ((int) $row->jml_tidak_terlaksana > 0) {
+                    return '<span class="pm-badge" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;">Tidak Sesuai Rencana</span>';
+                }
+                if ($row->status === 'completed') {
+                    return '<span class="pm-badge pm-badge--green">Sesuai Rencana</span>';
+                }
+                return '<span class="text-muted">—</span>';
+            })
+            ->removeColumn('jml_tidak_terlaksana')
+            ->rawColumns(['hasil'])
             ->make(true);
     }
 
@@ -116,6 +130,19 @@ class FieldworkController extends Controller
         }
 
         $data->nama_pelanggan_display = brDisplayName($data->entitas_pelanggan_pekerjaan, $data->nama_pelanggan_pekerjaan);
+
+        // Ringkasan titik sample yang tidak terlaksana (per alasan) — dipakai badge
+        // "Tidak Sesuai Rencana" di action bar & ringkasan di detail FWO.
+        $tt = DB::table('lab_samples as ls')
+            ->leftJoin('alasan_tidak_terlaksana as al', 'al.id_alasan', '=', 'ls.id_alasan_tidak_terlaksana')
+            ->where('ls.id_fwo', $id)
+            ->where('ls.status', 'tidak_terlaksana')
+            ->selectRaw("COALESCE(al.nama, '-') as alasan, COUNT(*) as jumlah")
+            ->groupBy('alasan')
+            ->orderByDesc('jumlah')
+            ->get();
+        $data->jumlah_tidak_terlaksana    = (int) $tt->sum('jumlah');
+        $data->ringkasan_tidak_terlaksana = $tt;
 
         $data->personels = DB::table('fieldwork_personels as fp')
             ->join('personnel as p', 'fp.id_personnel', '=', 'p.id_personnel')
@@ -335,11 +362,25 @@ class FieldworkController extends Controller
             ->select('id_fwo_boq', 'qty')
             ->get();
         foreach ($fwoBoqs as $fb) {
+            // Semua slot (termasuk yang Tidak Terlaksana) dihitung — tiap titik rencana harus punya slot
             $total    = DB::table('lab_samples')->where('id_fwo_boq', $fb->id_fwo_boq)->count();
-            $belumReg = DB::table('lab_samples')->where('id_fwo_boq', $fb->id_fwo_boq)->whereNull('id_wo_lab_sample_reg')->count();
+            // Slot Tidak Terlaksana (beralasan) dikecualikan dari kewajiban registrasi Lab Sample Reg
+            $belumReg = DB::table('lab_samples')
+                ->where('id_fwo_boq', $fb->id_fwo_boq)
+                ->whereNull('id_wo_lab_sample_reg')
+                ->where(fn ($q) => $q->whereNull('status')->orWhere('status', '!=', 'tidak_terlaksana'))
+                ->count();
             $totalKurang   += max(0, (int) $fb->qty - $total);
             $totalBelumReg += $belumReg;
         }
+        // Syarat: FWO wajib punya minimal 1 BOQ dan 1 Budget Plan (FWO kosong tidak boleh diselesaikan)
+        $belumAdaBoq = $fwoBoqs->isEmpty();
+        $totalPlan = DB::table('fwo_budgets')
+            ->where('id_fwo', $id)
+            ->whereNull('deleted_at')
+            ->count();
+        $belumAdaBudget = $totalPlan === 0;
+
         // Syarat: semua Budget Plan FWO (fwo_budgets) harus sudah completed
         $budgetBelumSelesai = DB::table('fwo_budgets')
             ->where('id_fwo', $id)
@@ -347,10 +388,12 @@ class FieldworkController extends Controller
             ->where('status', '!=', 'completed')
             ->count();
 
-        if ($totalKurang > 0 || $totalBelumReg > 0 || $budgetBelumSelesai > 0) {
+        if ($belumAdaBoq || $belumAdaBudget || $totalKurang > 0 || $totalBelumReg > 0 || $budgetBelumSelesai > 0) {
             $alasan = [];
+            if ($belumAdaBoq)            $alasan[] = "Belum ada BOQ pada FWO ini";
+            if ($belumAdaBudget)         $alasan[] = "Belum ada Budget Plan pada FWO ini";
             if ($totalKurang > 0)        $alasan[] = "{$totalKurang} titik belum dibuat sample";
-            if ($totalBelumReg > 0)      $alasan[] = "{$totalBelumReg} sample belum diregistrasi di Lab Sample Reg";
+            if ($totalBelumReg > 0)      $alasan[] = "{$totalBelumReg} sample belum diregistrasi di Lab Sample Reg atau ditandai Tidak Terlaksana";
             if ($budgetBelumSelesai > 0) $alasan[] = "{$budgetBelumSelesai} Budget Plan belum diselesaikan";
             return response()->json([
                 'message' => 'FWO belum bisa diselesaikan.',
@@ -478,7 +521,8 @@ class FieldworkController extends Controller
                 ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
                 ->where('fb.id_boq', $sec['id_boq'])
                 ->whereNull('fw.deleted_at')
-                ->sum('fb.qty');
+                ->selectRaw('COALESCE(SUM(' . fwoBoqEffectiveQtySql() . '), 0) as used_qty')
+                ->value('used_qty');
             $remaining = (int)($boq->qty ?? 0) - $usedQty;
             if ($sec['qty'] > $remaining) {
                 $ptName = DB::table('testing_points')

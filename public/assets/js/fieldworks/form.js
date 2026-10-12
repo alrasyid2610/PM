@@ -502,7 +502,12 @@ function renderFwoForm(res) {
                                 <option value="belum_diambil">Belum Diambil</option>
                                 <option value="diambil">Diambil</option>
                                 <option value="dikirim">Dikirim ke Lab</option>
+                                <option value="tidak_terlaksana">Tidak Terlaksana</option>
                             </select>
+                        </div>
+                        <div class="col-12 d-none" id="sampleModal-alasan-wrap">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Alasan Tidak Terlaksana <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="sampleModal-alasan" style="width:100%" data-no-disable></select>
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold" style="font-size:12px;">Keterangan</label>
@@ -518,6 +523,38 @@ function renderFwoForm(res) {
                 <div class="modal-footer py-2 px-3" style="border-top:1px solid #e2e8f0;">
                     <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" data-no-disable>Batal</button>
                     <button type="button" class="btn btn-sm btn-primary" id="sampleModal-btn-save" data-no-disable>
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Simpan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: TITIK TIDAK TERLAKSANA (dibuka dari status inline di tab Sample) -->
+    <div class="modal fade" id="tidakTerlaksanaModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
+            <div class="modal-content">
+                <div class="modal-header py-2 px-3" style="border-bottom:1px solid #e2e8f0;">
+                    <h6 class="modal-title mb-0">
+                        <i class="fa-solid fa-ban me-2" style="color:#c2410c;"></i>Titik Tidak Terlaksana
+                    </h6>
+                    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3 px-3">
+                    <input type="hidden" id="ttModal-id">
+                    <p class="text-muted mb-3" style="font-size:12px;" id="ttModal-info"></p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" style="font-size:12px;">Alasan <span class="text-danger">*</span></label>
+                        <select id="ttModal-alasan" style="width:100%" data-no-disable></select>
+                    </div>
+                    <div>
+                        <label class="form-label fw-semibold" style="font-size:12px;">Keterangan <span class="text-danger d-none" id="ttModal-ket-wajib">*</span></label>
+                        <textarea class="form-control form-control-sm" id="ttModal-keterangan" rows="2" placeholder="Detail tambahan (opsional)" data-no-disable></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3" style="border-top:1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" data-no-disable>Batal</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="ttModal-btn-save" data-no-disable>
                         <i class="fa-solid fa-floppy-disk me-1"></i> Simpan
                     </button>
                 </div>

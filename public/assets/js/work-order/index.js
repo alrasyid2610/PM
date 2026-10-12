@@ -1356,7 +1356,7 @@ function renderWoRegFromFwoList(groups) {
     return groups.map(function (g) {
         const rows = g.samples.map(function (s) {
             const jenisTxt = JENIS_LABEL_WO_SAMPLE[s.jenis_sample] || s.jenis_sample || '–';
-            const searchText = [s.no_sample, jenisTxt, s.titik_lokasi, g.no_fwo, g.nama_boq]
+            const searchText = [s.no_sample, jenisTxt, s.titik_lokasi, g.label]
                 .filter(Boolean).join(' ').toLowerCase();
             return `
             <div class="form-check wo-reg-from-fwo-row" data-search="${escHtml(searchText)}">
@@ -1372,7 +1372,7 @@ function renderWoRegFromFwoList(groups) {
         <div class="mb-3 wo-reg-from-fwo-group">
             <div class="fw-semibold" style="font-size:12px;color:#1e293b;">
                 <i class="fa-solid fa-file-lines me-1" style="color:#0369a1;"></i>
-                FWO ${escHtml(g.no_fwo)} — ${escHtml(g.nama_boq)}
+                ${escHtml(g.label)}
             </div>
             <div class="ps-3 pt-1">${rows}</div>
         </div>`;

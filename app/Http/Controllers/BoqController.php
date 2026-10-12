@@ -312,7 +312,7 @@ class BoqController extends Controller
             ->whereIn('fb.id_boq', $existingBoqs->pluck('id_boq'))
             ->whereNull('fw.deleted_at')
             ->whereNull('fb.deleted_at')
-            ->selectRaw('fb.id_boq, SUM(COALESCE(fb.qty, 0)) as used_qty')
+            ->selectRaw('fb.id_boq, SUM(' . fwoBoqEffectiveQtySql() . ') as used_qty')
             ->groupBy('fb.id_boq')
             ->pluck('used_qty', 'id_boq');
 
@@ -595,7 +595,7 @@ class BoqController extends Controller
             ->whereNull('fw.deleted_at')
             ->whereNull('fb.deleted_at')
             ->when($id_fwo, fn($q) => $q->where('fb.id_fwo', '!=', $id_fwo))
-            ->selectRaw('fb.id_boq, SUM(COALESCE(fb.qty, 0)) as used_qty')
+            ->selectRaw('fb.id_boq, SUM(' . fwoBoqEffectiveQtySql() . ') as used_qty')
             ->groupBy('fb.id_boq')
             ->pluck('used_qty', 'id_boq');
 

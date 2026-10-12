@@ -42,7 +42,7 @@ class FieldworkBoqController extends Controller
             ->where('fb.id_fwo', '!=', $id_fwo)
             ->whereNull('fw.deleted_at')
             ->whereNull('fb.deleted_at')
-            ->selectRaw('fb.id_boq, SUM(COALESCE(fb.qty, 0)) as used_qty')
+            ->selectRaw('fb.id_boq, SUM(' . fwoBoqEffectiveQtySql() . ') as used_qty')
             ->groupBy('fb.id_boq')
             ->pluck('used_qty', 'id_boq');
 
@@ -132,7 +132,7 @@ class FieldworkBoqController extends Controller
             ->whereIn('fb.id_boq', $boqIds)
             ->whereNull('fw.deleted_at')
             ->whereNull('fb.deleted_at')
-            ->selectRaw('fb.id_boq, SUM(COALESCE(fb.qty, 0)) as used_qty')
+            ->selectRaw('fb.id_boq, SUM(' . fwoBoqEffectiveQtySql() . ') as used_qty')
             ->groupBy('fb.id_boq')
             ->pluck('used_qty', 'id_boq');
 
@@ -237,7 +237,8 @@ class FieldworkBoqController extends Controller
                     ->where('fb.id_fwo', '!=', $id_fwo)
                     ->whereNull('fw.deleted_at')
                     ->whereNull('fb.deleted_at')
-                    ->sum('fb.qty');
+                    ->selectRaw('COALESCE(SUM(' . fwoBoqEffectiveQtySql() . '), 0) as used_qty')
+                    ->value('used_qty');
                 $remaining = (int)($boq->qty ?? 0) - $usedByOthers;
                 if ($sec['qty'] > $remaining) {
                     $ptName = DB::table('testing_points')
@@ -267,10 +268,11 @@ class FieldworkBoqController extends Controller
                 ->whereIn('id_boq', $toDelete->values()->toArray())
                 ->pluck('id_fwo_boq');
 
-            // Blokir jika ada lab_samples dengan status diambil atau dikirim
+            // Blokir jika ada lab_samples dengan status diambil/dikirim, atau yang sudah
+            // dicatat Tidak Terlaksana (rekaman hasil lapangan, tidak boleh hilang diam-diam)
             $blockedSamples = DB::table('lab_samples')
                 ->whereIn('id_fwo_boq', $fwoBoqIdsToDelete)
-                ->whereIn('status', ['diambil', 'dikirim'])
+                ->whereIn('status', ['diambil', 'dikirim', 'tidak_terlaksana'])
                 ->count();
 
             if ($blockedSamples > 0) {
@@ -285,7 +287,7 @@ class FieldworkBoqController extends Controller
                     ->join(', ');
 
                 return response()->json([
-                    'message' => "BOQ [{$ptNames}] tidak bisa dihapus karena memiliki sample yang sudah diambil atau dikirim ke lab.",
+                    'message' => "BOQ [{$ptNames}] tidak bisa dihapus karena memiliki sample yang sudah diambil, dikirim ke lab, atau dicatat tidak terlaksana.",
                 ], 422);
             }
 
