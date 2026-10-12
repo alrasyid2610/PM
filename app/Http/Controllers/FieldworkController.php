@@ -449,8 +449,10 @@ class FieldworkController extends Controller
             'budgets.*.keterangan'                     => 'nullable|string',
             'budgets.*.items'                          => 'required|array|min:1',
             'budgets.*.items.*.source_id_budget_item'  => 'required|integer',
-            'budgets.*.items.*.nominal_budget'         => 'required|integer|min:0',
+            'budgets.*.items.*.nominal_budget'         => 'required|integer|min:1',
             'budgets.*.items.*.keterangan'             => 'nullable|string',
+        ], [
+            'budgets.*.items.*.nominal_budget.min' => 'Nominal setiap item budget harus lebih dari 0.',
         ]);
 
         // Validasi Budget Plan: harus milik FWO sumber, dan setiap item harus milik Plan itu

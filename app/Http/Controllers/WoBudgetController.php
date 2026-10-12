@@ -79,8 +79,10 @@ class WoBudgetController extends Controller
             'keterangan'     => 'nullable|string',
             'items'          => 'required|array|min:1',
             'items.*.id_account'      => 'required|integer',
-            'items.*.nominal_budget'  => 'required|integer|min:0',
+            'items.*.nominal_budget'  => 'required|integer|min:1',
             'items.*.keterangan'      => 'nullable|string',
+        ], [
+            'items.*.nominal_budget.min' => 'Nominal setiap item harus lebih dari 0.',
         ]);
 
         DB::transaction(function () use ($request, &$id) {
@@ -149,8 +151,10 @@ class WoBudgetController extends Controller
             'keterangan'     => 'nullable|string',
             'items'          => 'required|array|min:1',
             'items.*.id_account'     => 'required|integer',
-            'items.*.nominal_budget' => 'required|integer|min:0',
+            'items.*.nominal_budget' => 'required|integer|min:1',
             'items.*.keterangan'     => 'nullable|string',
+        ], [
+            'items.*.nominal_budget.min' => 'Nominal setiap item harus lebih dari 0.',
         ]);
 
         $before = DB::table('wo_budgets')->where('id_budget', $id)->get()->toJson();

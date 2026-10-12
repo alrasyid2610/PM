@@ -4207,6 +4207,7 @@ $(document).off('click.wobudget', '#woBudgetModal-btn-save').on('click.wobudget'
 
     const items = [];
     let valid = true;
+    let zeroNominal = false;
     $('#woBudgetItemsBody .wo-budget-item-row').each(function () {
         const idAccount = $(this).find('.bi-account').val();
         const nominal   = parseInt($(this).find('.bi-nominal').val().replace(/,/g, ''), 10) || 0;
@@ -4214,10 +4215,12 @@ $(document).off('click.wobudget', '#woBudgetModal-btn-save').on('click.wobudget'
         const biId      = $(this).find('.bi-id').val();
         const isCa      = $(this).find('.bi-ca').is(':checked') ? 1 : 0;
         if (!idAccount) { valid = false; return false; }
+        if (nominal <= 0) { zeroNominal = true; return false; }
         items.push({ id_budget_item: biId || null, id_account: idAccount, nominal_budget: nominal, keterangan: ket, is_cash_advance: isCa });
     });
 
     if (!valid) return Swal.fire('Perhatian', 'Semua baris harus memilih Account.', 'warning');
+    if (zeroNominal) return Swal.fire('Perhatian', 'Nominal setiap item harus lebih dari 0.', 'warning');
     if (!items.length) return Swal.fire('Perhatian', 'Minimal 1 item anggaran.', 'warning');
 
     const payload = {

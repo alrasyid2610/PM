@@ -81,8 +81,10 @@ class FwoBudgetController extends Controller
             'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal_mulai',
             'items'          => 'required|array|min:1',
             'items.*.id_account'      => 'required|integer',
-            'items.*.nominal_budget'  => 'required|integer|min:0',
+            'items.*.nominal_budget'  => 'required|integer|min:1',
             'items.*.keterangan'      => 'nullable|string',
+        ], [
+            'items.*.nominal_budget.min' => 'Nominal setiap item harus lebih dari 0.',
         ]);
 
         $fwo = DB::table('fieldworks')->where('id_fwo', $request->id_fwo)->first(['tanggal_mulai', 'tanggal_selesai']);
@@ -173,8 +175,10 @@ class FwoBudgetController extends Controller
             'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal_mulai',
             'items'          => 'required|array|min:1',
             'items.*.id_account'     => 'required|integer',
-            'items.*.nominal_budget' => 'required|integer|min:0',
+            'items.*.nominal_budget' => 'required|integer|min:1',
             'items.*.keterangan'     => 'nullable|string',
+        ], [
+            'items.*.nominal_budget.min' => 'Nominal setiap item harus lebih dari 0.',
         ]);
 
         $fwo = DB::table('fieldworks')->where('id_fwo', $budget->id_fwo)->first(['tanggal_mulai', 'tanggal_selesai']);
