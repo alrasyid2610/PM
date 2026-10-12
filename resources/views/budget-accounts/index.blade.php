@@ -20,19 +20,23 @@
 <div class="row">
     <div class="col-12">
         <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <h6 class="mb-0 fw-semibold">
                     <i class="fa-solid fa-layer-group me-2" style="color:#0f766e;"></i>
                     Daftar Budget Account
                 </h6>
-                @if(userCan('budget-accounts', 'can_create'))
-                <button type="button" class="pm-btn-pill" id="btn-add-kategori"
-                    style="border-color:#0f766e;color:#0f766e;">
-                    <i class="fa-solid fa-plus" style="font-size:10px;"></i>
-                    <i class="fa-solid fa-layer-group" style="font-size:11px;"></i>
-                    Tambah Kategori
-                </button>
-                @endif
+                <div class="d-flex align-items-center gap-2">
+                    <div style="position:relative;">
+                        <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:11px;color:#94a3b8;"></i>
+                        <input type="text" id="account-search" class="form-control form-control-sm"
+                            placeholder="Cari nama / kode..." style="padding-left:28px;width:220px;">
+                    </div>
+                    @if(userCan('budget-accounts', 'can_create'))
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-add-kategori">
+                        <i class="fa-solid fa-plus me-1"></i> Tambah Kategori
+                    </button>
+                    @endif
+                </div>
             </div>
             <div class="card-body p-0">
                 <div id="account-table-wrap">

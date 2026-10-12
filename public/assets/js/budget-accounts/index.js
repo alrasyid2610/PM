@@ -10,10 +10,39 @@ function loadAccountData() {
     $.get('/budget-accounts/data')
         .done(function (res) {
             $('#account-table-wrap').html(renderAccountTable(res.data || []));
+            $('#account-search').val('');
         })
         .fail(function () {
             $('#account-table-wrap').html('<div class="text-center text-danger py-4">Gagal memuat data.</div>');
         });
+}
+
+// Cari nama/kode — kategori yang namanya cocok menampilkan semua sub kategorinya;
+// kalau tidak, kategori tetap tampil asal minimal 1 sub kategori cocok.
+function filterAccountTable(q) {
+    q = (q || '').trim().toLowerCase();
+    if (!q) {
+        $('.account-parent-row, .account-child-row').show();
+        return;
+    }
+
+    $('.account-parent-row').each(function () {
+        const $parent     = $(this);
+        const parentMatch = $parent.find('td').eq(1).text().toLowerCase().includes(q)
+            || $parent.find('code').text().toLowerCase().includes(q);
+        const $children   = $(`.account-child-row[data-parent="${$parent.data('id')}"]`);
+        let anyChildMatch = false;
+
+        $children.each(function () {
+            if (parentMatch) { $(this).show(); return; }
+            const isPlaceholder = $(this).find('td[colspan]').length > 0;
+            const match = !isPlaceholder && $(this).text().toLowerCase().includes(q);
+            $(this).toggle(match);
+            if (match) anyChildMatch = true;
+        });
+
+        $parent.toggle(parentMatch || anyChildMatch);
+    });
 }
 
 function renderAccountTable(parents) {
@@ -151,6 +180,10 @@ function openAccountModal({ id, idParent, parentNama, isEdit, data }) {
 }
 
 function initEvents() {
+    $(document).on('input', '#account-search', function () {
+        filterAccountTable($(this).val());
+    });
+
     // Expand / Collapse parent row
     $(document).on('click', '.account-parent-row', function (e) {
         if ($(e.target).closest('.account-actions-cell').length) return;
