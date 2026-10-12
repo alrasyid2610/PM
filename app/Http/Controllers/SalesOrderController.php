@@ -175,6 +175,17 @@ class SalesOrderController extends Controller
         $after = DB::table('sales_orders')->where('id_so', $id)->get()->toJson();
         saveAudit('sales_orders', $id, 'Create', '', $after);
 
+        \App\Services\NotificationDispatcher::fire('so.created', [
+            'label' => 'SO Dibuat',
+            'title' => 'SO Baru: {{no_so}}',
+            'body'  => '{{judul_order}}',
+            'url'   => url('sales-orders?open=' . $id),
+        ], [
+            'no_so'       => $soNumber,
+            'judul_order' => $request->judul_order,
+            'nama_user'   => \Illuminate\Support\Facades\Auth::user()?->name,
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Sales Order berhasil dibuat',

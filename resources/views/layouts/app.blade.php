@@ -233,11 +233,13 @@
     <script src="{{ asset('assets/js/core/crudPageController.js') }}"></script>
     <script src="{{ asset('assets/js/core/permissionEngine.js') }}"></script>
     <script src="{{ asset('assets/js/core/filePreview.js') }}"></script>
+    <script src="{{ asset('assets/js/core/notifications.js') }}"></script>
     <script src="{{ asset('assets/js/pm.js') }}"></script>
     @auth
     <script>
         window.userPermissions = @json(getUserPermissions(auth()->id()));
         window.currentMenuSlug = '{{ request()->segment(1) }}';
+        window.csrfToken = '{{ csrf_token() }}';
     </script>
     @endauth
     <script src="{{ asset('assets/js/scientific-input.js') }}"></script>

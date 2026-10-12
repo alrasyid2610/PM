@@ -33,6 +33,8 @@ use App\Http\Controllers\KategoriBisnisController;
 use App\Http\Controllers\SubKategoriBisnisController;
 use App\Http\Controllers\SatuanController;
 use App\Http\Controllers\OfficeController;
+use App\Http\Controllers\NotificationSettingController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\FwoBoqOtherController;
 use App\Http\Controllers\FwoBoqSamplingController;
 use App\Http\Controllers\BoqOtherController;
@@ -264,6 +266,22 @@ Route::prefix('office')->name('office.')->group(function () {
     Route::delete('/{id}', [OfficeController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/detail', [OfficeController::class, 'detail'])->name('detail')->whereNumber('id');
     Route::get('/{id}/history', [OfficeController::class, 'history'])->name('history')->whereNumber('id');
+});
+
+Route::prefix('notifications')->name('notifications.')->group(function () {
+    Route::get('/', [NotificationController::class, 'index'])->name('index');
+    Route::post('/mark-all-read', [NotificationController::class, 'markAllRead'])->name('mark-all-read');
+    Route::post('/{id}/read', [NotificationController::class, 'markRead'])->name('read')->whereNumber('id');
+    Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy')->whereNumber('id');
+});
+
+Route::prefix('notification-settings')->name('notification-settings.')->group(function () {
+    Route::get('/', [NotificationSettingController::class, 'index'])->name('index');
+    Route::get('/data', [NotificationSettingController::class, 'data'])->name('data');
+    Route::put('/events/{id}', [NotificationSettingController::class, 'updateEvent'])->name('events.update')->whereNumber('id');
+    Route::post('/events/{eventId}/rules', [NotificationSettingController::class, 'storeRule'])->name('rules.store')->whereNumber('eventId');
+    Route::put('/rules/{id}', [NotificationSettingController::class, 'updateRule'])->name('rules.update')->whereNumber('id');
+    Route::delete('/rules/{id}', [NotificationSettingController::class, 'destroyRule'])->name('rules.destroy')->whereNumber('id');
 });
 
 Route::prefix('satuan')->name('satuan.')->group(function () {

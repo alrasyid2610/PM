@@ -111,6 +111,7 @@ return [
             // modul ini di-uncomment lagi nanti, akses lama otomatis balik
             // tanpa perlu setup ulang.
             ['slug' => 'documentations', 'label' => 'Dokumentasi', 'icon' => 'fa-book'],
+            ['slug' => 'notification-settings', 'label' => 'Pengaturan Notifikasi', 'icon' => 'fa-bell'],
         ],
     ],
     [
