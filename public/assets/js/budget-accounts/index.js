@@ -1,6 +1,7 @@
 $(document).ready(function () {
     loadAccountData();
     initEvents();
+    initNumericMask('#accountModal');
 });
 
 function loadAccountData() {
@@ -140,6 +141,11 @@ function openAccountModal({ id, idParent, parentNama, isEdit, data }) {
     $('#accountModal-is_aktif').val(isEdit && data ? String(data.is_aktif) : '1');
     $('#accountModal-aktif-wrap').toggle(!!isEdit);
 
+    const nilaiDefaultEl = document.getElementById('accountModal-nilai-default');
+    const nilaiDefault   = isEdit && data ? (data.nilai_default || '') : '';
+    if (nilaiDefaultEl._cleave) nilaiDefaultEl._cleave.setRawValue(nilaiDefault);
+    else $(nilaiDefaultEl).val(nilaiDefault);
+
     bootstrap.Modal.getOrCreateInstance(document.getElementById('accountModal')).show();
     setTimeout(function () { $('#accountModal-nama').focus(); }, 300);
 }
@@ -236,6 +242,7 @@ function initEvents() {
             nama,
             kode,
             id_parent:  idParent || '',
+            nilai_default: rawNumVal(document.getElementById('accountModal-nilai-default')) ?? '',
             keterangan: $('#accountModal-keterangan').val(),
             is_aktif:   $('#accountModal-is_aktif').val() || '1',
         };

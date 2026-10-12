@@ -31,7 +31,7 @@ class BudgetAccountController extends Controller
                           ->orWhere('kode', 'like', "%{$q}%");
                 }))
                 ->orderBy('nama')
-                ->get(['id_account as id', 'nama as text', 'kode']);
+                ->get(['id_account as id', 'nama as text', 'kode', 'nilai_default']);
 
             if ($children->isNotEmpty()) {
                 $results[] = [
@@ -52,7 +52,7 @@ class BudgetAccountController extends Controller
                           ->orWhere('kode', 'like', "%{$q}%");
                 })
                 ->orderBy('nama')
-                ->get(['id_account as id', 'nama as text', 'kode']);
+                ->get(['id_account as id', 'nama as text', 'kode', 'nilai_default']);
 
             if ($orphans->isNotEmpty()) {
                 $results[] = [
@@ -101,9 +101,10 @@ class BudgetAccountController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nama'      => 'required|string|max:255',
-            'kode'      => 'required|string|max:50',
-            'id_parent' => 'nullable|integer',
+            'nama'          => 'required|string|max:255',
+            'kode'          => 'required|string|max:50',
+            'id_parent'     => 'nullable|integer',
+            'nilai_default' => 'nullable|integer|min:0',
         ]);
 
         $exists = DB::table('budget_accounts')
@@ -129,13 +130,14 @@ class BudgetAccountController extends Controller
         }
 
         $id = DB::table('budget_accounts')->insertGetId([
-            'id_parent'  => $request->id_parent ?: null,
-            'nama'       => $request->nama,
-            'kode'       => strtoupper($request->kode),
-            'keterangan' => $request->keterangan,
-            'is_aktif'   => 1,
-            'created_at' => now(),
-            'updated_at' => now(),
+            'id_parent'     => $request->id_parent ?: null,
+            'nama'          => $request->nama,
+            'kode'          => strtoupper($request->kode),
+            'nilai_default' => $request->filled('nilai_default') ? (int) $request->nilai_default : null,
+            'keterangan'    => $request->keterangan,
+            'is_aktif'      => 1,
+            'created_at'    => now(),
+            'updated_at'    => now(),
         ]);
 
         return response()->json(['success' => true, 'id' => $id]);
@@ -144,9 +146,10 @@ class BudgetAccountController extends Controller
     public function update(Request $request, int $id)
     {
         $request->validate([
-            'nama'      => 'required|string|max:255',
-            'kode'      => 'required|string|max:50',
-            'id_parent' => 'nullable|integer',
+            'nama'          => 'required|string|max:255',
+            'kode'          => 'required|string|max:50',
+            'id_parent'     => 'nullable|integer',
+            'nilai_default' => 'nullable|integer|min:0',
         ]);
 
         // Validasi: parent tidak boleh punya id_parent sendiri
@@ -173,12 +176,13 @@ class BudgetAccountController extends Controller
         }
 
         DB::table('budget_accounts')->where('id_account', $id)->update([
-            'id_parent'  => $request->id_parent ?: null,
-            'nama'       => $request->nama,
-            'kode'       => strtoupper($request->kode),
-            'keterangan' => $request->keterangan,
-            'is_aktif'   => $request->boolean('is_aktif', true) ? 1 : 0,
-            'updated_at' => now(),
+            'id_parent'     => $request->id_parent ?: null,
+            'nama'          => $request->nama,
+            'kode'          => strtoupper($request->kode),
+            'nilai_default' => $request->filled('nilai_default') ? (int) $request->nilai_default : null,
+            'keterangan'    => $request->keterangan,
+            'is_aktif'      => $request->boolean('is_aktif', true) ? 1 : 0,
+            'updated_at'    => now(),
         ]);
 
         return response()->json(['success' => true]);

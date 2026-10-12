@@ -68,6 +68,13 @@
                             placeholder="cth: TRANSPORT" data-no-disable style="text-transform:uppercase;"
                             oninput="this.value=this.value.toUpperCase()">
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Nilai Default (Rp)</label>
+                        <input type="text" inputmode="numeric"
+                            class="form-control form-control-sm input-num-mask input-num-int" id="accountModal-nilai-default"
+                            placeholder="Opsional" data-no-disable>
+                        <small class="text-muted">Dipakai sebagai nilai awal saat account ini dipilih di baris Budget Item — tetap bisa diubah manual.</small>
+                    </div>
                     <div class="col-md-12">
                         <label class="form-label">Keterangan</label>
                         <textarea class="form-control form-control-sm" id="accountModal-keterangan"

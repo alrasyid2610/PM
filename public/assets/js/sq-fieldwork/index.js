@@ -360,6 +360,17 @@ function initSqFwoBudgetAccountSelect2() {
     });
 }
 
+// Pilih Account yang punya Nilai Default → isi otomatis ke Nominal, kalau
+// baris itu masih kosong (tidak menimpa nominal yang sudah diisi/diedit user).
+$(document).off('select2:select.biDefault', '#sqFwoBudgetItemsBody .bi-account')
+    .on('select2:select.biDefault', '#sqFwoBudgetItemsBody .bi-account', function (e) {
+        const def = e.params.data.nilai_default;
+        if (!def) return;
+        const el = $(this).closest('tr').find('.bi-nominal').get(0);
+        if (!el || rawNumVal(el)) return;
+        if (el._cleave) el._cleave.setRawValue(def); else $(el).val(def);
+    });
+
 function recalcSqFwoBudgetTotal() {
     let total = 0;
     $('#sqFwoBudgetItemsBody .bi-nominal').each(function () {

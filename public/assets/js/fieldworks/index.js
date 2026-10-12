@@ -585,6 +585,17 @@ function initBudgetAccountSelect2() {
     });
 }
 
+// Pilih Account yang punya Nilai Default → isi otomatis ke Nominal, kalau
+// baris itu masih kosong (tidak menimpa nominal yang sudah diisi/diedit user).
+$(document).off('select2:select.biDefault', '#budgetItemsBody .bi-account')
+    .on('select2:select.biDefault', '#budgetItemsBody .bi-account', function (e) {
+        const def = e.params.data.nilai_default;
+        if (!def) return;
+        const el = $(this).closest('tr').find('.bi-nominal').get(0);
+        if (!el || rawNumVal(el)) return;
+        if (el._cleave) el._cleave.setRawValue(def); else $(el).val(def);
+    });
+
 function recalcBudgetTotal() {
     let total = 0;
     $('#budgetItemsBody .bi-nominal').each(function () {
