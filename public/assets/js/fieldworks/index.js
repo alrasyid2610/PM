@@ -585,15 +585,32 @@ function initBudgetAccountSelect2() {
     });
 }
 
-// Pilih Account yang punya Nilai Default → isi otomatis ke Nominal, kalau
-// baris itu masih kosong (tidak menimpa nominal yang sudah diisi/diedit user).
+// Pilih Account yang punya Nilai Default → isi otomatis ke Nominal, kalau baris itu
+// masih kosong ATAU nilainya sendiri hasil auto-fill sebelumnya (bukan diedit manual).
+// Ganti ke Account yang TIDAK punya Nilai Default → nominal ikut dikosongkan lagi,
+// tapi HANYA kalau nilainya masih hasil auto-fill — nominal yang sudah diedit manual
+// user tidak pernah disentuh oleh pilihan Account.
 $(document).off('select2:select.biDefault', '#budgetItemsBody .bi-account')
     .on('select2:select.biDefault', '#budgetItemsBody .bi-account', function (e) {
         const def = e.params.data.nilai_default;
-        if (!def) return;
-        const el = $(this).closest('tr').find('.bi-nominal').get(0);
-        if (!el || rawNumVal(el)) return;
-        if (el._cleave) el._cleave.setRawValue(def); else $(el).val(def);
+        const el  = $(this).closest('tr').find('.bi-nominal').get(0);
+        if (!el) return;
+        const wasAuto = $(el).data('auto-filled');
+        if (def && (!rawNumVal(el) || wasAuto)) {
+            if (el._cleave) el._cleave.setRawValue(def); else $(el).val(def);
+            $(el).data('auto-filled', true);
+        } else if (!def && wasAuto) {
+            if (el._cleave) el._cleave.setRawValue(''); else $(el).val('');
+            $(el).data('auto-filled', false);
+        }
+        recalcBudgetTotal();
+    });
+
+// Nominal diketik manual → tandai bukan auto-fill lagi, supaya ganti Account
+// berikutnya tidak menimpa/mengosongkan nilai yang sudah sengaja diisi user.
+$(document).off('input.biManual', '#budgetItemsBody .bi-nominal')
+    .on('input.biManual', '#budgetItemsBody .bi-nominal', function () {
+        $(this).data('auto-filled', false);
     });
 
 function recalcBudgetTotal() {
