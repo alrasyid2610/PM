@@ -45,6 +45,11 @@ function filterAccountTable(q) {
     });
 }
 
+function fmtRp(n) {
+    if (n === null || n === undefined || n === '') return '<span class="text-muted">—</span>';
+    return 'Rp ' + Number(n).toLocaleString('id-ID');
+}
+
 function renderAccountTable(parents) {
     if (!parents.length) {
         return `<div class="text-center text-muted py-5">
@@ -73,6 +78,7 @@ function renderAccountTable(parents) {
                     ${escHtml(c.nama)}
                 </td>
                 <td><code style="font-size:11px;color:#64748b;">${escHtml(c.kode)}</code></td>
+                <td style="font-size:12.5px;color:#475569;white-space:nowrap;">${fmtRp(c.nilai_default)}</td>
                 <td>${cStatus}</td>
                 <td class="text-center" style="white-space:nowrap;">
                     <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-account-edit"
@@ -89,7 +95,7 @@ function renderAccountTable(parents) {
 
         const emptyRow = !hasChildren
             ? `<tr class="account-child-row" data-parent="${p.id_account}">
-                 <td colspan="5" style="padding-left:40px;color:#94a3b8;font-size:12px;font-style:italic;border-bottom:none;">
+                 <td colspan="6" style="padding-left:40px;color:#94a3b8;font-size:12px;font-style:italic;border-bottom:none;">
                      Belum ada sub kategori
                  </td>
                </tr>`
@@ -112,6 +118,7 @@ function renderAccountTable(parents) {
                 </span>
             </td>
             <td><code style="font-size:11px;background:#dcfce7;color:#166534;padding:2px 6px;border-radius:4px;">${escHtml(p.kode)}</code></td>
+            <td style="font-size:12.5px;color:#166534;font-weight:600;white-space:nowrap;">${fmtRp(p.nilai_default)}</td>
             <td>${statusBadge}</td>
             <td class="text-center account-actions-cell" style="white-space:nowrap;">
                 ${can('budget-accounts', 'can_create') ? `<button type="button" class="btn btn-sm py-0 px-2 me-1 btn-add-item"
@@ -139,6 +146,7 @@ function renderAccountTable(parents) {
                     <th style="width:36px;text-align:center;">No.</th>
                     <th>NAMA</th>
                     <th style="width:140px;">KODE</th>
+                    <th style="width:140px;">NILAI DEFAULT</th>
                     <th style="width:100px;">STATUS</th>
                     <th style="min-width:200px;text-align:center;">AKSI</th>
                 </tr>
