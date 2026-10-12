@@ -56,6 +56,24 @@ class CheckMenuPermission
         'sq-fwo-budgets'             => 'sq-fieldworks',
     ];
 
+    // Endpoint "Aksi Khusus" (POST) — dicek lewat slug aksinya sendiri, BUKAN
+    // can_create menu induknya. Tanpa ini, user yang hanya boleh memverifikasi/
+    // menyelesaikan (mis. finance) tetap ditolak karena semua POST otomatis
+    // dianggap "create" pada menu induk. Format: segment pertama => [segment
+    // terakhir => slug aksi]. Menu induk cukup can_read; controller tetap
+    // mengecek slug aksi yang sama (lihat Project Reference — Aksi Khusus).
+    // Sengaja TIDAK termasuk output-pekerjaan/{id}/status: endpoint itu juga
+    // dipakai untuk transisi status lain yang bukan aksi khusus.
+    private const ACTION_ROUTES = [
+        'work-orders'        => ['complete' => 'wo-complete'],
+        'fieldworks'         => ['complete' => 'fwo-complete'],
+        'fwo-budgets'        => ['close' => 'fwo-budget-close'],
+        'wo-budgets'         => ['close' => 'wo-budget-close'],
+        'fwo-budget-actuals' => ['verify' => 'fwo-budget-verify', 'bulk-verify' => 'fwo-budget-verify'],
+        'wo-budget-actuals'  => ['verify' => 'wo-budget-verify', 'bulk-verify' => 'wo-budget-verify'],
+        'termin'             => ['siap-kirim' => 'termin-siap-kirim', 'selesai' => 'termin-selesai'],
+    ];
+
     public function handle(Request $request, Closure $next): mixed
     {
         $segments = $request->segments();
@@ -98,8 +116,21 @@ class CheckMenuPermission
         $slug   = self::SLUG_MAP[$first] ?? $first;
         $action = $this->resolveAction($request);
 
+        $perms = getUserPermissions(auth()->id());
+
+        // Aksi Khusus: cukup can_read menu induk + can_update slug aksinya
+        $actionSlug = $request->isMethod('POST') ? (self::ACTION_ROUTES[$first][$last] ?? null) : null;
+        if ($actionSlug) {
+            $allowed = ($perms[$slug]['can_read'] ?? false) && ($perms[$actionSlug]['can_update'] ?? false);
+            if (!$allowed) {
+                return $request->expectsJson()
+                    ? response()->json(['success' => false, 'message' => 'Anda tidak memiliki akses untuk aksi ini'], 403)
+                    : abort(403, 'Anda tidak memiliki akses untuk aksi ini');
+            }
+            return $next($request);
+        }
+
         // Cek permission
-        $perms   = getUserPermissions(auth()->id());
         $allowed = $perms[$slug][$action] ?? false;
 
         if (!$allowed) {

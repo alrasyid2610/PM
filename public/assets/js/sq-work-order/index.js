@@ -444,7 +444,27 @@ function renderSqBoqEditBody(sec) {
         <div class="boq-items">${renderSqBoqItemsList(sec.items || [])}</div>`;
 }
 
+// Section baru (belum tersimpan) hanya hidup di DOM + state. Karena daftar dirender
+// ulang dari state tiap ada perubahan (tambah/ubah/hapus item lain), isian yang
+// sudah diketik (Qty, Satuan, Harga, Discount, dll) wajib disalin ke state dulu —
+// kalau tidak, hilang saat item berikutnya ditambahkan.
+function syncSqBoqNewSectionsFromDom() {
+    sqBoqManageNewSections.forEach(function (sec) {
+        const $card = $(`.sq-boq-manage-section[data-tmp-id="${sec.tmpId}"]`);
+        if (!$card.length) return; // belum pernah dirender
+        const $sat = $card.find('.sq-boq-new-satuan');
+        sec.item_produk_alternate = $card.find('.sq-boq-new-item-produk').val() || null;
+        sec.qty        = rawNumVal($card.find('.sq-boq-new-qty')[0]) || null;
+        sec.harga      = rawNumVal($card.find('.sq-boq-new-harga')[0]) || null;
+        sec.discount   = rawNumVal($card.find('.sq-boq-new-discount')[0]) || 0;
+        sec.keterangan = $card.find('.sq-boq-new-ket').val() || null;
+        sec.id_satuan  = $sat.val() || null;
+        sec.satuan     = $sat.hasClass('select2-hidden-accessible') ? ($sat.select2('data')[0]?.text ?? null) : sec.satuan;
+    });
+}
+
 function renderSqBoqManageAll() {
+    syncSqBoqNewSectionsFromDom();
     const hasAny = sqWoBoqCache.length || sqBoqManageNewSections.length;
     $('#sqBoqManageEmpty').toggleClass('d-none', !!hasAny);
     $('#sqBoqManageSections').html(

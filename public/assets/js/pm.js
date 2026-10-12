@@ -652,3 +652,32 @@ $(document).on("paste", 'input[type="number"][step="any"]', function (e) {
     $numberInputs.eq(0).val(m[1]).trigger("input").trigger("change");
     $numberInputs.eq(1).val(m[2]).trigger("input").trigger("change");
 });
+
+// ── Select2: fokus kembali ke kotak select setelah dropdown ditutup lewat keyboard ──
+// Alur keyboard: Tab ke select → Spasi buka dropdown → Enter pilih → Tab lanjut ke
+// field berikutnya. Di dalam modal, fokus kadang hilang ke <body> begitu dropdown
+// ditutup; Tab berikutnya lalu dilempar focus trap Bootstrap ke tombol silang (X)
+// modal, bukan field berikutnya. Kalau fokus hilang ke body, kembalikan ke select-nya.
+// Hanya aktif saat interaksi terakhir via keyboard (klik di luar untuk menutup
+// dropdown tidak dipaksa fokus balik). Berlaku global untuk semua select2.
+(function () {
+    let lastInputWasKeyboard = false;
+    document.addEventListener("keydown", function () { lastInputWasKeyboard = true; }, true);
+    document.addEventListener("mousedown", function () { lastInputWasKeyboard = false; }, true);
+
+    $(document).on("select2:close", "select", function () {
+        if (!lastInputWasKeyboard) return;
+        const inst = $(this).data("select2");
+        if (!inst || !inst.$selection || !inst.$selection.length) return;
+
+        const restoreFocus = function () {
+            if (!document.body.contains(inst.$selection[0])) return;
+            const active = document.activeElement;
+            if (!active || active === document.body || active === document.documentElement) {
+                inst.$selection.trigger("focus");
+            }
+        };
+        setTimeout(restoreFocus, 0);
+        setTimeout(restoreFocus, 120);
+    });
+})();

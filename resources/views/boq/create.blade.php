@@ -92,15 +92,15 @@
 <div class="modal fade" id="modalAddSection" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalSectionTitle">
+            <div class="modal-header py-2 px-3" style="border-bottom:1px solid #e2e8f0;">
+                <h6 class="modal-title mb-0" id="modalSectionTitle">
                     <i class="fa-solid fa-layer-group me-2 text-primary"></i> Tambah Item
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </h6>
+                <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body py-3 px-3">
 
-                <div class="mb-4">
+                <div class="mb-3">
                     <label class="form-label fw-semibold">
                         Item <span class="text-danger">*</span>
                     </label>
@@ -129,15 +129,15 @@
                         <input type="text" id="modalItemSearch" class="form-control form-control-sm"
                             placeholder="Cari item...">
                     </div>
-                    <div id="modalItemsList"></div>
+                    <div id="modalItemsList" style="max-height:320px;overflow-y:auto;"></div>
                     <div id="modalSearchEmpty" class="text-center text-muted py-3 d-none" style="font-size:13px;">
                         <i class="fa-solid fa-magnifying-glass me-1 opacity-50"></i> Tidak ada item yang cocok
                     </div>
                 </div>
 
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+            <div class="modal-footer py-2 px-3" style="border-top:1px solid #e2e8f0;">
+                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Batal</button>
                 <button type="button" id="btnConfirmSection" class="btn btn-primary btn-sm" disabled>
                     <i class="fa-solid fa-check me-1"></i>
                     <span id="btnConfirmText">Tambah Item</span>

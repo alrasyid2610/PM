@@ -307,6 +307,15 @@ function loadBudgetData(idFwo) {
         });
 }
 
+// ID FWO untuk tab Budget — dibaca dari container yang SELALU dirender, bukan dari
+// tombol "Tambah Budget Plan" (tombol itu tidak ada untuk user tanpa izin create,
+// mis. finance yang hanya verifikasi → id kosong → request `fwo-budgets//list`).
+function getBudgetFwoId() {
+    return $('#fwoTabActionsBudget').data('id-fwo')
+        || $('#fwoTabActionsBudget .btn-budget-add').data('id-fwo')
+        || (typeof page !== 'undefined' && page && page.selectedRow ? page.selectedRow.id : null);
+}
+
 function fmtRp(val) {
     return 'Rp ' + Number(val || 0).toLocaleString('id-ID');
 }
@@ -736,7 +745,7 @@ $(document).off('click.budget', '#budgetModal-btn-save').on('click.budget', '#bu
 // ── Edit Budget Plan ──
 $(document).off('click.budget', '.btn-budget-edit').on('click.budget', '.btn-budget-edit', function () {
     const id    = $(this).data('id');
-    const idFwo = $('#fwoTabActionsBudget .btn-budget-add').data('id-fwo');
+    const idFwo = getBudgetFwoId();
     $.get(`/fwo-budgets/${id}`)
         .done(function (data) { openBudgetModal(idFwo, data); });
 });
@@ -765,7 +774,7 @@ $(document).off('click.sample', '.btn-sample-collapse').on('click.sample', '.btn
 $(document).off('click.budget', '.btn-budget-close').on('click.budget', '.btn-budget-close', function () {
     const id    = $(this).data('id');
     const label = $(this).data('label');
-    const idFwo = $('#fwoTabActionsBudget .btn-budget-add').data('id-fwo');
+    const idFwo = getBudgetFwoId();
 
     // Cari data plan dari cache
     const plans   = window._budgetPlans || [];
@@ -847,7 +856,7 @@ $(document).off('click.budget', '#closePlanModal-btn-save').on('click.budget', '
 $(document).off('click.budget', '.btn-budget-delete').on('click.budget', '.btn-budget-delete', function () {
     const id    = $(this).data('id');
     const label = $(this).data('label');
-    const idFwo = $('#fwoTabActionsBudget .btn-budget-add').data('id-fwo');
+    const idFwo = getBudgetFwoId();
     Swal.fire({
         title: 'Hapus Budget Plan?',
         html: `<b>${label}</b> akan dihapus.`,
@@ -870,7 +879,7 @@ $(document).off('click.budget', '.btn-budget-delete').on('click.budget', '.btn-b
 // ── Tambah Actual ──
 $(document).off('click.budget', '.btn-actual-add').on('click.budget', '.btn-actual-add', function () {
     const idBudgetItem   = $(this).data('id-budget-item');
-    const idFwo          = $(this).data('id-fwo') || $('#fwoTabActionsBudget .btn-budget-add').data('id-fwo');
+    const idFwo          = $(this).data('id-fwo') || getBudgetFwoId();
     const nominalBudget  = $(this).data('nominal-budget') || 0;
     const accountName    = $(this).data('account-name') || '';
     $('#actualModal-id').val('');
@@ -923,7 +932,7 @@ $(document).off('click.budget', '.btn-remove-actual-existing').on('click.budget'
 // ── Edit Actual ──
 $(document).off('click.budget', '.btn-actual-edit').on('click.budget', '.btn-actual-edit', function () {
     const id    = $(this).data('id');
-    const idFwo = $(this).data('id-fwo') || $('#fwoTabActionsBudget .btn-budget-add').data('id-fwo');
+    const idFwo = $(this).data('id-fwo') || getBudgetFwoId();
     $.get(`/fwo-budget-actuals/${id}`)
         .done(function (r) {
             $('#actualModal-id').val(r.id_actual);
@@ -951,7 +960,7 @@ $(document).off('click.budget', '.btn-actual-edit').on('click.budget', '.btn-act
 $(document).off('click.budget', '.btn-bulk-verify').on('click.budget', '.btn-bulk-verify', function () {
     const idBudget = $(this).data('id-budget');
     const label    = $(this).data('label');
-    const idFwo    = $('#fwoTabActionsBudget .btn-budget-add').data('id-fwo') ||
+    const idFwo    = getBudgetFwoId() ||
                      $('#fwoTabActionsBudget').find('[data-id-fwo]').data('id-fwo');
 
     $('#bulkVerifyModal-id-fwo').val(idFwo);
@@ -1090,7 +1099,7 @@ $(document).off('click.budget', '#bulkVerifyModal-btn-save').on('click.budget', 
 
 $(document).off('click.budget', '.btn-actual-delete').on('click.budget', '.btn-actual-delete', function () {
     const id    = $(this).data('id');
-    const idFwo = $('#fwoTabActionsBudget .btn-budget-add').data('id-fwo');
+    const idFwo = getBudgetFwoId();
     Swal.fire({
         title: 'Hapus Realisasi?',
         icon: 'warning',

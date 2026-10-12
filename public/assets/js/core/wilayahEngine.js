@@ -17,14 +17,40 @@ const WilayahEngine = {
         return this.fetch("/wilayah/children?kode=" + encodeURIComponent(kode));
     },
 
+    // Normalisasi nama untuk pencocokan toleran: huruf kecil, titik/koma & spasi ganda diabaikan.
+    // Nilai wilayah yang tersimpan di data lama bisa beda penulisan dari tabel `wilayah`
+    // ("KOTA ADM. JAKARTA UTARA" vs "Kota Adm. Jakarta Utara").
+    normalize(s) {
+        return String(s || "").toLowerCase().replace(/[.,]/g, " ").replace(/\s+/g, " ").trim();
+    },
+
+    findByName(data, name) {
+        if (!name) return null;
+        return (
+            data.find((item) => item.name === name) ||
+            data.find((item) => this.normalize(item.name) === this.normalize(name)) ||
+            null
+        );
+    },
+
     populate($el, data, selectedValue = "") {
+        const matched = this.findByName(data, selectedValue);
+
         $el.empty();
         $el.append(`<option value="">-- Pilih --</option>`);
         data.forEach((item) => {
             $el.append(
-                `<option value="${item.name}" data-code="${item.id}" ${item.name === selectedValue ? "selected" : ""}>${item.name}</option>`
+                `<option value="${item.name}" data-code="${item.id}" ${matched && item.name === matched.name ? "selected" : ""}>${item.name}</option>`
             );
         });
+
+        // Nilai tersimpan tidak ada di daftar wilayah → jangan dibuang diam-diam
+        // (kalau dibuang, Simpan akan menghapus data). Tampilkan apa adanya.
+        if (selectedValue && !matched) {
+            $el.find("option:first").after(
+                $("<option>").val(selectedValue).text(selectedValue).attr("data-legacy", "1").prop("selected", true)
+            );
+        }
         $el.trigger("change");
     },
 
@@ -35,7 +61,7 @@ const WilayahEngine = {
     },
 
     getCodeByName(data, name) {
-        let found = data.find((item) => item.name === name);
+        const found = this.findByName(data, name);
         return found ? found.id : null;
     },
 

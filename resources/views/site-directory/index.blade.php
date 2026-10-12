@@ -1,79 +1,38 @@
 @extends('layouts.app')
 
 @section('page-title', 'Site')
-@section('page-descrip', 'Daftar semua Site (BRS) lintas Perusahaan — klik Buka untuk mengelola di workspace Business Relation')
+@section('page-descrip', 'Daftar semua Site (BRS) lintas Perusahaan — klik baris untuk membuka workspace Business Relation')
 
 @section('breadcrumb')
     <li class="breadcrumb-item active" aria-current="page">Site</li>
 @endsection
 
-@section('content')
-<section class="section">
-    <div class="card">
-        <div class="card-body">
-            <div class="mb-3">
-                <div class="pm-search" style="max-width:340px;">
-                    <span class="pm-search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
-                    <input type="text" id="siteDirectorySearch" placeholder="Cari nama site, perusahaan, atau kota...">
-                </div>
-            </div>
+@section('page-icon')
+    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M40 68s20-18 20-32a20 20 0 10-40 0c0 14 20 32 20 32z" stroke="white" stroke-width="3" stroke-linejoin="round"/>
+        <circle cx="40" cy="36" r="7" stroke="white" stroke-width="3"/>
+    </svg>
+@endsection
 
-            <div class="table-responsive">
-                <table id="siteDirectoryTable" class="table table-striped table-sm table-bordered w-100">
-                    <thead>
-                        <tr>
-                            <th>No</th>
-                            <th>Nama Site</th>
-                            <th>Perusahaan</th>
-                            <th>Kota/Kabupaten</th>
-                            <th>Lokasi</th>
-                            <th>Tipe</th>
-                            <th>Status</th>
-                            <th style="width:80px;">Aksi</th>
-                        </tr>
-                    </thead>
-                </table>
-            </div>
-        </div>
-    </div>
-</section>
+@section('content')
+<x-crud-index title="List of Site" :with-history="false" :with-detail="false" />
 @endsection
 
 @section('custom-script')
 <script>
-    $(document).ready(function () {
-        const table = $('#siteDirectoryTable').DataTable({
-            processing: true,
-            serverSide: true,
-            ajax: "{{ route('site-directory.data') }}",
-            columns: [
-                { data: 'DT_RowIndex', orderable: false, searchable: false },
-                { data: 'nama_lokasi' },
-                { data: 'nama_br' },
-                { data: 'kota_kabupaten' },
-                { data: 'lokasi_gedung', orderable: false },
-                { data: 'tipe_label', orderable: false, searchable: false },
-                { data: 'status_label', orderable: false, searchable: false },
-                { data: 'action', orderable: false, searchable: false },
-            ],
-            dom: 'rtip',
-            language: { emptyTable: 'Belum ada data Site.' },
-            createdRow: function (row, data) {
-                $(row)
-                    .css('cursor', 'pointer')
-                    .attr('data-href', '/business-relations?open=' + data.id_br + '&tab=tabBrsSite&site=' + data.id_site);
-            },
-        });
+    window.route = {
+        data: "{{ route('site-directory.data') }}",
+        csrf: "{{ csrf_token() }}",
+    }
 
-        $('#siteDirectoryTable tbody').on('click', 'tr', function (e) {
-            if ($(e.target).closest('a, button').length) return;
-            const href = $(this).data('href');
-            if (href) window.location.href = href;
-        });
-
-        $('#siteDirectorySearch').on('input', function () {
-            table.search($(this).val()).draw();
-        });
-    });
+    window.datatableHeaderLabels = {
+        nama_lokasi:    'Nama Site',
+        nama_br:        'Perusahaan',
+        kota_kabupaten: 'Kota/Kabupaten',
+        lokasi_gedung:  'Lokasi',
+        tipe:           'Tipe',
+        status:         'Status',
+    };
 </script>
+<script src="{{ asset('assets/js/site-directory/index.js') }}?v={{ filemtime(public_path('assets/js/site-directory/index.js')) }}"></script>
 @endsection

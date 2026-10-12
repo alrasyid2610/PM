@@ -3,6 +3,7 @@
     'createRoute'       => null,
     'addLabel'          => 'Add Data',
     'withHistory'       => true,
+    'withDetail'        => true,
     'withSelesaiFilter' => false,
     'searchFields'      => [],
 ])
@@ -12,6 +13,7 @@
     :create-route="$createRoute"
     :add-label="$addLabel"
     :with-history="$withHistory"
+    :with-detail="$withDetail"
     :with-selesai-filter="$withSelesaiFilter"
 >
     @if(!empty($searchFields))
@@ -64,11 +66,13 @@
                 </div>
             </div>
 
+            @if($withDetail)
             <div class="tab-pane fade" id="tab-detail">
                 <div id="detailContent" class="text-muted">
                     Pilih data pada tab Data untuk melihat detail
                 </div>
             </div>
+            @endif
 
             @if($withHistory)
             <div class="tab-pane fade" id="tab-history">

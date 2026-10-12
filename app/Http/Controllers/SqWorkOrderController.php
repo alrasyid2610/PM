@@ -235,15 +235,35 @@ class SqWorkOrderController extends Controller
 
         $boqTotals = DB::table('sq_boq')
             ->whereIn('id_sq_wo', $woIds)
-            ->selectRaw('id_sq_wo, COUNT(*) as boq_count, SUM(GREATEST(0, qty * harga - discount)) as total_boq')
+            ->selectRaw('id_sq_wo, COUNT(*) as boq_count, SUM(COALESCE(qty, 0)) as boq_qty, SUM(GREATEST(0, qty * harga - discount)) as total_boq')
             ->groupBy('id_sq_wo')
             ->get()
             ->keyBy('id_sq_wo');
 
-        return response()->json($wos->map(function ($wo) use ($boqTotals) {
+        // BOQ Other & Sampling (sq_boq_tambahan) + jumlah FWO — dipakai KPI "Total Nilai"/"Total FWO" di detail SQ
+        $tambahanTotals = DB::table('sq_boq_tambahan')
+            ->whereIn('id_sq_wo', $woIds)
+            ->selectRaw("id_sq_wo, jenis, SUM(COALESCE(qty, 0) * COALESCE(harga, 0)) as total")
+            ->groupBy('id_sq_wo', 'jenis')
+            ->get()
+            ->groupBy('id_sq_wo');
+
+        $fwoCounts = DB::table('sq_fieldworks')
+            ->whereIn('id_sq_wo', $woIds)
+            ->selectRaw('id_sq_wo, COUNT(*) as fwo_count')
+            ->groupBy('id_sq_wo')
+            ->pluck('fwo_count', 'id_sq_wo');
+
+        return response()->json($wos->map(function ($wo) use ($boqTotals, $tambahanTotals, $fwoCounts) {
             $t = $boqTotals->get($wo->id_sq_wo);
             $wo->boq_count = (int) ($t->boq_count ?? 0);
+            $wo->boq_qty   = (int) ($t->boq_qty ?? 0);
             $wo->total_boq = (int) ($t->total_boq ?? 0);
+
+            $tambahan = $tambahanTotals->get($wo->id_sq_wo) ?? collect();
+            $wo->total_boq_other    = (int) ($tambahan->firstWhere('jenis', 'lainnya')->total ?? 0);
+            $wo->total_boq_sampling = (int) ($tambahan->firstWhere('jenis', 'sampling')->total ?? 0);
+            $wo->fwo_count          = (int) ($fwoCounts[$wo->id_sq_wo] ?? 0);
             return $wo;
         })->values());
     }

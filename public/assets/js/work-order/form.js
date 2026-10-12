@@ -201,7 +201,7 @@ function renderForm(res) {
                             <i class="fa-solid fa-file-circle-check" style="font-size:11px;"></i> Output
                         </button>` : (res.status === 'completed' ? woLockedLabel() : '')}
                     </div>
-                    <div id="woTabActionsBudget" class="d-none align-items-center gap-2">
+                    <div id="woTabActionsBudget" class="d-none align-items-center gap-2" data-wo-id="${res.id_wo}">
                         ${res.status !== 'completed' && can('work-orders', 'can_create') ? `
                         <button type="button" class="pm-btn-pill pm-btn-pill--teal btn-wo-budget-add"
                             data-wo-id="${res.id_wo}" data-no-disable>

@@ -192,12 +192,61 @@ let sqWoCache = [];
 function loadSqWoList(idSq, done) {
     $.get('/sq-work-orders/' + idSq + '/list', function (wos) {
         sqWoCache = wos || [];
+        renderSqSummary(sqWoCache);
         renderSqWoView();
         if (done) done();
     }).fail(function () {
         $('#sqWoContent').html('<div class="text-center text-danger py-4">Gagal memuat data Work Order.</div>');
         if (done) done();
     });
+}
+
+// Baris KPI di atas tab — sama dengan renderSoSummary() di Sales Order (Total WO,
+// Total FWO, Total QTY, Total Nilai + breakdown BOQ/Other/Sampling), tanpa kartu
+// progress karena SQ tidak punya realisasi.
+function renderSqSummary(wos) {
+    const sum = (key) => wos.reduce((s, w) => s + (Number(w[key]) || 0), 0);
+    const totalBoq      = sum('total_boq');
+    const totalOther    = sum('total_boq_other');
+    const totalSampling = sum('total_boq_sampling');
+    const totalNilai    = totalBoq + totalOther + totalSampling;
+    const fmtRp = (n) => 'Rp ' + Number(n || 0).toLocaleString('en-US');
+
+    const kpiCard = (icon, iconBg, label, value) => `<div class="pm-kpi-card">
+        <div class="pm-kpi-icon" style="background:${iconBg};"><i class="fa-solid ${icon}"></i></div>
+        <div>
+            <div class="pm-kpi-label">${label}</div>
+            <div class="pm-kpi-value">${value}</div>
+        </div>
+    </div>`;
+
+    const categories = [
+        { label: 'BOQ',          value: totalBoq,      bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+        { label: 'BOQ Other',    value: totalOther,    bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
+        { label: 'BOQ Sampling', value: totalSampling, bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+    ];
+    const badgesHtml = categories
+        .filter((c) => c.value > 0)
+        .map((c) => `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:${c.bg};color:${c.color};border:1px solid ${c.border};white-space:nowrap;">${c.label}: ${fmtRp(c.value)}</span>`)
+        .join('');
+
+    const totalNilaiCard = `<div class="pm-kpi-card" style="flex-direction:column;align-items:flex-start;gap:8px;min-width:220px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <div class="pm-kpi-icon" style="background:#7c3aed;flex-shrink:0;"><i class="fa-solid fa-sack-dollar"></i></div>
+            <div>
+                <div class="pm-kpi-label">Total Nilai</div>
+                <div class="pm-kpi-value">${totalNilai > 0 ? fmtRp(totalNilai) : '—'}</div>
+            </div>
+        </div>
+        ${badgesHtml ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${badgesHtml}</div>` : ''}
+    </div>`;
+
+    $('#sqSummaryCard').html(
+        kpiCard('fa-briefcase', 'var(--primary-500,#1a5fbe)', 'Total WO', wos.length + ' WO') +
+        kpiCard('fa-hard-hat', 'var(--primary-700,#18386b)', 'Total FWO', sum('fwo_count') + ' FWO') +
+        kpiCard('fa-layer-group', '#0891b2', 'Total QTY', sum('boq_qty') + ' qty') +
+        totalNilaiCard
+    );
 }
 
 function renderSqWoView() {

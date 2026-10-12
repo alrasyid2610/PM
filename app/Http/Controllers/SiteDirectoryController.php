@@ -28,36 +28,36 @@ class SiteDirectoryController extends Controller
             ->leftJoin('business_estates as be', 'be.id_bestate', '=', 's.kawasan_bisnis')
             ->leftJoin('commercial_buildings as cb', 'cb.id_building', '=', 's.gedung')
             ->whereNull('s.deleted_at')
+            ->orderBy('br.nama')
+            ->orderBy('s.nama_lokasi')
             ->select([
                 's.id_site',
                 's.id_br',
-                'br.nama as nama_br',
-                'ent.nama as entitas_br',
                 's.nama_lokasi',
+                'br.nama as nama_br',
                 's.kota_kabupaten',
+                'ent.nama as entitas_br',
                 'be.nama as nama_kawasan_bisnis',
                 'cb.nama as nama_gedung',
                 's.is_kantor_pusat',
                 's.is_aktif',
             ]);
 
+        // Pola list standar (sama seperti modul lain): kolom ditampilkan otomatis dari
+        // key JSON (`data-datatable-auto-columns`), key `id_*` disembunyikan tapi tetap
+        // ada di data baris (dipakai untuk klik baris). Kolom bantu dibuang di akhir.
         return DataTables::of($query)
             ->addIndexColumn()
             ->editColumn('nama_br', fn ($row) => brDisplayName($row->entitas_br, $row->nama_br))
             ->addColumn('lokasi_gedung', fn ($row) => $row->nama_gedung ?: ($row->nama_kawasan_bisnis ?: '—'))
-            ->addColumn('tipe_label', fn ($row) => $row->is_kantor_pusat
+            ->addColumn('tipe', fn ($row) => $row->is_kantor_pusat
                 ? '<span class="pm-badge pm-badge--blue">Pusat</span>'
                 : '<span class="pm-badge">Cabang</span>')
-            ->addColumn('status_label', fn ($row) => $row->is_aktif
+            ->addColumn('status', fn ($row) => $row->is_aktif
                 ? '<span class="pm-badge pm-badge--green">Aktif</span>'
                 : '<span class="pm-badge pm-badge--red">Non Aktif</span>')
-            ->addColumn('action', fn ($row) => '
-                <a href="/business-relations?open=' . $row->id_br . '&tab=tabBrsSite&site=' . $row->id_site . '"
-                    class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:11px;">
-                    <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>Buka
-                </a>
-            ')
-            ->rawColumns(['tipe_label', 'status_label', 'action'])
+            ->removeColumn('entitas_br', 'nama_kawasan_bisnis', 'nama_gedung', 'is_kantor_pusat', 'is_aktif')
+            ->rawColumns(['tipe', 'status'])
             ->make(true);
     }
 }

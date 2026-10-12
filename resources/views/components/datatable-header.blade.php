@@ -3,6 +3,7 @@
     'createRoute'       => null,
     'addLabel'          => 'Add Data',
     'withHistory'       => true,
+    'withDetail'        => true,
     'withSelesaiFilter' => false,
     'extraTabs'         => null,
 ])
@@ -53,11 +54,13 @@
                     data-bs-toggle="tab" data-bs-target="#tab-data"
                     type="button">Data</button>
             </li>
+            @if($withDetail)
             <li class="nav-item">
                 <button class="nav-link" id="detail-tab"
                     data-bs-toggle="tab" data-bs-target="#tab-detail"
                     type="button">Detail</button>
             </li>
+            @endif
             @if($withHistory)
             <li class="nav-item">
                 <button class="nav-link" id="history-tab"

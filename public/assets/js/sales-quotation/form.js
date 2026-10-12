@@ -110,6 +110,11 @@ function renderForm(res) {
         noWrap: true,
     })}
 
+    <!-- KPI ROW -->
+    <div class="detail-kpi-section">
+        <div class="pm-kpi-row" id="sqSummaryCard"></div>
+    </div>
+
     <div class="pm-tab-card">
         <div class="pm-tab-header">
             <ul class="pm-tab-nav" id="sqDetailTabs" role="tablist">

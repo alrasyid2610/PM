@@ -176,7 +176,7 @@ function renderFwoForm(res) {
                 <div id="fwoTabActionsAttachment" class="d-flex align-items-center gap-2 d-none">
                     <!-- Attachment dikelola via tombol Edit FWO di atas -->
                 </div>
-                <div id="fwoTabActionsBudget" class="d-none align-items-center gap-2">
+                <div id="fwoTabActionsBudget" class="d-none align-items-center gap-2" data-id-fwo="${res.id_fwo}">
                     ${
                         isDeleted
                             ? ""

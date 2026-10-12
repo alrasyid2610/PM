@@ -3803,6 +3803,14 @@ function woBudgetPlanFullyVerified(plan) {
     });
 }
 
+// ID WO untuk tab Budget — dari container yang SELALU dirender, bukan dari tombol
+// "Tambah Budget Plan" (tidak ada untuk user tanpa izin create, mis. finance).
+function getWoBudgetWoId() {
+    return $('#woTabActionsBudget').data('wo-id')
+        || $('#woTabActionsBudget .btn-wo-budget-add').data('wo-id')
+        || (currentWoData ? currentWoData.id_wo : null);
+}
+
 function renderWoBudgetList(plans, isLocked) {
     const cards = plans.map(function (p) {
         const selisih      = p.total_budget - p.total_actual;
@@ -4204,7 +4212,7 @@ $(document).off('click.wobudget', '#woBudgetModal-btn-save').on('click.wobudget'
 // ── Edit Budget Plan ──
 $(document).off('click.wobudget', '.btn-wo-budget-edit').on('click.wobudget', '.btn-wo-budget-edit', function () {
     const id   = $(this).data('id');
-    const idWo = $('#woTabActionsBudget .btn-wo-budget-add').data('wo-id');
+    const idWo = getWoBudgetWoId();
     $.get(`/wo-budgets/${id}`)
         .done(function (data) { openWoBudgetModal(idWo, data); });
 });
@@ -4223,7 +4231,7 @@ $(document).off('click.wobudget', '.btn-wo-budget-collapse').on('click.wobudget'
 $(document).off('click.wobudget', '.btn-wo-budget-close').on('click.wobudget', '.btn-wo-budget-close', function () {
     const id    = $(this).data('id');
     const label = $(this).data('label');
-    const idWo  = $('#woTabActionsBudget .btn-wo-budget-add').data('wo-id');
+    const idWo  = getWoBudgetWoId();
 
     const plans   = window._woBudgetPlans || [];
     const plan    = plans.find(function (p) { return p.id_budget == id; });
@@ -4303,7 +4311,7 @@ $(document).off('click.wobudget', '#woClosePlanModal-btn-save').on('click.wobudg
 $(document).off('click.wobudget', '.btn-wo-budget-delete').on('click.wobudget', '.btn-wo-budget-delete', function () {
     const id    = $(this).data('id');
     const label = $(this).data('label');
-    const idWo  = $('#woTabActionsBudget .btn-wo-budget-add').data('wo-id');
+    const idWo  = getWoBudgetWoId();
     Swal.fire({
         title: 'Hapus Budget Plan?',
         html: `<b>${label}</b> akan dihapus.`,
@@ -4326,7 +4334,7 @@ $(document).off('click.wobudget', '.btn-wo-budget-delete').on('click.wobudget', 
 // ── Tambah Actual ──
 $(document).off('click.wobudget', '.btn-wo-actual-add').on('click.wobudget', '.btn-wo-actual-add', function () {
     const idBudgetItem  = $(this).data('id-budget-item');
-    const idWo          = $(this).data('wo-id') || $('#woTabActionsBudget .btn-wo-budget-add').data('wo-id');
+    const idWo          = $(this).data('wo-id') || getWoBudgetWoId();
     const nominalBudget = $(this).data('nominal-budget') || 0;
     const accountName   = $(this).data('account-name') || '';
     $('#woActualModal-id').val('');
@@ -4376,7 +4384,7 @@ $(document).off('click.wobudget', '.btn-remove-wo-actual-existing').on('click.wo
 // ── Edit Actual ──
 $(document).off('click.wobudget', '.btn-wo-actual-edit').on('click.wobudget', '.btn-wo-actual-edit', function () {
     const id   = $(this).data('id');
-    const idWo = $(this).data('wo-id') || $('#woTabActionsBudget .btn-wo-budget-add').data('wo-id');
+    const idWo = $(this).data('wo-id') || getWoBudgetWoId();
     $.get(`/wo-budget-actuals/${id}`)
         .done(function (r) {
             $('#woActualModal-id').val(r.id_actual);
@@ -4401,7 +4409,7 @@ $(document).off('click.wobudget', '.btn-wo-actual-edit').on('click.wobudget', '.
 // ── Hapus Actual ──
 $(document).off('click.wobudget', '.btn-wo-actual-delete').on('click.wobudget', '.btn-wo-actual-delete', function () {
     const id   = $(this).data('id');
-    const idWo = $('#woTabActionsBudget .btn-wo-budget-add').data('wo-id');
+    const idWo = getWoBudgetWoId();
     Swal.fire({
         title: 'Hapus Realisasi?',
         icon: 'warning',
@@ -4466,7 +4474,7 @@ $(document).off('click.wobudget', '#woActualModal-btn-save').on('click.wobudget'
 $(document).off('click.wobudget', '.btn-wo-bulk-verify').on('click.wobudget', '.btn-wo-bulk-verify', function () {
     const idBudget = $(this).data('id-budget');
     const label    = $(this).data('label');
-    const idWo     = $('#woTabActionsBudget .btn-wo-budget-add').data('wo-id') ||
+    const idWo     = getWoBudgetWoId() ||
                      $('#woTabActionsBudget').find('[data-wo-id]').data('wo-id');
 
     $('#woBulkVerifyModal-id-wo').val(idWo);
