@@ -31,12 +31,30 @@ use Illuminate\Support\Facades\DB;
  */
 class NotificationDispatcher
 {
+    /**
+     * Dibungkus try-catch total dengan sengaja: fire() dipanggil di tengah alur
+     * bisnis utama (mis. setelah SO berhasil disimpan). Kalau ada apa pun yang
+     * salah di sistem notifikasi (migration belum jalan, rule tidak valid, dll),
+     * itu TIDAK BOLEH menggagalkan aksi utama yang sedang berjalan — cukup
+     * dicatat ke log, prosesnya tetap lanjut seperti notifikasi tidak ada.
+     */
     public static function fire(string $eventKey, array $meta, array $data = []): void
+    {
+        try {
+            self::dispatch($eventKey, $meta, $data);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("NotificationDispatcher gagal untuk event [{$eventKey}]: " . $e->getMessage());
+        }
+    }
+
+    private static function dispatch(string $eventKey, array $meta, array $data): void
     {
         $event = NotificationEvent::firstOrCreate(
             ['key' => $eventKey],
             ['label' => $meta['label'] ?? $eventKey, 'is_active' => true]
         );
+
+        self::rememberAvailableFields($event, array_keys($data));
 
         if (!$event->is_active) {
             return;
@@ -86,7 +104,26 @@ class NotificationDispatcher
         Notification::insert($rows);
     }
 
-    /** @return int[] */
+    /** Gabungkan field baru ke available_fields event (union, bukan replace — field
+     *  dari pemanggilan fire() sebelumnya tidak hilang walau kali ini datanya beda).
+     *  Gagal di sini (mis. kolom belum ada karena migration belum jalan) tidak
+     *  boleh menghentikan pengiriman notifikasi itu sendiri — cukup dilewati. */
+    private static function rememberAvailableFields(NotificationEvent $event, array $keys): void
+    {
+        if (empty($keys)) return;
+
+        try {
+            $existing = $event->available_fields ?? [];
+            $merged   = array_values(array_unique(array_merge($existing, $keys)));
+            sort($merged);
+            if ($merged !== $existing) {
+                $event->update(['available_fields' => $merged]);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Gagal mencatat available_fields event [{$event->key}]: " . $e->getMessage());
+        }
+    }
+
     private static function resolveRecipients(NotificationRule $rule): array
     {
         return match ($rule->recipient_type) {

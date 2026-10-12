@@ -15,7 +15,30 @@ class NotificationSettingController extends Controller
 {
     public function index()
     {
-        return view('notification-settings.index');
+        return view('notification-settings.index', ['menuSlugs' => collect($this->flattenMenuSlugs())]);
+    }
+
+    /**
+     * Daftar slug menu (dari config/menus.php) untuk dropdown "Slug Menu" di form
+     * Rule — supaya admin tidak perlu hafal/ketik manual. Grup "Aksi Khusus"
+     * sengaja dikecualikan: slug di situ cuma punya can_update (can_read selalu
+     * 0), jadi tidak relevan untuk recipient_type = 'permission' yang dicek dari
+     * can_read.
+     */
+    private function flattenMenuSlugs(): array
+    {
+        $slugs = [];
+        foreach (config('menus', []) as $group) {
+            if (($group['group'] ?? null) === 'Aksi Khusus') continue;
+            foreach ($group['items'] ?? [] as $item) {
+                $slugs[] = [
+                    'slug'  => $item['slug'],
+                    'label' => $item['label'],
+                    'group' => $group['group'] ?? null,
+                ];
+            }
+        }
+        return $slugs;
     }
 
     /** Katalog event + semua rule-nya, untuk render halaman. */
@@ -26,6 +49,7 @@ class NotificationSettingController extends Controller
 
         $events = $events->map(function ($e) use ($rules) {
             $e->rules = $rules->get($e->id, collect())->values();
+            $e->available_fields = !empty($e->available_fields ?? null) ? json_decode($e->available_fields) : [];
             return $e;
         });
 

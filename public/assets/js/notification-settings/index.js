@@ -127,6 +127,33 @@ $(function () {
         });
     });
 
+    // Chip field yang tersedia untuk event ybs — diklik untuk disisipkan ke
+    // Template Pesan (bukan diketik manual), diambil dari notifEvents yang
+    // sudah dimuat (available_fields dicatat otomatis tiap event dipicu).
+    function renderRuleFieldChips(eventId) {
+        const ev = notifEvents.find((e) => e.id === eventId);
+        const fields = (ev && ev.available_fields) || [];
+        if (!fields.length) {
+            $('#ruleFieldChips').html('<span class="text-muted">Belum ada data field tercatat untuk event ini — event perlu terpicu minimal 1x dulu.</span>');
+            return;
+        }
+        $('#ruleFieldChips').html(
+            '<span class="text-muted me-1">Field tersedia:</span> ' +
+            fields.map((f) => `<button type="button" class="btn btn-sm btn-outline-secondary chip-field py-0 px-2 me-1 mb-1" data-field="${f}" style="font-size:11px;">@{{${f}}}</button>`).join('')
+        );
+    }
+
+    $(document).on('click', '.chip-field', function () {
+        const $ta = $('#ruleTemplate');
+        const el = $ta.get(0);
+        const text = `{{${$(this).data('field')}}}`;
+        const start = el.selectionStart ?? el.value.length;
+        const end = el.selectionEnd ?? el.value.length;
+        el.value = el.value.slice(0, start) + text + el.value.slice(end);
+        el.focus();
+        el.selectionStart = el.selectionEnd = start + text.length;
+    });
+
     $(document).on('click', '.btn-rule-add', function () {
         const eventId = $(this).closest('.card').data('event-id');
         $('#ruleForm')[0].reset();
@@ -134,6 +161,7 @@ $(function () {
         $('#ruleEventId').val(eventId);
         $('#ruleUsers').val(null).trigger('change');
         $('#ruleRecipientType').val('permission').trigger('change');
+        renderRuleFieldChips(eventId);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('ruleModal')).show();
     });
 
@@ -145,6 +173,7 @@ $(function () {
         $('#ruleSlug').val(r.permission_slug || '');
         $('#ruleTemplate').val(r.message_template);
         $('#ruleActive').prop('checked', !!r.is_active);
+        renderRuleFieldChips(r.notification_event_id);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('ruleModal')).show();
     });
 

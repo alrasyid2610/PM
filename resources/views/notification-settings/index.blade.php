@@ -42,10 +42,18 @@
                     </div>
 
                     <div class="mb-3" id="ruleSlugWrap">
-                        <label class="form-label">Slug Menu</label>
-                        <input type="text" name="permission_slug" id="ruleSlug" class="form-control"
-                               placeholder="mis. fieldworks">
-                        <small class="text-muted">Harus sama persis dengan slug menu (lihat <code>config/menus.php</code>).</small>
+                        <label class="form-label">Modul (Slug Menu)</label>
+                        <select name="permission_slug" id="ruleSlug" class="form-select">
+                            <option value="">— Pilih Modul —</option>
+                            @foreach ($menuSlugs->groupBy('group') as $groupName => $items)
+                            <optgroup label="{{ $groupName }}">
+                                @foreach ($items as $item)
+                                <option value="{{ $item['slug'] }}">{{ $item['label'] }}</option>
+                                @endforeach
+                            </optgroup>
+                            @endforeach
+                        </select>
+                        <small class="text-muted">Penerima = user yang punya akses baca ke modul ini.</small>
                     </div>
 
                     <div class="mb-3" id="ruleUsersWrap" style="display:none;">
@@ -57,6 +65,7 @@
                         <label class="form-label required">Template Pesan</label>
                         <textarea name="message_template" id="ruleTemplate" class="form-control" rows="2" required
                                   placeholder="mis. SO baru @{{no_so}} dibuat oleh @{{nama_user}}"></textarea>
+                        <div id="ruleFieldChips" class="mt-1" style="font-size:11px;"></div>
                     </div>
 
                     <div class="form-check">
