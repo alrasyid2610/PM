@@ -137,6 +137,7 @@ async function renderForm(res) {
         `<div class="row g-3 form-1">
                     ${formGroup.text("name", "Nama", res.name, true, { className: "col-md-5" })}
                     ${formGroup.text("email", "Email", res.email, true, { className: "col-md-5" })}
+                    ${formGroup.text("no_hp", "No. HP", res.no_hp, false, { className: "col-md-3" })}
                     ${formGroup.select("is_active", "Status", res.is_active,
                         [{ value: 1, label: "Aktif" }, { value: 0, label: "Tidak Aktif" }],
                         { className: "col-md-2" }

@@ -8,13 +8,13 @@ namespace App\Support;
  * Sintaks isian dalam template: {kunci:tipe} atau {kunci:tipe=default}
  *   - angka      → bilangan (mis. {hari:angka=12})
  *   - rekening   → pilih dari master Bank Account
- *   - personel   → pilih dari master Personnel (nama + no. HP)
+ *   - user       → pilih dari User Management (nama + no. HP user)
  *   - termin     → daftar tahap pembayaran (dipakai di fase Termin)
  * `kunci` hanya huruf kecil/angka/underscore dan harus unik per template.
  */
 class PoinKeteranganTemplate
 {
-    public const TIPE = ['angka', 'rekening', 'personel', 'termin'];
+    public const TIPE = ['angka', 'rekening', 'user', 'termin'];
 
     public const KATEGORI = [
         'jadwal_sampling' => 'Jadwal Sampling',

@@ -23,9 +23,9 @@ class SqKeterangan
             ->get(['k.id_sq_keterangan', 'k.id_poin', 'k.urutan', 'k.nilai', 'k.teks_final', 'p.kategori', 'p.template']);
 
         $banks = DB::table('bank_accounts')->whereNull('deleted_at')->get()->keyBy('id_bank_account');
-        $personnel = DB::table('personnel')->whereNull('deleted_at')->get(['id_personnel', 'nama', 'no_hp'])->keyBy('id_personnel');
+        $users = DB::table('users')->get(['id', 'name', 'no_hp'])->keyBy('id');
 
-        return $rows->map(function ($r) use ($banks, $personnel) {
+        return $rows->map(function ($r) use ($banks, $users) {
             $nilai = $r->nilai ? (json_decode($r->nilai, true) ?: []) : [];
             $display = [];
             $isian = [];
@@ -36,8 +36,8 @@ class SqKeterangan
                     $label = ($val !== null && $val !== '') ? (string) $val : $i['default'];
                 } elseif ($i['tipe'] === 'rekening' && $val && ($b = $banks->get($val))) {
                     $label = self::formatRekening($b);
-                } elseif ($i['tipe'] === 'personel' && $val && ($p = $personnel->get($val))) {
-                    $label = trim($p->nama . ' ' . ($p->no_hp ?? ''));
+                } elseif ($i['tipe'] === 'user' && $val && ($u = $users->get($val))) {
+                    $label = trim($u->name . ' ' . ($u->no_hp ?? ''));
                 }
 
                 $lengkap = $label !== null && $label !== '';

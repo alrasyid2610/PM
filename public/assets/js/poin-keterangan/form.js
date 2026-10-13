@@ -1,4 +1,4 @@
-const POIN_TIPE_LABEL = { angka: 'Angka', rekening: 'Rekening (Bank Account)', personel: 'Personel (nama + no. HP)', termin: 'Daftar Termin' };
+const POIN_TIPE_LABEL = { angka: 'Angka', rekening: 'Rekening (Bank Account)', user: 'User (nama + no. HP)', termin: 'Daftar Termin' };
 
 function renderForm(res) {
     const isian = (res.isian || []).length
@@ -51,7 +51,7 @@ function renderForm(res) {
                                 ${formGroup.textarea("template", "Teks Poin", escHtml(res.template ?? ''), { className: "col-12" })}
                             </div>
                             <div class="text-muted small mb-2">
-                                Isian ditulis <code>{kunci:tipe=default}</code>, mis. <code>{hari:angka=12}</code>. Tipe: angka, rekening, personel, termin.
+                                Isian ditulis <code>{kunci:tipe=default}</code>, mis. <code>{hari:angka=12}</code>. Tipe: angka, rekening, user, termin.
                             </div>
                             <div class="mb-2"><strong style="font-size:12px;">Isian terdeteksi</strong>${isian}</div>
                             <div><strong style="font-size:12px;">Pratinjau</strong>

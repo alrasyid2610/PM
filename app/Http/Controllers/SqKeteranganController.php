@@ -61,11 +61,11 @@ class SqKeteranganController extends Controller
             return response()->json($rows->map(fn ($b) => ['id' => $b->id_bank_account, 'text' => SqKeterangan::formatRekening($b)]));
         }
 
-        if ($request->tipe === 'personel') {
-            $rows = DB::table('personnel')->whereNull('deleted_at')->where('is_aktif', 1)
-                ->when($q !== '', fn ($w) => $w->where('nama', 'like', "%{$q}%"))
-                ->orderBy('nama')->limit(30)->get(['id_personnel', 'nama', 'no_hp']);
-            return response()->json($rows->map(fn ($p) => ['id' => $p->id_personnel, 'text' => trim($p->nama . ' ' . ($p->no_hp ?? ''))]));
+        if ($request->tipe === 'user') {
+            $rows = DB::table('users')->where('is_active', 1)
+                ->when($q !== '', fn ($w) => $w->where('name', 'like', "%{$q}%"))
+                ->orderBy('name')->limit(30)->get(['id', 'name', 'no_hp']);
+            return response()->json($rows->map(fn ($u) => ['id' => $u->id, 'text' => trim($u->name . ' ' . ($u->no_hp ?? ''))]));
         }
 
         return response()->json([]);
@@ -163,9 +163,9 @@ class SqKeteranganController extends Controller
                     return response()->json(['message' => 'Rekening tidak ditemukan.'], 422);
                 }
                 $nilai[$i['key']] = (int) $v;
-            } elseif ($i['tipe'] === 'personel') {
-                if (!DB::table('personnel')->where('id_personnel', $v)->whereNull('deleted_at')->exists()) {
-                    return response()->json(['message' => 'Personel tidak ditemukan.'], 422);
+            } elseif ($i['tipe'] === 'user') {
+                if (!DB::table('users')->where('id', $v)->where('is_active', 1)->exists()) {
+                    return response()->json(['message' => 'User tidak ditemukan atau tidak aktif.'], 422);
                 }
                 $nilai[$i['key']] = (int) $v;
             }

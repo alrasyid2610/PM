@@ -683,7 +683,7 @@ function sqKetText(row, editable) {
         if (i.tipe === 'angka') {
             out += `<input type="number" min="0" max="9999" class="form-control form-control-sm d-inline-block sq-ket-angka"
                 style="width:76px;vertical-align:middle;" ${base} value="${escHtml(i.value_label ?? '')}">`;
-        } else if (i.tipe === 'rekening' || i.tipe === 'personel') {
+        } else if (i.tipe === 'rekening' || i.tipe === 'user') {
             const opt = i.value ? `<option value="${i.value}" selected>${escHtml(i.value_label ?? '')}</option>` : '<option value=""></option>';
             out += `<span class="d-inline-block" style="min-width:320px;vertical-align:middle;">
                 <select class="sq-ket-sel" data-tipe="${i.tipe}" ${base}>${opt}</select></span>`;
@@ -805,7 +805,7 @@ function renderSqKetList() {
             const tipe = $el.data('tipe');
             $el.select2({
                 width: '100%', dropdownParent: $('#detailContent'), allowClear: true,
-                placeholder: tipe === 'rekening' ? 'Pilih rekening' : 'Pilih personel', minimumInputLength: 0,
+                placeholder: tipe === 'rekening' ? 'Pilih rekening' : 'Pilih user', minimumInputLength: 0,
                 ajax: {
                     url: '/sales-quotations/keterangan/opsi', dataType: 'json', delay: 200,
                     data: function (p) { return { q: p.term || '', tipe: tipe }; },

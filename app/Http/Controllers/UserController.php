@@ -61,6 +61,7 @@ class UserController extends Controller
             'name'          => 'required|string|max:255',
             'email'         => 'required|email|unique:users,email',
             'password'      => 'required|string|min:8|confirmed',
+            'no_hp'         => 'nullable|string|max:30',
             'is_active'     => 'required|in:0,1',
             'menu_group_id' => 'nullable|integer|exists:menu_groups,id',
             'status_kepegawaian' => StatusKepegawaian::rule(),
@@ -73,6 +74,7 @@ class UserController extends Controller
                 'name'          => $request->name,
                 'email'         => $request->email,
                 'password'      => Hash::make($request->password),
+                'no_hp'         => $request->filled('no_hp') ? trim($request->no_hp) : null,
                 'is_active'     => $request->is_active,
                 'status_kepegawaian' => $request->filled('status_kepegawaian') ? $request->status_kepegawaian : null,
                 'menu_group_id' => $request->filled('menu_group_id') ? $request->menu_group_id : null,
@@ -94,7 +96,7 @@ class UserController extends Controller
     public function show($id)
     {
         $user = DB::table('users')
-            ->select(['id', 'name', 'email', 'is_active', 'menu_group_id', 'status_kepegawaian'])
+            ->select(['id', 'name', 'email', 'no_hp', 'is_active', 'menu_group_id', 'status_kepegawaian'])
             ->where('id', $id)
             ->first();
 
@@ -125,6 +127,7 @@ class UserController extends Controller
             'name'          => 'required|string|max:255',
             'email'         => "required|email|unique:users,email,{$id}",
             'password'      => 'nullable|string|min:8',
+            'no_hp'         => 'nullable|string|max:30',
             'is_active'     => 'required|in:0,1',
             'menu_group_id' => 'nullable|integer|exists:menu_groups,id',
             'permissions'   => 'nullable|string',
@@ -144,6 +147,7 @@ class UserController extends Controller
             $updateData = [
                 'name'          => $request->name,
                 'email'         => $request->email,
+                'no_hp'         => $request->filled('no_hp') ? trim($request->no_hp) : null,
                 'is_active'     => $request->is_active,
                 'status_kepegawaian' => $request->filled('status_kepegawaian') ? $request->status_kepegawaian : null,
                 'menu_group_id' => $request->filled('menu_group_id') ? $request->menu_group_id : null,

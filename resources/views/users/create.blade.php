@@ -34,6 +34,10 @@
                     <label class="form-label required">Email</label>
                     <input type="email" name="email" class="form-control" required>
                 </div>
+                <div class="col-md-3">
+                    <label class="form-label">No. HP</label>
+                    <input type="text" name="no_hp" class="form-control" maxlength="30">
+                </div>
                 <div class="col-md-5">
                     <label class="form-label required">Password</label>
                     <input type="password" name="password" class="form-control" required>
