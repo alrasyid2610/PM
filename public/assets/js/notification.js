@@ -13,13 +13,13 @@ window.Notify = {
 
     // Toast generik, ringkas — dipakai untuk aksi cepat/tidak mengganggu yang
     // bukan submit form (mis. drag-and-drop reorder baris).
-    toast(message, icon = "success") {
+    toast(message, icon = "success", timer = 1200) {
         return Swal.fire({
             toast: true,
             position: "top-end",
             icon: icon,
             title: message,
-            timer: 1200,
+            timer: timer,
             showConfirmButton: false,
         });
     },

@@ -735,6 +735,7 @@ function sqKetSimpanTermin($wrap) {
     });
     if (!n) data['nilai[' + key + ']'] = '';
     sqKetSend('PUT', '/sales-quotations/' + sqKetState.idSq + '/keterangan/' + $wrap.data('row'), data, function () {
+        Notify.toast('Berhasil disimpan', 'success', 2000);
         loadSqKeterangan(sqKetState.idSq);
     });
 }
@@ -792,7 +793,7 @@ function renderSqKetList() {
             const ids = $('#sqKetList .sq-ket-row').map(function () { return Number($(this).data('row')); }).get();
             $('#sqKetList .sq-ket-no').each(function (i) { $(this).text(i + 1); });
             sqKetSend('PUT', '/sales-quotations/' + sqKetState.idSq + '/keterangan/urut', { ids: ids }, function () {
-                Notify.toast('Urutan poin diperbarui');
+                Notify.toast('Berhasil disimpan', 'success', 2000);
                 loadSqKeterangan(sqKetState.idSq);
             });
         });
@@ -868,13 +869,14 @@ $(document).on('select2:select', '#sqKetTambah', function () {
     const id = $(this).val();
     if (!id) return;
     sqKetSend('PUT', '/sales-quotations/' + sqKetState.idSq + '/keterangan/tambah', { id_poin: id }, function () {
+        Notify.toast('Berhasil disimpan', 'success', 2000);
         loadSqKeterangan(sqKetState.idSq);
     });
 });
 
 $(document).on('click', '#btnSqKetStandar', function () {
     sqKetSend('PUT', '/sales-quotations/' + sqKetState.idSq + '/keterangan/isi-standar', {}, function (res) {
-        Notify.success(res.message);
+        Notify.toast(res.message || 'Berhasil disimpan', 'success', 2000);
         loadSqKeterangan(sqKetState.idSq);
     });
 });
@@ -883,6 +885,7 @@ function sqKetSimpanNilai(row, key, val) {
     const data = {};
     data['nilai[' + key + ']'] = val === null ? '' : val;
     sqKetSend('PUT', '/sales-quotations/' + sqKetState.idSq + '/keterangan/' + row, data, function () {
+        Notify.toast('Berhasil disimpan', 'success', 2000);
         // muat ulang agar penanda "belum lengkap" ikut diperbarui
         loadSqKeterangan(sqKetState.idSq);
     });
@@ -899,6 +902,7 @@ $(document).on('click', '#sqKetContent .sq-ket-del', function () {
     const row = $(this).data('row');
     Notify.confirmDelete('Hapus poin keterangan ini?', function () {
         sqKetSend('PUT', '/sales-quotations/' + sqKetState.idSq + '/keterangan/' + row + '/hapus', {}, function () {
+            Notify.toast('Berhasil disimpan', 'success', 2000);
             loadSqKeterangan(sqKetState.idSq);
         });
     });
