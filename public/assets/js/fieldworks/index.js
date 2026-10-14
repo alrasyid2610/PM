@@ -2486,7 +2486,7 @@ function renderSampleList(boqs, isLocked) {
                     : `<span style="color:#94a3b8;font-style:italic;font-size:11px;">–</span>`;
 
                 return `
-                <tr data-id-sample="${s.id_lab_sample}" data-boq-name="${escHtml(boq.nama_boq)}">
+                <tr data-id-sample="${s.id_lab_sample}" data-boq-name="${escHtml(boq.nama_boq)}" data-jenis="${escHtml(s.jenis_sample || '')}">
                     <td style="font-size:12px;color:#64748b;width:36px;">${s.no_urut}</td>
                     <td style="font-size:12px;white-space:nowrap;">${jenisTag} ${noSample}</td>
                     <td style="font-size:12px;">${titikCell}</td>
@@ -2800,9 +2800,13 @@ $(document).off('change.sample-status', '.sample-inline-status').on('change.samp
 
     // Tidak Terlaksana wajib alasan → buka modal; batal = muat ulang list (kembalikan pilihan)
     if (val === 'tidak_terlaksana') {
-        // Titik Sample wajib terisi dulu — datanya tetap dipakai walau titik ini tidak terlaksana
-        if (!$sel.closest('tr').find('.sample-inline-titik').val()) {
-            Notify.error('Isi Titik Sample dulu sebelum menandai Tidak Terlaksana.');
+        // Jenis & Titik Sample wajib terisi dulu — datanya tetap dipakai walau titik ini tidak terlaksana
+        const $trTT   = $sel.closest('tr');
+        const kurangTT = [];
+        if (!$trTT.data('jenis')) kurangTT.push('Jenis (lewat tombol Edit)');
+        if (!$trTT.find('.sample-inline-titik').val()) kurangTT.push('Titik Sample');
+        if (kurangTT.length) {
+            Notify.error('Isi ' + kurangTT.join(' dan ') + ' dulu sebelum menandai Tidak Terlaksana.');
             const idFwoReset = $('#fwoDetailTabs button[data-bs-target="#tabFwoSample"]').data('id-fwo');
             if (idFwoReset) loadSampleData(idFwoReset); // kembalikan pilihan status
             return;

@@ -410,6 +410,7 @@ class FieldworkController extends Controller
         $alasanKurang = [];
         foreach ($samples->where('status', 'tidak_terlaksana') as $s) {
             $kurang = [];
+            if ($blank($s->jenis_sample))            $kurang[] = 'Jenis';
             if ($blank($s->titik_lokasi))            $kurang[] = 'Titik Sample';
             if (!$s->id_alasan_tidak_terlaksana)     $kurang[] = 'Alasan';
             elseif ($s->alasan_wajib_keterangan && $blank($s->keterangan)) $kurang[] = 'Keterangan';
