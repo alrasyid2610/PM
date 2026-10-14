@@ -686,6 +686,8 @@ $(document).on('click', '.btn-output-other-delete', function () {
 // ── SAMPLE (langsung di level WO, tanpa FWO) ───────────────────────────────────
 
 const JENIS_LABEL_WO_SAMPLE = { env: 'ENV', we: 'WE', mp: 'MP', product: 'Product' };
+// id panel BOQ (tab Lab Sample Reg) yang sedang dibuka user; default semua tertutup
+const woSampleOpenPanels = new Set();
 const SAMPLE_STATUS_LABEL_WO = { belum_diambil: 'Belum Diambil', diambil: 'Diambil', dikirim: 'Dikirim' };
 const SAMPLE_STATUS_COLOR_WO = { belum_diambil: '#64748b', diambil: '#0369a1', dikirim: '#15803d' };
 const KONDISI_LABEL_WO = { baik: 'Baik', rusak: 'Rusak', tidak_lengkap: 'Tidak Lengkap' };
@@ -952,24 +954,28 @@ function renderWoSampleList(boqs, isLocked, hasFwo) {
             </div>` : '';
 
         const collapseId = `woSampleCollapse_${boq.id_boq}`;
+        // Default tertutup; panel yang sedang dibuka user tetap terbuka saat daftar dimuat ulang
+        const isOpen = woSampleOpenPanels.has(collapseId);
         return `
         <div class="mb-3 border rounded" style="background:#fff;">
             <div class="d-flex justify-content-between align-items-center px-3 py-2"
                 style="background:#f8fafc;border-bottom:1px solid #e2e8f0;border-radius:calc(0.375rem - 1px) calc(0.375rem - 1px) 0 0;">
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <span style="font-size:13px;font-weight:600;color:#1e293b;">${escHtml(boq.nama_boq)}</span>
-                    <span class="text-muted wo-sample-progress-text" style="font-size:11px;">Target: ${boq.qty || 0} &nbsp;·&nbsp; ${diambil}/${total} diambil &nbsp;·&nbsp; ${dikirim} dikirim</span>
-                    ${sisa > 0 && !isLocked ? `<span style="font-size:11px;color:#b45309;background:#fef3c7;border:1px solid #fde68a;border-radius:4px;padding:1px 6px;">${sisa} sisa qty BOQ</span>` : ''}
+                <div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                        <span class="text-muted wo-sample-progress-text" style="font-size:11px;">Target: ${boq.qty || 0} &nbsp;·&nbsp; ${diambil}/${total} diambil &nbsp;·&nbsp; ${dikirim} dikirim</span>
+                        ${sisa > 0 && !isLocked ? `<span style="font-size:11px;color:#b45309;background:#fef3c7;border:1px solid #fde68a;border-radius:4px;padding:1px 6px;">${sisa} sisa qty BOQ</span>` : ''}
+                    </div>
+                    <div style="font-size:13px;font-weight:600;color:#1e293b;">${escHtml(boq.nama_boq)}</div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     ${addBtn}
                     <button type="button" class="btn btn-sm btn-plan-icon btn-wo-sample-collapse"
                         data-target="#${collapseId}" title="Sembunyikan / Tampilkan">
-                        <i class="fa-solid fa-chevron-up"></i>
+                        <i class="fa-solid ${isOpen ? 'fa-chevron-up' : 'fa-chevron-down'}"></i>
                     </button>
                 </div>
             </div>
-            <div id="${collapseId}">
+            <div id="${collapseId}"${isOpen ? '' : ' style="display:none;"'}>
                 <div style="padding:4px 12px 0;">
                     <div class="progress" style="height:3px;border-radius:0;">
                         <div class="progress-bar" style="width:${pct}%;background:${barColor};"></div>
@@ -4258,6 +4264,18 @@ $(document).off('click.wobudget', '.btn-wo-budget-edit').on('click.wobudget', '.
     const idWo = getWoBudgetWoId();
     $.get(`/wo-budgets/${id}`)
         .done(function (data) { openWoBudgetModal(idWo, data); });
+});
+
+// ── Collapse / Expand panel BOQ di tab Lab Sample Reg ──
+$(document).off('click.wosample', '.btn-wo-sample-collapse').on('click.wosample', '.btn-wo-sample-collapse', function () {
+    const $icon   = $(this).find('i');
+    const $target = $($(this).data('target'));
+    $target.slideToggle(180, function () {
+        const visible = $target.is(':visible');
+        $icon.toggleClass('fa-chevron-up', visible).toggleClass('fa-chevron-down', !visible);
+        const id = $target.attr('id');
+        if (visible) woSampleOpenPanels.add(id); else woSampleOpenPanels.delete(id);
+    });
 });
 
 // ── Collapse / Expand panel item ──
