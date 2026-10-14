@@ -265,8 +265,9 @@ class WoSampleController extends Controller
             $samples = DB::table('lab_samples')
                 ->where('id_fwo_boq', $boq->id_fwo_boq)
                 ->whereNull('id_wo_lab_sample_reg')
-                // titik yang tidak terlaksana tidak ada sample-nya → tidak bisa diregistrasi
-                ->where(fn ($q) => $q->whereNull('status')->orWhere('status', '!=', 'tidak_terlaksana'))
+                // Hanya sample yang sudah berstatus Dikirim (ke lab) yang bisa diregistrasi —
+                // otomatis juga mengecualikan Tidak Terlaksana & yang belum diambil
+                ->where('status', 'dikirim')
                 ->orderBy('no_urut')
                 ->get(['id_lab_sample', 'no_sample', 'jenis_sample', 'titik_lokasi', 'status']);
 
@@ -292,6 +293,7 @@ class WoSampleController extends Controller
                 ->where('id_wo', $id_wo)
                 ->where('id_boq', $boq->id_boq)
                 ->whereNull('id_wo_lab_sample_reg')
+                ->where('status', 'dikirim')
                 ->orderBy('no_urut')
                 ->get(['id_lab_sample', 'no_sample', 'jenis_sample', 'titik_lokasi', 'status']);
 
@@ -334,6 +336,21 @@ class WoSampleController extends Controller
 
         if ($validCount !== count($validated['id_lab_sample'])) {
             return response()->json(['success' => false, 'message' => 'Sebagian sample tidak valid, sudah diregistrasi sebelumnya, atau berstatus Tidak Terlaksana.'], 422);
+        }
+
+        // Registrasi ke Lab Sample Reg hanya untuk sample yang sudah berstatus Dikirim (ke lab)
+        $belumDikirim = DB::table('lab_samples')
+            ->whereIn('id_lab_sample', $validated['id_lab_sample'])
+            ->where(fn ($q) => $q->whereNull('status')->orWhere('status', '!=', 'dikirim'))
+            ->orderBy('no_sample')
+            ->pluck('no_sample', 'id_lab_sample');
+        if ($belumDikirim->isNotEmpty()) {
+            $daftar = $belumDikirim->map(fn ($no, $id) => $no ?: "Sample #{$id}")->values();
+            $teks   = $daftar->take(5)->implode(', ') . ($daftar->count() > 5 ? ' dan ' . ($daftar->count() - 5) . ' lainnya' : '');
+            return response()->json([
+                'success' => false,
+                'message' => "Sample belum berstatus Dikirim, tidak bisa diregistrasi: {$teks}.",
+            ], 422);
         }
 
         DB::beginTransaction();

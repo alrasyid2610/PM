@@ -1350,7 +1350,7 @@ $(document).on('click', '#btn-wo-reg-from-fwo', function () {
 
 function renderWoRegFromFwoList(groups) {
     if (!groups.length) {
-        return '<div class="text-center text-muted py-3" style="font-size:13px;">Tidak ada sample dari FWO yang belum diregistrasi.</div>';
+        return '<div class="text-center text-muted py-3" style="font-size:13px;">Tidak ada sample berstatus <b>Dikirim</b> yang belum diregistrasi.<br>Hanya sample yang sudah dikirim ke lab yang bisa diregistrasi.</div>';
     }
 
     return groups.map(function (g) {

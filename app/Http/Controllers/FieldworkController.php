@@ -354,25 +354,61 @@ class FieldworkController extends Controller
 
         // Syarat: tiap BOQ item FWO harus sudah punya sample sebanyak qty-nya (titik yang direncanakan),
         // dan semua sample itu sudah diregistrasi di Lab Sample Reg (WO) — id_wo_lab_sample_reg tidak NULL.
-        $totalKurang  = 0; // titik yang belum dibuat sample
-        $totalBelumReg = 0; // sample yang belum diregistrasi di Lab Sample Reg
+        $totalKurang = 0; // titik yang belum dibuat sample
         $fwoBoqs = DB::table('fieldwork_boq')
             ->where('id_fwo', $id)
             ->whereNull('deleted_at')
             ->select('id_fwo_boq', 'qty')
             ->get();
+
+        $samples = $fwoBoqs->isEmpty() ? collect() : DB::table('lab_samples as ls')
+            ->leftJoin('alasan_tidak_terlaksana as al', 'al.id_alasan', '=', 'ls.id_alasan_tidak_terlaksana')
+            ->whereIn('ls.id_fwo_boq', $fwoBoqs->pluck('id_fwo_boq'))
+            ->orderBy('ls.no_sample')
+            ->get([
+                'ls.id_lab_sample', 'ls.id_fwo_boq', 'ls.no_sample', 'ls.status',
+                'ls.jenis_sample', 'ls.titik_lokasi', 'ls.tanggal_pengambilan', 'ls.kondisi_sample',
+                'ls.keterangan', 'ls.id_wo_lab_sample_reg', 'ls.id_alasan_tidak_terlaksana',
+                'al.wajib_keterangan as alasan_wajib_keterangan',
+            ]);
+
+        // Tiap titik rencana harus punya slot (slot Tidak Terlaksana ikut dihitung)
+        $slotPerBoq = $samples->groupBy('id_fwo_boq')->map->count();
         foreach ($fwoBoqs as $fb) {
-            // Semua slot (termasuk yang Tidak Terlaksana) dihitung — tiap titik rencana harus punya slot
-            $total    = DB::table('lab_samples')->where('id_fwo_boq', $fb->id_fwo_boq)->count();
-            // Slot Tidak Terlaksana (beralasan) dikecualikan dari kewajiban registrasi Lab Sample Reg
-            $belumReg = DB::table('lab_samples')
-                ->where('id_fwo_boq', $fb->id_fwo_boq)
-                ->whereNull('id_wo_lab_sample_reg')
-                ->where(fn ($q) => $q->whereNull('status')->orWhere('status', '!=', 'tidak_terlaksana'))
-                ->count();
-            $totalKurang   += max(0, (int) $fb->qty - $total);
-            $totalBelumReg += $belumReg;
+            $totalKurang += max(0, (int) $fb->qty - (int) ($slotPerBoq[$fb->id_fwo_boq] ?? 0));
         }
+
+        $nomor = fn ($s) => $s->no_sample ?: "Sample #{$s->id_lab_sample}";
+        // Maks. 5 nomor ditampilkan, sisanya diringkas supaya pesan tidak kepanjangan
+        $daftar = function ($items) {
+            $items = collect($items)->values();
+            return $items->take(5)->implode(', ') . ($items->count() > 5 ? ' dan ' . ($items->count() - 5) . ' lainnya' : '');
+        };
+        $blank = fn ($v) => $v === null || trim((string) $v) === '';
+
+        $aktif = $samples->filter(fn ($s) => $s->status !== 'tidak_terlaksana'); // sample yang benar-benar diproses
+
+        // a) Status harus Dikirim (ke lab)
+        $belumDikirim = $aktif->filter(fn ($s) => $s->status !== 'dikirim');
+
+        // b) Isian wajib lengkap: Jenis, Titik Sample, Tgl Pengambilan, Kondisi
+        $belumLengkap = [];
+        foreach ($aktif as $s) {
+            $kurang = [];
+            if ($blank($s->jenis_sample))        $kurang[] = 'Jenis';
+            if ($blank($s->titik_lokasi))        $kurang[] = 'Titik Sample';
+            if ($blank($s->tanggal_pengambilan)) $kurang[] = 'Tgl Pengambilan';
+            if ($blank($s->kondisi_sample))      $kurang[] = 'Kondisi';
+            if ($kurang) $belumLengkap[] = $nomor($s) . ' (' . implode(', ', $kurang) . ')';
+        }
+
+        // c) Sudah diregistrasi di Lab Sample Reg — hanya dihitung untuk yang sudah Dikirim,
+        //    supaya sample yang belum dikirim tidak muncul dobel di dua alasan
+        $belumReg = $aktif->filter(fn ($s) => $s->status === 'dikirim' && !$s->id_wo_lab_sample_reg);
+
+        // d) Tidak Terlaksana wajib punya alasan (+ keterangan kalau alasan tsb mewajibkan)
+        $alasanKurang = $samples->filter(fn ($s) => $s->status === 'tidak_terlaksana'
+            && (!$s->id_alasan_tidak_terlaksana || ($s->alasan_wajib_keterangan && $blank($s->keterangan))));
         // Syarat: FWO wajib punya minimal 1 BOQ dan 1 Budget Plan (FWO kosong tidak boleh diselesaikan)
         $belumAdaBoq = $fwoBoqs->isEmpty();
         $totalPlan = DB::table('fwo_budgets')
@@ -388,12 +424,17 @@ class FieldworkController extends Controller
             ->where('status', '!=', 'completed')
             ->count();
 
-        if ($belumAdaBoq || $belumAdaBudget || $totalKurang > 0 || $totalBelumReg > 0 || $budgetBelumSelesai > 0) {
+        $adaSampleMasalah = $belumDikirim->isNotEmpty() || $belumLengkap || $belumReg->isNotEmpty() || $alasanKurang->isNotEmpty();
+
+        if ($belumAdaBoq || $belumAdaBudget || $totalKurang > 0 || $adaSampleMasalah || $budgetBelumSelesai > 0) {
             $alasan = [];
             if ($belumAdaBoq)            $alasan[] = "Belum ada BOQ pada FWO ini";
             if ($belumAdaBudget)         $alasan[] = "Belum ada Budget Plan pada FWO ini";
             if ($totalKurang > 0)        $alasan[] = "{$totalKurang} titik belum dibuat sample";
-            if ($totalBelumReg > 0)      $alasan[] = "{$totalBelumReg} sample belum diregistrasi di Lab Sample Reg atau ditandai Tidak Terlaksana";
+            if ($belumDikirim->isNotEmpty()) $alasan[] = "{$belumDikirim->count()} sample belum berstatus Dikirim: " . $daftar($belumDikirim->map($nomor));
+            if ($belumLengkap)           $alasan[] = count($belumLengkap) . " sample belum lengkap isiannya: " . $daftar($belumLengkap);
+            if ($belumReg->isNotEmpty()) $alasan[] = "{$belumReg->count()} sample belum diregistrasi di Lab Sample Reg: " . $daftar($belumReg->map($nomor));
+            if ($alasanKurang->isNotEmpty()) $alasan[] = "{$alasanKurang->count()} sample Tidak Terlaksana belum lengkap alasannya: " . $daftar($alasanKurang->map($nomor));
             if ($budgetBelumSelesai > 0) $alasan[] = "{$budgetBelumSelesai} Budget Plan belum diselesaikan";
             return response()->json([
                 'message' => 'FWO belum bisa diselesaikan.',
