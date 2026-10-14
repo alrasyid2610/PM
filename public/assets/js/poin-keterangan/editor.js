@@ -176,8 +176,11 @@ const PoinEditor = (function () {
         const $help = $('<i class="fa-regular fa-circle-question ms-1" tabindex="0" title="" style="color:#2563eb;cursor:help;font-size:13px;"></i>');
         $col.find('label').first().append($help);
         // Popover buatan sendiri (Bootstrap Popover butuh Popper, yang tidak dimuat di layout ini)
-        let $pop = null;
-        const hidePop = () => { if ($pop) { $pop.remove(); $pop = null; } };
+        // Tetap terbuka selama kursor ada di ikon ATAU di popover-nya (ditutup dengan jeda singkat
+        // supaya kursor sempat berpindah dari ikon ke isi popover).
+        let $pop = null, hideTimer = null;
+        const hidePop = () => { clearTimeout(hideTimer); if ($pop) { $pop.remove(); $pop = null; } };
+        const hideSoon = () => { clearTimeout(hideTimer); hideTimer = setTimeout(hidePop, 200); };
         const showPop = () => {
             hidePop();
             $pop = $(`<div class="poin-help-pop"><div class="poin-help-title">Cara menulis isian</div><div class="poin-help-body">${helpHtml()}</div></div>`)
@@ -186,9 +189,12 @@ const PoinEditor = (function () {
             const w = $pop.outerWidth();
             let left = r.left + window.scrollX - 10;
             if (left + w > window.scrollX + window.innerWidth - 12) left = window.scrollX + window.innerWidth - w - 12;
-            $pop.css({ top: r.bottom + window.scrollY + 8, left: Math.max(8, left) });
+            // celah ke ikon cuma 2px + jeda tutup 200ms, jadi kursor sempat pindah ke isi popover
+            $pop.css({ top: r.bottom + window.scrollY + 2, left: Math.max(8, left) });
+            $pop.on('mouseenter', () => clearTimeout(hideTimer)).on('mouseleave', hideSoon);
         };
-        $help.on('mouseenter focus', showPop).on('mouseleave blur', hidePop);
+        $help.on('mouseenter focus', function () { clearTimeout(hideTimer); if (!$pop) showPop(); })
+             .on('mouseleave blur', hideSoon);
 
         // 2) Toolbar "Sisipkan isian" + panel kecil
         const $bar = $(`
