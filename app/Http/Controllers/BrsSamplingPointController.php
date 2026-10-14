@@ -79,14 +79,9 @@ class BrsSamplingPointController extends Controller
             'is_aktif'   => 'nullable|boolean',
         ];
 
-        // Koordinat wajib untuk ENV, opsional untuk WE
-        if ($jenis === 'env') {
-            $rules['latitude']  = 'required|numeric|between:-90,90';
-            $rules['longitude'] = 'required|numeric|between:-180,180';
-        } else {
-            $rules['latitude']  = 'nullable|numeric|between:-90,90';
-            $rules['longitude'] = 'nullable|numeric|between:-180,180';
-        }
+        // Koordinat opsional untuk ENV maupun WE (sejak 2026-10-14); kalau salah satu diisi, pasangannya wajib
+        $rules['latitude']  = 'nullable|required_with:longitude|numeric|between:-90,90';
+        $rules['longitude'] = 'nullable|required_with:latitude|numeric|between:-180,180';
 
         $request->validate($rules);
 
@@ -144,13 +139,9 @@ class BrsSamplingPointController extends Controller
             'is_aktif'   => 'nullable|boolean',
         ];
 
-        if ($jenis === 'env') {
-            $rules['latitude']  = 'required|numeric|between:-90,90';
-            $rules['longitude'] = 'required|numeric|between:-180,180';
-        } else {
-            $rules['latitude']  = 'nullable|numeric|between:-90,90';
-            $rules['longitude'] = 'nullable|numeric|between:-180,180';
-        }
+        // Koordinat opsional untuk ENV maupun WE; kalau salah satu diisi, pasangannya wajib
+        $rules['latitude']  = 'nullable|required_with:longitude|numeric|between:-90,90';
+        $rules['longitude'] = 'nullable|required_with:latitude|numeric|between:-180,180';
 
         $request->validate($rules);
 

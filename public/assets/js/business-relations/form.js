@@ -312,9 +312,8 @@ function initSamplingTabEvents() {
     $panel.on('click', '.btn-sp-add', function () {
         const jenis        = $(this).data('jenis');
         const idSite       = $(this).data('id-site');
-        const coordRequired = jenis === 'env';
-
-        _openSpModal({ jenis, idSite, coordRequired, isEdit: false });
+        // Koordinat opsional untuk ENV maupun WE (sejak 2026-10-14): wajib hanya bila "Ada Koordinat" dicentang
+        _openSpModal({ jenis, idSite, coordRequired: false, isEdit: false });
     });
 
     // Toggle koordinat di modal (WE)
@@ -358,7 +357,8 @@ function initSamplingTabEvents() {
         const lng  = $('#spModal-longitude').val().trim();
 
         if (!kode || !nama) return Swal.fire('Perhatian', 'Kode dan Nama wajib diisi.', 'warning');
-        if (coordRequired && (!lat || !lng)) return Swal.fire('Perhatian', 'Koordinat wajib diisi untuk Sampling ENV.', 'warning');
+        // Koordinat opsional; kalau "Ada Koordinat" dicentang, Latitude & Longitude harus lengkap
+        if (hasCoord && (!lat || !lng)) return Swal.fire('Perhatian', 'Latitude dan Longitude wajib diisi lengkap jika "Ada Koordinat" dicentang.', 'warning');
 
         const data = {
             _token:     window.route.csrf,
@@ -404,8 +404,7 @@ function initSamplingTabEvents() {
 
         $.get(`/brs-sampling-points/${id}`)
             .done(function (r) {
-                const coordRequired = r.jenis === 'env';
-                _openSpModal({ jenis: r.jenis, idSite, coordRequired, isEdit: true, data: r });
+                _openSpModal({ jenis: r.jenis, idSite, coordRequired: false, isEdit: true, data: r });
             });
     });
 
@@ -487,9 +486,9 @@ function _openSpModal({ jenis, idSite, coordRequired, isEdit, data }) {
     $('#spModal-lng-label').html('Longitude' + reqMark);
 
     // Tampilkan field Gedung/Ruangan/Lantai hanya untuk WE
-    $('#spModal-we-fields').toggle(!coordRequired);
+    $('#spModal-we-fields').toggle(jenis === 'we');
 
-    // Tampilkan/sembunyikan checkbox "Ada Koordinat" (hanya WE)
+    // Checkbox "Ada Koordinat" tampil untuk ENV & WE; koordinat hanya wajib bila dicentang
     if (coordRequired) {
         $('#spModal-has-coord-wrap').hide();
         $('#spModal-has-coord').prop('checked', true);
