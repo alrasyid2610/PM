@@ -4,6 +4,9 @@ $(document).ready(function () {
     page = new CrudPageController({
         primaryKey: "id_poin",
         renderForm: renderForm,
+        afterLoad: function () {
+            PoinEditor.init($('#detailContent textarea[name="template"]'));
+        },
     });
 
     $(document).on('click', '.btn-delete-record', function () {

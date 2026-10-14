@@ -1,12 +1,6 @@
-const POIN_TIPE_LABEL = { angka: 'Angka', rekening: 'Rekening (Bank Account)', user: 'User (nama + no. HP)', termin: 'Daftar Termin' };
-
+// "Isian terdeteksi" + Pratinjau + bantuan menulis isian dirender langsung oleh PoinEditor (editor.js),
+// dipanggil lewat afterLoad di index.js — bukan lagi blok statis dari server.
 function renderForm(res) {
-    const isian = (res.isian || []).length
-        ? `<ul class="mb-0 ps-3" style="font-size:12px;">${res.isian.map(i =>
-            `<li><code>${escHtml(i.key)}</code> — ${escHtml(POIN_TIPE_LABEL[i.tipe] || i.tipe)}${i.default ? ` (default ${escHtml(i.default)})` : ''}</li>`
-        ).join('')}</ul>`
-        : '<span class="text-muted small">Tidak ada isian — teks poin tetap.</span>';
-
     return `
 <form id="detailForm">
     <input type="hidden" name="_token" value="${window.route.csrf}">
@@ -49,13 +43,6 @@ function renderForm(res) {
                                 ${formGroup.checkbox("is_default", "Paket", res.is_default, { className: "col-md-3 col-6", checkLabel: "Paket standar" })}
                                 ${formGroup.checkbox("is_aktif", "Status", res.is_aktif, { className: "col-md-3 col-6", checkLabel: "Aktif" })}
                                 ${formGroup.textarea("template", "Teks Poin", escHtml(res.template ?? ''), { className: "col-12" })}
-                            </div>
-                            <div class="text-muted small mb-2">
-                                Isian ditulis <code>{kunci:tipe=default}</code>, mis. <code>{hari:angka=12}</code>. Tipe: angka, rekening, user, termin.
-                            </div>
-                            <div class="mb-2"><strong style="font-size:12px;">Isian terdeteksi</strong>${isian}</div>
-                            <div><strong style="font-size:12px;">Pratinjau</strong>
-                                <div class="border rounded p-2" style="font-size:12px;background:#f8fafc;white-space:pre-line;">${escHtml(res.preview ?? '')}</div>
                             </div>`
                         )}
 

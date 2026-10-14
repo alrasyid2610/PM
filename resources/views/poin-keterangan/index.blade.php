@@ -42,6 +42,7 @@
         is_aktif:   'Status',
     };
 </script>
+<script src="{{ asset('assets/js/poin-keterangan/editor.js') }}?v={{ filemtime(public_path('assets/js/poin-keterangan/editor.js')) }}"></script>
 <script src="{{ asset('assets/js/poin-keterangan/form.js') }}"></script>
 <script src="{{ asset('assets/js/poin-keterangan/index.js') }}"></script>
 @endsection

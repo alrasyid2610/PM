@@ -49,10 +49,8 @@
                         <label class="form-label required">Teks Poin</label>
                         <textarea name="template" class="form-control" rows="4" maxlength="2000" required></textarea>
                         <div class="form-text">
-                            Bagian yang boleh diubah per SQ ditulis sebagai isian
-                            <code>{kunci:tipe}</code> atau <code>{kunci:tipe=default}</code>.
-                            Tipe: <code>{{ implode('</code>, <code>', $tipe) }}</code>.<br>
-                            Contoh: <code>Penerbitan laporan adalah {hari:angka=12} hari kerja setelah sampel diterima</code>
+                            Bagian yang boleh diubah per SQ dibuat sebagai <b>isian</b>. Klik <b>Sisipkan isian</b> di atas,
+                            atau ketik <code>&#123;</code> untuk memilih tipe. Arahkan kursor ke ikon (?) untuk penjelasan lengkap.
                         </div>
                     </div>
                 </div>
@@ -66,7 +64,10 @@
 @endsection
 
 @section('custom-script')
+<script src="{{ asset('assets/js/poin-keterangan/editor.js') }}?v={{ filemtime(public_path('assets/js/poin-keterangan/editor.js')) }}"></script>
 <script>
+    PoinEditor.init($('textarea[name="template"]'));
+
     submitCreateForm({
         formId: "#createPoinForm",
         url: "{{ route('poin-keterangan.store') }}",
