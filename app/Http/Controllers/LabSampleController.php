@@ -246,6 +246,11 @@ class LabSampleController extends Controller
             return response()->json(['message' => 'Field tidak valid.'], 422);
         }
 
+        // Titik Sample sample Tidak Terlaksana tidak boleh dikosongkan
+        if ($field === 'titik_lokasi' && $sample->status === 'tidak_terlaksana' && trim((string) $request->input('value')) === '') {
+            return response()->json(['success' => false, 'message' => 'Titik Sample wajib diisi untuk sample Tidak Terlaksana.'], 422);
+        }
+
         $update = [
             $field       => $request->input('value') ?: null,
             'updated_at' => now(),
@@ -271,10 +276,14 @@ class LabSampleController extends Controller
      * alasan menandainya (wajib_keterangan), dan sample yang sudah diregistrasi di
      * Lab Sample Reg tidak boleh ditandai tidak terlaksana. Return pesan error / null.
      */
-    private function tidakTerlaksanaError($sample, $idAlasan, $keterangan): ?string
+    private function tidakTerlaksanaError($sample, $idAlasan, $keterangan, $titik): ?string
     {
         if ($sample->id_wo_lab_sample_reg) {
             return 'Sample sudah diregistrasi di Lab Sample Reg, tidak bisa ditandai Tidak Terlaksana.';
+        }
+        // Titik Sample wajib: datanya tetap dipakai walau titik ini tidak terlaksana
+        if (trim((string) $titik) === '') {
+            return 'Titik Sample wajib diisi sebelum ditandai Tidak Terlaksana.';
         }
 
         $alasan = $idAlasan
@@ -312,7 +321,7 @@ class LabSampleController extends Controller
             'id_alasan.required' => 'Alasan wajib dipilih.',
         ]);
 
-        if ($msg = $this->tidakTerlaksanaError($sample, $request->id_alasan, $request->keterangan)) {
+        if ($msg = $this->tidakTerlaksanaError($sample, $request->id_alasan, $request->keterangan, $sample->titik_lokasi)) {
             return response()->json(['success' => false, 'message' => $msg], 422);
         }
 
@@ -353,7 +362,7 @@ class LabSampleController extends Controller
 
         $isTidakTerlaksana = $request->status === 'tidak_terlaksana';
         if ($isTidakTerlaksana) {
-            if ($msg = $this->tidakTerlaksanaError($sample, $request->id_alasan_tidak_terlaksana, $request->keterangan)) {
+            if ($msg = $this->tidakTerlaksanaError($sample, $request->id_alasan_tidak_terlaksana, $request->keterangan, $request->titik_lokasi)) {
                 return response()->json(['success' => false, 'message' => $msg], 422);
             }
         }

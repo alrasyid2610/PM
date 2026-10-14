@@ -2783,7 +2783,12 @@ $(document).off('change.sample-titik', '.sample-inline-titik').on('change.sample
     initSampleTitikSelect2($table.closest('div')[0]);
 
     $.post(`/lab-samples/${id}/field`, { _token: window.route.csrf, field: 'titik_lokasi', value: val })
-        .fail(function () { Swal.fire({ icon: 'error', title: 'Gagal menyimpan lokasi', timer: 1500, showConfirmButton: false }); });
+        .fail(function (xhr) {
+            Swal.fire({ icon: 'error', title: xhr.responseJSON?.message || 'Gagal menyimpan lokasi', timer: 2500, showConfirmButton: false });
+            // Ditolak server (mis. titik sample Tidak Terlaksana dikosongkan) → kembalikan nilai lama
+            const idFwoTitik = $('#fwoDetailTabs button[data-bs-target="#tabFwoSample"]').data('id-fwo');
+            if (xhr.status === 422 && idFwoTitik) loadSampleData(idFwoTitik);
+        });
 });
 
 // ── Inline Select2 status ──
@@ -2795,6 +2800,13 @@ $(document).off('change.sample-status', '.sample-inline-status').on('change.samp
 
     // Tidak Terlaksana wajib alasan → buka modal; batal = muat ulang list (kembalikan pilihan)
     if (val === 'tidak_terlaksana') {
+        // Titik Sample wajib terisi dulu — datanya tetap dipakai walau titik ini tidak terlaksana
+        if (!$sel.closest('tr').find('.sample-inline-titik').val()) {
+            Notify.error('Isi Titik Sample dulu sebelum menandai Tidak Terlaksana.');
+            const idFwoReset = $('#fwoDetailTabs button[data-bs-target="#tabFwoSample"]').data('id-fwo');
+            if (idFwoReset) loadSampleData(idFwoReset); // kembalikan pilihan status
+            return;
+        }
         const $m = $('#tidakTerlaksanaModal');
         const noUrut = $sel.closest('tr').find('td:first').text().trim();
         $m.find('#ttModal-id').val(id);

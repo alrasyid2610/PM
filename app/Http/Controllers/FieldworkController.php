@@ -406,9 +406,15 @@ class FieldworkController extends Controller
         //    supaya sample yang belum dikirim tidak muncul dobel di dua alasan
         $belumReg = $aktif->filter(fn ($s) => $s->status === 'dikirim' && !$s->id_wo_lab_sample_reg);
 
-        // d) Tidak Terlaksana wajib punya alasan (+ keterangan kalau alasan tsb mewajibkan)
-        $alasanKurang = $samples->filter(fn ($s) => $s->status === 'tidak_terlaksana'
-            && (!$s->id_alasan_tidak_terlaksana || ($s->alasan_wajib_keterangan && $blank($s->keterangan))));
+        // d) Tidak Terlaksana wajib punya Titik Sample + alasan (+ keterangan kalau alasan tsb mewajibkan)
+        $alasanKurang = [];
+        foreach ($samples->where('status', 'tidak_terlaksana') as $s) {
+            $kurang = [];
+            if ($blank($s->titik_lokasi))            $kurang[] = 'Titik Sample';
+            if (!$s->id_alasan_tidak_terlaksana)     $kurang[] = 'Alasan';
+            elseif ($s->alasan_wajib_keterangan && $blank($s->keterangan)) $kurang[] = 'Keterangan';
+            if ($kurang) $alasanKurang[] = $nomor($s) . ' (' . implode(', ', $kurang) . ')';
+        }
         // Syarat: FWO wajib punya minimal 1 BOQ dan 1 Budget Plan (FWO kosong tidak boleh diselesaikan)
         $belumAdaBoq = $fwoBoqs->isEmpty();
         $totalPlan = DB::table('fwo_budgets')
@@ -424,7 +430,7 @@ class FieldworkController extends Controller
             ->where('status', '!=', 'completed')
             ->count();
 
-        $adaSampleMasalah = $belumDikirim->isNotEmpty() || $belumLengkap || $belumReg->isNotEmpty() || $alasanKurang->isNotEmpty();
+        $adaSampleMasalah = $belumDikirim->isNotEmpty() || $belumLengkap || $belumReg->isNotEmpty() || $alasanKurang;
 
         if ($belumAdaBoq || $belumAdaBudget || $totalKurang > 0 || $adaSampleMasalah || $budgetBelumSelesai > 0) {
             $alasan = [];
@@ -434,7 +440,7 @@ class FieldworkController extends Controller
             if ($belumDikirim->isNotEmpty()) $alasan[] = "{$belumDikirim->count()} sample belum berstatus Dikirim: " . $daftar($belumDikirim->map($nomor));
             if ($belumLengkap)           $alasan[] = count($belumLengkap) . " sample belum lengkap isiannya: " . $daftar($belumLengkap);
             if ($belumReg->isNotEmpty()) $alasan[] = "{$belumReg->count()} sample belum diregistrasi di Lab Sample Reg: " . $daftar($belumReg->map($nomor));
-            if ($alasanKurang->isNotEmpty()) $alasan[] = "{$alasanKurang->count()} sample Tidak Terlaksana belum lengkap alasannya: " . $daftar($alasanKurang->map($nomor));
+            if ($alasanKurang)           $alasan[] = count($alasanKurang) . " sample Tidak Terlaksana belum lengkap: " . $daftar($alasanKurang);
             if ($budgetBelumSelesai > 0) $alasan[] = "{$budgetBelumSelesai} Budget Plan belum diselesaikan";
             return response()->json([
                 'message' => 'FWO belum bisa diselesaikan.',
