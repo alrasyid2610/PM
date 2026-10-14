@@ -41,6 +41,7 @@ function renderForm(res) {
                                 ${formGroup.text("no_rekening", "No. Rekening", res.no_rekening, true, { className: "col-md-4 col-12" })}
                                 ${formGroup.text("atas_nama", "Atas Nama", res.atas_nama, true, { className: "col-md-4 col-12" })}
                                 ${formGroup.textarea("keterangan", "Keterangan", res.keterangan, { className: "col-12" })}
+                                ${formGroup.checkbox("is_utama", "Rekening Utama", res.is_utama, { className: "col-12", checkLabel: "Utama — otomatis terisi di keterangan penawaran SQ (hanya 1 rekening)" })}
                             </div>`
                         )}
 

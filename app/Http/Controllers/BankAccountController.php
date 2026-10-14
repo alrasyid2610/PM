@@ -38,9 +38,24 @@ class BankAccountController extends Controller
             ->whereNull('deleted_at')
             ->orderBy('bank')
             ->orderBy('atas_nama')
-            ->select(['id_bank_account', 'bank', 'no_rekening', 'atas_nama', 'keterangan']);
+            ->select(['id_bank_account', 'bank', 'no_rekening', 'atas_nama', 'keterangan', 'is_utama']);
 
-        return DataTables::of($query)->addIndexColumn()->make(true);
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->editColumn('is_utama', fn ($row) => $row->is_utama
+                ? '<span class="pm-badge pm-badge--blue">Utama</span>'
+                : '<span class="text-muted">—</span>')
+            ->rawColumns(['is_utama'])
+            ->make(true);
+    }
+
+    /** Rekening utama maksimal 1: menjadikan satu rekening utama melepas penanda di rekening lain. */
+    private function setUtama(int $id, bool $utama): void
+    {
+        if ($utama) {
+            DB::table('bank_accounts')->where('id_bank_account', '!=', $id)->where('is_utama', 1)->update(['is_utama' => 0, 'updated_at' => now()]);
+        }
+        DB::table('bank_accounts')->where('id_bank_account', $id)->update(['is_utama' => $utama ? 1 : 0]);
     }
 
     public function create()
@@ -60,6 +75,7 @@ class BankAccountController extends Controller
             'created_at'  => now(),
             'updated_at'  => now(),
         ]);
+        $this->setUtama($id, $request->boolean('is_utama'));
 
         $after = DB::table('bank_accounts')->where('id_bank_account', $id)->get()->toJson();
         saveAudit('bank_accounts', $id, 'Create', '', $after);
@@ -93,6 +109,7 @@ class BankAccountController extends Controller
             'keterangan'  => $validated['keterangan'] ?? null,
             'updated_at'  => now(),
         ]);
+        $this->setUtama((int) $id, $request->boolean('is_utama'));
 
         $after = DB::table('bank_accounts')->where('id_bank_account', $id)->get()->toJson();
         saveAudit('bank_accounts', $id, 'update', $before, $after);

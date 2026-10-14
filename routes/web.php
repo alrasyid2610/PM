@@ -747,6 +747,7 @@ Route::prefix('sales-quotations')->name('sales-quotations.')->group(function () 
     Route::put('/{id}/keterangan/urut', [SqKeteranganController::class, 'urut'])->name('keterangan.urut')->whereNumber('id');
     Route::put('/{id}/keterangan/{row}', [SqKeteranganController::class, 'update'])->name('keterangan.update')->whereNumber(['id', 'row']);
     Route::put('/{id}/keterangan/{row}/hapus', [SqKeteranganController::class, 'hapus'])->name('keterangan.hapus')->whereNumber(['id', 'row']);
+    Route::put('/{id}/keterangan/{row}/ganti', [SqKeteranganController::class, 'ganti'])->name('keterangan.ganti')->whereNumber(['id', 'row']);
 
     Route::get('/{id}', [SalesQuotationController::class, 'show'])->name('show')->whereNumber('id');
     Route::put('/{id}', [SalesQuotationController::class, 'update'])->name('update')->whereNumber('id');

@@ -45,6 +45,14 @@
                         <label class="form-label">Keterangan</label>
                         <textarea name="keterangan" class="form-control" rows="3"></textarea>
                     </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" name="is_utama" id="create_is_utama" class="form-check-input" value="1">
+                            <label class="form-check-label" for="create_is_utama">
+                                Rekening utama <span class="text-muted">(otomatis terisi di keterangan penawaran SQ, tetap bisa diganti. Hanya 1 rekening yang bisa utama.)</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </x-section-card>
         </div>

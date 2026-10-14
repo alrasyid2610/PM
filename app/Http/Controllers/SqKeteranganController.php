@@ -30,8 +30,12 @@ class SqKeteranganController extends Controller
         ]);
     }
 
-    /** Poin aktif yang bisa ditambahkan, dikelompokkan per kategori di frontend. */
-    public function katalog()
+    /**
+     * Poin aktif yang bisa ditambahkan, dikelompokkan per kategori di frontend.
+     * Dengan ?id_sq=, tiap poin ditandai `dipakai` kalau sudah ada di keterangan SQ itu
+     * (supaya tidak bisa dipilih dua kali — sebelumnya baru ditolak 422 setelah dipilih).
+     */
+    public function katalog(Request $request)
     {
         $data = DB::table('poin_keterangan')
             ->whereNull('deleted_at')
@@ -40,11 +44,16 @@ class SqKeteranganController extends Controller
             ->orderBy('id_poin')
             ->get(['id_poin', 'kategori', 'template']);
 
+        $dipakai = $request->filled('id_sq')
+            ? DB::table('sq_keterangan')->where('id_sq', $request->id_sq)->pluck('id_poin')->all()
+            : [];
+
         return response()->json($data->map(fn ($p) => [
             'id'             => $p->id_poin,
             'kategori'       => $p->kategori,
             'kategori_label' => Tpl::KATEGORI[$p->kategori] ?? $p->kategori,
             'text'           => Tpl::render($p->template),
+            'dipakai'        => in_array($p->id_poin, $dipakai, true),
         ])->values());
     }
 
@@ -87,12 +96,56 @@ class SqKeteranganController extends Controller
             'id_sq'      => $id,
             'id_poin'    => $poin->id_poin,
             'urutan'     => (int) DB::table('sq_keterangan')->where('id_sq', $id)->max('urutan') + 1,
-            'nilai'      => null,
+            'nilai'      => ($awal = SqKeterangan::nilaiAwal((int) $id, $poin->template)) ? json_encode($awal) : null,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
         return response()->json(['success' => true, 'message' => 'Poin ditambahkan']);
+    }
+
+    /**
+     * Ganti varian: poin pada baris ini diganti poin lain tanpa mengubah posisi/urutan.
+     * Nilai isian dibawa ke varian baru untuk kunci yang sama & tipe yang sama (mis. {hari:angka});
+     * isian baru diisi nilai awal otomatis (rekening utama / kontak SQ).
+     */
+    public function ganti(Request $request, $id, $row)
+    {
+        if ($lock = SqLock::bySq($id)) return $lock;
+        $request->validate(['id_poin' => 'required|integer']);
+
+        $k = DB::table('sq_keterangan as k')
+            ->join('poin_keterangan as p', 'p.id_poin', '=', 'k.id_poin')
+            ->where('k.id_sq', $id)->where('k.id_sq_keterangan', $row)
+            ->first(['k.nilai', 'p.template']);
+        if (!$k) return response()->json(['message' => 'Poin tidak ditemukan'], 404);
+
+        $baru = DB::table('poin_keterangan')->where('id_poin', $request->id_poin)->whereNull('deleted_at')->where('is_aktif', 1)->first();
+        if (!$baru) return response()->json(['message' => 'Poin pengganti tidak ditemukan atau sudah nonaktif.'], 422);
+
+        if (DB::table('sq_keterangan')->where('id_sq', $id)->where('id_poin', $baru->id_poin)->where('id_sq_keterangan', '!=', $row)->exists()) {
+            return response()->json(['message' => 'Poin pengganti sudah ada di keterangan SQ ini.'], 422);
+        }
+
+        // Bawa nilai lama yang kunci & tipenya sama dengan isian di varian baru
+        $lama = $k->nilai ? (json_decode($k->nilai, true) ?: []) : [];
+        $tipeLama = collect(Tpl::parse($k->template))->pluck('tipe', 'key');
+        $nilai = [];
+        foreach (Tpl::parse($baru->template) as $i) {
+            if (array_key_exists($i['key'], $lama) && ($tipeLama[$i['key']] ?? null) === $i['tipe']) {
+                $nilai[$i['key']] = $lama[$i['key']];
+            }
+        }
+        // Isian baru yang bisa diisi otomatis (rekening utama / kontak SQ) — tidak menimpa nilai yang dibawa
+        $nilai += SqKeterangan::nilaiAwal((int) $id, $baru->template) ?? [];
+
+        DB::table('sq_keterangan')->where('id_sq_keterangan', $row)->update([
+            'id_poin'    => $baru->id_poin,
+            'nilai'      => $nilai ? json_encode($nilai) : null,
+            'updated_at' => now(),
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Varian poin diganti']);
     }
 
     public function isiStandar($id)

@@ -93,6 +93,47 @@ class SqKeterangan
         return $baris ? "\n" . implode("\n", $baris) : '';
     }
 
+    /**
+     * Nilai awal isian saat poin ditambahkan ke SQ (supaya user tidak memilih ulang di setiap SQ):
+     *  - tipe `rekening` → Rekening Utama di master Bank Account (kalau ada)
+     *  - tipe `user`     → Marketing Internal SQ, cadangan PIC Input (hanya user aktif)
+     * Tipe lain (angka/termin) dibiarkan kosong → memakai default template / diisi user.
+     * Mengembalikan array nilai (kunci => id) atau null bila tidak ada yang bisa diisi otomatis.
+     */
+    public static function nilaiAwal(int $idSq, string $template): ?array
+    {
+        $isian = PoinKeteranganTemplate::parse($template);
+        $tipe  = array_column($isian, 'tipe');
+        if (!array_intersect(['rekening', 'user'], $tipe)) return null;
+
+        $rekening = null;
+        if (in_array('rekening', $tipe, true)) {
+            // Pengisian otomatis hanya kemudahan: kalau gagal (mis. migration kolom is_utama belum
+            // dijalankan) jangan sampai membuat SQ / menambah poin ikut gagal — isian dibiarkan kosong.
+            try {
+                $rekening = DB::table('bank_accounts')->whereNull('deleted_at')->where('is_utama', 1)->value('id_bank_account');
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('SqKeterangan::nilaiAwal rekening utama gagal: ' . $e->getMessage());
+            }
+        }
+
+        $kontak = null;
+        if (in_array('user', $tipe, true)) {
+            $sq = DB::table('sales_quotations')->where('id_sq', $idSq)->first(['pic_marketing_internal', 'pic_input']);
+            foreach ([$sq->pic_marketing_internal ?? null, $sq->pic_input ?? null] as $uid) {
+                if ($uid && DB::table('users')->where('id', $uid)->where('is_active', 1)->exists()) { $kontak = (int) $uid; break; }
+            }
+        }
+
+        $nilai = [];
+        foreach ($isian as $i) {
+            if ($i['tipe'] === 'rekening' && $rekening) $nilai[$i['key']] = (int) $rekening;
+            if ($i['tipe'] === 'user' && $kontak)       $nilai[$i['key']] = $kontak;
+        }
+
+        return $nilai ?: null;
+    }
+
     /** Isi paket standar (poin aktif ber-is_default) yang belum ada di SQ. Mengembalikan jumlah yang ditambahkan. */
     public static function isiStandar(int $idSq): int
     {
@@ -109,11 +150,12 @@ class SqKeterangan
             ->get();
 
         foreach ($poin as $p) {
+            $awal = self::nilaiAwal($idSq, $p->template);
             DB::table('sq_keterangan')->insert([
                 'id_sq'      => $idSq,
                 'id_poin'    => $p->id_poin,
                 'urutan'     => ++$urutan,
-                'nilai'      => null,
+                'nilai'      => $awal ? json_encode($awal) : null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

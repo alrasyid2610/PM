@@ -137,6 +137,8 @@ function renderForm(res) {
                         data-bs-toggle="tab" data-bs-target="#tabSqKet" data-sq-id="${res.id_sq}">
                         <i class="fa-solid fa-list-ol me-1" style="color:#7c3aed;font-size:11px;"></i>
                         Keterangan
+                        <span id="sqKetTabBadge" class="d-none ms-1" title="Poin yang isiannya belum lengkap"
+                            style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:10px;font-size:10px;font-weight:700;padding:0 6px;"></span>
                     </button>
                 </li>
             </ul>
@@ -289,6 +291,7 @@ function renderForm(res) {
                 <!-- TAB: KETERANGAN PENAWARAN (poin dari master Poin Keterangan) -->
                 <div class="tab-pane fade" id="tabSqKet" role="tabpanel">
                     <div class="card card-body">
+                        <div id="sqKetSummary"></div>
                         <div id="sqKetToolbar" class="mb-3"></div>
                         <div id="sqKetContent">
                             <div class="text-center text-muted py-4">
