@@ -1112,8 +1112,8 @@ Route::prefix('users')->name('users.')->group(function () {
 
 Route::prefix('dashboard')->name('dashboard.')->group(function () {
     Route::get('/',             [DashboardController::class, 'index'])->name('index');
-    Route::get('/summary',      [DashboardController::class, 'summary'])->name('summary');
-    Route::get('/so-per-month', [DashboardController::class, 'soPerMonth'])->name('soPerMonth');
+    // Data per widget (kpi/chart) — akses dicek per slug widget di controller
+    Route::get('/widget/{slug}', [DashboardController::class, 'widget'])->name('widget');
     Route::get('/list',         [DashboardController::class, 'list'])->name('list');
 });
 

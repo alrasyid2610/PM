@@ -15,6 +15,15 @@
  *   type    — 'submenu' (punya sub-items) | 'direct' (link langsung, tanpa submenu)
  */
 
+// Widget Dashboard: item grup "Widget Dashboard" di bawah dibangun dari katalog
+// config/dashboard_widgets.php (satu sumber), supaya widget baru otomatis muncul di matrix permission.
+$dashboardWidgetItems = array_map(fn ($w) => [
+    'slug'    => $w['slug'],
+    'label'   => $w['label'],
+    'icon'    => $w['icon'],
+    'section' => $w['kelompok'],
+], require __DIR__ . '/dashboard_widgets.php');
+
 return [
     [
         'group'           => 'Dashboard',
@@ -140,5 +149,16 @@ return [
             ['slug' => 'wo-budget-close',       'label' => 'Selesaikan Plan Budget WO', 'icon' => 'fa-box-archive'],
             ['slug' => 'fwo-budget-close',      'label' => 'Selesaikan Plan Budget FWO','icon' => 'fa-box-archive'],
         ],
+    ],
+    [
+        // Akses per widget di halaman Dashboard (lihat config/dashboard_widgets.php).
+        // Sama seperti Aksi Khusus: tidak tampil di sidebar, matrix 1 kolom "Diizinkan".
+        'group'           => 'Widget Dashboard',
+        'icon'            => 'fa-gauge',
+        'type'            => 'submenu',
+        'show_in_sidebar' => false,
+        'permission_mode' => 'action',
+        'divider'         => 'Widget Dashboard',
+        'items'           => $dashboardWidgetItems,
     ],
 ];
