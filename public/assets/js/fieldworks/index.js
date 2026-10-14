@@ -2562,10 +2562,12 @@ function renderSampleList(boqs, isLocked) {
         <div class="mb-3 border rounded" style="background:#fff;">
             <div class="d-flex justify-content-between align-items-center px-3 py-2"
                 style="background:#f8fafc;border-bottom:1px solid #e2e8f0;border-radius:calc(0.375rem - 1px) calc(0.375rem - 1px) 0 0;">
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <span style="font-size:13px;font-weight:600;color:#1e293b;">${escHtml(boq.nama_boq)}</span>
-                    <span class="text-muted sample-progress-text" style="font-size:11px;">Target: ${boq.qty || 0} &nbsp;·&nbsp; ${diambil}/${total} diambil &nbsp;·&nbsp; ${dikirim} dikirim${ttText}</span>
-                    ${sisa > 0 && !isLocked ? `<span style="font-size:11px;color:#b45309;background:#fef3c7;border:1px solid #fde68a;border-radius:4px;padding:1px 6px;">${sisa} slot belum dibuat</span>` : ''}
+                <div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                        <span class="text-muted sample-progress-text" style="font-size:11px;">Target: ${boq.qty || 0} &nbsp;·&nbsp; ${diambil}/${total} diambil &nbsp;·&nbsp; ${dikirim} dikirim${ttText}</span>
+                        ${sisa > 0 && !isLocked ? `<span style="font-size:11px;color:#b45309;background:#fef3c7;border:1px solid #fde68a;border-radius:4px;padding:1px 6px;">${sisa} slot belum dibuat</span>` : ''}
+                    </div>
+                    <div style="font-size:13px;font-weight:600;color:#1e293b;">${escHtml(boq.nama_boq)}</div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     ${addBtn}
