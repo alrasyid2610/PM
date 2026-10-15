@@ -214,7 +214,6 @@ function renderNilaiBulan(slug, $card, $box, res) {
 var _dashMaps = {};
 var PETA_WARNA = ['#dbeafe', '#93c5fd', '#3b82f6', '#1d4ed8', '#1e3a8a'];
 var PETA_KOSONG = '#f1f5f9';
-var PETA_JAWA = ['31', '32', '33', '34', '35', '36'];
 
 function escD(s) { return $('<div>').text(s == null ? '' : String(s)).html(); }
 
@@ -428,25 +427,6 @@ function renderPeta(slug, $card, res) {
             map.fitBounds(geoLayer.getBounds());
             panelAwal();
         }
-        function zoomJawa() {
-            var b = L.latLngBounds([]);
-            PETA_JAWA.forEach(function (k) { if (layerByKode[k]) b.extend(layerByKode[k].getBounds()); });
-            if (b.isValid()) map.fitBounds(b, { padding: [10, 10] });
-        }
-
-        // Tombol "Zoom Jawa" di bawah tombol +/−
-        var ctlJawa = L.control({ position: 'topleft' });
-        ctlJawa.onAdd = function () {
-            var div = L.DomUtil.create('div', 'leaflet-bar');
-            var a = L.DomUtil.create('a', '', div);
-            a.href = '#'; a.title = 'Zoom ke Pulau Jawa'; a.innerHTML = 'Jawa';
-            a.style.cssText = 'width:auto;padding:0 8px;font-size:12px;font-weight:600;line-height:30px;';
-            L.DomEvent.disableClickPropagation(div);
-            L.DomEvent.on(a, 'click', function (e) { L.DomEvent.preventDefault(e); zoomJawa(); });
-            return div;
-        };
-        ctlJawa.addTo(map);
-
         // Legenda (sesuai metrik)
         var judulLegenda = metrik === 'nilai' ? 'Nilai SO' : (metrik === 'site' ? 'Site' : 'Customer');
         var legend = L.control({ position: 'bottomright' });
