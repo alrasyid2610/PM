@@ -386,6 +386,50 @@ $(document).on('click', '.btn-wo-boq-tambahan-delete', function () {
 
 // ── OUTPUT OTHER (level WO, berdiri sendiri) ────────────────────────────────────
 
+// ── Judul Output (Output Pekerjaan & Output Other) ─────────────────────────
+// Select2 yang bisa memilih dari master `output_judul` ATAU mengetik judul baru (tags).
+// Yang dikirim & disimpan adalah teks judulnya, bukan id master; judul baru masuk master
+// otomatis saat output disimpan (OutputJudul::resolve() di backend).
+function initJudulOutputSelect($sel, tipe, $dropdownParent, nilai) {
+    if ($sel.hasClass('select2-hidden-accessible')) $sel.select2('destroy');
+    $sel.empty().append('<option value=""></option>');
+
+    const sama = function (a, b) { return String(a).toLowerCase() === String(b).toLowerCase(); };
+
+    $sel.select2({
+        width: '100%',
+        placeholder: 'Pilih atau ketik judul output',
+        allowClear: true,
+        tags: true,
+        dropdownParent: $dropdownParent,
+        createTag: function (params) {
+            const t = $.trim(params.term || '');
+            if (!t) return null;
+            // Judul yang sama (tidak peka huruf besar-kecil) tidak ditawarkan sebagai judul baru
+            let ada = false;
+            $sel.find('option').each(function () { if (this.value && sama(this.value, t)) ada = true; });
+            return ada ? null : { id: t, text: t, isNew: true };
+        },
+        templateResult: function (d) {
+            if (!d.isNew) return d.text;
+            return $('<span></span>').append('<i class="fa-solid fa-plus me-1" style="font-size:10px;"></i>').append(document.createTextNode('Tambah judul baru: "' + d.text + '"'));
+        },
+        language: { noResults: function () { return 'Ketik untuk menambah judul baru'; } },
+    });
+
+    $.get('/output-judul/select2', { tipe: tipe }).done(function (rows) {
+        rows.forEach(function (r) { $sel.append(new Option(r.text, r.id, false, false)); });
+        if (nilai) {
+            // Pakai bentuk yang ada di master bila cocok; kalau belum ada (mis. judul lama) tambahkan sebagai opsi
+            let cocok = null;
+            $sel.find('option').each(function () { if (this.value && sama(this.value, nilai)) cocok = this.value; });
+            if (cocok === null) { $sel.append(new Option(nilai, nilai, false, false)); cocok = nilai; }
+            $sel.val(cocok).trigger('change');
+        }
+    });
+    if (nilai) $sel.append(new Option(nilai, nilai, true, true)).trigger('change'); // tampil langsung selagi daftar dimuat
+}
+
 let outputOtherFilePond = null;
 let woSampleFilePond = null;
 
@@ -509,7 +553,6 @@ $(document).on('click', '#btnAddOutputOther', function () {
     $modal.find('#outputOtherModalLabel').html('<i class="fa-solid fa-file-circle-plus me-2" style="color:#0f766e;"></i>Tambah Output Other');
     $modal.find('#outputOtherModal-id').val('');
     $modal.find('#outputOtherModal-id-wo').val(idWo);
-    $modal.find('#outputOtherModal-nama').val('');
     $modal.find('#outputOtherModal-qty').val('');
     $modal.find('#outputOtherModal-status').val('belum_siap');
     $modal.find('#outputOtherModal-tgl-mulai').val('');
@@ -518,6 +561,7 @@ $(document).on('click', '#btnAddOutputOther', function () {
     $modal.find('#outputOtherModal-keterangan').val('');
     $modal.find('#outputOtherModal-existing-files').empty();
     initOutputOtherSatuanSelect2();
+    initJudulOutputSelect($modal.find('#outputOtherModal-nama'), 'other', $modal, '');
 
     if (outputOtherFilePond) { outputOtherFilePond.destroy(); outputOtherFilePond = null; }
     outputOtherFilePond = createFileUploader('#outputOtherModal-attachments');
@@ -538,7 +582,7 @@ $(document).on('click', '.btn-output-other-edit', function (e) {
     $.get(`/wo-output-other/${id}`)
         .done(function (r) {
             $modal.find('#outputOtherModal-id-wo').val(r.id_wo);
-            $modal.find('#outputOtherModal-nama').val(r.nama_item || '');
+            initJudulOutputSelect($modal.find('#outputOtherModal-nama'), 'other', $modal, r.nama_item || '');
             const qtyEl = $modal.find('#outputOtherModal-qty')[0];
             if (qtyEl && qtyEl._cleave) qtyEl._cleave.setRawValue(r.qty || ''); else $modal.find('#outputOtherModal-qty').val(r.qty || '');
             $modal.find('#outputOtherModal-status').val(r.status || 'belum_siap');
@@ -584,7 +628,7 @@ $(document).on('click', '#outputOtherModal-btn-save', function () {
     const idWo   = $modal.find('#outputOtherModal-id-wo').val();
     const $btn   = $(this);
 
-    const namaItem = $modal.find('#outputOtherModal-nama').val().trim();
+    const namaItem = ($modal.find('#outputOtherModal-nama').val() || '').trim();
     const qty      = rawNumVal($modal.find('#outputOtherModal-qty')[0]);
     if (!namaItem) { Notify.warning('Nama item wajib diisi.'); return; }
     if (!qty)      { Notify.warning('Qty wajib diisi.'); return; }
@@ -2485,7 +2529,7 @@ function showOutputForm(data) {
         '<div class="row g-3">' +
         '<div class="col-md-6">' +
         '<label class="form-label form-label-sm text-muted mb-1">Judul Output <span class="text-danger">*</span></label>' +
-        '<input type="text" id="outputJudulOutput" class="form-control form-control-sm" placeholder="Judul Output" maxlength="255" value="' + (isEdit ? escHtml(data.judul_output || '') : '') + '">' +
+        '<select id="outputJudulOutput" class="form-select form-select-sm"></select>' +
         '</div>' +
         '<div class="col-md-6">' +
         '<label class="form-label form-label-sm text-muted mb-1">Nomor Dokumen</label>' +
@@ -2544,12 +2588,12 @@ function showOutputForm(data) {
     );
     $('#modalOutputFormBody').html(html);
     initFpDate('#modalOutputFormBody');
+    initJudulOutputSelect($('#outputJudulOutput'), 'pekerjaan', $('#modalOutputForm'), isEdit ? (data.judul_output || '') : '');
     outputFilePond = createFileUploader('#outputAttachments');
     triggerOutputQtyVisibility(isEdit ? (data.jenis_dokumen || '') : '');
 
     var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalOutputForm'));
     modal.show();
-    setTimeout(function () { $('#outputJudulOutput').focus(); }, 400);
 }
 
 function triggerOutputQtyVisibility(jenis) {
@@ -2709,7 +2753,7 @@ $(document).ready(function () {
             return;
         }
 
-        var judulOutput = $("#outputJudulOutput").val().trim();
+        var judulOutput = ($("#outputJudulOutput").val() || "").trim();
         if (!judulOutput) {
             Swal.fire({
                 icon: "warning",

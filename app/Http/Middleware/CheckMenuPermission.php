@@ -49,6 +49,7 @@ class CheckMenuPermission
         'wo-boq-other'               => 'work-orders',
         'wo-boq-sampling'            => 'work-orders',
         'wo-output-other'            => 'work-orders',
+        'output-judul'               => 'work-orders',
         'sq-boq'                     => 'sq-work-orders',
         'sq-boq-tambahan'            => 'sq-work-orders',
         'sq-wo-budgets'              => 'sq-work-orders',

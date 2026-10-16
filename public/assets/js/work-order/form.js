@@ -489,8 +489,7 @@ function renderForm(res) {
                     <div class="row g-2">
                         <div class="col-12">
                             <label class="form-label fw-semibold" style="font-size:12px;">Nama Item <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm" id="outputOtherModal-nama"
-                                placeholder="cth: Surat Keterangan..." data-no-disable>
+                            <select class="form-select form-select-sm" id="outputOtherModal-nama" data-no-disable></select>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold" style="font-size:12px;">Qty <span class="text-danger">*</span></label>

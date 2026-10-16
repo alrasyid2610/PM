@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\OutputJudul;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -49,7 +50,7 @@ class OutputPekerjaanController extends Controller
 
         $id = DB::table('output_pekerjaan')->insertGetId([
             'id_wo'           => $request->id_wo,
-            'judul_output'    => $request->judul_output,
+            'judul_output'    => OutputJudul::resolve('pekerjaan', $request->judul_output),
             'judul_dokumen'   => $request->judul_dokumen,
             'jenis_dokumen'   => $request->jenis_dokumen,
             'qty_copy'        => in_array($request->jenis_dokumen, ['copy','asli_dan_copy']) ? ($request->qty_copy ?: null) : null,
@@ -103,7 +104,7 @@ class OutputPekerjaanController extends Controller
         }
 
         DB::table('output_pekerjaan')->where('id_output', $id)->update([
-            'judul_output'  => $request->judul_output,
+            'judul_output'  => OutputJudul::resolve('pekerjaan', $request->judul_output),
             'judul_dokumen' => $request->judul_dokumen,
             'jenis_dokumen' => $request->jenis_dokumen,
             'qty_copy'      => in_array($request->jenis_dokumen, ['copy','asli_dan_copy']) ? ($request->qty_copy ?: null) : null,

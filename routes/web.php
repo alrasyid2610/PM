@@ -42,6 +42,7 @@ use App\Http\Controllers\FwoBoqSamplingController;
 use App\Http\Controllers\BoqOtherController;
 use App\Http\Controllers\BoqSamplingController;
 use App\Http\Controllers\OutputTambahanController;
+use App\Http\Controllers\OutputJudulController;
 use App\Http\Controllers\TestingParameterController;
 use App\Http\Controllers\TestingKelompokMatriksSampleController;
 use App\Http\Controllers\TestingStandardController;
@@ -212,6 +213,8 @@ Route::prefix('wo-boq-sampling')->name('wo-boq-sampling.')->group(function () {
     Route::delete('/{id}', [BoqSamplingController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/history', [BoqSamplingController::class, 'history'])->name('history')->whereNumber('id');
 });
+
+Route::get('/output-judul/select2', [OutputJudulController::class, 'select2'])->name('output-judul.select2');
 
 Route::prefix('wo-output-other')->name('wo-output-other.')->group(function () {
     Route::get('/{id_wo}/list', [OutputTambahanController::class, 'listByWo'])->name('list')->whereNumber('id_wo');

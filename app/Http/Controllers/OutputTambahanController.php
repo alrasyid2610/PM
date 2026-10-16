@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\OutputJudul;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Traits\HasAuditHistory;
@@ -82,7 +83,7 @@ class OutputTambahanController extends Controller
 
         $id = DB::table('output_tambahan')->insertGetId([
             'id_wo'           => $request->id_wo,
-            'nama_item'       => $validated['nama_item'],
+            'nama_item'       => OutputJudul::resolve('other', $validated['nama_item']),
             'qty'             => $validated['qty'],
             'id_satuan'       => $validated['id_satuan'] ?? null,
             'status'          => $validated['status'] ?? 'belum_siap',
@@ -131,7 +132,7 @@ class OutputTambahanController extends Controller
         $before = DB::table('output_tambahan')->where('id_output_tambahan', $id)->get()->toJson();
 
         DB::table('output_tambahan')->where('id_output_tambahan', $id)->update([
-            'nama_item'       => $validated['nama_item'],
+            'nama_item'       => OutputJudul::resolve('other', $validated['nama_item']),
             'qty'             => $validated['qty'],
             'id_satuan'       => $validated['id_satuan'] ?? null,
             'status'          => $validated['status'] ?? 'belum_siap',
