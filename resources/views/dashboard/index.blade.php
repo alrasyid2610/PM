@@ -158,6 +158,11 @@
 
 @section('custom-script')
 <style>
+    /* Ikon loading per widget */
+    .dw-loading {
+        position: absolute; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+        background: rgba(255, 255, 255, .72); border-radius: inherit; font-size: 22px; color: #1a56db;
+    }
     /* Label angka di tengah provinsi pada Peta Customer (tidak menangkap klik) */
     .dw-peta-lbl-wrap { background: transparent; border: 0; }
     .dw-peta-lbl {

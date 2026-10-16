@@ -64,15 +64,30 @@ function switchTab(type) {
     });
 }
 
+// Ikon loading per widget: overlay di atas kartu selama data diambil
+function dwLoading($el, on) {
+    $el.each(function () {
+        var $c = $(this);
+        $c.children('.dw-loading').remove();
+        if (!on) return;
+        if ($c.css('position') === 'static') $c.css('position', 'relative');
+        $c.append('<div class="dw-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>');
+    });
+}
+
 // ── Kartu angka ──
 function loadKpis() {
     $('.dw-card[data-widget]').each(function () {
-        var slug = $(this).data('widget');
+        var $card = $(this);
+        var slug = $card.data('widget');
+        dwLoading($card, true);
         $.get(window.route.widget + '/' + slug, function (res) {
             $('#' + slug + '-value').text(res.value ?? 0);
             $('#' + slug + '-sub').text(res.sub ?? '');
         }).fail(function () {
             $('#' + slug + '-value').text('—');
+        }).always(function () {
+            dwLoading($card, false);
         });
     });
 }
@@ -279,8 +294,12 @@ function petaAturToolbar($card) {
 function loadPeta(slug) {
     var $card = $('[data-chart-widget="' + slug + '"]');
     petaAturToolbar($card);
+    dwLoading($card.children('.card-body'), true);
     $.get(window.route.widget + '/' + slug, petaParams($card), function (res) { renderPeta(slug, $card, res); })
-        .fail(function () { $card.find('.dw-peta-map').html('<div class="text-center text-danger py-5">Gagal memuat peta.</div>'); });
+        .fail(function () {
+            dwLoading($card.children('.card-body'), false);
+            $card.find('.dw-peta-map').html('<div class="text-center text-danger py-5">Gagal memuat peta.</div>');
+        });
 }
 
 $(document).on('change', '.dw-peta-metrik, .dw-peta-cakupan, .dw-peta-tahun, .dw-peta-kategori, .dw-peta-mode', function () {
@@ -462,6 +481,8 @@ function renderPeta(slug, $card, res) {
         setTimeout(function () { map.invalidateSize(); map.fitBounds(geoLayer.getBounds()); aturLabel(); }, 150);
     }).fail(function () {
         $mapEl.html('<div class="text-center text-danger py-5">Gagal memuat peta.</div>');
+    }).always(function () {
+        dwLoading($card.children('.card-body'), false);
     });
 }
 
@@ -492,9 +513,12 @@ function loadChart(slug, year, mode) {
     if (year) params.year = year;
     if (mode) params.mode = mode;
 
+    var $body = $card.children('.card-body');
+    dwLoading($body, true);
     $.get(window.route.widget + '/' + slug, params, function (res) {
+        if (res.kind === 'peta') return renderPeta(slug, $card, res); // overlay ditutup setelah peta digambar
+        dwLoading($body, false);
         if (res.kind === 'donut') return renderDonut(slug, $box, res);
-        if (res.kind === 'peta') return renderPeta(slug, $card, res);
 
         var $sel = $card.find('.dw-chart-year');
         $sel.html((res.years || [res.year]).map(function (y) {
@@ -519,6 +543,7 @@ function loadChart(slug, year, mode) {
         });
         _dashCharts[slug].render();
     }).fail(function () {
+        dwLoading($body, false);
         $box.html('<div class="text-center text-danger py-4">Gagal memuat grafik.</div>');
     });
 }
