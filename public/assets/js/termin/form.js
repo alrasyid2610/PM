@@ -213,11 +213,6 @@ function renderForm(res) {
                             </div>`
                         )}
 
-                        ${formGroup.sectionCard(
-                            { icon: 'fa-paperclip', color: 'icon-blue', title: 'Attachment', subtitle: 'File pendukung termin' },
-                            `${renderAttachmentSection()}`
-                        )}
-
                     </div>
                 </div>
 

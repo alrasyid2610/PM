@@ -89,13 +89,6 @@
             </x-section-card>
         </div>
 
-        <!-- SECTION 3: ATTACHMENT -->
-        <div class="col-12">
-            <x-section-card icon="fa-paperclip" color="icon-blue" title="Attachment" subtitle="File pendukung termin">
-                <input type="file" class="filepond" name="attachments[]" multiple>
-            </x-section-card>
-        </div>
-
         <x-form-actions :back-route="request('embed') ? null : route('termin.index')" submit-label="Simpan Termin" />
 
     </form>
@@ -109,7 +102,6 @@
     $(document).ready(function () {
         initNumericMask(document);
         initFpDate(document);
-        createFileUploader(".filepond");
         $('#status').select2({ placeholder: 'Pilih Status', width: '100%' });
 
         $('#id_so').select2({
@@ -374,7 +366,6 @@
         formId:   "#terminForm",
         url:      "{{ route('termin.store') }}",
         redirect: preselectSoId ? null : "{{ route('termin.index') }}",
-        filepond: ".filepond",
         onSuccess: preselectSoId ? function () {
             localStorage.setItem('termin_created', JSON.stringify({ id_so: preselectSoId, ts: Date.now() }));
             var inIframe = window.self !== window.top;

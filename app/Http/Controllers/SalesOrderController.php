@@ -804,6 +804,149 @@ class SalesOrderController extends Controller
     }
 
     /**
+     * Dokumen Sales Order standar (portrait, header/footer sama dengan PDF FWO).
+     * Isi mengikuti contoh SO.25.001: 1 Pelanggan, 2 Pekerjaan, 3 Penagihan,
+     * 4 Distribusi Dokumen. Tanpa nilai/harga. Data yang belum ada di sistem
+     * ditandai "??" di view supaya ditentukan belakangan.
+     */
+    public function dokumenPdf($id)
+    {
+        $so = DB::table('sales_orders as so')
+            ->leftJoin('business_relations as p', 'p.id_br', '=', 'so.id_pelanggan')
+            ->leftJoin('entitas as ep', 'ep.id_entitas', '=', 'p.id_entitas')
+            ->leftJoin('business_relation_sites as sp', 'sp.id_site', '=', 'so.id_site_pelanggan')
+            ->leftJoin('business_relation_contacts as cp', 'cp.id_contact', '=', 'so.id_pic_pelanggan')
+            ->leftJoin('business_relations as d', 'd.id_br', '=', 'so.id_pelanggan_delivery')
+            ->leftJoin('entitas as ed', 'ed.id_entitas', '=', 'd.id_entitas')
+            ->leftJoin('business_relation_sites as sd', 'sd.id_site', '=', 'so.id_site_pelanggan_delivery')
+            ->leftJoin('business_relation_contacts as cd', 'cd.id_contact', '=', 'so.id_pic_pelanggan_delivery')
+            ->leftJoin('business_relations as y', 'y.id_br', '=', 'so.id_pelanggan_payment')
+            ->leftJoin('entitas as ey', 'ey.id_entitas', '=', 'y.id_entitas')
+            ->leftJoin('business_relation_sites as sy', 'sy.id_site', '=', 'so.id_site_pelanggan_payment')
+            ->leftJoin('business_relation_contacts as cy', 'cy.id_contact', '=', 'so.id_pic_pelanggan_payment')
+            ->leftJoin('contracts as ct', 'ct.id_contract', '=', 'so.id_sc')
+            ->leftJoin('sales_quotations as sq', 'sq.id_sq', '=', 'so.id_sq')
+            ->leftJoin('business_relation_contacts as csq', 'csq.id_contact', '=', 'sq.id_pic_pelanggan')
+            ->where('so.id_so', $id)
+            ->whereNull('so.deleted_at')
+            ->select([
+                'so.*',
+                'p.nama as pel_nama', 'ep.nama as pel_entitas', 'sp.alamat_lengkap as pel_alamat',
+                'cp.nama_pic as pel_pic', 'cp.jabatan as pel_pic_jabatan', 'cp.nomor_telepon_pic as pel_pic_telp', 'cp.email_pic as pel_pic_email',
+                'd.nama as del_nama', 'ed.nama as del_entitas', 'sd.nama_lokasi as del_site', 'sd.alamat_lengkap as del_alamat',
+                'cd.nama_pic as del_pic', 'cd.jabatan as del_pic_jabatan', 'cd.nomor_telepon_pic as del_pic_telp', 'cd.email_pic as del_pic_email',
+                'y.nama as pay_nama', 'ey.nama as pay_entitas', 'y.npwp as pay_npwp', 'y.npwp_alamat as pay_npwp_alamat',
+                'sy.alamat_lengkap as pay_alamat',
+                'cy.nama_pic as pay_pic', 'cy.jabatan as pay_pic_jabatan', 'cy.nomor_telepon_pic as pay_pic_telp', 'cy.email_pic as pay_pic_email',
+                'ct.no_contract', 'ct.tanggal_kontrak', 'ct.tanggal_mulai as kontrak_mulai', 'ct.tanggal_selesai as kontrak_selesai', 'ct.catatan as kontrak_catatan',
+                'sq.no_sq', 'sq.tanggal_sq', 'csq.nama_pic as sq_pic',
+            ])
+            ->first();
+
+        abort_if(!$so, 404, 'Sales Order tidak ditemukan');
+
+        $users = DB::table('users')
+            ->whereIn('id', array_filter([$so->pic_input, $so->pic_order, $so->pic_marketing_internal, $so->pic_marketing_eksternal]))
+            ->get(['id', 'name', 'no_hp', 'email'])->keyBy('id');
+
+        $wos = DB::table('work_orders as wo')
+            ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
+            ->where('wo.id_so', $id)->whereNull('wo.deleted_at')
+            ->orderBy('wo.id_wo')
+            ->get(['wo.id_wo', 'wo.no_wo', 'wo.judul_pekerjaan', 'brs.nama_lokasi as site', 'brs.alamat_lengkap as alamat']);
+        $woIds = $wos->pluck('id_wo');
+
+        // Agenda sampling = FWO milik WO di SO ini (jadwal, lokasi, PIC pelanggan, penyelia, tim)
+        $fwos = DB::table('fieldworks as fw')
+            ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'fw.id_site_pelanggan_pekerjaan')
+            ->leftJoin('business_relation_contacts as c', 'c.id_contact', '=', 'fw.id_pic_pelanggan_pekerjaan')
+            ->leftJoin('users as u', 'u.id', '=', 'fw.id_penyelia')
+            ->whereIn('fw.id_wo', $woIds)->whereNull('fw.deleted_at')
+            ->orderBy('fw.tanggal_mulai')->orderBy('fw.id_fwo')
+            ->get(['fw.id_fwo', 'fw.id_wo', 'fw.no_fwo', 'fw.tanggal_mulai', 'fw.tanggal_selesai', 'fw.keterangan',
+                'brs.nama_lokasi as site', 'brs.alamat_lengkap as alamat',
+                'c.nama_pic', 'c.nomor_telepon_pic', 'c.email_pic',
+                'u.name as penyelia', 'u.no_hp as penyelia_hp', 'u.email as penyelia_email']);
+        $tim = DB::table('fieldwork_personels as fp')
+            ->join('personnel as p', 'p.id_personnel', '=', 'fp.id_personnel')
+            ->whereIn('fp.id_fwo', $fwos->pluck('id_fwo'))
+            ->get(['fp.id_fwo', 'p.nama', 'fp.role'])->groupBy('id_fwo');
+
+        $boq = $woIds->isEmpty() ? collect() : DB::table('boq as b')
+            ->leftJoin('testing_points as tp', 'tp.id_testing_point', '=', 'b.id_testing_point')
+            ->leftJoin('testing_standards as ts', 'ts.id_testing_standard', '=', 'tp.id_testing_standard')
+            ->leftJoin('testing_matriks_samples as tms', 'tms.id_testing_matriks_sample', '=', 'tp.id_testing_matriks_sample')
+            ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'b.id_satuan')
+            ->whereIn('b.id_wo', $woIds)->whereNull('b.deleted_at')
+            ->orderBy('b.id_boq')
+            ->get(['b.id_wo', 'tp.nama as testing_point', 'ts.nomor as standard_nomor', 'ts.judul as standard_judul',
+                'tms.judul_indonesia as matriks', 'b.qty', 'sat.nama as satuan'])
+            ->groupBy('id_wo');
+
+        $tambahan = $woIds->isEmpty() ? collect() : DB::table('boq_tambahan as bt')
+            ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'bt.id_satuan')
+            ->whereIn('bt.id_wo', $woIds)->whereNull('bt.deleted_at')
+            ->orderBy('bt.id_boq_tambahan')
+            ->get(['bt.id_wo', 'bt.nama_item', 'bt.qty', 'sat.nama as satuan'])
+            ->groupBy('id_wo');
+
+        $outputs = collect();
+        if ($woIds->isNotEmpty()) {
+            $terminIds = DB::table('termin')->where('id_so', $id)->pluck('id_termin');
+            $outputs = DB::table('output_pekerjaan as o')
+                ->where(fn ($q) => $q->whereIn('o.id_wo', $woIds)->orWhereIn('o.id_termin', $terminIds))
+                ->orderBy('o.id_output')
+                ->get(['o.judul_output', 'o.judul_dokumen', 'o.jenis_dokumen', 'o.qty_asli', 'o.qty_copy', 'o.link_drive'])
+                ->map(fn ($o) => (object) [
+                    'item'       => $o->judul_dokumen ?: 'Output Pekerjaan',
+                    'judul'      => $o->judul_output,
+                    'keterangan' => match ($o->jenis_dokumen) {
+                        'asli'          => 'Asli' . ($o->qty_asli ? " {$o->qty_asli} eksemplar" : ''),
+                        'copy'          => 'Copy' . ($o->qty_copy ? " {$o->qty_copy} eksemplar" : ''),
+                        'asli_dan_copy' => 'Asli' . ($o->qty_asli ? " {$o->qty_asli}" : '') . ' dan Copy' . ($o->qty_copy ? " {$o->qty_copy}" : '') . ' eksemplar',
+                        default         => null,
+                    },
+                    'link'       => $o->link_drive,
+                ]);
+            $other = DB::table('output_tambahan as ot')
+                ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'ot.id_satuan')
+                ->whereIn('ot.id_wo', $woIds)->whereNull('ot.deleted_at')
+                ->orderBy('ot.id_output_tambahan')
+                ->get(['ot.nama_item', 'ot.qty', 'sat.nama as satuan', 'ot.keterangan', 'ot.link_drive'])
+                ->map(fn ($o) => (object) [
+                    'item'       => $o->nama_item,
+                    'judul'      => null,
+                    'keterangan' => trim(($o->qty ? "{$o->qty} " . ($o->satuan ?? '') : '') . ($o->keterangan ? ' — ' . $o->keterangan : '')) ?: null,
+                    'link'       => $o->link_drive,
+                ]);
+            $outputs = $outputs->concat($other)->values();
+        }
+
+        $termins = DB::table('termin')->where('id_so', $id)->orderBy('id_termin')->get(['no_termin', 'nama', 'persentase', 'tanggal', 'is_dp']);
+
+        // Rekening pembayaran: rekening utama (penanda is_utama) dan rekening PPN (is_ppn)
+        $rekening = DB::table('bank_accounts')->whereNull('deleted_at')->where('is_aktif', 1)->orderByDesc('is_utama')->get();
+
+        // Personel penghubung pelanggan: PIC Pemesan/Delivery/Payment + PIC tiap FWO, tanpa duplikat nama
+        $kontak = collect([
+            ['nama' => $so->pel_pic, 'jabatan' => $so->pel_pic_jabatan, 'email' => $so->pel_pic_email, 'telp' => $so->pel_pic_telp],
+            ['nama' => $so->del_pic, 'jabatan' => $so->del_pic_jabatan, 'email' => $so->del_pic_email, 'telp' => $so->del_pic_telp],
+            ['nama' => $so->pay_pic, 'jabatan' => $so->pay_pic_jabatan, 'email' => $so->pay_pic_email, 'telp' => $so->pay_pic_telp],
+        ])->filter(fn ($k) => $k['nama'])->unique('nama')->values();
+
+        \Carbon\Carbon::setLocale('id');
+
+        return Pdf::view('pdf.sales-order.dokumen', compact(
+            'so', 'users', 'wos', 'fwos', 'tim', 'boq', 'tambahan', 'outputs', 'termins', 'rekening', 'kontak'
+        ))
+            ->headerView('pdf.layouts.sections.header')
+            ->footerView('pdf.layouts.sections.footer')
+            ->margins(top: 30, right: 0, bottom: 20, left: 0)
+            ->format('a4')
+            ->name("{$so->no_so}.pdf");
+    }
+
+    /**
      * Clone SO — Fase 1 (SO + WO + BOQ + BOQ Other/Sampling saja).
      * FWO, Budget, Personnel menyusul di fase berikutnya (disepakati bertahap
      * dengan user 2026-09-12). Halaman penuh (bukan modal) karena skalanya

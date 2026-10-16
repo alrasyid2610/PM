@@ -75,6 +75,33 @@ class SqKeterangan
         });
     }
 
+    /**
+     * No. SQ Draft yang masih memakai rekening ini pada isian bertipe rekening.
+     * SQ Final tidak dihitung: teksnya sudah dikunci (teks_final).
+     */
+    public static function sqPemakaiRekening(int $idRekening): array
+    {
+        $rows = DB::table('sq_keterangan as k')
+            ->join('poin_keterangan as p', 'p.id_poin', '=', 'k.id_poin')
+            ->join('sales_quotations as s', 's.id_sq', '=', 'k.id_sq')
+            ->whereNull('k.teks_final')
+            ->whereNotNull('k.nilai')
+            ->get(['k.nilai', 'p.template', 's.no_sq']);
+
+        $dipakai = [];
+        foreach ($rows as $r) {
+            $nilai = json_decode($r->nilai, true) ?: [];
+            foreach (PoinKeteranganTemplate::parse($r->template) as $i) {
+                if ($i['tipe'] === 'rekening' && (int) ($nilai[$i['key']] ?? 0) === $idRekening) {
+                    $dipakai[$r->no_sq] = true;
+                    break;
+                }
+            }
+        }
+
+        return array_keys($dipakai);
+    }
+
     public static function formatRekening(object $b): string
     {
         $bank = preg_match('/^bank\s/i', $b->bank) ? $b->bank : 'Bank ' . $b->bank;
@@ -111,7 +138,7 @@ class SqKeterangan
             // Pengisian otomatis hanya kemudahan: kalau gagal (mis. migration kolom is_utama belum
             // dijalankan) jangan sampai membuat SQ / menambah poin ikut gagal — isian dibiarkan kosong.
             try {
-                $rekening = DB::table('bank_accounts')->whereNull('deleted_at')->where('is_utama', 1)->value('id_bank_account');
+                $rekening = DB::table('bank_accounts')->whereNull('deleted_at')->where('is_utama', 1)->where('is_aktif', 1)->value('id_bank_account');
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('SqKeterangan::nilaiAwal rekening utama gagal: ' . $e->getMessage());
             }

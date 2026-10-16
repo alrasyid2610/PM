@@ -61,6 +61,14 @@
                             </label>
                         </div>
                     </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" name="is_aktif" id="create_is_aktif" class="form-check-input" value="1" checked>
+                            <label class="form-check-label" for="create_is_aktif">
+                                Aktif <span class="text-muted">(rekening nonaktif tidak muncul di pilihan baru)</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </x-section-card>
         </div>

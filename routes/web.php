@@ -849,6 +849,10 @@ Route::prefix('sales-orders')->name('sales-orders.')->group(function () {
         ->name('print')
         ->whereNumber('id');
 
+    Route::get('/{id}/dokumen', [SalesOrderController::class, 'dokumenPdf'])
+        ->name('dokumen')
+        ->whereNumber('id');
+
     Route::get('/{id}/clone', [SalesOrderController::class, 'clonePage'])
         ->name('clone-page')
         ->whereNumber('id');
@@ -999,7 +1003,6 @@ Route::prefix('termin')->name('termin.')->group(function () {
     Route::post('/',                  [TerminController::class, 'store'])->name('store');
     Route::get('/select2',            [TerminController::class, 'select2'])->name('select2');
     Route::get('/by-so/{id_so}',      [TerminController::class, 'bySo'])->name('by-so')->whereNumber('id_so');
-    Route::post('/delete-attachment',     [TerminController::class, 'deleteAttachment'])->name('delete-attachment');
     Route::get('/outputs-by-so/{id_so}', [TerminController::class, 'outputsBySo'])->name('outputs-by-so')->whereNumber('id_so');
     Route::get('/check-dp/{id_so}',      [TerminController::class, 'checkDpBySo'])->name('check-dp')->whereNumber('id_so');
     Route::get('/{id}',                  [TerminController::class, 'show'])->name('show')->whereNumber('id');

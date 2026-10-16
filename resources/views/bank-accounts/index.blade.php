@@ -42,6 +42,7 @@
         keterangan:  'Keterangan',
         is_utama:    'Utama',
         is_ppn:      'PPN',
+        is_aktif:    'Status',
     };
 </script>
 <script src="{{ asset('assets/js/bank-accounts/form.js') }}"></script>

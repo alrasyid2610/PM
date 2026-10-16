@@ -43,6 +43,7 @@ function renderForm(res) {
                                 ${formGroup.textarea("keterangan", "Keterangan", res.keterangan, { className: "col-12" })}
                                 ${formGroup.checkbox("is_utama", "Rekening Utama", res.is_utama, { className: "col-12", checkLabel: "Utama — otomatis terisi di keterangan penawaran SQ (hanya 1 rekening)" })}
                                 ${formGroup.checkbox("is_ppn", "Rekening PPN", res.is_ppn, { className: "col-12", checkLabel: "PPN — rekening ini dipakai untuk pembayaran PPN" })}
+                                ${formGroup.checkbox("is_aktif", "Status", res.is_aktif, { className: "col-12", checkLabel: "Aktif — rekening nonaktif tidak muncul di pilihan baru (SQ lama yang sudah memakainya tetap tampil)" })}
                             </div>`
                         )}
 

@@ -61,9 +61,8 @@ $(document).ready(function () {
         onSave: function (id) {
             var el = document.getElementById('detail_nilai');
             if (el && el._cleave) el.value = el._cleave.getRawValue();
-            submitCrudForm({ id: id, reload: page.loadDetail.bind(page), filepond: page.pondEdit });
+            submitCrudForm({ id: id, reload: page.loadDetail.bind(page) });
         },
-        useAttachment: true,
     });
 
     // DP checkbox: set status selesai & disable field status + tombol tambah output

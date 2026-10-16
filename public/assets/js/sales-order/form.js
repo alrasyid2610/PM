@@ -89,6 +89,11 @@ function renderForm(res) {
         tags: pelangganTag + sqAsalTag + soReferensiTag,
         moreActions: [
             {
+                label: "Cetak Sales Order",
+                icon: "fa-solid fa-file-pdf",
+                attrs: `onclick="window.open('/sales-orders/${res.id_so}/dokumen','_blank')"`,
+            },
+            {
                 label: "Printout SO (Sementara)",
                 icon: "fa-solid fa-file-pdf",
                 attrs: `onclick="window.open('/sales-orders/${res.id_so}/print','_blank')"`,

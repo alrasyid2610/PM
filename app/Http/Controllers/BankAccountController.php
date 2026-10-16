@@ -38,7 +38,7 @@ class BankAccountController extends Controller
             ->whereNull('deleted_at')
             ->orderBy('bank')
             ->orderBy('atas_nama')
-            ->select(['id_bank_account', 'bank', 'no_rekening', 'atas_nama', 'keterangan', 'is_utama', 'is_ppn']);
+            ->select(['id_bank_account', 'bank', 'no_rekening', 'atas_nama', 'keterangan', 'is_utama', 'is_ppn', 'is_aktif']);
 
         return DataTables::of($query)
             ->addIndexColumn()
@@ -48,7 +48,10 @@ class BankAccountController extends Controller
             ->editColumn('is_ppn', fn ($row) => $row->is_ppn
                 ? '<span class="pm-badge pm-badge--blue">PPN</span>'
                 : '<span class="text-muted">—</span>')
-            ->rawColumns(['is_utama', 'is_ppn'])
+            ->editColumn('is_aktif', fn ($row) => $row->is_aktif
+                ? '<span class="pm-badge pm-badge--green">Aktif</span>'
+                : '<span class="pm-badge pm-badge--gray">Nonaktif</span>')
+            ->rawColumns(['is_utama', 'is_ppn', 'is_aktif'])
             ->make(true);
     }
 
@@ -76,10 +79,11 @@ class BankAccountController extends Controller
             'bank'        => $validated['bank'],
             'keterangan'  => $validated['keterangan'] ?? null,
             'is_ppn'      => $request->boolean('is_ppn') ? 1 : 0,
+            'is_aktif'    => $request->boolean('is_aktif') ? 1 : 0,
             'created_at'  => now(),
             'updated_at'  => now(),
         ]);
-        $this->setUtama($id, $request->boolean('is_utama'));
+        $this->setUtama($id, $request->boolean('is_utama') && $request->boolean('is_aktif'));
 
         $after = DB::table('bank_accounts')->where('id_bank_account', $id)->get()->toJson();
         saveAudit('bank_accounts', $id, 'Create', '', $after);
@@ -112,9 +116,10 @@ class BankAccountController extends Controller
             'bank'        => $validated['bank'],
             'keterangan'  => $validated['keterangan'] ?? null,
             'is_ppn'      => $request->boolean('is_ppn') ? 1 : 0,
+            'is_aktif'    => $request->boolean('is_aktif') ? 1 : 0,
             'updated_at'  => now(),
         ]);
-        $this->setUtama((int) $id, $request->boolean('is_utama'));
+        $this->setUtama((int) $id, $request->boolean('is_utama') && $request->boolean('is_aktif'));
 
         $after = DB::table('bank_accounts')->where('id_bank_account', $id)->get()->toJson();
         saveAudit('bank_accounts', $id, 'update', $before, $after);
@@ -124,6 +129,16 @@ class BankAccountController extends Controller
 
     public function destroy($id)
     {
+        // Rekening yang masih dipakai SQ Draft tidak boleh dihapus (isian SQ jadi "belum lengkap")
+        $sqDraft = \App\Support\SqKeterangan::sqPemakaiRekening((int) $id);
+        if ($sqDraft) {
+            return response()->json([
+                'message' => 'Rekening masih dipakai di SQ Draft: ' . implode(', ', array_slice($sqDraft, 0, 5))
+                    . (count($sqDraft) > 5 ? ' dan ' . (count($sqDraft) - 5) . ' lainnya' : '')
+                    . '. Ganti rekening di SQ tersebut, atau nonaktifkan rekening ini.',
+            ], 422);
+        }
+
         $before = DB::table('bank_accounts')->where('id_bank_account', $id)->get()->toJson();
         DB::table('bank_accounts')->where('id_bank_account', $id)->update(['deleted_at' => now()]);
         $after = DB::table('bank_accounts')->where('id_bank_account', $id)->get()->toJson();
@@ -137,6 +152,7 @@ class BankAccountController extends Controller
     {
         $data = DB::table('bank_accounts')
             ->whereNull('deleted_at')
+            ->where('is_aktif', 1)
             ->when($request->q, fn ($q, $s) => $q->where(fn ($w) => $w
                 ->where('bank', 'like', "%{$s}%")
                 ->orWhere('no_rekening', 'like', "%{$s}%")

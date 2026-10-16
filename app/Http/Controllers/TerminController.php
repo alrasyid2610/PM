@@ -6,14 +6,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use App\Traits\HasAuditHistory;
-use App\Traits\HasAttachment;
 
 class TerminController extends Controller
 {
-    use HasAuditHistory, HasAttachment;
-
-    protected function attachmentTable(): string      { return 'termin'; }
-    protected function attachmentPrimaryKey(): string { return 'id_termin'; }
+    use HasAuditHistory;
 
     protected function auditTable(): string
     {
@@ -97,7 +93,6 @@ class TerminController extends Controller
             'status'        => 'required|in:pending,siap_kirim,selesai',
             'keterangan'    => 'nullable|string',
             'id_so'         => 'nullable|integer',
-            'attachments.*' => 'nullable|file|max:153600',
         ]);
 
         if ($request->boolean('is_dp') && (!empty($request->input('selected_outputs', [])) || !empty($request->input('selected_other', [])))) {
@@ -105,9 +100,6 @@ class TerminController extends Controller
                 'message' => 'Termin Down Payment (DP) tidak dapat memilih Output Pekerjaan.',
             ], 422);
         }
-
-        $upload = uploadAttachment($request->file('attachments'), 'termin');
-        $files  = $upload['files'];
 
         $status = $this->guardTerminStatus($request->status, 'pending');
 
@@ -121,7 +113,6 @@ class TerminController extends Controller
             'status'     => $status,
             'is_dp'      => $request->boolean('is_dp') ? 1 : 0,
             'keterangan' => $request->keterangan,
-            'attachment' => json_encode($files),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -340,16 +331,6 @@ class TerminController extends Controller
 
         $before = DB::table('termin')->where('id_termin', $id)->get()->toJson();
 
-        $existing = $request->existing_attachments ?? [];
-        $newFiles = [];
-
-        if ($request->hasFile('attachments')) {
-            $upload   = uploadAttachment($request->file('attachments'), 'termin');
-            $newFiles = $upload['files'];
-        }
-
-        $attachments = array_merge($existing, $newFiles);
-
         $currentStatus = DB::table('termin')->where('id_termin', $id)->value('status');
         $status = $this->guardTerminStatus($request->status, $currentStatus);
 
@@ -362,7 +343,6 @@ class TerminController extends Controller
             'status'     => $status,
             'is_dp'      => $request->boolean('is_dp') ? 1 : 0,
             'keterangan' => $request->keterangan,
-            'attachment' => json_encode($attachments),
             'updated_at' => now(),
         ]);
 
@@ -539,10 +519,5 @@ class TerminController extends Controller
     public function history($id)
     {
         return $this->auditHistory($id);
-    }
-
-    public function deleteAttachment(Request $request)
-    {
-        return $this->removeAttachment($request);
     }
 }

@@ -63,7 +63,7 @@ class SqKeteranganController extends Controller
         $q = trim((string) $request->q);
 
         if ($request->tipe === 'rekening') {
-            $rows = DB::table('bank_accounts')->whereNull('deleted_at')
+            $rows = DB::table('bank_accounts')->whereNull('deleted_at')->where('is_aktif', 1)
                 ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x
                     ->where('bank', 'like', "%{$q}%")->orWhere('no_rekening', 'like', "%{$q}%")->orWhere('atas_nama', 'like', "%{$q}%")))
                 ->orderBy('bank')->limit(30)->get();

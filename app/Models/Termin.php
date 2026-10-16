@@ -17,11 +17,9 @@ class Termin extends Model
         'tanggal',
         'status',
         'keterangan',
-        'attachment',
     ];
 
     protected $casts = [
         'tanggal'    => 'date',
-        'attachment' => 'array',
     ];
 }

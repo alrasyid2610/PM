@@ -23,6 +23,9 @@
     .offer td.r { text-align: right; white-space: nowrap; }
     .offer td.c { text-align: center; }
     .offer tr.section td { font-weight: 700; background: #f1f5f9; }
+    /* Judul bagian (I/II) tidak boleh tertinggal sendirian di dasar halaman; Grand Total tidak boleh sendirian di halaman baru */
+    .offer tr.section { break-after: avoid; page-break-after: avoid; }
+    .offer tr.total { break-before: avoid; page-break-before: avoid; }
     .offer tr.total td { font-weight: 700; background: #203864; color: #fff; border-color: #203864; }
     .offer .sub { font-size: 10px; color: #334155; display: block; margin-top: 2px; }
     .offer .nm { font-weight: 700; }
