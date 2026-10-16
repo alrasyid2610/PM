@@ -17,6 +17,8 @@
 
     .offer { width: 100%; border-collapse: collapse; font-size: 11px; }
     .offer th, .offer td { border: 1px solid #222; padding: 4px 6px; vertical-align: top; }
+    .offer tr { page-break-inside: avoid; break-inside: avoid; }
+    .offer thead { display: table-header-group; }
     .offer th { background: #dbe8f5; font-weight: 700; text-align: center; }
     .offer td.r { text-align: right; white-space: nowrap; }
     .offer td.c { text-align: center; }

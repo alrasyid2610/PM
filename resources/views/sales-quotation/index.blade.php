@@ -28,8 +28,9 @@
             ['label' => 'All',        'value' => 'all'],
             ['label' => 'Draft',      'value' => 'draft'],
             ['label' => 'Final',      'value' => 'final'],
-            ['label' => 'Completed',  'value' => 'completed'],
-            ['label' => 'Cancel',     'value' => 'cancel'],
+            ['label' => 'Win',        'value' => 'win'],
+            ['label' => 'Lose',       'value' => 'lose'],
+            ['label' => 'Void',       'value' => 'void'],
             ['label' => 'Deleted',    'value' => 'deleted'],
         ]],
     ]"

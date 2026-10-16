@@ -756,7 +756,9 @@ Route::prefix('sales-quotations')->name('sales-quotations.')->group(function () 
     Route::get('/{id}/executive-summary', [SalesQuotationController::class, 'executiveSummaryPdf'])->name('executive-summary')->whereNumber('id');
     Route::get('/{id}/penawaran', [SalesQuotationController::class, 'penawaranPdf'])->name('penawaran')->whereNumber('id');
     Route::post('/{id}/finalize', [SalesQuotationController::class, 'finalize'])->name('finalize')->whereNumber('id');
-    Route::post('/{id}/cancel', [SalesQuotationController::class, 'cancel'])->name('cancel')->whereNumber('id');
+    Route::post('/{id}/win', [SalesQuotationController::class, 'win'])->name('win')->whereNumber('id');
+    Route::post('/{id}/lose', [SalesQuotationController::class, 'lose'])->name('lose')->whereNumber('id');
+    Route::post('/{id}/void', [SalesQuotationController::class, 'void'])->name('void')->whereNumber('id');
     Route::post('/{id}/revise', [SalesQuotationController::class, 'revise'])->name('revise')->whereNumber('id');
     Route::get('/{id}/convert-preview', [SqConvertController::class, 'preview'])->name('convert-preview')->whereNumber('id');
     Route::post('/{id}/convert', [SqConvertController::class, 'convert'])->name('convert')->whereNumber('id');

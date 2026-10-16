@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\DB;
  * Fieldwork ada): hari_ke FWO dihitung dari basis hari yang SAMA dengan
  * hari_mulai WO (lihat SqFieldworkController — hari_ke divalidasi terhadap
  * rentang hari WO induknya), jadi tanggalnya dihitung dari $start yang sama.
- * hanya SQ berstatus Final yang boleh diterbitkan (kesepakatan 2026-09-27); setelah sukses status SQ otomatis jadi 'completed'.
+ * hanya SQ berstatus Win yang boleh diterbitkan (sejak 2026-10-16; sebelumnya Final); status SQ tetap Win setelah SO terbit, penandanya sales_orders.id_sq.
  */
 class SqConvertController extends Controller
 {
@@ -112,8 +112,8 @@ class SqConvertController extends Controller
         $sq = DB::table('sales_quotations')->where('id_sq', $id)->whereNull('deleted_at')->first();
         if (!$sq) return response()->json(['message' => 'Sales Quotation tidak ditemukan'], 404);
 
-        if ($sq->status !== 'final') {
-            return response()->json(['message' => 'Hanya SQ berstatus Final yang bisa diterbitkan menjadi SO. Finalkan SQ dulu.'], 422);
+        if ($sq->status !== 'win') {
+            return response()->json(['message' => 'Hanya SQ berstatus Win yang bisa diterbitkan menjadi SO.'], 422);
         }
 
         foreach (self::SQ_REQUIRED as $col => $label) {
@@ -126,8 +126,8 @@ class SqConvertController extends Controller
             $result = DB::transaction(function () use ($id, $sq, $input) {
                 // Kunci baris SQ supaya 2 klik bersamaan tidak menghasilkan 2 SO.
                 $locked = DB::table('sales_quotations')->where('id_sq', $id)->lockForUpdate()->first();
-                if ($locked->status !== 'final') {
-                    throw new \RuntimeException('Hanya SQ berstatus Final yang bisa diterbitkan menjadi SO.');
+                if ($locked->status !== 'win') {
+                    throw new \RuntimeException('Hanya SQ berstatus Win yang bisa diterbitkan menjadi SO.');
                 }
                 if (DB::table('sales_orders')->where('id_sq', $id)->whereNull('deleted_at')->exists()) {
                     throw new \RuntimeException('Sales Quotation ini sudah pernah diterbitkan menjadi Sales Order.');
@@ -355,14 +355,6 @@ class SqConvertController extends Controller
                         }
                     }
                 }
-
-                $sqBefore = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
-                DB::table('sales_quotations')->where('id_sq', $id)->update([
-                    'status' => 'completed',
-                    'diputuskan_at' => now(),
-                    'updated_at' => now(),
-                ]);
-                saveAudit('sales_quotations', $id, 'update', $sqBefore, DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson());
 
                 return ['id_so' => $idSo, 'no_so' => DB::table('sales_orders')->where('id_so', $idSo)->value('no_so'), 'total_wo' => $totalWo];
             });

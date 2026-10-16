@@ -35,11 +35,11 @@ return [
     ['slug' => 'dash-so-nilai-per-bulan', 'label' => 'Nilai SO per Bulan', 'kelompok' => 'Sales', 'type' => 'chart', 'icon' => 'fa-sack-dollar', 'kind' => 'bar_tahun_nilai'],
     ['slug' => 'dash-list-so',        'label' => 'Daftar SO Outstanding', 'kelompok' => 'Sales', 'type' => 'table', 'icon' => 'fa-file-lines', 'key' => 'so'],
 
-    // SQ (penawaran). "Final" = terkunci & siap diterbitkan jadi SO; Completed = sudah jadi SO.
-    ['slug' => 'dash-sq-final',        'label' => 'SQ Final Belum Jadi SO', 'kelompok' => 'Sales', 'type' => 'kpi',   'icon' => 'fa-file-signature', 'color' => '#1d4ed8', 'bg' => '#eff6ff', 'tab' => 'sq'],
-    ['slug' => 'dash-sq-kedaluwarsa',  'label' => 'SQ Mendekati Kedaluwarsa', 'kelompok' => 'Sales', 'type' => 'kpi', 'icon' => 'fa-hourglass-half', 'color' => '#d97706', 'bg' => '#fffbeb', 'tab' => 'sq'],
+    // SQ (penawaran). Final = terkunci, menunggu keputusan customer; Win = disetujui (siap jadi SO); Lose/Void = tidak lanjut.
+    ['slug' => 'dash-sq-final',        'label' => 'SQ Win Belum Jadi SO', 'kelompok' => 'Sales', 'type' => 'kpi',   'icon' => 'fa-file-signature', 'color' => '#1d4ed8', 'bg' => '#eff6ff', 'tab' => 'sq'],
+    ['slug' => 'dash-sq-kedaluwarsa',  'label' => 'SQ Final Mendekati Kedaluwarsa', 'kelompok' => 'Sales', 'type' => 'kpi', 'icon' => 'fa-hourglass-half', 'color' => '#d97706', 'bg' => '#fffbeb', 'tab' => 'sq'],
     ['slug' => 'dash-sq-per-status',   'label' => 'SQ per Status',          'kelompok' => 'Sales', 'type' => 'chart', 'icon' => 'fa-chart-pie', 'kind' => 'donut'],
-    ['slug' => 'dash-list-sq',         'label' => 'Daftar SQ Final Belum Jadi SO', 'kelompok' => 'Sales', 'type' => 'table', 'icon' => 'fa-file-signature', 'key' => 'sq'],
+    ['slug' => 'dash-list-sq',         'label' => 'Daftar SQ Win Belum Jadi SO', 'kelompok' => 'Sales', 'type' => 'table', 'icon' => 'fa-file-signature', 'key' => 'sq'],
 
     // ── Operasional ──
     ['slug' => 'dash-wo-outstanding',  'label' => 'Outstanding WO',        'kelompok' => 'Operasional', 'type' => 'kpi',   'icon' => 'fa-briefcase',     'color' => '#0284c7', 'bg' => '#e0f2fe', 'tab' => 'wo'],

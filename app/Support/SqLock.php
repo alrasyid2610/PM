@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Penguncian Sales Quotation: hanya SQ berstatus Draft yang boleh diubah
- * (header, WO, BOQ, BOQ Other/Sampling, Budget). Final/Completed/Cancel
+ * (header, WO, BOQ, BOQ Other/Sampling, Budget). Final/Win/Lose/Void
  * terkunci — perubahan lewat revisi. Tiap method mengembalikan JsonResponse
  * 423 kalau terkunci, atau null kalau boleh lanjut.
  */
@@ -67,7 +67,7 @@ class SqLock
     {
         if ($status === null || $status === 'draft') return null;
 
-        $label = ['final' => 'Final', 'completed' => 'Completed', 'cancel' => 'Cancel'][$status] ?? $status;
+        $label = ['final' => 'Final', 'win' => 'Win', 'lose' => 'Lose', 'void' => 'Void'][$status] ?? $status;
         return response()->json([
             'message' => "Sales Quotation berstatus {$label} dan tidak bisa diubah. Hanya SQ berstatus Draft yang bisa diedit.",
         ], 423);

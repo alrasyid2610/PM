@@ -294,8 +294,8 @@ class DashboardController extends Controller
     }
 
     // ── SQ ───────────────────────────────────────────────────────────────
-    // Hanya revisi terbaru (is_latest) yang dihitung — revisi lama berstatus Cancel "digantikan".
-    // Final = terkunci & belum diterbitkan jadi SO (kalau sudah jadi SO statusnya Completed).
+    // Hanya revisi terbaru (is_latest) yang dihitung — revisi lama berstatus Void "digantikan".
+    // Final = terkunci, menunggu keputusan customer (Win/Lose). Win = disetujui; "belum jadi SO" = Win tanpa SO.
 
     private function sqFinalQuery()
     {
@@ -305,9 +305,21 @@ class DashboardController extends Controller
             ->where('status', 'final');
     }
 
+    private function sqWinBelumSoQuery()
+    {
+        return DB::table('sales_quotations as sq')
+            ->whereNull('sq.deleted_at')
+            ->where('sq.is_latest', true)
+            ->where('sq.status', 'win')
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))->from('sales_orders as so')
+                    ->whereColumn('so.id_sq', 'sq.id_sq')->whereNull('so.deleted_at');
+            });
+    }
+
     private function kpiSqFinal(): array
     {
-        return ['value' => $this->sqFinalQuery()->count(), 'sub' => 'menunggu diterbitkan SO'];
+        return ['value' => $this->sqWinBelumSoQuery()->count(), 'sub' => 'menunggu diterbitkan SO'];
     }
 
     private function kpiSqKedaluwarsa(): array
@@ -342,8 +354,9 @@ class DashboardController extends Controller
         $def = [
             'draft'     => ['Draft', '#94a3b8'],
             'final'     => ['Final', '#1d4ed8'],
-            'completed' => ['Completed', '#15803d'],
-            'cancel'    => ['Cancel', '#c2410c'],
+            'win'       => ['Win', '#15803d'],
+            'lose'      => ['Lose', '#dc2626'],
+            'void'      => ['Void', '#c2410c'],
         ];
 
         $labels = $data = $colors = [];
@@ -538,13 +551,10 @@ class DashboardController extends Controller
                 ->get();
 
         } elseif ($type === 'sq') {
-            // SQ Final terbaru yang belum diterbitkan jadi SO; yang paling dekat masa berlakunya di atas
-            $rows = DB::table('sales_quotations as sq')
+            // SQ Win terbaru yang belum diterbitkan jadi SO; yang paling dekat masa berlakunya di atas
+            $rows = $this->sqWinBelumSoQuery()
                 ->leftJoin('business_relations as br', 'br.id_br', '=', 'sq.id_pelanggan')
                 ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'sq.id_pic_pelanggan')
-                ->whereNull('sq.deleted_at')
-                ->where('sq.is_latest', true)
-                ->where('sq.status', 'final')
                 ->select([
                     'sq.id_sq as id_rec',
                     'sq.no_sq as no',

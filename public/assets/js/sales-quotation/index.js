@@ -11,8 +11,9 @@ window.datatableColumnRenderers = Object.assign({}, window.datatableColumnRender
         var map = {
             draft:     { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0', icon: 'fa-pen',          label: 'Draft' },
             final:     { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-lock',         label: 'Final' },
-            completed: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-circle-check', label: 'Completed' },
-            cancel:    { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa', icon: 'fa-ban',          label: 'Cancel' },
+            win:       { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-trophy',       label: 'Win' },
+            lose:      { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: 'fa-thumbs-down',  label: 'Lose' },
+            void:      { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa', icon: 'fa-ban',          label: 'Void' },
             deleted:   { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: 'fa-trash',        label: 'Deleted' },
         };
         var s = map[data] || { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0', icon: 'fa-circle', label: data || '-' };
@@ -421,7 +422,7 @@ window.addEventListener('storage', function (e) {
     }
 });
 
-// ── Status SQ: Finalkan & Batalkan (dengan konfirmasi) ──────────────────
+// ── Status SQ: Finalkan, Win, Lose & Void (dengan konfirmasi) ──────────────────
 function sqStatusAction(url, data, doneMsg) {
     $.ajax({
         url: url,
@@ -440,7 +441,7 @@ function sqStatusAction(url, data, doneMsg) {
 function finalizeSq(idSq) {
     Swal.fire({
         title: 'Finalkan Sales Quotation?',
-        html: 'Setelah difinalkan, SQ <strong>terkunci</strong> dan tidak bisa diedit lagi (header, WO, BOQ, Budget). SQ siap diterbitkan menjadi SO.',
+        html: 'Setelah difinalkan, SQ <strong>terkunci</strong> dan tidak bisa diedit lagi (header, WO, BOQ, Budget). Setelah itu tandai hasilnya: <strong>Win</strong> (customer setuju) atau <strong>Lose</strong> (ditolak).',
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'Ya, Finalkan',
@@ -451,29 +452,61 @@ function finalizeSq(idSq) {
     });
 }
 
-function cancelSq(idSq) {
+function winSq(idSq) {
     Swal.fire({
-        title: 'Batalkan Sales Quotation?',
-        html: 'SQ akan berstatus <strong>Cancel</strong> dan terkunci. Tindakan ini tidak bisa dibatalkan.',
+        title: 'Tandai SQ sebagai Win?',
+        html: 'Customer menyetujui penawaran ini. Setelah Win, SQ bisa diterbitkan menjadi SO. Status <strong>tidak bisa diubah lagi</strong>.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Win',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#16a34a',
+        reverseButtons: true,
+    }).then(function (result) {
+        if (result.isConfirmed) sqStatusAction('/sales-quotations/' + idSq + '/win', {}, 'SQ ditandai Win.');
+    });
+}
+
+function loseSq(idSq) {
+    Swal.fire({
+        title: 'Tandai SQ sebagai Lose?',
+        html: 'Customer menolak penawaran ini. Status <strong>tidak bisa diubah lagi</strong>, tetapi SQ masih bisa direvisi.',
         input: 'text',
-        inputPlaceholder: 'Alasan (opsional), mis. ditolak pelanggan',
+        inputPlaceholder: 'Alasan (opsional), mis. harga terlalu tinggi',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Ya, Batalkan SQ',
+        confirmButtonText: 'Ya, Lose',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#dc2626',
+        reverseButtons: true,
+    }).then(function (result) {
+        if (result.isConfirmed) sqStatusAction('/sales-quotations/' + idSq + '/lose', { keterangan_status: result.value || '' }, 'SQ ditandai Lose.');
+    });
+}
+
+function voidSq(idSq) {
+    Swal.fire({
+        title: 'Void Sales Quotation?',
+        html: 'SQ dibatalkan dan <strong>terkunci</strong> (bukan keputusan customer). Tindakan ini tidak bisa dibatalkan.',
+        input: 'text',
+        inputPlaceholder: 'Alasan (opsional), mis. salah input',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Void SQ',
         cancelButtonText: 'Kembali',
         confirmButtonColor: '#dc2626',
         reverseButtons: true,
     }).then(function (result) {
-        if (result.isConfirmed) sqStatusAction('/sales-quotations/' + idSq + '/cancel', { keterangan_status: result.value || '' }, 'SQ dibatalkan.');
+        if (result.isConfirmed) sqStatusAction('/sales-quotations/' + idSq + '/void', { keterangan_status: result.value || '' }, 'SQ di-Void.');
     });
 }
 
-// Revisi: bikin SQ baru (Draft) dari SQ Final ini; SQ ini sendiri jadi Cancel
-// ("digantikan"). Beda dari cancelSq — bukan pembatalan, tapi penerus.
+// Revisi: bikin SQ baru (Draft) dari SQ Final/Lose ini. SQ Final jadi Void
+// ("digantikan"); SQ Lose tetap Lose. Beda dari voidSq — bukan pembatalan, tapi penerus.
 function reviseSq(idSq) {
     Swal.fire({
         title: 'Buat Revisi SQ?',
-        html: 'SQ baru berstatus <strong>Draft</strong> akan dibuat sebagai salinan penuh (WO, BOQ, BOQ Other/Sampling, Budget Plan). SQ ini sendiri otomatis berstatus <strong>Cancel</strong> (digantikan revisi baru).',
+        html: 'SQ baru berstatus <strong>Draft</strong> akan dibuat sebagai salinan penuh (WO, BOQ, BOQ Other/Sampling, Budget Plan). Jika SQ ini berstatus Final, statusnya otomatis menjadi <strong>Void</strong> (digantikan revisi baru); jika Lose, tetap Lose.',
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'Ya, Buat Revisi',
@@ -499,7 +532,7 @@ function reviseSq(idSq) {
 function showRiwayatRevisiSq(idSq) {
     $.get('/sales-quotations/' + idSq, function (res) {
         const rows = (res.riwayat_revisi || []).map(function (r) {
-            const badge = { draft: 'secondary', final: 'primary', completed: 'success', cancel: 'warning' }[r.status] || 'secondary';
+            const badge = { draft: 'secondary', final: 'primary', win: 'success', lose: 'danger', void: 'warning' }[r.status] || 'secondary';
             const current = r.id_sq === idSq ? ' <strong>(sedang dibuka)</strong>' : '';
             return `<tr>
                 <td style="text-align:center;">${r.revisi === 0 ? '—' : 'Rev.' + r.revisi}</td>
@@ -543,8 +576,8 @@ function openConvertSqModal(idSq) {
     $.get('/sales-quotations/' + idSq + '/convert-preview', function (p) {
         $('#convertSqNo').text(p.no_sq + (p.revisi > 0 ? ' Rev.' + p.revisi : ''));
 
-        if (p.status !== 'final' && !p.sudah_convert) {
-            $('#convertSqBody').html('<div class="alert alert-warning mb-0">Hanya SQ berstatus <strong>Final</strong> yang bisa diterbitkan menjadi SO. Finalkan SQ ini dulu.</div>');
+        if (p.status !== 'win' && !p.sudah_convert) {
+            $('#convertSqBody').html('<div class="alert alert-warning mb-0">Hanya SQ berstatus <strong>Win</strong> yang bisa diterbitkan menjadi SO. Tandai SQ ini Win dulu.</div>');
             return;
         }
         if (p.sudah_convert) {
@@ -602,7 +635,7 @@ function openConvertSqModal(idSq) {
                     <tbody>${woRows}</tbody>
                 </table></div>
                 <div style="font-size:11px;color:#94a3b8;margin-top:6px;">
-                    Setelah convert: status SQ otomatis jadi Diterima, PIC Pekerjaan tiap WO diisi manual di detail WO (SQ menyimpan kontak pelanggan, WO menyimpan user), FWO dibuat belakangan di SO.
+                    Setelah convert: status SQ tetap Win (tertaut ke SO), PIC Pekerjaan tiap WO diisi manual di detail WO (SQ menyimpan kontak pelanggan, WO menyimpan user), FWO dibuat belakangan di SO.
                 </div>
             </div>
         </form>`);

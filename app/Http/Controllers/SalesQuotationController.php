@@ -262,41 +262,58 @@ class SalesQuotationController extends Controller
         return response()->json(['success' => true, 'message' => 'Sales Quotation difinalkan. SQ sekarang terkunci dan siap diterbitkan jadi SO.']);
     }
 
-    /** Draft/Final → Cancel (alasan opsional dicatat di keterangan_status). */
-    public function cancel(Request $request, $id)
+    /** Final → Win (customer setuju; SQ siap diterbitkan jadi SO). Status akhir, tidak bisa dibatalkan. */
+    public function win(Request $request, $id)
+    {
+        return $this->putusan($request, $id, ['final'], 'win', 'Hanya SQ berstatus Final yang bisa ditandai Win.', 'Sales Quotation ditandai Win. Sekarang bisa diterbitkan jadi SO.');
+    }
+
+    /** Final → Lose (customer menolak; alasan opsional di keterangan_status). Status akhir; boleh direvisi. */
+    public function lose(Request $request, $id)
+    {
+        return $this->putusan($request, $id, ['final'], 'lose', 'Hanya SQ berstatus Final yang bisa ditandai Lose.', 'Sales Quotation ditandai Lose.');
+    }
+
+    /** Draft/Final → Void (dibatalkan sendiri, bukan keputusan customer; alasan opsional). */
+    public function void(Request $request, $id)
+    {
+        return $this->putusan($request, $id, ['draft', 'final'], 'void', 'Hanya SQ berstatus Draft atau Final yang bisa di-Void.', 'Sales Quotation di-Void.');
+    }
+
+    private function putusan(Request $request, $id, array $dariStatus, string $status, string $pesanTolak, string $pesanOk)
     {
         $sq = DB::table('sales_quotations')->where('id_sq', $id)->whereNull('deleted_at')->first();
         if (!$sq) return response()->json(['message' => 'Sales Quotation tidak ditemukan'], 404);
-        if (!in_array($sq->status, ['draft', 'final'], true)) {
-            return response()->json(['message' => 'Hanya SQ berstatus Draft atau Final yang bisa dibatalkan.'], 422);
+        if (!in_array($sq->status, $dariStatus, true)) {
+            return response()->json(['message' => $pesanTolak], 422);
         }
         $request->validate(['keterangan_status' => 'nullable|string|max:1000']);
 
         $before = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
         DB::table('sales_quotations')->where('id_sq', $id)->update([
-            'status' => 'cancel',
+            'status' => $status,
             'keterangan_status' => $request->input('keterangan_status') ?: $sq->keterangan_status,
             'diputuskan_at' => now(),
             'updated_at' => now(),
         ]);
         saveAudit('sales_quotations', $id, 'update', $before, DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson());
 
-        return response()->json(['success' => true, 'message' => 'Sales Quotation dibatalkan.']);
+        return response()->json(['success' => true, 'message' => $pesanOk]);
     }
 
     /**
-     * Revisi SQ Final: bikin SQ baru (row baru, no_sq sama + revisi naik 1)
+     * Revisi SQ Final/Lose: bikin SQ baru (row baru, no_sq sama + revisi naik 1)
      * berstatus Draft, salinan penuh dari SQ sumber (header + WO + BOQ + BOQ
-     * Other/Sampling + Budget Plan). SQ sumber ditandai is_latest=false &
-     * status=cancel — dianggap sudah digantikan, tidak dianggap "batal" karena
-     * alasan bisnis. Completed tidak boleh direvisi (sudah jadi SO).
+     * Other/Sampling + Budget Plan). SQ sumber ditandai is_latest=false.
+     * Sumber Final → Void ("digantikan"); sumber Lose tetap Lose (keputusan
+     * customer tidak diubah). Win tidak boleh direvisi (sudah disetujui).
      */
     public function revise($id)
     {
         $sq = DB::table('sales_quotations')->where('id_sq', $id)->whereNull('deleted_at')->first();
         if (!$sq) return response()->json(['message' => 'Sales Quotation tidak ditemukan'], 404);
-        if ($sq->status !== 'final') {
-            return response()->json(['message' => 'Hanya SQ berstatus Final yang bisa direvisi.'], 422);
+        if (!in_array($sq->status, ['final', 'lose'], true)) {
+            return response()->json(['message' => 'Hanya SQ berstatus Final atau Lose yang bisa direvisi.'], 422);
         }
 
         $newId = DB::transaction(function () use ($sq) {
@@ -377,13 +394,15 @@ class SalesQuotationController extends Controller
             }
 
             $before = DB::table('sales_quotations')->where('id_sq', $sq->id_sq)->get()->toJson();
-            DB::table('sales_quotations')->where('id_sq', $sq->id_sq)->update([
-                'is_latest' => false,
-                'status' => 'cancel',
-                'keterangan_status' => "Digantikan oleh revisi Rev.{$data['revisi']}",
-                'diputuskan_at' => now(),
-                'updated_at' => now(),
-            ]);
+            $update = ['is_latest' => false, 'updated_at' => now()];
+            if ($sq->status === 'final') {
+                $update += [
+                    'status' => 'void',
+                    'keterangan_status' => "Digantikan oleh revisi Rev.{$data['revisi']}",
+                    'diputuskan_at' => now(),
+                ];
+            }
+            DB::table('sales_quotations')->where('id_sq', $sq->id_sq)->update($update);
             saveAudit('sales_quotations', $sq->id_sq, 'update', $before, DB::table('sales_quotations')->where('id_sq', $sq->id_sq)->get()->toJson());
 
             $after = DB::table('sales_quotations')->where('id_sq', $newId)->get()->toJson();
@@ -404,8 +423,8 @@ class SalesQuotationController extends Controller
 
     public function destroy($id)
     {
-        if (DB::table('sales_quotations')->where('id_sq', $id)->value('status') === 'completed') {
-            return response()->json(['message' => 'SQ berstatus Completed (sudah menjadi SO) tidak bisa dihapus.'], 422);
+        if (DB::table('sales_quotations')->where('id_sq', $id)->value('status') === 'win') {
+            return response()->json(['message' => 'SQ berstatus Win tidak bisa dihapus.'], 422);
         }
         $before = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
         DB::table('sales_quotations')->where('id_sq', $id)->update(['deleted_at' => now()]);
@@ -495,8 +514,8 @@ class SalesQuotationController extends Controller
             ->first();
 
         if (!$sq) abort(404, 'Sales Quotation tidak ditemukan');
-        if ($sq->status !== 'completed') {
-            abort(422, 'Executive Summary hanya tersedia untuk SQ berstatus Completed (SO sudah terbit).');
+        if ($sq->status !== 'win' || !$sq->no_so) {
+            abort(422, 'Executive Summary hanya tersedia untuk SQ berstatus Win yang SO-nya sudah terbit.');
         }
         $sq->nama_pelanggan_display = brDisplayName($sq->entitas_pelanggan, $sq->nama_pelanggan);
 
@@ -710,7 +729,8 @@ class SalesQuotationController extends Controller
         ])
             ->headerView('pdf.layouts.sections.header-penawaran', ['no' => $noDok, 'tanggal' => $tanggal])
             ->footerView('pdf.layouts.sections.footer')
-            ->margins(top: 30, right: 0, bottom: 20, left: 0)
+            // Footer (gambar kop bawah ± 25 mm + nomor halaman) harus muat di margin bawah, kalau tidak menimpa baris tabel
+            ->margins(top: 30, right: 0, bottom: 35, left: 0)
             ->format('a4')
             ->name("Penawaran-{$sq->no_sq}.pdf");
     }

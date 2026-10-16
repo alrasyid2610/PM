@@ -7,8 +7,9 @@ function sqStatusBadge(res) {
     const map = {
         draft:     { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0', icon: 'fa-pen', label: 'Draft' },
         final:     { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-lock', label: 'Final' },
-        completed: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-circle-check', label: 'Completed' },
-        cancel:    { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa', icon: 'fa-ban', label: 'Cancel' },
+        win:       { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-trophy', label: 'Win' },
+        lose:      { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: 'fa-thumbs-down', label: 'Lose' },
+        void:      { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa', icon: 'fa-ban', label: 'Void' },
     };
     const s = map[res.status] || map.draft;
     return `<span class="pm-badge" style="background:${s.bg};color:${s.color};border:1px solid ${s.border};">
@@ -18,9 +19,11 @@ function sqStatusBadge(res) {
 
 function renderForm(res) {
     const isDeleted = !!res.deleted_at;
-    // Hanya Draft yang bisa diedit; Final/Completed/Cancel terkunci
+    // Hanya Draft yang bisa diedit; Final/Win/Lose/Void terkunci
     const isDraft = res.status === 'draft';
     const isFinal = res.status === 'final';
+    const isWin   = res.status === 'win';
+    const isLose  = res.status === 'lose';
 
     const pelangganTagParams = res.id_pelanggan
         ? '?open=' + res.id_pelanggan + (res.id_site_pelanggan ? '&tab=tabBrsSite&site=' + res.id_site_pelanggan : '')
@@ -60,7 +63,7 @@ function renderForm(res) {
         number: escHtml(res.no_sq ?? '—'),
         createdAt: escHtml(res.created_at ?? '—'),
         updatedAt: escHtml(res.updated_at ?? '—'),
-        deleteId: (isDeleted || res.status === 'completed') ? null : res.id_sq,
+        deleteId: (isDeleted || isWin) ? null : res.id_sq,
         editText: (isDeleted || !isDraft) ? '' : 'Edit SQ',
         statusBadge: sqStatusBadge(res),
         tags: revBadge + riwayatTag + soTerbitTag + pelangganTag,
@@ -70,7 +73,7 @@ function renderForm(res) {
                 icon: "fa-solid fa-file-invoice",
                 attrs: `onclick="window.open('/sales-quotations/${res.id_sq}/penawaran','_blank')"`,
             },
-            ...(!isDeleted && res.status === 'completed' ? [{
+            ...(!isDeleted && isWin && res.id_so_terbit ? [{
                 label: "Executive Summary (Internal)",
                 icon: "fa-solid fa-chart-pie",
                 attrs: `onclick="window.open('/sales-quotations/${res.id_sq}/executive-summary','_blank')"`,
@@ -80,17 +83,26 @@ function renderForm(res) {
                 icon: "fa-solid fa-lock",
                 attrs: `onclick="finalizeSq(${res.id_sq})"`,
             }] : []),
-            ...(!isDeleted && (isDraft || isFinal) && can('sales-quotations', 'can_update') ? [{
-                label: "Batalkan SQ",
-                icon: "fa-solid fa-ban",
-                attrs: `onclick="cancelSq(${res.id_sq})"`,
+            ...(!isDeleted && isFinal && can('sales-quotations', 'can_update') ? [{
+                label: "Tandai Win",
+                icon: "fa-solid fa-trophy",
+                attrs: `onclick="winSq(${res.id_sq})"`,
+            }, {
+                label: "Tandai Lose",
+                icon: "fa-solid fa-thumbs-down",
+                attrs: `onclick="loseSq(${res.id_sq})"`,
             }] : []),
-            ...(!isDeleted && isFinal && can('sales-quotations', 'can_create') ? [{
+            ...(!isDeleted && (isDraft || isFinal) && can('sales-quotations', 'can_update') ? [{
+                label: "Void SQ",
+                icon: "fa-solid fa-ban",
+                attrs: `onclick="voidSq(${res.id_sq})"`,
+            }] : []),
+            ...(!isDeleted && (isFinal || isLose) && can('sales-quotations', 'can_create') ? [{
                 label: "Revisi SQ",
                 icon: "fa-solid fa-code-branch",
                 attrs: `onclick="reviseSq(${res.id_sq})"`,
             }] : []),
-            ...(!isDeleted && isFinal && can('sales-quotations', 'can_create') && can('sales-orders', 'can_create') ? [{
+            ...(!isDeleted && isWin && !res.id_so_terbit && can('sales-quotations', 'can_create') && can('sales-orders', 'can_create') ? [{
                 label: "Terbitkan SO",
                 icon: "fa-solid fa-right-left",
                 attrs: `onclick="openConvertSqModal(${res.id_sq})"`,
