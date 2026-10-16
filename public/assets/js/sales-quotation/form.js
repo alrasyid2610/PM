@@ -78,6 +78,11 @@ function renderForm(res) {
                 icon: "fa-solid fa-chart-pie",
                 attrs: `onclick="window.open('/sales-quotations/${res.id_sq}/executive-summary','_blank')"`,
             }] : []),
+            ...(!isDeleted ? [{
+                label: "Bandingkan SQ",
+                icon: "fa-solid fa-code-compare",
+                attrs: `onclick="openCompareSqModal(${res.id_sq}, '${escHtml(res.no_sq ?? '')} Rev.${res.revisi ?? 0}')"`,
+            }] : []),
             ...(!isDeleted && isDraft && can('sales-quotations', 'can_update') ? [{
                 label: "Finalkan SQ",
                 icon: "fa-solid fa-lock",

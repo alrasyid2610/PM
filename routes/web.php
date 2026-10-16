@@ -16,6 +16,7 @@ use App\Http\Controllers\SalesQuotationController;
 use App\Http\Controllers\SqWorkOrderController;
 use App\Http\Controllers\SqBoqController;
 use App\Http\Controllers\SqConvertController;
+use App\Http\Controllers\SqCompareController;
 use App\Http\Controllers\SqBoqTambahanController;
 use App\Http\Controllers\SqWoBudgetController;
 use App\Http\Controllers\SqFieldworkController;
@@ -763,6 +764,9 @@ Route::prefix('sales-quotations')->name('sales-quotations.')->group(function () 
     Route::post('/{id}/lose', [SalesQuotationController::class, 'lose'])->name('lose')->whereNumber('id');
     Route::post('/{id}/void', [SalesQuotationController::class, 'void'])->name('void')->whereNumber('id');
     Route::post('/{id}/revise', [SalesQuotationController::class, 'revise'])->name('revise')->whereNumber('id');
+    Route::get('/{id}/compare-options', [SqCompareController::class, 'options'])->name('compare-options')->whereNumber('id');
+    Route::get('/{id}/compare/{other}', [SqCompareController::class, 'compare'])->name('compare')->whereNumber(['id', 'other']);
+    Route::get('/{id}/compare/{other}/pdf', [SqCompareController::class, 'pdf'])->name('compare-pdf')->whereNumber(['id', 'other']);
     Route::get('/{id}/convert-preview', [SqConvertController::class, 'preview'])->name('convert-preview')->whereNumber('id');
     Route::post('/{id}/convert', [SqConvertController::class, 'convert'])->name('convert')->whereNumber('id');
 });

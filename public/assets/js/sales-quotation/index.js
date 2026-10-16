@@ -565,6 +565,154 @@ function showRiwayatRevisiSq(idSq) {
     });
 }
 
+// ── Bandingkan SQ ───────────────────────────────────────────────────────
+// "Sesudah" = SQ yang dibuka, "Sebelum" = SQ pembanding. Selisih = sesudah − sebelum.
+// Warna selisih: pendapatan/margin naik = hijau; biaya naik = merah (biaya lebih besar buruk).
+let compareSqId = null;
+
+function cmpRp(n) {
+    n = Number(n) || 0;
+    return (n < 0 ? '-' : '') + 'Rp ' + Math.abs(n).toLocaleString('id-ID');
+}
+
+function cmpPill(delta, isCost, pct) {
+    delta = Number(delta) || 0;
+    if (delta === 0) return '<span class="cmp-pill cmp-flat">Tidak berubah</span>';
+    const naik = delta > 0;
+    const baik = isCost ? !naik : naik;
+    const pctTxt = (pct !== null && pct !== undefined) ? ' (' + (naik ? '+' : '') + String(pct).replace('.', ',') + '%)' : '';
+    return '<span class="cmp-pill ' + (baik ? 'cmp-up' : 'cmp-down') + '">' + (naik ? '▲ +' : '▼ -') + cmpRp(Math.abs(delta)).replace('-', '') + pctTxt + '</span>';
+}
+
+function cmpSection(title, rows, isCost, showAmounts) {
+    if (!rows || !rows.length) return '';
+    const semuaSama = rows.every(function (r) { return r.status === 'sama'; });
+    const body = rows.map(function (r) {
+        const perubahan = r.status === 'berubah'
+            ? r.changes.map(function (c) {
+                const lbl = (c.label === r.label || c.label === 'Isi') ? '' : escHtml(c.label) + ': ';
+                const dari = String(c.dari), ke = String(c.ke);
+                const potong = function (t) { return t.length > 110 ? t.slice(0, 110) + '…' : t; };
+                return '<div>' + lbl + '<span class="cmp-from" title="' + escHtml(dari) + '">' + escHtml(potong(dari)) + '</span> → <b title="' + escHtml(ke) + '">' + escHtml(potong(ke)) + '</b></div>';
+            }).join('')
+            : (r.ringkas ? '<span style="color:#94a3b8;">' + escHtml(r.ringkas) + '</span>' : '');
+        const amt = showAmounts
+            ? '<td class="r">' + (r.dari === null ? '—' : cmpRp(r.dari)) + '</td><td class="r">' + (r.ke === null ? '—' : cmpRp(r.ke)) + '</td><td class="r">' + (r.delta === 0 ? '<span style="color:#cbd5e1;">—</span>' : cmpPill(r.delta, isCost)) + '</td>'
+            : '';
+        return '<tr class="' + (r.status === 'sama' ? 'cmp-same' : '') + '">'
+            + '<td><b>' + escHtml(r.label) + '</b>' + (r.sub ? '<div style="font-size:11px;color:#64748b;">' + escHtml(r.sub) + '</div>' : '') + '</td>'
+            + '<td><span class="cmp-st ' + r.status + '">' + { baru: 'Baru', dihapus: 'Dihapus', berubah: 'Berubah', sama: 'Sama' }[r.status] + '</span></td>'
+            + '<td>' + perubahan + '</td>' + amt + '</tr>';
+    }).join('');
+    const head = '<tr><th>Item</th><th style="width:80px;">Status</th><th>Perubahan</th>'
+        + (showAmounts ? '<th class="r" style="width:120px;">Subtotal sebelum</th><th class="r" style="width:120px;">Subtotal sesudah</th><th class="r" style="width:150px;">Selisih</th>' : '') + '</tr>';
+    return '<div class="cmp-sec' + (semuaSama ? ' cmp-same' : '') + '"><div class="cmp-sec-title">' + title + '</div>'
+        + '<div class="table-responsive"><table class="cmp-t"><thead>' + head + '</thead><tbody>' + body + '</tbody></table></div></div>';
+}
+
+function renderCompareSq(d) {
+    const r = d.ringkasan;
+    const card = function (label, ke, dari, delta, isCost, pct, extra) {
+        return '<div class="cmp-card"><div class="lbl">' + label + '</div><div class="val">' + ke + '</div>'
+            + '<div class="sub">Sebelum: ' + dari + (extra || '') + '</div><div class="mt-1">' + cmpPill(delta, isCost, pct) + '</div></div>';
+    };
+    const mp = r.margin_pct;
+    const j = r.jumlah;
+    const kartu = '<div class="d-flex gap-2 flex-wrap">'
+        + card('Total Harga', cmpRp(r.pendapatan.ke), cmpRp(r.pendapatan.dari), r.pendapatan.delta, false, r.pendapatan.pct)
+        + card('Biaya (Budget)', cmpRp(r.biaya.ke), cmpRp(r.biaya.dari), r.biaya.delta, true, r.biaya.pct)
+        + card('Margin', cmpRp(r.margin.ke) + (mp.ke !== null ? ' <span style="font-size:12px;color:#64748b;font-weight:600;">' + String(mp.ke).replace('.', ',') + '%</span>' : ''),
+            cmpRp(r.margin.dari) + (mp.dari !== null ? ' (' + String(mp.dari).replace('.', ',') + '%)' : ''), r.margin.delta, false, r.margin.pct)
+        + '<div class="cmp-card"><div class="lbl">Perubahan</div><div class="val">' + (j.berubah + j.baru + j.dihapus) + '</div>'
+        + '<div class="sub"><span class="cmp-st berubah">' + j.berubah + ' berubah</span> <span class="cmp-st baru">' + j.baru + ' baru</span> <span class="cmp-st dihapus">' + j.dihapus + ' dihapus</span></div></div>'
+        + '</div>';
+
+    const narasi = '<div class="mt-2 p-2" style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;font-size:13px;color:#4c1d95;">'
+        + '<i class="fa-solid fa-lightbulb me-1"></i>' + escHtml(d.narasi) + '</div>';
+
+    const lab = function (m) { return escHtml(m.no_sq) + ' Rev.' + m.revisi + ' · ' + escHtml(m.status); };
+    const judul = '<div style="font-size:12px;color:#64748b;" class="mt-2">Sebelum (pembanding): <b>' + lab(d.pembanding) + '</b> &nbsp;→&nbsp; Sesudah (dibuka): <b>' + lab(d.ini) + '</b></div>';
+
+    const woHtml = d.wos.map(function (w) {
+        const meta = (w.meta || []).map(function (c) { return escHtml(c.label) + ' <span class="cmp-from">' + escHtml(c.dari) + '</span> → <b>' + escHtml(c.ke) + '</b>'; }).join(' · ');
+        const bodyHtml = w.status === 'sama' ? '' :
+            cmpSection('BOQ', w.sections.boq, false, true)
+            + cmpSection('BOQ Other & Sampling', w.sections.tambahan, false, true)
+            + cmpSection('Fieldwork (FWO)', w.sections.fwo, false, false)
+            + cmpSection('Budget', w.sections.budget, true, true);
+        return '<div class="cmp-wo' + (w.status === 'sama' ? ' cmp-same' : '') + '"><div class="cmp-wo-head">'
+            + '<i class="fa-solid fa-briefcase" style="color:#1a56db;font-size:12px;"></i><b style="font-size:13px;">' + escHtml(w.label) + '</b>'
+            + (w.sub ? '<span style="font-size:11px;color:#64748b;">' + escHtml(w.sub) + '</span>' : '')
+            + '<span class="cmp-st ' + w.status + '">' + { baru: 'WO baru', dihapus: 'WO dihapus', berubah: 'Berubah', sama: 'Sama' }[w.status] + '</span>'
+            + (w.d_pendapatan !== 0 ? '<span style="font-size:11px;color:#64748b;">Harga ' + cmpPill(w.d_pendapatan, false) + '</span>' : '')
+            + (w.d_biaya !== 0 ? '<span style="font-size:11px;color:#64748b;">Biaya ' + cmpPill(w.d_biaya, true) + '</span>' : '')
+            + (meta ? '<span style="font-size:11px;color:#64748b;">' + meta + '</span>' : '')
+            + '</div><div class="cmp-wo-body">' + bodyHtml + '</div></div>';
+    }).join('');
+
+    return kartu + narasi + judul
+        + cmpSection('Data SQ (header)', d.header, false, false)
+        + woHtml
+        + cmpSection('Keterangan penawaran', d.keterangan, false, false);
+}
+
+function runCompareSq() {
+    const other = $('#compareSqSelect').val();
+    if (!other || !compareSqId) return;
+    $('#compareSqResult').html('<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Membandingkan...</div>');
+    $.get('/sales-quotations/' + compareSqId + '/compare/' + other, function (d) {
+        $('#compareSqResult').html(renderCompareSq(d));
+    }).fail(function (xhr) {
+        $('#compareSqResult').html('<div class="alert alert-danger mb-0">' + escHtml((xhr.responseJSON && xhr.responseJSON.message) || 'Gagal membandingkan SQ.') + '</div>');
+    });
+}
+
+function openCompareSqModal(idSq, noSq) {
+    compareSqId = idSq;
+    const $modal = $('#modalCompareSq');
+    const $sel = $('#compareSqSelect');
+    $('#compareSqNo').text(noSq || '');
+    $('#compareSqResult').html('<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>');
+    $modal.toggleClass('cmp-hide-same', !$('#compareSqShowSame').is(':checked'));
+
+    if ($sel.hasClass('select2-hidden-accessible')) $sel.select2('destroy');
+    $sel.empty().append('<option value=""></option>');
+    $sel.select2({
+        width: '100%', placeholder: 'Pilih SQ pembanding', allowClear: true, minimumInputLength: 0,
+        dropdownParent: $modal,
+        ajax: {
+            url: '/sales-quotations/' + idSq + '/compare-options', delay: 200, dataType: 'json',
+            data: function (p) { return { q: p.term || '' }; },
+            processResults: function (d) { return { results: d.results }; },
+        },
+    });
+
+    bootstrap.Modal.getOrCreateInstance($modal[0]).show();
+
+    $.get('/sales-quotations/' + idSq + '/compare-options', function (res) {
+        if (res.default) {
+            $sel.append(new Option(res.default.text, res.default.id, true, true)).trigger('change');
+            runCompareSq();
+        } else {
+            $('#compareSqResult').html('<div class="text-center text-muted py-4"><i class="fa-solid fa-code-compare fa-2x d-block mb-2 opacity-25"></i>SQ ini belum punya revisi sebelumnya. Pilih SQ pembanding di atas.</div>');
+        }
+    });
+}
+
+$(document).on('change', '#compareSqSelect', function () {
+    $('#btnCompareSqPdf').prop('disabled', !$(this).val());
+    runCompareSq();
+});
+// PDF internal: isinya sama dengan modal (baris yang sama ikut dicetak bila switch aktif)
+$(document).on('click', '#btnCompareSqPdf', function () {
+    const other = $('#compareSqSelect').val();
+    if (!other || !compareSqId) return;
+    window.open('/sales-quotations/' + compareSqId + '/compare/' + other + '/pdf' + ($('#compareSqShowSame').is(':checked') ? '?semua=1' : ''), '_blank');
+});
+$(document).on('change', '#compareSqShowSame', function () {
+    $('#modalCompareSq').toggleClass('cmp-hide-same', !this.checked);
+});
+
 // ── Convert SQ → SO ─────────────────────────────────────────────────────
 // Modal kecil: user isi Tanggal SO, Tanggal Mulai (hari ke-1), PIC Order,
 // PO. Hari ke-N tiap WO dihitung jadi tanggal dari Tanggal Mulai itu.
