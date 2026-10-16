@@ -777,7 +777,20 @@ class WorkOrderController extends Controller
             ")
             ->first();
 
+        $otherStats = DB::table('output_tambahan')
+            ->where('id_wo', $id)
+            ->whereNull('deleted_at')
+            ->selectRaw("
+                SUM(CASE WHEN status = 'belum_siap' THEN 1 ELSE 0 END) as belum_siap,
+                SUM(CASE WHEN status = 'siap'       THEN 1 ELSE 0 END) as siap,
+                SUM(CASE WHEN status = 'terkirim'   THEN 1 ELSE 0 END) as terkirim
+            ")
+            ->first();
+
         return response()->json([
+            'other_belum_siap'   => (int) ($otherStats->belum_siap ?? 0),
+            'other_siap'         => (int) ($otherStats->siap ?? 0),
+            'other_terkirim'     => (int) ($otherStats->terkirim ?? 0),
             'total_boq_qty'      => $totalBoqQty,
             'total_fwo_qty'      => $totalFwoQty,
             'progress_pct'       => $pct,

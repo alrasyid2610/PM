@@ -8,7 +8,7 @@ use App\Traits\HasAuditHistory;
 
 /**
  * "Output Others" — level WO, berdiri sendiri (tidak terhubung ke BOQ
- * Other). Gabungan baris tagihan (qty/satuan/harga) + tracking dokumen
+ * Other). Gabungan baris tagihan (qty/satuan) + tracking dokumen
  * (status/attachments/link_drive/tanggal), lihat Project Reference bagian
  * "PRD — Struktur Modul Lab Testing".
  */
@@ -34,7 +34,7 @@ class OutputTambahanController extends Controller
             ->orderBy('t.created_at')
             ->select([
                 't.id_output_tambahan', 't.nama_item', 't.qty', 't.id_satuan', 'sat.nama as satuan',
-                't.harga', 't.status', 't.tanggal_mulai', 't.tanggal_selesai',
+                't.status', 't.tanggal_mulai', 't.tanggal_selesai',
                 't.attachments', 't.link_drive', 't.keterangan', 't.created_at',
             ])
             ->get();
@@ -47,7 +47,6 @@ class OutputTambahanController extends Controller
 
         return response()->json([
             'data'      => $rows,
-            'total'     => $rows->sum(fn($r) => (int) $r->qty * (int) $r->harga),
             'wo_status' => $wo->status ?? null,
         ]);
     }
@@ -58,7 +57,6 @@ class OutputTambahanController extends Controller
             'nama_item'       => 'required|string|max:255',
             'qty'             => 'required|integer|min:1',
             'id_satuan'       => 'nullable|integer|exists:satuan,id_satuan',
-            'harga'           => 'required|integer|min:0',
             'status'          => 'nullable|in:belum_siap,siap,terkirim',
             'tanggal_mulai'   => 'nullable|date',
             'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal_mulai',
@@ -87,7 +85,6 @@ class OutputTambahanController extends Controller
             'nama_item'       => $validated['nama_item'],
             'qty'             => $validated['qty'],
             'id_satuan'       => $validated['id_satuan'] ?? null,
-            'harga'           => $validated['harga'],
             'status'          => $validated['status'] ?? 'belum_siap',
             'tanggal_mulai'   => $validated['tanggal_mulai'] ?? null,
             'tanggal_selesai' => $validated['tanggal_selesai'] ?? null,
@@ -137,7 +134,6 @@ class OutputTambahanController extends Controller
             'nama_item'       => $validated['nama_item'],
             'qty'             => $validated['qty'],
             'id_satuan'       => $validated['id_satuan'] ?? null,
-            'harga'           => $validated['harga'],
             'status'          => $validated['status'] ?? 'belum_siap',
             'tanggal_mulai'   => $validated['tanggal_mulai'] ?? null,
             'tanggal_selesai' => $validated['tanggal_selesai'] ?? null,

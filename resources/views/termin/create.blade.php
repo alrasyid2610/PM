@@ -225,10 +225,11 @@
                 return '<tr>' +
                     '<td ' + TD + ' style="text-align:center;">' +
                         '<input type="checkbox" class="form-check-input output-check" ' +
-                        'name="selected_outputs[]" value="' + item.id_output + '" ' +
+                        'name="' + (item.tipe === 'other' ? 'selected_other[]' : 'selected_outputs[]') + '" value="' + item.id_output + '" ' +
                         'data-tgl-selesai="' + (item.tanggal_selesai ? item.tanggal_selesai.substring(0, 10) : '') + '">' +
                     '</td>' +
-                    '<td ' + TD + '>' + escHtml(item.judul_output) + '</td>' +
+                    '<td ' + TD + '>' + escHtml(item.judul_output) +
+                        (item.tipe === 'other' ? ' <span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;background:#f3e8ff;color:#7e22ce;border:1px solid #e9d5ff;">Other</span>' : '') + '</td>' +
                     '<td ' + TD + '>' + statusBadge + '</td>' +
                     '<td ' + TD + ' style="white-space:nowrap;color:#64748b;font-size:12px;">' + (item.tanggal_selesai ? item.tanggal_selesai.substring(0, 10) : '—') + '</td>' +
                 '</tr>';

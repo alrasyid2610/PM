@@ -420,7 +420,6 @@ function renderOutputOtherList(rows, total, isLocked) {
     }
 
     const rowsHtml = rows.map(function (r, i) {
-        const subtotal = (r.qty || 0) * (r.harga || 0);
         const st = OUTPUT_OTHER_STATUS_COLOR[r.status] || OUTPUT_OTHER_STATUS_COLOR.belum_siap;
         const periode = r.tanggal_mulai || r.tanggal_selesai
             ? `${r.tanggal_mulai ? r.tanggal_mulai.substring(0,10) : '—'} s/d ${r.tanggal_selesai ? r.tanggal_selesai.substring(0,10) : '—'}`
@@ -437,8 +436,6 @@ function renderOutputOtherList(rows, total, isLocked) {
             <td style="font-size:12px;color:#94a3b8;width:36px;">${i + 1}</td>
             <td style="font-size:12px;">${escHtml(r.nama_item)}</td>
             <td style="font-size:12px;text-align:right;white-space:nowrap;">${r.qty ?? 0} ${escHtml(r.satuan || '')}</td>
-            <td style="font-size:12px;text-align:right;white-space:nowrap;">Rp ${Number(r.harga || 0).toLocaleString('id-ID')}</td>
-            <td style="font-size:12px;text-align:right;white-space:nowrap;font-weight:600;">Rp ${Number(subtotal).toLocaleString('id-ID')}</td>
             <td style="text-align:center;white-space:nowrap;">
                 <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:${st.bg};color:${st.color};">${OUTPUT_OTHER_STATUS_LABEL[r.status] || r.status}</span>
             </td>
@@ -467,8 +464,6 @@ function renderOutputOtherList(rows, total, isLocked) {
                     <th style="width:36px;">No</th>
                     <th>Nama Item</th>
                     <th style="width:100px;text-align:right;">Qty</th>
-                    <th style="width:120px;text-align:right;">Harga</th>
-                    <th style="width:130px;text-align:right;">Subtotal</th>
                     <th style="width:90px;text-align:center;">Status</th>
                     <th style="width:170px;">Periode</th>
                     <th style="width:140px;">Lampiran</th>
@@ -476,13 +471,6 @@ function renderOutputOtherList(rows, total, isLocked) {
                 </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
-            <tfoot>
-                <tr>
-                    <td colspan="4" style="font-size:12px;font-weight:600;text-align:right;">Total</td>
-                    <td style="font-size:12px;font-weight:700;text-align:right;color:#1d4ed8;">Rp ${Number(total).toLocaleString('id-ID')}</td>
-                    <td colspan="4"></td>
-                </tr>
-            </tfoot>
         </table>
     </div>`;
 }
@@ -523,7 +511,6 @@ $(document).on('click', '#btnAddOutputOther', function () {
     $modal.find('#outputOtherModal-id-wo').val(idWo);
     $modal.find('#outputOtherModal-nama').val('');
     $modal.find('#outputOtherModal-qty').val('');
-    $modal.find('#outputOtherModal-harga').val('');
     $modal.find('#outputOtherModal-status').val('belum_siap');
     $modal.find('#outputOtherModal-tgl-mulai').val('');
     $modal.find('#outputOtherModal-tgl-selesai').val('');
@@ -554,8 +541,6 @@ $(document).on('click', '.btn-output-other-edit', function (e) {
             $modal.find('#outputOtherModal-nama').val(r.nama_item || '');
             const qtyEl = $modal.find('#outputOtherModal-qty')[0];
             if (qtyEl && qtyEl._cleave) qtyEl._cleave.setRawValue(r.qty || ''); else $modal.find('#outputOtherModal-qty').val(r.qty || '');
-            const hargaEl = $modal.find('#outputOtherModal-harga')[0];
-            if (hargaEl && hargaEl._cleave) hargaEl._cleave.setRawValue(r.harga || ''); else $modal.find('#outputOtherModal-harga').val(r.harga || '');
             $modal.find('#outputOtherModal-status').val(r.status || 'belum_siap');
             $modal.find('#outputOtherModal-tgl-mulai').val(r.tanggal_mulai ? r.tanggal_mulai.substring(0,10) : '');
             $modal.find('#outputOtherModal-tgl-selesai').val(r.tanggal_selesai ? r.tanggal_selesai.substring(0,10) : '');
@@ -610,7 +595,6 @@ $(document).on('click', '#outputOtherModal-btn-save', function () {
     fd.append('nama_item', namaItem);
     fd.append('qty', qty);
     fd.append('id_satuan', $modal.find('#outputOtherModal-satuan').val() || '');
-    fd.append('harga', rawNumVal($modal.find('#outputOtherModal-harga')[0]) || 0);
     fd.append('status', $modal.find('#outputOtherModal-status').val());
     fd.append('tanggal_mulai', $modal.find('#outputOtherModal-tgl-mulai').val() || '');
     fd.append('tanggal_selesai', $modal.find('#outputOtherModal-tgl-selesai').val() || '');
@@ -1745,6 +1729,32 @@ function renderBoqSummary(data) {
             </div>
         </div>`;
 
+    const otherBelumSiap = data.other_belum_siap ?? 0;
+    const otherSiap      = data.other_siap ?? 0;
+    const otherTerkirim  = data.other_terkirim ?? 0;
+    const totalOther     = otherBelumSiap + otherSiap + otherTerkirim;
+    const otherPill = (icon, bg, color, border, text) =>
+        `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:${bg};color:${color};border:1px solid ${border};">
+            <i class="fa-solid ${icon} me-1" style="font-size:9px;"></i>${text}
+        </span>`;
+    const outputOtherCard = totalOther === 0 ? kpiCard("fa-file-circle-plus", "#64748b", "Output Other", "—", "Belum ada output", "#tabOutputOther") :
+        `<div class="pm-kpi-card kpi-tab-link" data-tab-target="#tabOutputOther" style="flex-direction:column;align-items:flex-start;gap:8px;min-width:220px;cursor:pointer;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div class="pm-kpi-icon" style="background:#7e22ce;flex-shrink:0;">
+                    <i class="fa-solid fa-file-circle-plus"></i>
+                </div>
+                <div>
+                    <div class="pm-kpi-label">Output Other</div>
+                    <div class="pm-kpi-value">${totalOther} <span style="font-size:12px;font-weight:400;color:#94a3b8;">item</span></div>
+                </div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                ${otherPill('fa-clock', '#fef2f2', '#dc2626', '#fecaca', otherBelumSiap + ' Belum Siap')}
+                ${otherPill('fa-check', '#f0fdf4', '#16a34a', '#bbf7d0', otherSiap + ' Siap')}
+                ${otherTerkirim ? otherPill('fa-paper-plane', '#eff6ff', '#1d4ed8', '#bfdbfe', otherTerkirim + ' Terkirim') : ''}
+            </div>
+        </div>`;
+
     // Card "Total Nilai" — isinya (BOQ Other/Sampling) belum ada di sini,
     // ditambahkan async dari loadBoqValueSummary()/updateBoqValueCard(). Nilai
     // BOQ-nya sendiri sudah tahu duluan (data.total_boq_amount) jadi langsung
@@ -1776,6 +1786,7 @@ function renderBoqSummary(data) {
             </div>
         </div>` +
         outputCard +
+        outputOtherCard +
         totalNilaiCard
     );
 }

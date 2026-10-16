@@ -9,25 +9,30 @@ function outputStatusBadge(status) {
     return `<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:${bg};color:${color};">${label}</span>`;
 }
 
+function outputOtherBadge() {
+    return '<span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;background:#f3e8ff;color:#7e22ce;border:1px solid #e9d5ff;">Other</span>';
+}
+
 function renderAssignedOutputsInner(outputs) {
     const TH = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:8px 12px;color:#64748b;font-weight:600;"';
     const TD = 'style="padding:8px 12px;vertical-align:middle;"';
 
     if (outputs && outputs.length) {
         const rows = outputs.map(function (item) {
-            return `<tr class="assigned-output-row" data-id="${item.id_output}">
-                <input type="hidden" name="selected_outputs[]" value="${item.id_output}">
+            const isOther = item.tipe === 'other';
+            return `<tr class="assigned-output-row" data-id="${item.id_output}" data-tipe="${isOther ? 'other' : 'pekerjaan'}">
+                <input type="hidden" name="${isOther ? 'selected_other[]' : 'selected_outputs[]'}" value="${item.id_output}">
                 <td ${TD} style="white-space:nowrap;">
                     ${item.id_wo
                         ? `<a href="/work-orders?open=${item.id_wo}" class="fw-semibold text-decoration-none" style="color:#1a56db;font-size:12px;">${escHtml(item.no_wo || '—')}</a>`
                         : `<span style="font-size:12px;color:#64748b;">${escHtml(item.no_wo || '—')}</span>`
                     }
                 </td>
-                <td ${TD}>${escHtml(item.judul_output)}</td>
+                <td ${TD}>${escHtml(item.judul_output)}${isOther ? ' ' + outputOtherBadge() : ''}</td>
                 <td ${TD}>${outputStatusBadge(item.status)}</td>
                 <td ${TD} style="text-align:right;white-space:nowrap;">
                     <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-remove-output-termin"
-                        data-id="${item.id_output}" data-no-disable style="font-size:11px;">
+                        data-id="${item.id_output}" data-tipe="${isOther ? 'other' : 'pekerjaan'}" data-no-disable style="font-size:11px;">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </td>

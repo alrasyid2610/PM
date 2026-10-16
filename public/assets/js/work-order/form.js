@@ -502,11 +502,6 @@ function renderForm(res) {
                             <select class="form-select form-select-sm" id="outputOtherModal-satuan" data-no-disable></select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold" style="font-size:12px;">Harga (Rp) <span class="text-danger">*</span></label>
-                            <input type="text" inputmode="numeric" class="form-control form-control-sm input-num-mask"
-                                id="outputOtherModal-harga" placeholder="0" data-no-disable>
-                        </div>
-                        <div class="col-md-4">
                             <label class="form-label fw-semibold" style="font-size:12px;">Status</label>
                             <select class="form-select form-select-sm" id="outputOtherModal-status" data-no-disable>
                                 <option value="belum_siap">Belum Siap</option>

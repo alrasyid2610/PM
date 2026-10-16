@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use App\Traits\HasAuditHistory;
 use App\Traits\HasAttachment;
 
@@ -99,7 +100,7 @@ class TerminController extends Controller
             'attachments.*' => 'nullable|file|max:153600',
         ]);
 
-        if ($request->boolean('is_dp') && !empty($request->input('selected_outputs', []))) {
+        if ($request->boolean('is_dp') && (!empty($request->input('selected_outputs', [])) || !empty($request->input('selected_other', [])))) {
             return response()->json([
                 'message' => 'Termin Down Payment (DP) tidak dapat memilih Output Pekerjaan.',
             ], 422);
@@ -135,6 +136,8 @@ class TerminController extends Controller
             ]);
         }
 
+        $this->claimOther((int) $id, $request->id_so, $request->input('selected_other', []), $judulTagihan);
+
         $after = DB::table('termin')->where('id_termin', $id)->get()->toJson();
         saveAudit('termin', $id, 'Create', '', $after);
 
@@ -157,13 +160,7 @@ class TerminController extends Controller
 
         $data->nama_pelanggan_billing = brDisplayName($data->entitas_pelanggan_billing, $data->nama_pelanggan_billing);
 
-        $data->assigned_outputs = DB::table('output_pekerjaan as op')
-            ->leftJoin('work_orders as wo', 'wo.id_wo', '=', 'op.id_wo')
-            ->where('op.id_termin', $id)
-            ->select('op.id_output', 'op.id_wo', 'op.judul_output', 'op.judul_tagihan', 'op.status', 'wo.no_wo')
-            ->orderBy('wo.no_wo')
-            ->orderBy('op.id_output')
-            ->get();
+        $data->assigned_outputs = $this->assignedOutputs((int) $id);
 
         return response()->json($data);
     }
@@ -184,13 +181,7 @@ class TerminController extends Controller
 
         $data->nama_pelanggan_billing = brDisplayName($data->entitas_pelanggan_billing, $data->nama_pelanggan_billing);
 
-        $data->assigned_outputs = DB::table('output_pekerjaan as op')
-            ->leftJoin('work_orders as wo', 'wo.id_wo', '=', 'op.id_wo')
-            ->where('op.id_termin', $id)
-            ->select('op.id_output', 'op.id_wo', 'op.judul_output', 'op.judul_tagihan', 'op.status', 'wo.no_wo')
-            ->orderBy('wo.no_wo')
-            ->orderBy('op.id_output')
-            ->get();
+        $data->assigned_outputs = $this->assignedOutputs((int) $id);
 
         return response()->json($data);
     }
@@ -210,6 +201,7 @@ class TerminController extends Controller
                 ->where('id_output', $idOutput)
                 ->update(['id_termin' => $id, 'updated_at' => now()]);
         }
+        $this->claimOther((int) $id, $termin->id_so ?? null, $request->input('ids_other', []));
         return response()->json(['success' => true]);
     }
 
@@ -220,6 +212,14 @@ class TerminController extends Controller
             ->where('id_output', $idOutput)
             ->where('id_termin', $id)
             ->update(['id_termin' => null, 'judul_tagihan' => null, 'updated_at' => now()]);
+
+        // Output Other (output_tambahan) dilepas lewat id terpisah
+        if ($request->filled('id_output_other') && $this->otherReady()) {
+            DB::table('output_tambahan')
+                ->where('id_output_tambahan', (int) $request->input('id_output_other'))
+                ->where('id_termin', $id)
+                ->update(['id_termin' => null, 'judul_tagihan' => null, 'updated_at' => now()]);
+        }
         return response()->json(['success' => true]);
     }
 
@@ -296,6 +296,27 @@ class TerminController extends Controller
             ->orderBy('op.id_output')
             ->get();
 
+        $outputs->each(fn ($o) => $o->tipe = 'pekerjaan');
+
+        // Output Other (output_tambahan): hanya yang berstatus Siap & belum ditagihkan
+        if ($this->otherReady()) {
+            $other = DB::table('output_tambahan as ot')
+                ->join('work_orders as wo', 'wo.id_wo', '=', 'ot.id_wo')
+                ->where('wo.id_so', $id_so)
+                ->whereNull('wo.deleted_at')
+                ->whereNull('ot.deleted_at')
+                ->where('ot.status', 'siap')
+                ->whereNull('ot.id_termin')
+                ->orderBy('wo.no_wo')
+                ->orderBy('ot.id_output_tambahan')
+                ->get([
+                    'ot.id_output_tambahan as id_output', 'ot.nama_item as judul_output',
+                    'ot.status', 'ot.tanggal_selesai', 'wo.no_wo', 'wo.id_wo',
+                ]);
+            $other->each(fn ($o) => $o->tipe = 'other');
+            $outputs = $outputs->concat($other)->sortBy('no_wo')->values();
+        }
+
         return response()->json($outputs);
     }
 
@@ -311,7 +332,7 @@ class TerminController extends Controller
             'id_so'      => 'nullable|integer',
         ]);
 
-        if ($request->boolean('is_dp') && !empty($request->input('selected_outputs', []))) {
+        if ($request->boolean('is_dp') && (!empty($request->input('selected_outputs', [])) || !empty($request->input('selected_other', [])))) {
             return response()->json([
                 'message' => 'Termin Down Payment (DP) tidak dapat memilih Output Pekerjaan.',
             ], 422);
@@ -369,6 +390,16 @@ class TerminController extends Controller
             ]);
         }
 
+        // Sinkronisasi Output Other
+        if ($this->otherReady()) {
+            $selectedOther = array_map('intval', $request->input('selected_other', []));
+            DB::table('output_tambahan')
+                ->where('id_termin', $id)
+                ->when($selectedOther, fn ($q) => $q->whereNotIn('id_output_tambahan', $selectedOther))
+                ->update(['id_termin' => null, 'judul_tagihan' => null, 'updated_at' => now()]);
+            $this->claimOther((int) $id, $request->id_so, $selectedOther, $judulTagihan);
+        }
+
         $after = DB::table('termin')->where('id_termin', $id)->get()->toJson();
         saveAudit('termin', $id, 'update', $before, $after);
 
@@ -381,6 +412,12 @@ class TerminController extends Controller
         DB::table('output_pekerjaan')
             ->where('id_termin', $id)
             ->update(['id_termin' => null, 'judul_tagihan' => null, 'updated_at' => now()]);
+
+        if ($this->otherReady()) {
+            DB::table('output_tambahan')
+                ->where('id_termin', $id)
+                ->update(['id_termin' => null, 'judul_tagihan' => null, 'updated_at' => now()]);
+        }
 
         DB::table('termin')->where('id_termin', $id)->delete();
 
@@ -414,6 +451,70 @@ class TerminController extends Controller
                 'text' => $item->nomor . ' - ' . $item->nama,
             ])
         );
+    }
+
+    /** Kolom id_termin di output_tambahan baru ada setelah migration dijalankan. */
+    private function otherReady(): bool
+    {
+        return Schema::hasColumn('output_tambahan', 'id_termin');
+    }
+
+    /**
+     * Pasang Output Other ke Termin. Hanya yang milik WO dari SO yang sama, berstatus Siap,
+     * dan belum ditagihkan (atau sudah milik Termin ini) yang diterima; id lain diabaikan.
+     */
+    private function claimOther(int $idTermin, $idSo, array $ids, array $judulTagihan = []): void
+    {
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if (!$ids || !$idSo || !$this->otherReady()) return;
+
+        $valid = DB::table('output_tambahan as ot')
+            ->join('work_orders as wo', 'wo.id_wo', '=', 'ot.id_wo')
+            ->where('wo.id_so', $idSo)
+            ->whereNull('wo.deleted_at')
+            ->whereNull('ot.deleted_at')
+            ->whereIn('ot.id_output_tambahan', $ids)
+            ->where(function ($q) use ($idTermin) {
+                $q->where('ot.id_termin', $idTermin)
+                  ->orWhere(fn ($n) => $n->whereNull('ot.id_termin')->where('ot.status', 'siap'));
+            })
+            ->pluck('ot.id_output_tambahan');
+
+        foreach ($valid as $idOther) {
+            DB::table('output_tambahan')->where('id_output_tambahan', $idOther)->update([
+                'id_termin'     => $idTermin,
+                'judul_tagihan' => $judulTagihan[$idOther] ?? null,
+                'updated_at'    => now(),
+            ]);
+        }
+    }
+
+    /** Output yang sudah ditagihkan di Termin: Output Pekerjaan + Output Other. */
+    private function assignedOutputs(int $idTermin)
+    {
+        $rows = DB::table('output_pekerjaan as op')
+            ->leftJoin('work_orders as wo', 'wo.id_wo', '=', 'op.id_wo')
+            ->where('op.id_termin', $idTermin)
+            ->select('op.id_output', 'op.id_wo', 'op.judul_output', 'op.judul_tagihan', 'op.status', 'wo.no_wo')
+            ->orderBy('wo.no_wo')
+            ->orderBy('op.id_output')
+            ->get();
+        $rows->each(fn ($o) => $o->tipe = 'pekerjaan');
+
+        if ($this->otherReady()) {
+            $other = DB::table('output_tambahan as ot')
+                ->leftJoin('work_orders as wo', 'wo.id_wo', '=', 'ot.id_wo')
+                ->where('ot.id_termin', $idTermin)
+                ->whereNull('ot.deleted_at')
+                ->select('ot.id_output_tambahan as id_output', 'ot.id_wo', 'ot.nama_item as judul_output', 'ot.judul_tagihan', 'ot.status', 'wo.no_wo')
+                ->orderBy('wo.no_wo')
+                ->orderBy('ot.id_output_tambahan')
+                ->get();
+            $other->each(fn ($o) => $o->tipe = 'other');
+            $rows = $rows->concat($other)->sortBy('no_wo')->values();
+        }
+
+        return $rows;
     }
 
     private function generateNoTermin(): string

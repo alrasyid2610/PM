@@ -104,13 +104,16 @@ $(document).ready(function () {
     $(document).on('click', '.btn-remove-output-termin', function () {
         var $row = $(this).closest('tr.assigned-output-row');
         var idOutput = $(this).data('id');
+        var isOther  = $(this).data('tipe') === 'other';
         var terminId = page.selectedRow.id;
 
         Notify.confirm('Hapus output ini dari tagihan?', function () {
             $.ajax({
                 url: window.route.update + terminId + '/remove-output',
                 method: 'POST',
-                data: { _token: window.route.csrf, id_output: idOutput },
+                data: isOther
+                    ? { _token: window.route.csrf, id_output_other: idOutput }
+                    : { _token: window.route.csrf, id_output: idOutput },
                 success: function () {
                     $row.remove();
                     if ($('#assignedOutputsTbody tr').length === 0) {
@@ -161,13 +164,14 @@ $(document).ready(function () {
                         '<td ' + TD + ' style="text-align:center;">' +
                             '<input type="checkbox" class="form-check-input output-pick-check"' +
                             ' data-id="' + item.id_output + '"' +
+                            ' data-tipe="' + (item.tipe === 'other' ? 'other' : 'pekerjaan') + '"' +
                             ' data-wo="' + escHtml(item.no_wo || '') + '"' +
                             ' data-wo-id="' + (item.id_wo || '') + '"' +
                             ' data-judul="' + escHtml(item.judul_output) + '"' +
                             ' data-status="' + escHtml(item.status || '') + '"' +
                             ' data-tgl-selesai="' + tglSelesai + '">' +
                         '</td>' +
-                        '<td ' + TD + '>' + escHtml(item.judul_output) + '</td>' +
+                        '<td ' + TD + '>' + escHtml(item.judul_output) + (item.tipe === 'other' ? ' ' + outputOtherBadge() : '') + '</td>' +
                         '<td ' + TD + '>' + outputStatusBadge(item.status) + '</td>' +
                         '<td ' + TD + ' style="white-space:nowrap;color:#64748b;font-size:12px;">' + (tglSelesai || '—') + '</td>' +
                     '</tr>';
@@ -375,8 +379,10 @@ $(document).ready(function () {
             return;
         }
 
-        var ids = [];
-        $checked.each(function () { ids.push($(this).data('id')); });
+        var ids = [], idsOther = [];
+        $checked.each(function () {
+            ($(this).data('tipe') === 'other' ? idsOther : ids).push($(this).data('id'));
+        });
 
         var terminId = page.selectedRow.id;
         var $btn = $(this);
@@ -385,29 +391,31 @@ $(document).ready(function () {
         $.ajax({
             url: window.route.update + terminId + '/add-output',
             method: 'POST',
-            data: { _token: window.route.csrf, ids: ids },
+            data: { _token: window.route.csrf, ids: ids, ids_other: idsOther },
             success: function () {
                 var $tbody = $('#assignedOutputsTbody');
                 $checked.each(function () {
                     var id     = $(this).data('id');
+                    var isOther = $(this).data('tipe') === 'other';
+                    var fieldName = isOther ? 'selected_other[]' : 'selected_outputs[]';
                     var wo     = $(this).data('wo');
                     var judul  = $(this).data('judul');
                     var status = $(this).data('status') || '';
-                    if ($('input[name="selected_outputs[]"][value="' + id + '"]').length) return;
+                    if ($('input[name="' + fieldName + '"][value="' + id + '"]').length) return;
                     $tbody.append(
-                        '<tr class="assigned-output-row" data-id="' + id + '">' +
-                        '<input type="hidden" name="selected_outputs[]" value="' + id + '">' +
+                        '<tr class="assigned-output-row" data-id="' + id + '" data-tipe="' + (isOther ? 'other' : 'pekerjaan') + '">' +
+                        '<input type="hidden" name="' + fieldName + '" value="' + id + '">' +
                         '<td ' + TD_STYLE + ' style="white-space:nowrap;">' +
                             ($(this).data('wo-id')
                                 ? '<a href="/work-orders?open=' + $(this).data('wo-id') + '" class="fw-semibold text-decoration-none" style="color:#1a56db;font-size:12px;">' + escHtml(wo) + '</a>'
                                 : '<span style="font-size:12px;color:#64748b;">' + escHtml(wo) + '</span>'
                             ) +
                         '</td>' +
-                        '<td ' + TD_STYLE + '>' + escHtml(judul) + '</td>' +
+                        '<td ' + TD_STYLE + '>' + escHtml(judul) + (isOther ? ' ' + outputOtherBadge() : '') + '</td>' +
                         '<td ' + TD_STYLE + '>' + outputStatusBadge(status) + '</td>' +
                         '<td ' + TD_STYLE + ' style="text-align:right;">' +
                             '<button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-remove-output-termin" ' +
-                            'data-id="' + id + '" data-no-disable style="font-size:11px;">' +
+                            'data-id="' + id + '" data-tipe="' + (isOther ? 'other' : 'pekerjaan') + '" data-no-disable style="font-size:11px;">' +
                             '<i class="fa-solid fa-trash"></i></button>' +
                         '</td></tr>'
                     );
