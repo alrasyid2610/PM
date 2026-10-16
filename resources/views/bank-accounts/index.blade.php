@@ -41,6 +41,7 @@
         atas_nama:   'Atas Nama',
         keterangan:  'Keterangan',
         is_utama:    'Utama',
+        is_ppn:      'PPN',
     };
 </script>
 <script src="{{ asset('assets/js/bank-accounts/form.js') }}"></script>

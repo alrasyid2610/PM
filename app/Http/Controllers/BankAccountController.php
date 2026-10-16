@@ -38,14 +38,17 @@ class BankAccountController extends Controller
             ->whereNull('deleted_at')
             ->orderBy('bank')
             ->orderBy('atas_nama')
-            ->select(['id_bank_account', 'bank', 'no_rekening', 'atas_nama', 'keterangan', 'is_utama']);
+            ->select(['id_bank_account', 'bank', 'no_rekening', 'atas_nama', 'keterangan', 'is_utama', 'is_ppn']);
 
         return DataTables::of($query)
             ->addIndexColumn()
             ->editColumn('is_utama', fn ($row) => $row->is_utama
                 ? '<span class="pm-badge pm-badge--blue">Utama</span>'
                 : '<span class="text-muted">—</span>')
-            ->rawColumns(['is_utama'])
+            ->editColumn('is_ppn', fn ($row) => $row->is_ppn
+                ? '<span class="pm-badge pm-badge--blue">PPN</span>'
+                : '<span class="text-muted">—</span>')
+            ->rawColumns(['is_utama', 'is_ppn'])
             ->make(true);
     }
 
@@ -72,6 +75,7 @@ class BankAccountController extends Controller
             'atas_nama'   => $validated['atas_nama'],
             'bank'        => $validated['bank'],
             'keterangan'  => $validated['keterangan'] ?? null,
+            'is_ppn'      => $request->boolean('is_ppn') ? 1 : 0,
             'created_at'  => now(),
             'updated_at'  => now(),
         ]);
@@ -107,6 +111,7 @@ class BankAccountController extends Controller
             'atas_nama'   => $validated['atas_nama'],
             'bank'        => $validated['bank'],
             'keterangan'  => $validated['keterangan'] ?? null,
+            'is_ppn'      => $request->boolean('is_ppn') ? 1 : 0,
             'updated_at'  => now(),
         ]);
         $this->setUtama((int) $id, $request->boolean('is_utama'));

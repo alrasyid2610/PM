@@ -433,6 +433,18 @@ function sqStatusAction(url, data, doneMsg) {
             setTimeout(function () { window.location.reload(); }, 800);
         },
         error: function (xhr) {
+            const alasan = xhr.responseJSON && xhr.responseJSON.alasan;
+            if (alasan && alasan.length) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'SQ belum bisa difinalkan',
+                    html: '<ul style="text-align:left;margin:0;padding-left:18px;">'
+                        + alasan.map(function (a) { return '<li>' + $('<div>').text(a).html() + '</li>'; }).join('')
+                        + '</ul>',
+                    confirmButtonText: 'Oke',
+                });
+                return;
+            }
             Notify.error((xhr.responseJSON && xhr.responseJSON.message) || 'Aksi gagal diproses.');
         },
     });

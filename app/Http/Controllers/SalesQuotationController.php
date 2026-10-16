@@ -114,6 +114,15 @@ class SalesQuotationController extends Controller
         return $prefix . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
     }
 
+    /** Nomor FWO SQ berikutnya — sama dengan SqFieldworkController::generateNoSqFwo() (dipakai saat revisi menyalin FWO). */
+    private function generateNoSqFwo(): string
+    {
+        $prefix = 'SQFWO-' . now()->format('y') . '-';
+        $latest = DB::table('sq_fieldworks')->where('no_sq_fwo', 'like', $prefix . '%')->orderByDesc('id_sq_fwo')->first();
+        $newNumber = $latest ? ((int) substr($latest->no_sq_fwo, -4)) + 1 : 1;
+        return $prefix . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
+    }
+
     private function generateNoSq(): string
     {
         $year = now()->format('y');
@@ -242,15 +251,63 @@ class SalesQuotationController extends Controller
         if ($sq->status !== 'draft') {
             return response()->json(['message' => 'Hanya SQ berstatus Draft yang bisa difinalkan.'], 422);
         }
-        if (!DB::table('sq_work_orders')->where('id_sq', $id)->exists()) {
-            return response()->json(['message' => 'Tambahkan minimal 1 Work Order sebelum memfinalkan SQ.'], 422);
+        // Semua syarat dikumpulkan dulu supaya user melihat seluruh kekurangan sekaligus
+        $alasan = [];
+
+        $woIds = DB::table('sq_work_orders')->where('id_sq', $id)->pluck('id_sq_wo');
+        if ($woIds->isEmpty()) {
+            $alasan[] = 'Tambahkan minimal 1 Work Order.';
+        } else {
+            // Minimal 1 BOQ: BOQ, BOQ Other, atau BOQ Sampling (boleh di WO mana saja)
+            $adaBoq = DB::table('sq_boq')->whereIn('id_sq_wo', $woIds)->exists()
+                || DB::table('sq_boq_tambahan')->whereIn('id_sq_wo', $woIds)->exists();
+            if (!$adaBoq) {
+                $alasan[] = 'Minimal harus ada 1 BOQ (BOQ, BOQ Other, atau BOQ Sampling).';
+            }
+
+            // Minimal 1 Budget: Budget Plan WO atau Budget Plan FWO
+            $fwoIds = DB::table('sq_fieldworks')->whereIn('id_sq_wo', $woIds)->pluck('id_sq_fwo');
+            $adaBudget = DB::table('sq_wo_budgets')->whereIn('id_sq_wo', $woIds)->exists()
+                || ($fwoIds->isNotEmpty() && DB::table('sq_fwo_budgets')->whereIn('id_sq_fwo', $fwoIds)->exists());
+            if (!$adaBudget) {
+                $alasan[] = 'Minimal harus ada 1 Budget (Budget WO atau Budget FWO).';
+            }
+
+            // Setiap FWO yang sudah dibuat wajib punya Budget Plan sendiri
+            if ($fwoIds->isNotEmpty()) {
+                $fwoPunyaBudget = DB::table('sq_fwo_budgets')->whereIn('id_sq_fwo', $fwoIds)->pluck('id_sq_fwo')->unique();
+                $tanpaBudget = DB::table('sq_fieldworks')
+                    ->whereIn('id_sq_fwo', $fwoIds->diff($fwoPunyaBudget))
+                    ->orderBy('id_sq_wo')->orderBy('urutan')->orderBy('id_sq_fwo')
+                    ->pluck('no_sq_fwo');
+                if ($tanpaBudget->isNotEmpty()) {
+                    $daftar = $tanpaBudget->take(5)->implode(', ') . ($tanpaBudget->count() > 5 ? ', dan ' . ($tanpaBudget->count() - 5) . ' lainnya' : '');
+                    $alasan[] = "{$tanpaBudget->count()} FWO belum punya Budget: {$daftar}. Setiap FWO wajib punya Budget.";
+                }
+
+                // ...dan minimal 1 BOQ FWO
+                $fwoPunyaBoq = DB::table('sq_fieldwork_boq')->whereIn('id_sq_fwo', $fwoIds)->pluck('id_sq_fwo')->unique();
+                $tanpaBoq = DB::table('sq_fieldworks')
+                    ->whereIn('id_sq_fwo', $fwoIds->diff($fwoPunyaBoq))
+                    ->orderBy('id_sq_wo')->orderBy('urutan')->orderBy('id_sq_fwo')
+                    ->pluck('no_sq_fwo');
+                if ($tanpaBoq->isNotEmpty()) {
+                    $daftar = $tanpaBoq->take(5)->implode(', ') . ($tanpaBoq->count() > 5 ? ', dan ' . ($tanpaBoq->count() - 5) . ' lainnya' : '');
+                    $alasan[] = "{$tanpaBoq->count()} FWO belum punya BOQ FWO: {$daftar}. Setiap FWO wajib punya minimal 1 BOQ FWO.";
+                }
+            }
         }
 
         // Semua isian poin keterangan (rekening, kontak, dst.) harus terisi sebelum SQ dikunci
         $belumLengkap = SqKeterangan::yangBelumLengkap((int) $id);
         if ($belumLengkap) {
+            $alasan[] = 'Keterangan penawaran belum lengkap (tab Keterangan): ' . implode('; ', $belumLengkap) . '.';
+        }
+
+        if ($alasan) {
             return response()->json([
-                'message' => 'Keterangan penawaran belum lengkap: ' . implode('; ', $belumLengkap) . '. Lengkapi isian di tab Keterangan.',
+                'message' => 'SQ belum bisa difinalkan: ' . implode(' ', $alasan),
+                'alasan'  => $alasan,
             ], 422);
         }
 
@@ -348,6 +405,7 @@ class SalesQuotationController extends Controller
                 $wd['updated_at'] = now();
                 $newWoId = DB::table('sq_work_orders')->insertGetId($wd);
 
+                $boqMap = []; // id_sq_boq lama → baru (dipakai BOQ FWO)
                 foreach (DB::table('sq_boq')->where('id_sq_wo', $wo->id_sq_wo)->get() as $b) {
                     $bd = (array) $b;
                     unset($bd['id_sq_boq']);
@@ -355,6 +413,7 @@ class SalesQuotationController extends Controller
                     $bd['created_at'] = now();
                     $bd['updated_at'] = now();
                     $newBoqId = DB::table('sq_boq')->insertGetId($bd);
+                    $boqMap[$b->id_sq_boq] = $newBoqId;
 
                     $items = DB::table('sq_boq_items')->where('id_sq_boq', $b->id_sq_boq)->pluck('id_testing_item');
                     if ($items->isNotEmpty()) {
@@ -389,6 +448,57 @@ class SalesQuotationController extends Controller
                         $bid['created_at'] = now();
                         $bid['updated_at'] = now();
                         DB::table('sq_wo_budget_items')->insert($bid);
+                    }
+                }
+
+                // FWO + BOQ FWO (+ item) + Budget FWO (+ item). Sebelum 2026-10-16 bagian ini tidak ikut
+                // tersalin, jadi revisi diam-diam kehilangan semua FWO.
+                foreach (DB::table('sq_fieldworks')->where('id_sq_wo', $wo->id_sq_wo)->orderBy('urutan')->orderBy('id_sq_fwo')->get() as $f) {
+                    $fd = (array) $f;
+                    unset($fd['id_sq_fwo']);
+                    $fd['id_sq_wo'] = $newWoId;
+                    $fd['no_sq_fwo'] = $this->generateNoSqFwo(); // nomor identitas harus unik, tidak diwariskan
+                    $fd['created_at'] = now();
+                    $fd['updated_at'] = now();
+                    $newFwoId = DB::table('sq_fieldworks')->insertGetId($fd);
+
+                    foreach (DB::table('sq_fieldwork_boq')->where('id_sq_fwo', $f->id_sq_fwo)->get() as $fb) {
+                        // BOQ WO sumbernya sudah tersalin di atas; lewati bila tidak ditemukan (data yatim)
+                        if (!isset($boqMap[$fb->id_sq_boq])) continue;
+                        $fbd = (array) $fb;
+                        unset($fbd['id_sq_fwo_boq']);
+                        $fbd['id_sq_fwo'] = $newFwoId;
+                        $fbd['id_sq_boq'] = $boqMap[$fb->id_sq_boq];
+                        $fbd['created_at'] = now();
+                        $fbd['updated_at'] = now();
+                        $newFwoBoqId = DB::table('sq_fieldwork_boq')->insertGetId($fbd);
+
+                        foreach (DB::table('sq_fieldwork_boq_items')->where('id_sq_fwo_boq', $fb->id_sq_fwo_boq)->get() as $fi) {
+                            $fid = (array) $fi;
+                            unset($fid['id_sq_fwo_boq_item']);
+                            $fid['id_sq_fwo_boq'] = $newFwoBoqId;
+                            $fid['created_at'] = now();
+                            $fid['updated_at'] = now();
+                            DB::table('sq_fieldwork_boq_items')->insert($fid);
+                        }
+                    }
+
+                    foreach (DB::table('sq_fwo_budgets')->where('id_sq_fwo', $f->id_sq_fwo)->get() as $fbp) {
+                        $fbpd = (array) $fbp;
+                        unset($fbpd['id_sq_budget']);
+                        $fbpd['id_sq_fwo'] = $newFwoId;
+                        $fbpd['created_at'] = now();
+                        $fbpd['updated_at'] = now();
+                        $newFwoBudgetId = DB::table('sq_fwo_budgets')->insertGetId($fbpd);
+
+                        foreach (DB::table('sq_fwo_budget_items')->where('id_sq_budget', $fbp->id_sq_budget)->get() as $fbi) {
+                            $fbid = (array) $fbi;
+                            unset($fbid['id_sq_budget_item']);
+                            $fbid['id_sq_budget'] = $newFwoBudgetId;
+                            $fbid['created_at'] = now();
+                            $fbid['updated_at'] = now();
+                            DB::table('sq_fwo_budget_items')->insert($fbid);
+                        }
                     }
                 }
             }

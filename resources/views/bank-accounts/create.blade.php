@@ -53,6 +53,14 @@
                             </label>
                         </div>
                     </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" name="is_ppn" id="create_is_ppn" class="form-check-input" value="1">
+                            <label class="form-check-label" for="create_is_ppn">
+                                Rekening PPN <span class="text-muted">(rekening ini dipakai untuk pembayaran PPN)</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </x-section-card>
         </div>
