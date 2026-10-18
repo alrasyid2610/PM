@@ -17,12 +17,20 @@ trait HasAuditHistory
         'wo_budgets'        => 'Budget — Plan',
         'wo_budget_actuals' => 'Budget — Realisasi',
         'lab_samples'       => 'Lab Sample Reg',
+        'fieldworks'        => 'Fieldwork Order',
+        'fieldwork_boq'     => 'BOQ',
+        'fwo_boq_tambahan'  => 'BOQ Other',
+        'fieldwork_personels' => 'Personel',
+        'fieldwork_attachments' => 'Lampiran',
+        'fwo_budgets'       => 'Budget — Plan',
+        'fwo_budget_actuals' => 'Budget — Realisasi',
     ];
 
     /** Kolom kunci/teknis tabel anak yang tidak perlu tampil sebagai perubahan. */
     private const AUDIT_EXCLUDE_ANAK = [
         'id_boq_tambahan', 'id_output_tambahan', 'id_output', 'id_budget', 'id_actual',
         'id_lab_sample', 'id_wo', 'id_budget_item', 'deleted_at', 'akun', 'plan',
+        'id_fwo', 'id_fwo_boq', 'id_fwo_boq_tambahan',
     ];
 
     public function history($id)
@@ -93,7 +101,7 @@ trait HasAuditHistory
                 }
 
                 if ($parentTable) {
-                    $changes = $this->auditTerjemahkanId($changes);
+                    $changes = $this->auditTerjemahkanId($changes, $log->nama_table);
                 }
 
                 $hasil = [
@@ -107,12 +115,15 @@ trait HasAuditHistory
 
                 if ($parentTable) {
                     $snap = $new ?: $old;
-                    $hasil['bagian'] = $this->auditBagian($log->nama_table, $snap);
+                    $hasil['bagian'] = $this->auditBagian($log->nama_table, $snap, $table, $parentTable);
                     $hasil['label']  = $anak ? $this->auditLabel($snap) : null;
                 }
 
                 return $hasil;
-            });
+            })
+            // Log lama berisi update tanpa perubahan (hanya updated_at) disembunyikan di History modul induk
+            ->filter(fn ($l) => !($parentTable && $l['action'] === 'update' && $l['total_changes'] === 0))
+            ->values();
 
         return response()->json($logs);
     }
@@ -128,11 +139,21 @@ trait HasAuditHistory
         'id_pic_pelanggan_pekerjaan' => ['users', 'id', 'name'],
     ];
 
+    /** Penimpa untuk log tabel `fieldworks`. */
+    private const AUDIT_ID_FWO = [
+        'id_pic_pelanggan_pekerjaan' => ['business_relation_contacts', 'id_contact', 'nama_pic'],
+        'id_penyelia'                => ['users', 'id', 'name'],
+        'id_wo'                      => ['work_orders', 'id_wo', 'no_wo'],
+    ];
+
     /** Ganti nilai id pada daftar perubahan dengan namanya (nilai yang tidak ditemukan dibiarkan). */
-    private function auditTerjemahkanId(array $changes): array
+    private function auditTerjemahkanId(array $changes, string $namaTable = ''): array
     {
+        // Di FWO, field kontak/penyelia merujuk tabel berbeda dari WO
+        $petaId = $namaTable === 'fieldworks' ? array_merge(self::AUDIT_ID_KE_NAMA, self::AUDIT_ID_FWO) : self::AUDIT_ID_KE_NAMA;
+
         foreach ($changes as &$c) {
-            $peta = self::AUDIT_ID_KE_NAMA[$c['field']] ?? null;
+            $peta = $petaId[$c['field']] ?? null;
             if (!$peta) continue;
 
             foreach (['old_value', 'new_value'] as $k) {
@@ -145,11 +166,16 @@ trait HasAuditHistory
         return $changes;
     }
 
-    private function auditBagian(string $namaTable, $snap): string
+    private function auditBagian(string $namaTable, $snap, string $table = '', ?string $parentTable = null): string
     {
-        if ($namaTable === 'boq_tambahan' && is_array($snap) && ($snap['jenis'] ?? null) === 'sampling') {
+        // Log milik tabel modul ini sendiri
+        if ($namaTable === $table) return 'Informasi';
+
+        if (in_array($namaTable, ['boq_tambahan', 'fwo_boq_tambahan'], true) && is_array($snap) && ($snap['jenis'] ?? null) === 'sampling') {
             return 'BOQ Sampling';
         }
+        // Sample di FWO disebut Sample, di WO disebut Lab Sample Reg
+        if ($namaTable === 'lab_samples' && $parentTable === 'fieldworks') return 'Sample';
 
         return self::AUDIT_BAGIAN[$namaTable] ?? $namaTable;
     }
@@ -159,7 +185,7 @@ trait HasAuditHistory
     {
         if (!is_array($snap)) return null;
 
-        foreach (['nama_item', 'judul_output', 'label', 'no_sample'] as $k) {
+        foreach (['nama_item', 'judul_output', 'label', 'no_sample', 'no_fwo'] as $k) {
             if (!empty($snap[$k])) return (string) $snap[$k];
         }
         if (!empty($snap['akun'])) {

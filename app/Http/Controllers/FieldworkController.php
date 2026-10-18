@@ -12,6 +12,19 @@ class FieldworkController extends Controller
 {
     use HasAuditHistory;
 
+    // History FWO juga menampilkan tab BOQ, BOQ Other/Sampling, Personel, Lampiran, Budget, Sample
+    protected function auditParentTable(): ?string
+    {
+        return 'fieldworks';
+    }
+
+    /** Induk WO dari FWO (log FWO ikut tampil di History WO, tab Fieldwork Orders). */
+    private function parentWo($idFwo): ?array
+    {
+        $idWo = DB::table('fieldworks')->where('id_fwo', $idFwo)->value('id_wo');
+        return $idWo ? ['work_orders', $idWo] : null;
+    }
+
     protected function auditTable(): string
     {
         return 'fieldworks';
@@ -161,6 +174,7 @@ class FieldworkController extends Controller
             'personels.*.role'          => 'nullable|string|max:500',
         ]);
 
+        $before = $this->personelSnapshot($id);
         DB::table('fieldwork_personels')->where('id_fwo', $id)->delete();
 
         if (!empty($validated['personels'])) {
@@ -173,6 +187,11 @@ class FieldworkController extends Controller
                     'updated_at'   => now(),
                 ], $validated['personels'])
             );
+        }
+
+        $after = $this->personelSnapshot($id);
+        if ($before !== $after) {
+            saveAudit('fieldwork_personels', $id, 'Update', json_encode([$before]), json_encode([$after]), ['fieldworks', $id]);
         }
 
         return response()->json(['success' => true, 'message' => 'Personel berhasil diperbarui']);
@@ -256,7 +275,7 @@ class FieldworkController extends Controller
         }
 
         $after = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
-        saveAudit('fieldworks', $id, 'create', null, $after);
+        saveAudit('fieldworks', $id, 'create', null, $after, $this->parentWo($id));
 
         return response()->json(['success' => true, 'message' => 'Fieldwork berhasil disimpan', 'id_fwo' => $id]);
     }
@@ -293,9 +312,35 @@ class FieldworkController extends Controller
         ]);
 
         $after = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
-        saveAudit('fieldworks', $id, 'update', $before, $after);
+        saveAudit('fieldworks', $id, 'update', $before, $after, $this->parentWo($id));
 
         return response()->json(['success' => true, 'message' => 'Fieldwork berhasil diperbarui']);
+    }
+
+    /** Snapshot personel FWO: satu field per orang ("Personel • Nama" => peran) agar diff hanya menampilkan yang berubah. */
+    private function personelSnapshot($idFwo): array
+    {
+        $hasil = [];
+        $rows = DB::table('fieldwork_personels as fp')
+            ->leftJoin('personnel as p', 'p.id_personnel', '=', 'fp.id_personnel')
+            ->where('fp.id_fwo', $idFwo)->orderBy('fp.id_fwo_personel')->get(['p.nama', 'fp.role']);
+        foreach ($rows as $r) {
+            $kunci = 'Personel • ' . ($r->nama ?? '?');
+            for ($n = 2; isset($hasil[$kunci]); $n++) $kunci = 'Personel • ' . ($r->nama ?? '?') . " ($n)";
+            $hasil[$kunci] = $r->role ?: '-';
+        }
+        return $hasil;
+    }
+
+    /** Snapshot lampiran FWO: satu field per jenis lampiran ("Lampiran • Jenis" => jumlah file). */
+    private function lampiranSnapshot($idFwo): array
+    {
+        $json = DB::table('fieldworks')->where('id_fwo', $idFwo)->value('attachments');
+        $hasil = [];
+        foreach ((json_decode($json ?? '[]', true) ?: []) as $g) {
+            $hasil['Lampiran • ' . ($g['type'] ?? '?')] = count($g['files'] ?? []) . ' file';
+        }
+        return $hasil;
     }
 
     public function updateAttachments(Request $request, $id)
@@ -311,6 +356,7 @@ class FieldworkController extends Controller
 
         $groups = $request->input('groups', []);
         $result = [];
+        $lampiranBefore = $this->lampiranSnapshot($id);
 
         foreach ($groups as $i => $group) {
             $existing = $group['existing'] ?? [];
@@ -334,6 +380,11 @@ class FieldworkController extends Controller
             'attachments' => $result ? json_encode($result) : null,
             'updated_at'  => now(),
         ]);
+
+        $lampiranAfter = $this->lampiranSnapshot($id);
+        if ($lampiranBefore !== $lampiranAfter) {
+            saveAudit('fieldwork_attachments', $id, 'Update', json_encode([$lampiranBefore]), json_encode([$lampiranAfter]), ['fieldworks', $id]);
+        }
 
         return response()->json(['success' => true, 'message' => 'Attachment berhasil disimpan']);
     }
@@ -455,7 +506,7 @@ class FieldworkController extends Controller
             'updated_at' => now(),
         ]);
         $after = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
-        saveAudit('fieldworks', $id, 'update', $before, $after);
+        saveAudit('fieldworks', $id, 'update', $before, $after, $this->parentWo($id));
 
         return response()->json(['success' => true, 'message' => 'FWO berhasil diselesaikan']);
     }
@@ -465,7 +516,7 @@ class FieldworkController extends Controller
         $before = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
         DB::table('fieldworks')->where('id_fwo', $id)->update(['deleted_at' => now()]);
         $after = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
-        saveAudit('fieldworks', $id, 'delete', $before, $after);
+        saveAudit('fieldworks', $id, 'delete', $before, $after, $this->parentWo($id));
         return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
     }
 
@@ -671,7 +722,7 @@ class FieldworkController extends Controller
         });
 
         $after = DB::table('fieldworks')->where('id_fwo', $newId)->get()->toJson();
-        saveAudit('fieldworks', $newId, 'create', null, $after);
+        saveAudit('fieldworks', $newId, 'create', null, $after, $this->parentWo($newId));
 
         return response()->json([
             'success' => true,

@@ -108,6 +108,23 @@ class LabSampleController extends Controller
     }
 
     // Generate otomatis slot yang belum ada hingga qty, dengan no_sample auto-format
+    /** Snapshot 1 sample (JSON) untuk audit log. */
+    private function sampleJson($id): string
+    {
+        return DB::table('lab_samples')->where('id_lab_sample', $id)->get()->toJson();
+    }
+
+    private function parentFwo($idFwo): ?array
+    {
+        return $idFwo ? ['fieldworks', $idFwo] : null;
+    }
+
+    /** Catat aksi massal sebagai 1 baris ringkasan (bukan 1 baris per sample). */
+    private function auditRingkasan($idSample, string $aksi, string $ringkasan, $idFwo): void
+    {
+        saveAudit('lab_samples', $idSample, $aksi, '', json_encode(['ringkasan' => $ringkasan]), $this->parentFwo($idFwo));
+    }
+
     public function generateSlots(Request $request, $id_fwo_boq)
     {
         $boq = DB::table('fieldwork_boq')->where('id_fwo_boq', $id_fwo_boq)->first();
@@ -124,6 +141,8 @@ class LabSampleController extends Controller
 
         $existingUruts = $existing->pluck('no_urut')->toArray();
         $toCreate = [];
+        $idPertama = null;
+        $jumlahBaru = 0;
 
         for ($i = 1; $i <= $boq->qty; $i++) {
             if (!in_array($i, $existingUruts)) {
@@ -138,9 +157,15 @@ class LabSampleController extends Controller
                     'updated_at' => now(),
                 ];
                 // Insert satu per satu agar nextNoSample() dapat sequence yang benar
-                DB::table('lab_samples')->insert(end($toCreate));
+                $idBaru = DB::table('lab_samples')->insertGetId(end($toCreate));
                 array_pop($toCreate);
+                $idPertama ??= $idBaru;
+                $jumlahBaru++;
             }
+        }
+
+        if ($jumlahBaru > 0) {
+            $this->auditRingkasan($idPertama, 'Create', "Membuat {$jumlahBaru} slot sample untuk BOQ FWO #{$id_fwo_boq}", $boq->id_fwo);
         }
 
         return response()->json(['success' => true, 'message' => 'Slot berhasil dibuat.']);
@@ -178,6 +203,8 @@ class LabSampleController extends Controller
             'updated_at' => now(),
         ]);
 
+        saveAudit('lab_samples', $id, 'Create', '', $this->sampleJson($id), $this->parentFwo($boq->id_fwo));
+
         return response()->json(['success' => true, 'id_lab_sample' => $id]);
     }
 
@@ -190,7 +217,9 @@ class LabSampleController extends Controller
             return response()->json(['success' => false, 'message' => 'FWO sudah selesai.'], 403);
         }
 
+        $before = $this->sampleJson($id);
         DB::table('lab_samples')->where('id_lab_sample', $id)->delete();
+        saveAudit('lab_samples', $id, 'Delete', $before, '', $this->parentFwo($sample->id_fwo));
 
         return response()->json(['success' => true]);
     }
@@ -222,10 +251,16 @@ class LabSampleController extends Controller
         }
 
         // Slot Tidak Terlaksana tidak ikut di-overwrite (statusnya hasil keputusan lapangan + alasan)
-        DB::table('lab_samples')
+        $targetBulk = DB::table('lab_samples')
             ->where('id_fwo_boq', $id_fwo_boq)
-            ->where(fn ($q) => $q->whereNull('status')->orWhere('status', '!=', 'tidak_terlaksana'))
-            ->update($update);
+            ->where(fn ($q) => $q->whereNull('status')->orWhere('status', '!=', 'tidak_terlaksana'));
+        $idsBulk = (clone $targetBulk)->pluck('id_lab_sample');
+        $targetBulk->update($update);
+
+        if ($idsBulk->isNotEmpty()) {
+            $isi = collect($update)->except('updated_at')->map(fn ($v, $k) => "{$k} = {$v}")->implode(', ');
+            $this->auditRingkasan($idsBulk->first(), 'Update', "Isi massal {$idsBulk->count()} sample BOQ FWO #{$id_fwo_boq}: {$isi}", $boq->id_fwo);
+        }
 
         return response()->json(['success' => true]);
     }
@@ -267,7 +302,9 @@ class LabSampleController extends Controller
             $update['id_alasan_tidak_terlaksana'] = null;
         }
 
+        $before = $this->sampleJson($id);
         DB::table('lab_samples')->where('id_lab_sample', $id)->update($update);
+        saveAudit('lab_samples', $id, 'Update', $before, $this->sampleJson($id), $this->parentFwo($sample->id_fwo));
 
         return response()->json(['success' => true]);
     }
@@ -339,7 +376,7 @@ class LabSampleController extends Controller
         ]);
 
         $after = DB::table('lab_samples')->where('id_lab_sample', $id)->get()->toJson();
-        saveAudit('lab_samples', $id, 'Update', $before, $after);
+        saveAudit('lab_samples', $id, 'Update', $before, $after, $this->parentFwo($sample->id_fwo));
 
         return response()->json(['success' => true]);
     }
@@ -394,7 +431,7 @@ class LabSampleController extends Controller
         ]);
 
         $after = DB::table('lab_samples')->where('id_lab_sample', $id)->get()->toJson();
-        saveAudit('lab_samples', $id, 'Update', $before, $after);
+        saveAudit('lab_samples', $id, 'Update', $before, $after, $this->parentFwo($sample->id_fwo));
 
         return response()->json(['success' => true]);
     }

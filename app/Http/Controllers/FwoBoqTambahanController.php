@@ -83,7 +83,7 @@ abstract class FwoBoqTambahanController extends Controller
         ]);
 
         $after = DB::table('fwo_boq_tambahan')->where('id_fwo_boq_tambahan', $id)->get()->toJson();
-        saveAudit('fwo_boq_tambahan', $id, 'Create', '', $after);
+        saveAudit('fwo_boq_tambahan', $id, 'Create', '', $after, ['fieldworks', $validated['id_fwo']]);
 
         return response()->json(['success' => true, 'id' => $id]);
     }
@@ -129,7 +129,7 @@ abstract class FwoBoqTambahanController extends Controller
         ]);
 
         $after = DB::table('fwo_boq_tambahan')->where('id_fwo_boq_tambahan', $id)->get()->toJson();
-        saveAudit('fwo_boq_tambahan', $id, 'Update', $before, $after);
+        saveAudit('fwo_boq_tambahan', $id, 'Update', $before, $after, ['fieldworks', $row->id_fwo]);
 
         return response()->json(['success' => true]);
     }
@@ -145,7 +145,7 @@ abstract class FwoBoqTambahanController extends Controller
 
         $before = DB::table('fwo_boq_tambahan')->where('id_fwo_boq_tambahan', $id)->get()->toJson();
         DB::table('fwo_boq_tambahan')->where('id_fwo_boq_tambahan', $id)->update(['deleted_at' => now()]);
-        saveAudit('fwo_boq_tambahan', $id, 'Delete', $before, '');
+        saveAudit('fwo_boq_tambahan', $id, 'Delete', $before, '', ['fieldworks', $row->id_fwo]);
 
         return response()->json(['success' => true]);
     }

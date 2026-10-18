@@ -251,6 +251,8 @@ class FieldworkBoqController extends Controller
             }
         }
 
+        $snapshotSebelum = $this->boqSnapshot($id_fwo);
+
         // Mapping id_boq → row lama (aktif)
         $existing = DB::table('fieldwork_boq')
             ->where('id_fwo', $id_fwo)
@@ -349,6 +351,28 @@ class FieldworkBoqController extends Controller
             }
         }
 
+        // Tercatat di History FWO hanya bila ada BOQ yang ditambah/dihapus/berubah
+        $snapshotSesudah = $this->boqSnapshot($id_fwo);
+        if ($snapshotSebelum !== $snapshotSesudah) {
+            saveAudit('fieldwork_boq', $id_fwo, 'Update', json_encode([$snapshotSebelum]), json_encode([$snapshotSesudah]), ['fieldworks', $id_fwo]);
+        }
+
         return response()->json(['success' => true, 'message' => 'Fieldwork BOQ berhasil diperbarui']);
+    }
+
+    /** Snapshot BOQ FWO: satu field per BOQ ("BOQ • Testing Point" => qty & keterangan) untuk History. */
+    private function boqSnapshot(int $idFwo): array
+    {
+        $hasil = [];
+        $rows = DB::table('fieldwork_boq as fb')
+            ->leftJoin('testing_points as tp', 'tp.id_testing_point', '=', 'fb.id_testing_point')
+            ->where('fb.id_fwo', $idFwo)->whereNull('fb.deleted_at')
+            ->orderBy('fb.id_fwo_boq')->get(['tp.nama', 'fb.qty', 'fb.keterangan']);
+        foreach ($rows as $r) {
+            $kunci = 'BOQ • ' . ($r->nama ?? '?');
+            for ($n = 2; isset($hasil[$kunci]); $n++) $kunci = 'BOQ • ' . ($r->nama ?? '?') . " ($n)";
+            $hasil[$kunci] = 'Qty ' . ($r->qty ?? '-') . ($r->keterangan ? ' — ' . $r->keterangan : '');
+        }
+        return $hasil;
     }
 }

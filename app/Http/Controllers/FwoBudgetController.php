@@ -67,6 +67,36 @@ class FwoBudgetController extends Controller
         return $fwo && $fwo->status === 'completed';
     }
 
+    /**
+     * Snapshot plan budget untuk audit log: baris plan + satu field per item budget
+     * ("Item • {akun}" => nominal) supaya History hanya menampilkan item yang berubah.
+     */
+    private function budgetJson($id): string
+    {
+        $plan = DB::table('fwo_budgets')->where('id_budget', $id)->first();
+        if (!$plan) return '';
+
+        $plan = (array) $plan;
+        $dipakai = [];
+        $items = DB::table('fwo_budget_items as bi')
+            ->leftJoin('budget_accounts as a', 'a.id_account', '=', 'bi.id_account')
+            ->where('bi.id_budget', $id)
+            ->orderBy('bi.id_budget_item')
+            ->get(['a.nama', 'bi.nominal_budget', 'bi.keterangan', 'bi.is_cash_advance']);
+
+        foreach ($items as $i) {
+            $kunci = 'Item • ' . ($i->nama ?? '?');
+            $dipakai[$kunci] = ($dipakai[$kunci] ?? 0) + 1;
+            if ($dipakai[$kunci] > 1) $kunci .= ' (' . $dipakai[$kunci] . ')';
+
+            $plan[$kunci] = 'Rp ' . number_format($i->nominal_budget, 0, ',', '.')
+                . ($i->is_cash_advance ? ' [Cash Advance]' : '')
+                . ($i->keterangan ? ' — ' . $i->keterangan : '');
+        }
+
+        return json_encode([$plan]);
+    }
+
     public function store(Request $request)
     {
         if ($this->fwoIsCompleted($request->id_fwo)) {
@@ -116,8 +146,8 @@ class FwoBudgetController extends Controller
             }
         });
 
-        $after = DB::table('fwo_budgets')->where('id_budget', $id)->get()->toJson();
-        saveAudit('fwo_budgets', $id, 'Create', '', $after);
+        $after = $this->budgetJson($id);
+        saveAudit('fwo_budgets', $id, 'Create', '', $after, ['fieldworks', $request->id_fwo]);
 
         return response()->json(['success' => true, 'id' => $id]);
     }
@@ -186,7 +216,7 @@ class FwoBudgetController extends Controller
             return response()->json(['success' => false, 'message' => $msg], 422);
         }
 
-        $before = DB::table('fwo_budgets')->where('id_budget', $id)->get()->toJson();
+        $before = $this->budgetJson($id);
 
         DB::transaction(function () use ($request, $id) {
             DB::table('fwo_budgets')->where('id_budget', $id)->update([
@@ -236,8 +266,8 @@ class FwoBudgetController extends Controller
             }
         });
 
-        $after = DB::table('fwo_budgets')->where('id_budget', $id)->get()->toJson();
-        saveAudit('fwo_budgets', $id, 'Update', $before, $after);
+        $after = $this->budgetJson($id);
+        saveAudit('fwo_budgets', $id, 'Update', $before, $after, ['fieldworks', $budget->id_fwo]);
 
         return response()->json(['success' => true]);
     }
@@ -298,14 +328,14 @@ class FwoBudgetController extends Controller
             $dokumenPath = $uploaded['files'][0] ?? null;
         }
 
-        $before = DB::table('fwo_budgets')->where('id_budget', $id)->get()->toJson();
+        $before = $this->budgetJson($id);
         DB::table('fwo_budgets')->where('id_budget', $id)->update(array_filter([
             'status'             => 'completed',
             'dokumen_realisasi'  => $dokumenPath,
             'updated_at'         => now(),
         ], fn($v) => $v !== null));
-        $after = DB::table('fwo_budgets')->where('id_budget', $id)->get()->toJson();
-        saveAudit('fwo_budgets', $id, 'Close', $before, $after);
+        $after = $this->budgetJson($id);
+        saveAudit('fwo_budgets', $id, 'Close', $before, $after, ['fieldworks', $budget->id_fwo]);
 
         return response()->json(['success' => true]);
     }
@@ -320,14 +350,14 @@ class FwoBudgetController extends Controller
             return response()->json(['success' => false, 'message' => 'Budget plan sudah ditutup, tidak dapat dihapus.'], 403);
         }
 
-        $before = DB::table('fwo_budgets')->where('id_budget', $id)->get()->toJson();
+        $before = $this->budgetJson($id);
 
         DB::table('fwo_budgets')->where('id_budget', $id)->update([
             'deleted_at' => now(),
             'updated_at' => now(),
         ]);
 
-        saveAudit('fwo_budgets', $id, 'Delete', $before, '');
+        saveAudit('fwo_budgets', $id, 'Delete', $before, '', ['fieldworks', $budget->id_fwo ?? null]);
 
         return response()->json(['success' => true]);
     }
