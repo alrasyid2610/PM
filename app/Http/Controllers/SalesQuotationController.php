@@ -26,6 +26,12 @@ class SalesQuotationController extends Controller
         return 'sales_quotations';
     }
 
+    // History SQ juga menampilkan tab Keterangan dan Work Order
+    protected function auditParentTable(): ?string
+    {
+        return 'sales_quotations';
+    }
+
     protected function auditExcludeFields(): array
     {
         return ['updated_at', 'created_at', 'id_sq'];

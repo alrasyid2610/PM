@@ -22,6 +22,10 @@ class SqFieldworkController extends Controller
     use HasAuditHistory;
 
     protected function auditTable(): string { return 'sq_fieldworks'; }
+
+    // History SQ FWO juga menampilkan tab BOQ dan Budget
+    protected function auditParentTable(): ?string { return 'sq_fieldworks'; }
+
     protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_sq_fwo']; }
 
     public function index()
@@ -80,7 +84,7 @@ class SqFieldworkController extends Controller
         ]));
 
         $after = DB::table('sq_fieldworks')->where('id_sq_fwo', $id)->get()->toJson();
-        saveAudit('sq_fieldworks', $id, 'Create', '', $after);
+        saveAudit('sq_fieldworks', $id, 'Create', '', $after, ['sq_work_orders', $validated['id_sq_wo']]);
 
         return response()->json(['success' => true, 'id' => $id]);
     }
@@ -176,7 +180,7 @@ class SqFieldworkController extends Controller
         ]));
 
         $after = DB::table('sq_fieldworks')->where('id_sq_fwo', $id)->get()->toJson();
-        saveAudit('sq_fieldworks', $id, 'update', $before, $after);
+        saveAudit('sq_fieldworks', $id, 'update', $before, $after, ['sq_work_orders', DB::table('sq_fieldworks')->where('id_sq_fwo', $id)->value('id_sq_wo')]);
 
         return response()->json(['success' => true]);
     }
@@ -193,7 +197,7 @@ class SqFieldworkController extends Controller
         // sq_fwo_budgets/items milik FWO ini otomatis.
         DB::table('sq_fieldworks')->where('id_sq_fwo', $id)->delete();
 
-        saveAudit('sq_fieldworks', $id, 'delete', $before, '');
+        saveAudit('sq_fieldworks', $id, 'delete', $before, '', ['sq_work_orders', $row->id_sq_wo]);
 
         return response()->json(['success' => true]);
     }

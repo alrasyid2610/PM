@@ -80,6 +80,26 @@ class SqKeteranganController extends Controller
         return response()->json([]);
     }
 
+    /** Snapshot keterangan SQ: satu field per poin ("Poin • Kategori (#id)" => teks hasil render). */
+    private function ketSnapshot($idSq): array
+    {
+        $hasil = [];
+        foreach (SqKeterangan::rows((int) $idSq) as $r) {
+            $hasil['Poin • ' . $r->kategori_label . ' (#' . $r->id_poin . ')'] = (string) $r->teks;
+        }
+
+        return $hasil;
+    }
+
+    /** Catat perubahan keterangan SQ ke History SQ; dilewati bila tidak ada selisih. */
+    private function auditKet($idSq, array $sebelum): void
+    {
+        $sesudah = $this->ketSnapshot($idSq);
+        if ($sebelum !== $sesudah) {
+            saveAudit('sq_keterangan', $idSq, 'Update', json_encode([$sebelum]), json_encode([$sesudah]), ['sales_quotations', $idSq]);
+        }
+    }
+
     public function tambah(Request $request, $id)
     {
         if ($lock = SqLock::bySq($id)) return $lock;
@@ -92,6 +112,7 @@ class SqKeteranganController extends Controller
             return response()->json(['message' => 'Poin tersebut sudah ada di keterangan SQ ini.'], 422);
         }
 
+        $sebelum = $this->ketSnapshot($id);
         DB::table('sq_keterangan')->insert([
             'id_sq'      => $id,
             'id_poin'    => $poin->id_poin,
@@ -100,6 +121,8 @@ class SqKeteranganController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        $this->auditKet($id, $sebelum);
 
         return response()->json(['success' => true, 'message' => 'Poin ditambahkan']);
     }
@@ -113,6 +136,7 @@ class SqKeteranganController extends Controller
     {
         if ($lock = SqLock::bySq($id)) return $lock;
         $request->validate(['id_poin' => 'required|integer']);
+        $sebelum = $this->ketSnapshot($id);
 
         $k = DB::table('sq_keterangan as k')
             ->join('poin_keterangan as p', 'p.id_poin', '=', 'k.id_poin')
@@ -145,13 +169,17 @@ class SqKeteranganController extends Controller
             'updated_at' => now(),
         ]);
 
+        $this->auditKet($id, $sebelum);
+
         return response()->json(['success' => true, 'message' => 'Varian poin diganti']);
     }
 
     public function isiStandar($id)
     {
         if ($lock = SqLock::bySq($id)) return $lock;
+        $sebelum = $this->ketSnapshot($id);
         $n = SqKeterangan::isiStandar((int) $id);
+        $this->auditKet($id, $sebelum);
 
         return response()->json([
             'success' => true,
@@ -169,6 +197,8 @@ class SqKeteranganController extends Controller
                 ->update(['urutan' => $i + 1, 'updated_at' => now()]);
         }
 
+        saveAudit('sq_keterangan', $id, 'Update', '', json_encode(['ringkasan' => 'Mengubah urutan poin keterangan']), ['sales_quotations', $id]);
+
         return response()->json(['success' => true]);
     }
 
@@ -176,6 +206,7 @@ class SqKeteranganController extends Controller
     {
         if ($lock = SqLock::bySq($id)) return $lock;
         $request->validate(['nilai' => 'nullable|array']);
+        $sebelum = $this->ketSnapshot($id);
 
         $k = DB::table('sq_keterangan as k')
             ->join('poin_keterangan as p', 'p.id_poin', '=', 'k.id_poin')
@@ -229,13 +260,17 @@ class SqKeteranganController extends Controller
             'updated_at' => now(),
         ]);
 
+        $this->auditKet($id, $sebelum);
+
         return response()->json(['success' => true]);
     }
 
     public function hapus($id, $row)
     {
         if ($lock = SqLock::bySq($id)) return $lock;
+        $sebelum = $this->ketSnapshot($id);
         DB::table('sq_keterangan')->where('id_sq', $id)->where('id_sq_keterangan', $row)->delete();
+        $this->auditKet($id, $sebelum);
 
         return response()->json(['success' => true, 'message' => 'Poin dihapus']);
     }

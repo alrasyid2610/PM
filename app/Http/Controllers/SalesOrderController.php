@@ -17,6 +17,12 @@ class SalesOrderController extends Controller
     protected function attachmentTable(): string      { return 'sales_orders'; }
     protected function attachmentPrimaryKey(): string { return 'id_so'; }
 
+    // History SO juga menampilkan perubahan Work Order dan Termin milik SO ini
+    protected function auditParentTable(): ?string
+    {
+        return 'sales_orders';
+    }
+
     protected function auditTable(): string
     {
         return 'sales_orders';

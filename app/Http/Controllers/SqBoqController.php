@@ -73,6 +73,8 @@ class SqBoqController extends Controller
             return response()->json(['success' => false, 'message' => 'Terdapat duplikasi Testing Point dalam data yang dikirim.'], 422);
         }
 
+        $snapshotSebelum = $this->boqSnapshot((int) $id_sq_wo);
+
         $existing = DB::table('sq_boq')->where('id_sq_wo', $id_sq_wo)->get()->keyBy('id_testing_point');
         $removedPtIds = $existing->keys()->diff($incomingPtIds);
 
@@ -135,6 +137,32 @@ class SqBoqController extends Controller
             }
         }
 
+        $snapshotSesudah = $this->boqSnapshot((int) $id_sq_wo);
+        if ($snapshotSebelum !== $snapshotSesudah) {
+            saveAudit('sq_boq', $id_sq_wo, 'Update', json_encode([$snapshotSebelum]), json_encode([$snapshotSesudah]), ['sq_work_orders', $id_sq_wo]);
+        }
+
         return response()->json(['success' => true, 'message' => 'BOQ berhasil disimpan']);
+    }
+
+    /** Snapshot BOQ SQ WO: satu field per BOQ ("BOQ • Testing Point" => qty, harga, discount, jumlah item). */
+    private function boqSnapshot(int $idSqWo): array
+    {
+        $hasil = [];
+        $rows = DB::table('sq_boq as b')
+            ->leftJoin('testing_points as tp', 'tp.id_testing_point', '=', 'b.id_testing_point')
+            ->where('b.id_sq_wo', $idSqWo)->orderBy('b.id_sq_boq')
+            ->get(['b.id_sq_boq', 'tp.nama', 'b.qty', 'b.harga', 'b.discount', 'b.keterangan']);
+        $jumlahItem = DB::table('sq_boq_items')->whereIn('id_sq_boq', $rows->pluck('id_sq_boq'))
+            ->selectRaw('id_sq_boq, COUNT(*) as n')->groupBy('id_sq_boq')->pluck('n', 'id_sq_boq');
+        foreach ($rows as $r) {
+            $kunci = 'BOQ • ' . ($r->nama ?? '?');
+            for ($n = 2; isset($hasil[$kunci]); $n++) $kunci = 'BOQ • ' . ($r->nama ?? '?') . " ($n)";
+            $hasil[$kunci] = 'Qty ' . ($r->qty ?? 0) . ' × Rp ' . number_format((float) $r->harga, 0, ',', '.')
+                . ((int) $r->discount ? ', discount Rp ' . number_format((int) $r->discount, 0, ',', '.') : '')
+                . ', ' . ($jumlahItem[$r->id_sq_boq] ?? 0) . ' item'
+                . ($r->keterangan ? ' — ' . $r->keterangan : '');
+        }
+        return $hasil;
     }
 }

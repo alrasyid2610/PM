@@ -83,6 +83,49 @@ class TerminController extends Controller
         ]);
     }
 
+    /**
+     * Snapshot Termin untuk audit log: baris termin + satu field per output yang ditagihkan
+     * ("Output • judul" => judul tagihan) supaya History hanya menampilkan output yang berubah.
+     */
+    private function terminJson($id): string
+    {
+        $termin = DB::table('termin')->where('id_termin', $id)->first();
+        if (!$termin) return '';
+
+        $termin = (array) $termin;
+        unset($termin['attachment']);
+
+        $tambah = function (string $awalan, $nama, $tagihan) use (&$termin) {
+            $kunci = $awalan . ' • ' . ($nama ?: '?');
+            for ($n = 2; isset($termin[$kunci]); $n++) $kunci = $awalan . ' • ' . ($nama ?: '?') . " ($n)";
+            $termin[$kunci] = $tagihan ?: 'ditagihkan';
+        };
+
+        foreach (DB::table('output_pekerjaan')->where('id_termin', $id)->orderBy('id_output')->get(['judul_output', 'judul_tagihan']) as $o) {
+            $tambah('Output', $o->judul_output, $o->judul_tagihan);
+        }
+        if ($this->otherReady()) {
+            foreach (DB::table('output_tambahan')->where('id_termin', $id)->whereNull('deleted_at')->orderBy('id_output_tambahan')->get(['nama_item', 'judul_tagihan']) as $o) {
+                $tambah('Output Other', $o->nama_item, $o->judul_tagihan);
+            }
+        }
+
+        return json_encode([$termin]);
+    }
+
+    /** Induk SO dari Termin (log Termin ikut tampil di History SO, tab Termin). */
+    private function parentSo($idTermin): ?array
+    {
+        $idSo = DB::table('termin')->where('id_termin', $idTermin)->value('id_so');
+        return $idSo ? ['sales_orders', $idSo] : null;
+    }
+
+    /** Catat aksi pada Termin (output ditambah/dilepas, status) bila snapshot berubah. */
+    private function auditTermin($id, string $aksi, string $before): void
+    {
+        saveAudit('termin', $id, $aksi, $before, $this->terminJson($id), $this->parentSo($id));
+    }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -129,8 +172,7 @@ class TerminController extends Controller
 
         $this->claimOther((int) $id, $request->id_so, $request->input('selected_other', []), $judulTagihan);
 
-        $after = DB::table('termin')->where('id_termin', $id)->get()->toJson();
-        saveAudit('termin', $id, 'Create', '', $after);
+        saveAudit('termin', $id, 'Create', '', $this->terminJson($id), $this->parentSo($id));
 
         return response()->json(['success' => true, 'id' => $id]);
     }
@@ -186,6 +228,7 @@ class TerminController extends Controller
             ], 422);
         }
 
+        $before = $this->terminJson($id);
         $ids = array_map('intval', $request->input('ids', []));
         foreach ($ids as $idOutput) {
             DB::table('output_pekerjaan')
@@ -193,11 +236,13 @@ class TerminController extends Controller
                 ->update(['id_termin' => $id, 'updated_at' => now()]);
         }
         $this->claimOther((int) $id, $termin->id_so ?? null, $request->input('ids_other', []));
+        $this->auditTermin($id, 'update', $before);
         return response()->json(['success' => true]);
     }
 
     public function removeOutput(Request $request, $id)
     {
+        $before = $this->terminJson($id);
         $idOutput = (int) $request->input('id_output');
         DB::table('output_pekerjaan')
             ->where('id_output', $idOutput)
@@ -211,6 +256,7 @@ class TerminController extends Controller
                 ->where('id_termin', $id)
                 ->update(['id_termin' => null, 'judul_tagihan' => null, 'updated_at' => now()]);
         }
+        $this->auditTermin($id, 'update', $before);
         return response()->json(['success' => true]);
     }
 
@@ -220,10 +266,12 @@ class TerminController extends Controller
             return response()->json(['message' => 'Anda tidak memiliki akses untuk aksi Siap Kirim Termin'], 403);
         }
 
+        $before = $this->terminJson($id);
         DB::table('termin')->where('id_termin', $id)->update([
             'status'     => 'siap_kirim',
             'updated_at' => now(),
         ]);
+        $this->auditTermin($id, 'update', $before);
         return response()->json(['success' => true]);
     }
 
@@ -233,10 +281,12 @@ class TerminController extends Controller
             return response()->json(['message' => 'Anda tidak memiliki akses untuk aksi Selesaikan Termin'], 403);
         }
 
+        $before = $this->terminJson($id);
         DB::table('termin')->where('id_termin', $id)->update([
             'status'     => 'selesai',
             'updated_at' => now(),
         ]);
+        $this->auditTermin($id, 'update', $before);
         return response()->json(['success' => true]);
     }
 
@@ -329,7 +379,7 @@ class TerminController extends Controller
             ], 422);
         }
 
-        $before = DB::table('termin')->where('id_termin', $id)->get()->toJson();
+        $before = $this->terminJson($id);
 
         $currentStatus = DB::table('termin')->where('id_termin', $id)->value('status');
         $status = $this->guardTerminStatus($request->status, $currentStatus);
@@ -380,14 +430,16 @@ class TerminController extends Controller
             $this->claimOther((int) $id, $request->id_so, $selectedOther, $judulTagihan);
         }
 
-        $after = DB::table('termin')->where('id_termin', $id)->get()->toJson();
-        saveAudit('termin', $id, 'update', $before, $after);
+        saveAudit('termin', $id, 'update', $before, $this->terminJson($id), $this->parentSo($id));
 
         return response()->json(['success' => true, 'message' => 'Data berhasil diperbarui']);
     }
 
     public function destroy($id)
     {
+        $before = $this->terminJson($id);
+        $parent = $this->parentSo($id);
+
         // Lepaskan output yang ditugaskan agar bisa ditagihkan kembali
         DB::table('output_pekerjaan')
             ->where('id_termin', $id)
@@ -400,6 +452,7 @@ class TerminController extends Controller
         }
 
         DB::table('termin')->where('id_termin', $id)->delete();
+        saveAudit('termin', $id, 'delete', $before, '', $parent);
 
         return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
     }

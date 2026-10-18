@@ -14,6 +14,12 @@ use Illuminate\Support\Facades\DB;
  */
 class SqBoqTambahanController extends Controller
 {
+    /** Snapshot 1 baris (JSON) untuk audit log. */
+    private function rowJson($id): string
+    {
+        return DB::table('sq_boq_tambahan')->where('id_sq_boq_tambahan', $id)->get()->toJson();
+    }
+
     public function listByWo($id_sq_wo)
     {
         $rows = DB::table('sq_boq_tambahan as t')
@@ -46,6 +52,7 @@ class SqBoqTambahanController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]));
+        saveAudit('sq_boq_tambahan', $id, 'Create', '', $this->rowJson($id), ['sq_work_orders', $validated['id_sq_wo']]);
 
         return response()->json(['success' => true, 'id' => $id]);
     }
@@ -64,9 +71,11 @@ class SqBoqTambahanController extends Controller
             'keterangan' => 'nullable|string',
         ]);
 
+        $before = $this->rowJson($id);
         DB::table('sq_boq_tambahan')->where('id_sq_boq_tambahan', $id)->update(array_merge($validated, [
             'updated_at' => now(),
         ]));
+        saveAudit('sq_boq_tambahan', $id, 'Update', $before, $this->rowJson($id), ['sq_work_orders', $row->id_sq_wo]);
 
         return response()->json(['success' => true]);
     }
@@ -77,7 +86,9 @@ class SqBoqTambahanController extends Controller
         $row = DB::table('sq_boq_tambahan')->where('id_sq_boq_tambahan', $id)->first();
         if (!$row) return response()->json(['message' => 'Tidak ditemukan'], 404);
 
+        $before = $this->rowJson($id);
         DB::table('sq_boq_tambahan')->where('id_sq_boq_tambahan', $id)->delete();
+        saveAudit('sq_boq_tambahan', $id, 'Delete', $before, '', ['sq_work_orders', $row->id_sq_wo]);
 
         return response()->json(['success' => true]);
     }

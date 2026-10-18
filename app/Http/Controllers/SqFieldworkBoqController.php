@@ -214,6 +214,8 @@ class SqFieldworkBoqController extends Controller
             }
         }
 
+        $snapshotSebelum = $this->boqSnapshot((int) $id_sq_fwo);
+
         $existing = DB::table('sq_fieldwork_boq')->where('id_sq_fwo', $id_sq_fwo)->get()->keyBy('id_sq_boq');
         $incomingBoqIds = collect($validated['sections'])->pluck('id_sq_boq');
 
@@ -257,6 +259,28 @@ class SqFieldworkBoqController extends Controller
             }
         }
 
+        $snapshotSesudah = $this->boqSnapshot((int) $id_sq_fwo);
+        if ($snapshotSebelum !== $snapshotSesudah) {
+            saveAudit('sq_fieldwork_boq', $id_sq_fwo, 'Update', json_encode([$snapshotSebelum]), json_encode([$snapshotSesudah]), ['sq_fieldworks', $id_sq_fwo]);
+        }
+
         return response()->json(['success' => true, 'message' => 'Fieldwork BOQ berhasil diperbarui']);
+    }
+
+    /** Snapshot BOQ SQ FWO: satu field per BOQ ("BOQ • Testing Point" => qty & keterangan). */
+    private function boqSnapshot(int $idSqFwo): array
+    {
+        $hasil = [];
+        $rows = DB::table('sq_fieldwork_boq as fb')
+            ->leftJoin('sq_boq as b', 'b.id_sq_boq', '=', 'fb.id_sq_boq')
+            ->leftJoin('testing_points as tp', 'tp.id_testing_point', '=', 'b.id_testing_point')
+            ->where('fb.id_sq_fwo', $idSqFwo)->orderBy('fb.id_sq_fwo_boq')
+            ->get(['tp.nama', 'fb.qty', 'fb.keterangan']);
+        foreach ($rows as $r) {
+            $kunci = 'BOQ • ' . ($r->nama ?? '?');
+            for ($n = 2; isset($hasil[$kunci]); $n++) $kunci = 'BOQ • ' . ($r->nama ?? '?') . " ($n)";
+            $hasil[$kunci] = 'Qty ' . ($r->qty ?? '-') . ($r->keterangan ? ' — ' . $r->keterangan : '');
+        }
+        return $hasil;
     }
 }

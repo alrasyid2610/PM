@@ -21,6 +21,10 @@ class SqWorkOrderController extends Controller
     use HasAuditHistory;
 
     protected function auditTable(): string { return 'sq_work_orders'; }
+
+    // History SQ WO juga menampilkan tab BOQ, BOQ Other/Sampling, Budget, Fieldwork Orders
+    protected function auditParentTable(): ?string { return 'sq_work_orders'; }
+
     protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_sq_wo']; }
 
     public function index()
@@ -68,7 +72,7 @@ class SqWorkOrderController extends Controller
         ]));
 
         $after = DB::table('sq_work_orders')->where('id_sq_wo', $id)->get()->toJson();
-        saveAudit('sq_work_orders', $id, 'Create', '', $after);
+        saveAudit('sq_work_orders', $id, 'Create', '', $after, ['sales_quotations', $validated['id_sq']]);
 
         return response()->json(['success' => true, 'id' => $id]);
     }
@@ -152,7 +156,7 @@ class SqWorkOrderController extends Controller
         ]));
 
         $after = DB::table('sq_work_orders')->where('id_sq_wo', $id)->get()->toJson();
-        saveAudit('sq_work_orders', $id, 'update', $before, $after);
+        saveAudit('sq_work_orders', $id, 'update', $before, $after, ['sales_quotations', $row->id_sq]);
 
         return response()->json(['success' => true]);
     }
@@ -169,7 +173,7 @@ class SqWorkOrderController extends Controller
         // sq_wo_budgets/sq_fieldworks/dst. milik WO ini otomatis.
         DB::table('sq_work_orders')->where('id_sq_wo', $id)->delete();
 
-        saveAudit('sq_work_orders', $id, 'delete', $before, '');
+        saveAudit('sq_work_orders', $id, 'delete', $before, '', ['sales_quotations', $row->id_sq]);
 
         return response()->json(['success' => true]);
     }

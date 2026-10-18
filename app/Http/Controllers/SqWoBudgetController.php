@@ -46,6 +46,36 @@ class SqWoBudgetController extends Controller
         return response()->json($budgets);
     }
 
+    /**
+     * Snapshot plan budget untuk audit log: baris plan + satu field per item budget
+     * ("Item • {akun}" => nominal) supaya History hanya menampilkan item yang berubah.
+     */
+    private function budgetJson($id): string
+    {
+        $plan = DB::table('sq_wo_budgets')->where('id_sq_budget', $id)->first();
+        if (!$plan) return '';
+
+        $plan = (array) $plan;
+        $dipakai = [];
+        $items = DB::table('sq_wo_budget_items as bi')
+            ->leftJoin('budget_accounts as a', 'a.id_account', '=', 'bi.id_account')
+            ->where('bi.id_sq_budget', $id)
+            ->orderBy('bi.id_sq_budget_item')
+            ->get(['a.nama', 'bi.nominal_budget', 'bi.keterangan', 'bi.is_cash_advance']);
+
+        foreach ($items as $i) {
+            $kunci = 'Item • ' . ($i->nama ?? '?');
+            $dipakai[$kunci] = ($dipakai[$kunci] ?? 0) + 1;
+            if ($dipakai[$kunci] > 1) $kunci .= ' (' . $dipakai[$kunci] . ')';
+
+            $plan[$kunci] = 'Rp ' . number_format($i->nominal_budget, 0, ',', '.')
+                . ($i->is_cash_advance ? ' [Cash Advance]' : '')
+                . ($i->keterangan ? ' — ' . $i->keterangan : '');
+        }
+
+        return json_encode([$plan]);
+    }
+
     public function store(Request $request)
     {
         if ($lock = SqLock::byWo($request->input('id_sq_wo'))) return $lock;
@@ -87,8 +117,8 @@ class SqWoBudgetController extends Controller
             return $id;
         });
 
-        $after = DB::table('sq_wo_budgets')->where('id_sq_budget', $id)->get()->toJson();
-        saveAudit('sq_wo_budgets', $id, 'Create', '', $after);
+        $after = $this->budgetJson($id);
+        saveAudit('sq_wo_budgets', $id, 'Create', '', $after, ['sq_work_orders', $request->id_sq_wo]);
 
         return response()->json(['success' => true, 'id' => $id]);
     }
@@ -123,7 +153,7 @@ class SqWoBudgetController extends Controller
             'items.*.keterangan' => 'nullable|string',
         ]);
 
-        $before = DB::table('sq_wo_budgets')->where('id_sq_budget', $id)->get()->toJson();
+        $before = $this->budgetJson($id);
 
         DB::transaction(function () use ($request, $id) {
             DB::table('sq_wo_budgets')->where('id_sq_budget', $id)->update([
@@ -164,8 +194,8 @@ class SqWoBudgetController extends Controller
             }
         });
 
-        $after = DB::table('sq_wo_budgets')->where('id_sq_budget', $id)->get()->toJson();
-        saveAudit('sq_wo_budgets', $id, 'Update', $before, $after);
+        $after = $this->budgetJson($id);
+        saveAudit('sq_wo_budgets', $id, 'Update', $before, $after, ['sq_work_orders', $budget->id_sq_wo]);
 
         return response()->json(['success' => true]);
     }
@@ -176,10 +206,10 @@ class SqWoBudgetController extends Controller
         $budget = DB::table('sq_wo_budgets')->where('id_sq_budget', $id)->first();
         if (!$budget) return response()->json(['message' => 'Tidak ditemukan'], 404);
 
-        $before = DB::table('sq_wo_budgets')->where('id_sq_budget', $id)->get()->toJson();
+        $before = $this->budgetJson($id);
         DB::table('sq_wo_budget_items')->where('id_sq_budget', $id)->delete();
         DB::table('sq_wo_budgets')->where('id_sq_budget', $id)->delete();
-        saveAudit('sq_wo_budgets', $id, 'Delete', $before, '');
+        saveAudit('sq_wo_budgets', $id, 'Delete', $before, '', ['sq_work_orders', $budget->id_sq_wo]);
 
         return response()->json(['success' => true]);
     }

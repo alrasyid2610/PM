@@ -22,6 +22,13 @@ class WorkOrderController extends Controller
         return ['updated_at', 'created_at', 'id_wo'];
     }
 
+    /** Induk SO dari WO (log WO ikut tampil di History SO, tab Work Order). */
+    private function parentSo($idWo): ?array
+    {
+        $idSo = DB::table('work_orders')->where('id_wo', $idWo)->value('id_so');
+        return $idSo ? ['sales_orders', $idSo] : null;
+    }
+
     // History WO juga menampilkan perubahan tab BOQ, BOQ Other/Sampling, Output, Budget, Lab Sample Reg
     protected function auditParentTable(): ?string
     {
@@ -97,7 +104,7 @@ class WorkOrderController extends Controller
         ]);
 
         $after = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
-        saveAudit('work_orders', $id, 'Create', '', $after);
+        saveAudit('work_orders', $id, 'Create', '', $after, $this->parentSo($id));
 
         return response()->json([
             'status' => 'success',
@@ -189,7 +196,7 @@ class WorkOrderController extends Controller
                 ]);
 
             $after = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
-            saveAudit('work_orders', $id, 'update', $before, $after);
+            saveAudit('work_orders', $id, 'update', $before, $after, $this->parentSo($id));
 
             DB::commit();
         } catch (\Throwable $th) {
@@ -426,7 +433,7 @@ class WorkOrderController extends Controller
             'status'     => 'completed',
             'updated_at' => now(),
         ]);
-        saveAudit('work_orders', $id, 'update', $before, DB::table('work_orders')->where('id_wo', $id)->get()->toJson());
+        saveAudit('work_orders', $id, 'update', $before, DB::table('work_orders')->where('id_wo', $id)->get()->toJson(), $this->parentSo($id));
 
         return response()->json(['success' => true, 'message' => 'Work Order berhasil diselesaikan']);
     }
@@ -452,7 +459,7 @@ class WorkOrderController extends Controller
         DB::table('work_orders')->where('id_wo', $id)->update(['deleted_at' => $now]);
 
         $after = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
-        saveAudit('work_orders', $id, 'delete', $before, $after);
+        saveAudit('work_orders', $id, 'delete', $before, $after, $this->parentSo($id));
         return response()->json(['success' => true, 'message' => 'Data berhasil dihapus']);
     }
 
@@ -522,7 +529,7 @@ class WorkOrderController extends Controller
             ]);
 
             $after = DB::table('work_orders')->where('id_wo', $newId)->get()->toJson();
-            saveAudit('work_orders', $newId, 'create', null, $after);
+            saveAudit('work_orders', $newId, 'create', null, $after, $this->parentSo($newId));
 
             // Clone BOQ items
             $boqInput = $request->input('boq', []);
