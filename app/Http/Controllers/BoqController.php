@@ -271,7 +271,7 @@ class BoqController extends Controller
             ], $section['items']));
         }
 
-        saveAudit('boq', $idWo, 'create', null, json_encode($validated['sections']));
+        saveAudit('boq', $idWo, 'create', null, json_encode($validated['sections']), ['work_orders', $idWo]);
 
         return response()->json([
             'success' => true,
@@ -465,7 +465,7 @@ class BoqController extends Controller
         }
 
         $afterData = DB::table('boq')->where('id_wo', $id)->whereNull('deleted_at')->get();
-        saveAudit('boq', $id, 'update', json_encode($oldData), json_encode($afterData));
+        saveAudit('boq', $id, 'update', json_encode($oldData), json_encode($afterData), ['work_orders', $id]);
 
         return response()->json(['success' => true, 'message' => 'BOQ berhasil diperbarui']);
     }
@@ -480,77 +480,8 @@ class BoqController extends Controller
             ->orderByDesc('a.created_at')
             ->get();
 
-        $pointNames = DB::table('testing_points')
-            ->pluck('nama', 'id_testing_point')
-            ->toArray();
-
-        return response()->json($logs->map(function ($log) use ($pointNames) {
-            $oldSections = $log->old_value ? (json_decode($log->old_value, true) ?? []) : [];
-            $newSections = $log->new_value ? (json_decode($log->new_value, true) ?? []) : [];
-
-            $oldByPt = [];
-            foreach ($oldSections as $sec) {
-                $pt = $sec['id_testing_point'] ?? null;
-                if ($pt !== null) $oldByPt[$pt] = $sec;
-            }
-
-            $newByPt = [];
-            foreach ($newSections as $sec) {
-                $pt = $sec['id_testing_point'] ?? null;
-                if ($pt !== null) $newByPt[$pt] = $sec;
-            }
-
-            $changes = [];
-
-            foreach ($newByPt as $ptId => $newSec) {
-                if (!array_key_exists($ptId, $oldByPt)) {
-                    $name = $pointNames[$ptId] ?? "ID $ptId";
-                    $changes[] = [
-                        'field'     => "Section: $name",
-                        'old_value' => null,
-                        'new_value' => 'Ditambahkan (' . count($newSec['items'] ?? []) . ' item)',
-                    ];
-                }
-            }
-
-            foreach ($oldByPt as $ptId => $oldSec) {
-                if (!array_key_exists($ptId, $newByPt)) {
-                    $name = $pointNames[$ptId] ?? "ID $ptId";
-                    $changes[] = [
-                        'field'     => "Section: $name",
-                        'old_value' => 'Ada (' . count($oldSec['items'] ?? []) . ' item)',
-                        'new_value' => null,
-                    ];
-                }
-            }
-
-            foreach ($newByPt as $ptId => $newSec) {
-                if (!array_key_exists($ptId, $oldByPt)) continue;
-                $oldSec = $oldByPt[$ptId];
-                $name   = $pointNames[$ptId] ?? "ID $ptId";
-
-                $oldItemCount = count($oldSec['items'] ?? []);
-                $newItemCount = count($newSec['items'] ?? []);
-                if ($oldItemCount !== $newItemCount) {
-                    $changes[] = [
-                        'field'     => "$name — Jumlah item",
-                        'old_value' => "$oldItemCount item",
-                        'new_value' => "$newItemCount item",
-                    ];
-                }
-
-                foreach (['item_produk_alternate', 'qty', 'id_satuan', 'harga', 'discount', 'keterangan'] as $field) {
-                    $oldVal = $oldSec[$field] ?? null;
-                    $newVal = $newSec[$field] ?? null;
-                    if ((string)$oldVal !== (string)$newVal) {
-                        $changes[] = [
-                            'field'     => "$name — $field",
-                            'old_value' => $oldVal,
-                            'new_value' => $newVal,
-                        ];
-                    }
-                }
-            }
+        return response()->json($logs->map(function ($log) {
+            $changes = $this->auditChanges($log->old_value, $log->new_value);
 
             return [
                 'id'              => $log->id,
@@ -561,6 +492,84 @@ class BoqController extends Controller
                 'created_at'      => $log->created_at,
             ];
         }));
+    }
+
+    /**
+     * Perubahan BOQ dari 1 log audit (snapshot seluruh section BOQ per WO) menjadi daftar
+     * [field, old_value, new_value]. Dipakai History BOQ dan History WO.
+     */
+    public function auditChanges(?string $oldJson, ?string $newJson): array
+    {
+        $pointNames = DB::table('testing_points')->pluck('nama', 'id_testing_point')->toArray();
+
+        $oldSections = $oldJson ? (json_decode($oldJson, true) ?? []) : [];
+        $newSections = $newJson ? (json_decode($newJson, true) ?? []) : [];
+
+        $oldByPt = [];
+        foreach ($oldSections as $sec) {
+            $pt = $sec['id_testing_point'] ?? null;
+            if ($pt !== null) $oldByPt[$pt] = $sec;
+        }
+
+        $newByPt = [];
+        foreach ($newSections as $sec) {
+            $pt = $sec['id_testing_point'] ?? null;
+            if ($pt !== null) $newByPt[$pt] = $sec;
+        }
+
+        $changes = [];
+
+        foreach ($newByPt as $ptId => $newSec) {
+            if (!array_key_exists($ptId, $oldByPt)) {
+                $name = $pointNames[$ptId] ?? "ID $ptId";
+                $changes[] = [
+                    'field'     => "Section: $name",
+                    'old_value' => null,
+                    'new_value' => 'Ditambahkan (' . count($newSec['items'] ?? []) . ' item)',
+                ];
+            }
+        }
+
+        foreach ($oldByPt as $ptId => $oldSec) {
+            if (!array_key_exists($ptId, $newByPt)) {
+                $name = $pointNames[$ptId] ?? "ID $ptId";
+                $changes[] = [
+                    'field'     => "Section: $name",
+                    'old_value' => 'Ada (' . count($oldSec['items'] ?? []) . ' item)',
+                    'new_value' => null,
+                ];
+            }
+        }
+
+        foreach ($newByPt as $ptId => $newSec) {
+            if (!array_key_exists($ptId, $oldByPt)) continue;
+            $oldSec = $oldByPt[$ptId];
+            $name   = $pointNames[$ptId] ?? "ID $ptId";
+
+            $oldItemCount = count($oldSec['items'] ?? []);
+            $newItemCount = count($newSec['items'] ?? []);
+            if ($oldItemCount !== $newItemCount) {
+                $changes[] = [
+                    'field'     => "$name — Jumlah item",
+                    'old_value' => "$oldItemCount item",
+                    'new_value' => "$newItemCount item",
+                ];
+            }
+
+            foreach (['item_produk_alternate', 'qty', 'id_satuan', 'harga', 'discount', 'keterangan'] as $field) {
+                $oldVal = $oldSec[$field] ?? null;
+                $newVal = $newSec[$field] ?? null;
+                if ((string)$oldVal !== (string)$newVal) {
+                    $changes[] = [
+                        'field'     => "$name — $field",
+                        'old_value' => $oldVal,
+                        'new_value' => $newVal,
+                    ];
+                }
+            }
+        }
+
+        return $changes;
     }
 
     public function select2ByWo(Request $request, $id_wo)

@@ -96,6 +96,24 @@ class WoSampleController extends Controller
         ]);
     }
 
+    /** Snapshot 1 sample (JSON) untuk audit log. */
+    private function sampleJson($id): string
+    {
+        return DB::table('lab_samples')->where('id_lab_sample', $id)->get()->toJson();
+    }
+
+    /** Induk WO untuk History WO (sample asal FWO tanpa id_wo tidak punya induk WO). */
+    private function parentWo($idWo): ?array
+    {
+        return $idWo ? ['work_orders', $idWo] : null;
+    }
+
+    /** Catat aksi massal sebagai 1 baris ringkasan (bukan 1 baris per sample). */
+    private function auditRingkasan($idSample, string $aksi, string $ringkasan, $idWo): void
+    {
+        saveAudit('lab_samples', $idSample, $aksi, '', json_encode(['ringkasan' => $ringkasan]), $this->parentWo($idWo));
+    }
+
     public function samplingPointsBySite($id_site)
     {
         $rows = DB::table('brs_sampling_points')
@@ -366,6 +384,14 @@ class WoSampleController extends Controller
                 ]);
             }
 
+            $this->auditRingkasan(
+                $validated['id_lab_sample'][0],
+                'Register',
+                'Registrasi ' . count($validated['id_lab_sample']) . ' sample ke Lab Sample Reg (tanggal ' . $validated['tanggal_registrasi'] . '): '
+                    . DB::table('lab_samples')->whereIn('id_lab_sample', $validated['id_lab_sample'])->orderBy('no_sample')->pluck('no_sample')->implode(', '),
+                $id_wo
+            );
+
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -424,6 +450,8 @@ class WoSampleController extends Controller
                 'updated_at'           => now(),
             ]);
 
+            saveAudit('lab_samples', $idSample, 'Create', '', $this->sampleJson($idSample), $this->parentWo($id_wo));
+
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -464,8 +492,9 @@ class WoSampleController extends Controller
 
         $maxUrut = (int) (DB::table('lab_samples')->where('id_wo', $id_wo)->where('id_boq', $id_boq)->max('no_urut') ?? 0);
 
+        $idPertama = null;
         for ($i = 1; $i <= $sisa; $i++) {
-            DB::table('lab_samples')->insert([
+            $idBaru = DB::table('lab_samples')->insertGetId([
                 'id_fwo'     => null,
                 'id_fwo_boq' => null,
                 'id_wo'      => $id_wo,
@@ -476,7 +505,10 @@ class WoSampleController extends Controller
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+            $idPertama ??= $idBaru;
         }
+
+        $this->auditRingkasan($idPertama, 'Create', "Membuat {$sisa} slot sample untuk BOQ #{$id_boq}", $id_wo);
 
         return response()->json(['success' => true, 'message' => 'Slot berhasil dibuat.']);
     }
@@ -512,6 +544,8 @@ class WoSampleController extends Controller
             'updated_at' => now(),
         ]);
 
+        saveAudit('lab_samples', $id, 'Create', '', $this->sampleJson($id), $this->parentWo($id_wo));
+
         return response()->json(['success' => true, 'id_lab_sample' => $id]);
     }
 
@@ -538,7 +572,13 @@ class WoSampleController extends Controller
             return response()->json(['success' => false, 'message' => 'Tidak ada field yang diisi.'], 422);
         }
 
+        $ids = DB::table('lab_samples')->where('id_wo', $id_wo)->where('id_boq', $id_boq)->pluck('id_lab_sample');
         DB::table('lab_samples')->where('id_wo', $id_wo)->where('id_boq', $id_boq)->update($update);
+
+        if ($ids->isNotEmpty()) {
+            $isi = collect($update)->except('updated_at')->map(fn ($v, $k) => "{$k} = {$v}")->implode(', ');
+            $this->auditRingkasan($ids->first(), 'Update', "Isi massal {$ids->count()} sample BOQ #{$id_boq}: {$isi}", $id_wo);
+        }
 
         return response()->json(['success' => true]);
     }
@@ -559,10 +599,12 @@ class WoSampleController extends Controller
             return response()->json(['message' => 'Field tidak valid.'], 422);
         }
 
+        $before = $this->sampleJson($id);
         DB::table('lab_samples')->where('id_lab_sample', $id)->update([
             $field       => $request->input('value') ?: null,
             'updated_at' => now(),
         ]);
+        saveAudit('lab_samples', $id, 'Update', $before, $this->sampleJson($id), $this->parentWo($sample->id_wo));
 
         return response()->json(['success' => true]);
     }
@@ -608,7 +650,7 @@ class WoSampleController extends Controller
         ]);
 
         $after = DB::table('lab_samples')->where('id_lab_sample', $id)->get()->toJson();
-        saveAudit('lab_samples', $id, 'Update', $before, $after);
+        saveAudit('lab_samples', $id, 'Update', $before, $after, $this->parentWo($sample->id_wo));
 
         return response()->json(['success' => true]);
     }
@@ -622,7 +664,9 @@ class WoSampleController extends Controller
             return response()->json(['success' => false, 'message' => 'WO sudah selesai.'], 403);
         }
 
+        $before = $this->sampleJson($id);
         DB::table('lab_samples')->where('id_lab_sample', $id)->delete();
+        saveAudit('lab_samples', $id, 'Delete', $before, '', $this->parentWo($sample->id_wo));
 
         return response()->json(['success' => true]);
     }

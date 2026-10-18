@@ -23,6 +23,31 @@ class WoBudgetActualController extends Controller
         return $wo === 'completed';
     }
 
+    /** Induk WO dari sebuah item budget (untuk audit log tab Budget di History WO). */
+    private function parentWo($idBudgetItem): ?array
+    {
+        $idWo = DB::table('wo_budget_items as bi')
+            ->join('wo_budgets as b', 'b.id_budget', '=', 'bi.id_budget')
+            ->where('bi.id_budget_item', $idBudgetItem)
+            ->value('b.id_wo');
+
+        return $idWo ? ['work_orders', $idWo] : null;
+    }
+
+    /** Snapshot realisasi + nama akun & plan-nya supaya History mudah dibaca. */
+    private function actualJson($id): string
+    {
+        $row = DB::table('wo_budget_actuals as a')
+            ->leftJoin('wo_budget_items as bi', 'bi.id_budget_item', '=', 'a.id_budget_item')
+            ->leftJoin('budget_accounts as ac', 'ac.id_account', '=', 'bi.id_account')
+            ->leftJoin('wo_budgets as b', 'b.id_budget', '=', 'bi.id_budget')
+            ->where('a.id_actual', $id)
+            ->select(['a.*', 'ac.nama as akun', 'b.label as plan'])
+            ->first();
+
+        return $row ? json_encode([$row]) : '';
+    }
+
     public function store(Request $request)
     {
         if ($this->woIsCompleted($request->id_budget_item)) {
@@ -51,8 +76,8 @@ class WoBudgetActualController extends Controller
             'updated_at'     => now(),
         ]);
 
-        $after = DB::table('wo_budget_actuals')->where('id_actual', $id)->get()->toJson();
-        saveAudit('wo_budget_actuals', $id, 'Create', '', $after);
+        $after = $this->actualJson($id);
+        saveAudit('wo_budget_actuals', $id, 'Create', '', $after, $this->parentWo($request->id_budget_item));
 
         return response()->json(['success' => true, 'id' => $id]);
     }
@@ -97,7 +122,7 @@ class WoBudgetActualController extends Controller
 
         $allFiles = array_merge($kept, $newFiles);
 
-        $before = DB::table('wo_budget_actuals')->where('id_actual', $id)->get()->toJson();
+        $before = $this->actualJson($id);
 
         DB::table('wo_budget_actuals')->where('id_actual', $id)->update([
             'nominal_actual' => $request->nominal_actual,
@@ -108,8 +133,8 @@ class WoBudgetActualController extends Controller
 
         deleteAttachmentFiles($removed);
 
-        $after = DB::table('wo_budget_actuals')->where('id_actual', $id)->get()->toJson();
-        saveAudit('wo_budget_actuals', $id, 'Update', $before, $after);
+        $after = $this->actualJson($id);
+        saveAudit('wo_budget_actuals', $id, 'Update', $before, $after, $this->parentWo(DB::table('wo_budget_actuals')->where('id_actual', $id)->value('id_budget_item')));
 
         return response()->json(['success' => true]);
     }
@@ -129,7 +154,15 @@ class WoBudgetActualController extends Controller
 
         DB::transaction(function () use ($request) {
             foreach ($request->items as $item) {
-                $before = DB::table('wo_budget_actuals')->where('id_actual', $item['id_actual'])->get()->toJson();
+                // Item yang status & catatannya tidak berubah dilewati (tidak diverifikasi ulang, tidak dicatat di History)
+                $sekarang = DB::table('wo_budget_actuals')->where('id_actual', $item['id_actual'])->first(['status_verifikasi', 'catatan_verifikasi']);
+                if ($sekarang
+                    && ($sekarang->status_verifikasi ?? 'menunggu') === $item['status_verifikasi']
+                    && ($sekarang->catatan_verifikasi ?: null) === ($item['catatan_verifikasi'] ?: null)) {
+                    continue;
+                }
+
+                $before = $this->actualJson($item['id_actual']);
                 DB::table('wo_budget_actuals')->where('id_actual', $item['id_actual'])->update([
                     'status_verifikasi'  => $item['status_verifikasi'],
                     'catatan_verifikasi' => $item['catatan_verifikasi'] ?: null,
@@ -137,8 +170,8 @@ class WoBudgetActualController extends Controller
                     'verified_at'        => now(),
                     'updated_at'         => now(),
                 ]);
-                $after = DB::table('wo_budget_actuals')->where('id_actual', $item['id_actual'])->get()->toJson();
-                saveAudit('wo_budget_actuals', $item['id_actual'], 'Verify', $before, $after);
+                $after = $this->actualJson($item['id_actual']);
+                saveAudit('wo_budget_actuals', $item['id_actual'], 'Verify', $before, $after, $this->parentWo(DB::table('wo_budget_actuals')->where('id_actual', $item['id_actual'])->value('id_budget_item')));
             }
         });
 
@@ -159,7 +192,7 @@ class WoBudgetActualController extends Controller
             'catatan_verifikasi' => 'nullable|string|max:500',
         ]);
 
-        $before = DB::table('wo_budget_actuals')->where('id_actual', $id)->get()->toJson();
+        $before = $this->actualJson($id);
 
         DB::table('wo_budget_actuals')->where('id_actual', $id)->update([
             'status_verifikasi'  => $request->status_verifikasi,
@@ -169,8 +202,8 @@ class WoBudgetActualController extends Controller
             'updated_at'         => now(),
         ]);
 
-        $after = DB::table('wo_budget_actuals')->where('id_actual', $id)->get()->toJson();
-        saveAudit('wo_budget_actuals', $id, 'Verify', $before, $after);
+        $after = $this->actualJson($id);
+        saveAudit('wo_budget_actuals', $id, 'Verify', $before, $after, $this->parentWo($row->id_budget_item));
 
         return response()->json(['success' => true]);
     }
@@ -182,9 +215,9 @@ class WoBudgetActualController extends Controller
             return response()->json(['success' => false, 'message' => 'WO sudah selesai, tidak dapat menghapus pengeluaran.'], 403);
         }
 
-        $before = DB::table('wo_budget_actuals')->where('id_actual', $id)->get()->toJson();
+        $before = $this->actualJson($id);
         DB::table('wo_budget_actuals')->where('id_actual', $id)->delete();
-        saveAudit('wo_budget_actuals', $id, 'Delete', $before, '');
+        saveAudit('wo_budget_actuals', $id, 'Delete', $before, '', $row ? $this->parentWo($row->id_budget_item) : null);
 
         return response()->json(['success' => true]);
     }

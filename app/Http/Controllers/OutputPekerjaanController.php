@@ -64,10 +64,18 @@ class OutputPekerjaanController extends Controller
             'updated_at'      => now(),
         ]);
 
+        saveAudit('output_pekerjaan', $id, 'Create', '', $this->outputJson($id), ['work_orders', $request->id_wo]);
+
         return response()->json([
             'success' => true,
             'data'    => DB::table('output_pekerjaan')->where('id_output', $id)->first(),
         ]);
+    }
+
+    /** Snapshot 1 baris output (JSON) untuk audit log. */
+    private function outputJson($id): string
+    {
+        return DB::table('output_pekerjaan')->where('id_output', $id)->get()->toJson();
     }
 
     public function update(Request $request, $id)
@@ -97,6 +105,7 @@ class OutputPekerjaanController extends Controller
         // 'output-pekerjaan-siap') — kalau form edit biasa coba ubah ke
         // 'siap' tanpa akses itu, pertahankan status lama (field lain tetap
         // ikut ter-update seperti biasa, bukan seluruh request ditolak).
+        $before  = $this->outputJson($id);
         $current = DB::table('output_pekerjaan')->where('id_output', $id)->value('status');
         $status  = $request->status ?? 'belum_siap';
         if ($status === 'siap' && $current !== 'siap' && !userCan('output-pekerjaan-siap', 'can_update')) {
@@ -117,6 +126,8 @@ class OutputPekerjaanController extends Controller
             'updated_at'      => now(),
         ]);
 
+        $this->auditOutput($id, 'Update', $before);
+
         return response()->json([
             'success' => true,
             'data'    => DB::table('output_pekerjaan')->where('id_output', $id)->first(),
@@ -131,16 +142,28 @@ class OutputPekerjaanController extends Controller
             return response()->json(['message' => 'Anda tidak memiliki akses untuk aksi Siap Output Pekerjaan'], 403);
         }
 
+        $before = $this->outputJson($id);
         DB::table('output_pekerjaan')->where('id_output', $id)->update([
             'status'     => $request->status,
             'updated_at' => now(),
         ]);
+        $this->auditOutput($id, 'Update', $before);
         return response()->json(['success' => true, 'status' => $request->status]);
+    }
+
+    /** Catat perubahan output; ikut tampil di History WO bila output milik WO (bukan level Termin/BOQ). */
+    private function auditOutput($id, string $aksi, string $before): void
+    {
+        $idWo = DB::table('output_pekerjaan')->where('id_output', $id)->value('id_wo');
+        saveAudit('output_pekerjaan', $id, $aksi, $before, $this->outputJson($id), $idWo ? ['work_orders', $idWo] : null);
     }
 
     public function destroy($id)
     {
+        $before = $this->outputJson($id);
+        $idWo   = DB::table('output_pekerjaan')->where('id_output', $id)->value('id_wo');
         DB::table('output_pekerjaan')->where('id_output', $id)->delete();
+        saveAudit('output_pekerjaan', $id, 'Delete', $before, '', $idWo ? ['work_orders', $idWo] : null);
         return response()->json(['success' => true, 'message' => 'Output berhasil dihapus']);
     }
 }

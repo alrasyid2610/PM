@@ -84,7 +84,7 @@ abstract class BoqTambahanController extends Controller
         ]);
 
         $after = DB::table('boq_tambahan')->where('id_boq_tambahan', $id)->get()->toJson();
-        saveAudit('boq_tambahan', $id, 'Create', '', $after);
+        saveAudit('boq_tambahan', $id, 'Create', '', $after, ['work_orders', $validated['id_wo']]);
 
         return response()->json(['success' => true, 'id' => $id]);
     }
@@ -130,7 +130,7 @@ abstract class BoqTambahanController extends Controller
         ]);
 
         $after = DB::table('boq_tambahan')->where('id_boq_tambahan', $id)->get()->toJson();
-        saveAudit('boq_tambahan', $id, 'Update', $before, $after);
+        saveAudit('boq_tambahan', $id, 'Update', $before, $after, ['work_orders', $row->id_wo]);
 
         return response()->json(['success' => true]);
     }
@@ -146,7 +146,7 @@ abstract class BoqTambahanController extends Controller
 
         $before = DB::table('boq_tambahan')->where('id_boq_tambahan', $id)->get()->toJson();
         DB::table('boq_tambahan')->where('id_boq_tambahan', $id)->update(['deleted_at' => now()]);
-        saveAudit('boq_tambahan', $id, 'Delete', $before, '');
+        saveAudit('boq_tambahan', $id, 'Delete', $before, '', ['work_orders', $row->id_wo]);
 
         return response()->json(['success' => true]);
     }

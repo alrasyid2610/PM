@@ -76,15 +76,14 @@ class SqKeterangan
     }
 
     /**
-     * No. SQ Draft yang masih memakai rekening ini pada isian bertipe rekening.
-     * SQ Final tidak dihitung: teksnya sudah dikunci (teks_final).
+     * No. SQ (semua status) yang memakai rekening ini pada isian bertipe rekening.
+     * Dipakai untuk memblokir hapus rekening: master yang sudah dipakai transaksi tidak boleh dihapus.
      */
     public static function sqPemakaiRekening(int $idRekening): array
     {
         $rows = DB::table('sq_keterangan as k')
             ->join('poin_keterangan as p', 'p.id_poin', '=', 'k.id_poin')
             ->join('sales_quotations as s', 's.id_sq', '=', 'k.id_sq')
-            ->whereNull('k.teks_final')
             ->whereNotNull('k.nilai')
             ->get(['k.nilai', 'p.template', 's.no_sq']);
 

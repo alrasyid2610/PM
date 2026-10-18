@@ -131,6 +131,14 @@ class FwoBudgetActualController extends Controller
 
         DB::transaction(function () use ($request) {
             foreach ($request->items as $item) {
+                // Item yang status & catatannya tidak berubah dilewati (tidak diverifikasi ulang, tidak dicatat di History)
+                $sekarang = DB::table('fwo_budget_actuals')->where('id_actual', $item['id_actual'])->first(['status_verifikasi', 'catatan_verifikasi']);
+                if ($sekarang
+                    && ($sekarang->status_verifikasi ?? 'menunggu') === $item['status_verifikasi']
+                    && ($sekarang->catatan_verifikasi ?: null) === ($item['catatan_verifikasi'] ?: null)) {
+                    continue;
+                }
+
                 $before = DB::table('fwo_budget_actuals')->where('id_actual', $item['id_actual'])->get()->toJson();
                 DB::table('fwo_budget_actuals')->where('id_actual', $item['id_actual'])->update([
                     'status_verifikasi'  => $item['status_verifikasi'],

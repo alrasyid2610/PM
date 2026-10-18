@@ -67,6 +67,37 @@ class WoBudgetController extends Controller
         return $wo && $wo->status === 'completed';
     }
 
+    /**
+     * Snapshot plan budget untuk audit log: baris plan + satu field per item budget
+     * ("Item • {akun}" => nominal) supaya History hanya menampilkan item yang benar-benar
+     * berubah/ditambah/dihapus (item yang tidak berubah tidak dicatat).
+     */
+    private function budgetJson($id): string
+    {
+        $plan = DB::table('wo_budgets')->where('id_budget', $id)->first();
+        if (!$plan) return '';
+
+        $plan = (array) $plan;
+        $dipakai = [];
+        $items = DB::table('wo_budget_items as bi')
+            ->leftJoin('budget_accounts as a', 'a.id_account', '=', 'bi.id_account')
+            ->where('bi.id_budget', $id)
+            ->orderBy('bi.id_budget_item')
+            ->get(['a.nama', 'bi.nominal_budget', 'bi.keterangan', 'bi.is_cash_advance']);
+
+        foreach ($items as $i) {
+            $kunci = 'Item • ' . ($i->nama ?? '?');
+            $dipakai[$kunci] = ($dipakai[$kunci] ?? 0) + 1;
+            if ($dipakai[$kunci] > 1) $kunci .= ' (' . $dipakai[$kunci] . ')'; // akun yang sama dipakai lebih dari sekali
+
+            $plan[$kunci] = 'Rp ' . number_format($i->nominal_budget, 0, ',', '.')
+                . ($i->is_cash_advance ? ' [Cash Advance]' : '')
+                . ($i->keterangan ? ' — ' . $i->keterangan : '');
+        }
+
+        return json_encode([$plan]);
+    }
+
     public function store(Request $request)
     {
         if ($this->woIsCompleted($request->id_wo)) {
@@ -109,8 +140,8 @@ class WoBudgetController extends Controller
             }
         });
 
-        $after = DB::table('wo_budgets')->where('id_budget', $id)->get()->toJson();
-        saveAudit('wo_budgets', $id, 'Create', '', $after);
+        $after = $this->budgetJson($id);
+        saveAudit('wo_budgets', $id, 'Create', '', $after, ['work_orders', $request->id_wo]);
 
         return response()->json(['success' => true, 'id' => $id]);
     }
@@ -157,7 +188,7 @@ class WoBudgetController extends Controller
             'items.*.nominal_budget.min' => 'Nominal setiap item harus lebih dari 0.',
         ]);
 
-        $before = DB::table('wo_budgets')->where('id_budget', $id)->get()->toJson();
+        $before = $this->budgetJson($id);
 
         DB::transaction(function () use ($request, $id) {
             DB::table('wo_budgets')->where('id_budget', $id)->update([
@@ -205,8 +236,8 @@ class WoBudgetController extends Controller
             }
         });
 
-        $after = DB::table('wo_budgets')->where('id_budget', $id)->get()->toJson();
-        saveAudit('wo_budgets', $id, 'Update', $before, $after);
+        $after = $this->budgetJson($id);
+        saveAudit('wo_budgets', $id, 'Update', $before, $after, ['work_orders', $budget->id_wo]);
 
         return response()->json(['success' => true]);
     }
@@ -267,14 +298,14 @@ class WoBudgetController extends Controller
             $dokumenPath = $uploaded['files'][0] ?? null;
         }
 
-        $before = DB::table('wo_budgets')->where('id_budget', $id)->get()->toJson();
+        $before = $this->budgetJson($id);
         DB::table('wo_budgets')->where('id_budget', $id)->update(array_filter([
             'status'             => 'completed',
             'dokumen_realisasi'  => $dokumenPath,
             'updated_at'         => now(),
         ], fn($v) => $v !== null));
-        $after = DB::table('wo_budgets')->where('id_budget', $id)->get()->toJson();
-        saveAudit('wo_budgets', $id, 'Close', $before, $after);
+        $after = $this->budgetJson($id);
+        saveAudit('wo_budgets', $id, 'Close', $before, $after, ['work_orders', $budget->id_wo]);
 
         return response()->json(['success' => true]);
     }
@@ -289,14 +320,14 @@ class WoBudgetController extends Controller
             return response()->json(['success' => false, 'message' => 'Budget plan sudah ditutup, tidak dapat dihapus.'], 403);
         }
 
-        $before = DB::table('wo_budgets')->where('id_budget', $id)->get()->toJson();
+        $before = $this->budgetJson($id);
 
         DB::table('wo_budgets')->where('id_budget', $id)->update([
             'deleted_at' => now(),
             'updated_at' => now(),
         ]);
 
-        saveAudit('wo_budgets', $id, 'Delete', $before, '');
+        saveAudit('wo_budgets', $id, 'Delete', $before, '', ['work_orders', $budget->id_wo ?? null]);
 
         return response()->json(['success' => true]);
     }

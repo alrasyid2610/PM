@@ -22,6 +22,18 @@ class WorkOrderController extends Controller
         return ['updated_at', 'created_at', 'id_wo'];
     }
 
+    // History WO juga menampilkan perubahan tab BOQ, BOQ Other/Sampling, Output, Budget, Lab Sample Reg
+    protected function auditParentTable(): ?string
+    {
+        return 'work_orders';
+    }
+
+    // Log BOQ lama (sebelum kolom parent ada) disimpan dengan row_id = id WO
+    protected function auditExtraTables(): array
+    {
+        return ['boq'];
+    }
+
     public function index()
     {
         return view('work-order.index', [
@@ -409,10 +421,12 @@ class WorkOrderController extends Controller
             ], 422);
         }
 
+        $before = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
         DB::table('work_orders')->where('id_wo', $id)->update([
             'status'     => 'completed',
             'updated_at' => now(),
         ]);
+        saveAudit('work_orders', $id, 'update', $before, DB::table('work_orders')->where('id_wo', $id)->get()->toJson());
 
         return response()->json(['success' => true, 'message' => 'Work Order berhasil diselesaikan']);
     }

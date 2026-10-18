@@ -97,7 +97,7 @@ class OutputTambahanController extends Controller
         ]);
 
         $after = DB::table('output_tambahan')->where('id_output_tambahan', $id)->get()->toJson();
-        saveAudit('output_tambahan', $id, 'Create', '', $after);
+        saveAudit('output_tambahan', $id, 'Create', '', $after, ['work_orders', $request->id_wo]);
 
         return response()->json(['success' => true, 'id' => $id]);
     }
@@ -145,7 +145,7 @@ class OutputTambahanController extends Controller
         ]);
 
         $after = DB::table('output_tambahan')->where('id_output_tambahan', $id)->get()->toJson();
-        saveAudit('output_tambahan', $id, 'Update', $before, $after);
+        saveAudit('output_tambahan', $id, 'Update', $before, $after, ['work_orders', $row->id_wo]);
 
         return response()->json(['success' => true]);
     }
@@ -161,7 +161,7 @@ class OutputTambahanController extends Controller
 
         $before = DB::table('output_tambahan')->where('id_output_tambahan', $id)->get()->toJson();
         DB::table('output_tambahan')->where('id_output_tambahan', $id)->update(['deleted_at' => now()]);
-        saveAudit('output_tambahan', $id, 'Delete', $before, '');
+        saveAudit('output_tambahan', $id, 'Delete', $before, '', ['work_orders', $row->id_wo]);
 
         return response()->json(['success' => true]);
     }

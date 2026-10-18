@@ -410,7 +410,9 @@ class CrudPageController {
                 html += `
                 <div class="acc-item ${isOpen}">
                     <div class="acc-header">
+                        ${log.bagian ? `<span class="acc-bagian">${escHtml(log.bagian)}</span>` : ""}
                         <span class="acc-badge ${actionClass}">${actionLabel}</span>
+                        ${log.label ? `<span class="acc-label" title="${escHtml(log.label)}">${escHtml(log.label)}</span>` : ""}
                         <div class="acc-by">
                             <div class="acc-avatar">${initials}</div>
                             ${log.created_by_name ?? "System"}

@@ -129,13 +129,13 @@ class BankAccountController extends Controller
 
     public function destroy($id)
     {
-        // Rekening yang masih dipakai SQ Draft tidak boleh dihapus (isian SQ jadi "belum lengkap")
+        // Rekening yang sudah dipakai SQ (status apa pun) tidak boleh dihapus; nonaktifkan saja
         $sqDraft = \App\Support\SqKeterangan::sqPemakaiRekening((int) $id);
         if ($sqDraft) {
             return response()->json([
-                'message' => 'Rekening masih dipakai di SQ Draft: ' . implode(', ', array_slice($sqDraft, 0, 5))
+                'message' => 'Rekening sudah dipakai di SQ: ' . implode(', ', array_slice($sqDraft, 0, 5))
                     . (count($sqDraft) > 5 ? ' dan ' . (count($sqDraft) - 5) . ' lainnya' : '')
-                    . '. Ganti rekening di SQ tersebut, atau nonaktifkan rekening ini.',
+                    . '. Rekening yang sudah dipakai tidak bisa dihapus, nonaktifkan saja bila tidak dipakai lagi.',
             ], 422);
         }
 
