@@ -70,7 +70,7 @@ class BrsSamplingPointController extends Controller
         $rules = [
             'id_site'    => 'required|integer',
             'jenis'      => 'required|in:env,we',
-            'kode'       => 'required|string|max:50',
+            'kode'       => 'required|string|max:255',
             'nama'       => 'required|string|max:255',
             'gedung'     => 'nullable|string|max:255',
             'ruangan'    => 'nullable|string|max:255',
@@ -130,7 +130,7 @@ class BrsSamplingPointController extends Controller
         $jenis = $row->jenis;
 
         $rules = [
-            'kode'       => 'required|string|max:50',
+            'kode'       => 'required|string|max:255',
             'nama'       => 'required|string|max:255',
             'gedung'     => 'nullable|string|max:255',
             'ruangan'    => 'nullable|string|max:255',
