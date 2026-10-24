@@ -25,7 +25,7 @@ function renderAssignedOutputsInner(outputs) {
                 <td ${TD} style="white-space:nowrap;">
                     ${item.id_wo
                         ? `<a href="/work-orders?open=${item.id_wo}" class="fw-semibold text-decoration-none" style="color:#1a56db;font-size:12px;">${escHtml(item.no_wo || '—')}</a>`
-                        : `<span style="font-size:12px;color:#64748b;">${escHtml(item.no_wo || '—')}</span>`
+                        : `<span style="font-size:12px;color:#64748b;">${escHtml(item.no_wo || (item.tipe === 'other' ? 'Level SO' : '—'))}</span>`
                     }
                 </td>
                 <td ${TD}>${escHtml(item.judul_output)}${isOther ? ' ' + outputOtherBadge() : ''}</td>

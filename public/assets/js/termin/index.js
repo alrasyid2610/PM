@@ -150,7 +150,7 @@ $(document).ready(function () {
             // Kelompokkan per WO
             var woGroups = new Map();
             data.forEach(function (item) {
-                var key = item.no_wo || '—';
+                var key = item.no_wo || (item.tipe === 'other' ? 'Level SO (tanpa WO)' : '—');
                 if (!woGroups.has(key)) woGroups.set(key, []);
                 woGroups.get(key).push(item);
             });

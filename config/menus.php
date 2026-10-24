@@ -143,7 +143,7 @@ return [
             ['slug' => 'wo-complete',           'label' => 'Selesaikan WO',             'icon' => 'fa-flag-checkered'],
             ['slug' => 'wo-budget-verify',      'label' => 'Verifikasi Budget WO',      'icon' => 'fa-stamp'],
             ['slug' => 'fwo-budget-verify',     'label' => 'Verifikasi Budget FWO',     'icon' => 'fa-stamp'],
-            ['slug' => 'output-pekerjaan-siap', 'label' => 'Siap Output Pekerjaan (WO)', 'icon' => 'fa-check'],
+            ['slug' => 'output-pekerjaan-siap', 'label' => 'Siap Output (Pekerjaan & Other)', 'icon' => 'fa-check'],
             ['slug' => 'termin-siap-kirim',     'label' => 'Siap Kirim Termin',         'icon' => 'fa-paper-plane'],
             ['slug' => 'termin-selesai',        'label' => 'Selesaikan Termin',         'icon' => 'fa-flag-checkered'],
             ['slug' => 'wo-budget-close',       'label' => 'Selesaikan Plan Budget WO', 'icon' => 'fa-box-archive'],

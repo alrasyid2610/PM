@@ -386,49 +386,7 @@ $(document).on('click', '.btn-wo-boq-tambahan-delete', function () {
 
 // ── OUTPUT OTHER (level WO, berdiri sendiri) ────────────────────────────────────
 
-// ── Judul Output (Output Pekerjaan & Output Other) ─────────────────────────
-// Select2 yang bisa memilih dari master `output_judul` ATAU mengetik judul baru (tags).
-// Yang dikirim & disimpan adalah teks judulnya, bukan id master; judul baru masuk master
-// otomatis saat output disimpan (OutputJudul::resolve() di backend).
-function initJudulOutputSelect($sel, tipe, $dropdownParent, nilai) {
-    if ($sel.hasClass('select2-hidden-accessible')) $sel.select2('destroy');
-    $sel.empty().append('<option value=""></option>');
-
-    const sama = function (a, b) { return String(a).toLowerCase() === String(b).toLowerCase(); };
-
-    $sel.select2({
-        width: '100%',
-        placeholder: 'Pilih atau ketik judul output',
-        allowClear: true,
-        tags: true,
-        dropdownParent: $dropdownParent,
-        createTag: function (params) {
-            const t = $.trim(params.term || '');
-            if (!t) return null;
-            // Judul yang sama (tidak peka huruf besar-kecil) tidak ditawarkan sebagai judul baru
-            let ada = false;
-            $sel.find('option').each(function () { if (this.value && sama(this.value, t)) ada = true; });
-            return ada ? null : { id: t, text: t, isNew: true };
-        },
-        templateResult: function (d) {
-            if (!d.isNew) return d.text;
-            return $('<span></span>').append('<i class="fa-solid fa-plus me-1" style="font-size:10px;"></i>').append(document.createTextNode('Tambah judul baru: "' + d.text + '"'));
-        },
-        language: { noResults: function () { return 'Ketik untuk menambah judul baru'; } },
-    });
-
-    $.get('/output-judul/select2', { tipe: tipe }).done(function (rows) {
-        rows.forEach(function (r) { $sel.append(new Option(r.text, r.id, false, false)); });
-        if (nilai) {
-            // Pakai bentuk yang ada di master bila cocok; kalau belum ada (mis. judul lama) tambahkan sebagai opsi
-            let cocok = null;
-            $sel.find('option').each(function () { if (this.value && sama(this.value, nilai)) cocok = this.value; });
-            if (cocok === null) { $sel.append(new Option(nilai, nilai, false, false)); cocok = nilai; }
-            $sel.val(cocok).trigger('change');
-        }
-    });
-    if (nilai) $sel.append(new Option(nilai, nilai, true, true)).trigger('change'); // tampil langsung selagi daftar dimuat
-}
+// initJudulOutputSelect() dipindah ke core/judulOutput.js (dipakai bersama halaman SO)
 
 let outputOtherFilePond = null;
 let woSampleFilePond = null;
@@ -484,7 +442,12 @@ function renderOutputOtherList(rows, total, isLocked) {
             </td>
             <td style="font-size:11px;white-space:nowrap;color:#64748b;">${periode}</td>
             <td style="font-size:11px;">${filesHtml}${drive}</td>
-            <td class="text-center" style="width:72px;white-space:nowrap;">
+            <td class="text-center" style="white-space:nowrap;">
+                ${!isLocked && r.status === 'belum_siap' && can('output-pekerjaan-siap', 'can_update') ? `
+                <button type="button" class="btn btn-sm btn-success py-0 px-2 me-1 btn-output-other-siap"
+                    data-id="${r.id_output_tambahan}" title="Tandai Siap" style="font-size:11px;" data-no-disable>
+                    <i class="fa-solid fa-check me-1"></i>Siap
+                </button>` : ''}
                 ${!isLocked && can('work-orders', 'can_update') ? `
                 <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-output-other-edit"
                     data-id="${r.id_output_tambahan}" title="Edit" style="font-size:11px;">
@@ -545,9 +508,36 @@ function initOutputOtherSatuanSelect2(idVal, labelVal) {
     });
 }
 
+// Opsi "Siap" di dropdown Status hanya untuk user ber-izin aksi khusus (atau bila item memang sudah Siap)
+function toggleOutputOtherSiapOption($modal, statusSaatIni) {
+    const boleh = can('output-pekerjaan-siap', 'can_update') || statusSaatIni === 'siap';
+    $modal.find('#outputOtherModal-status option[value="siap"]').prop('disabled', !boleh);
+}
+
+// Tombol aksi "Siap" di daftar Output Other (sama dengan tombol Siap di Output Pekerjaan)
+$(document).on('click', '.btn-output-other-siap', function () {
+    const $btn = $(this);
+    const id   = $btn.data('id');
+    const idWo = $('#woDetailTabs button[data-bs-target="#tabOutputOther"]').data('wo-id');
+    Notify.confirm('Ubah status menjadi <b>Siap</b>?', function () {
+        $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
+        $.ajax({
+            url: '/wo-output-other/' + id + '/status',
+            method: 'POST',
+            data: { _token: window.route.csrf, status: 'siap' },
+            success: function () { Notify.success('Status diperbarui menjadi Siap'); loadOutputOtherData(idWo); },
+            error: function (xhr) {
+                Notify.error(xhr.responseJSON?.message || 'Gagal mengubah status');
+                $btn.prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i>Siap');
+            },
+        });
+    });
+});
+
 $(document).on('click', '#btnAddOutputOther', function () {
     const idWo   = $(this).data('wo-id');
     const $modal = $('#outputOtherModal');
+    toggleOutputOtherSiapOption($modal, '');
 
     $modal.find('#outputOtherModalLabel').html('<i class="fa-solid fa-file-circle-plus me-2" style="color:#0f766e;"></i>Tambah Output Other');
     $modal.find('#outputOtherModal-id').val('');
@@ -584,6 +574,7 @@ $(document).on('click', '.btn-output-other-edit', function (e) {
             initJudulOutputSelect($modal.find('#outputOtherModal-nama'), 'other', $modal, r.nama_item || '');
             const qtyEl = $modal.find('#outputOtherModal-qty')[0];
             if (qtyEl && qtyEl._cleave) qtyEl._cleave.setRawValue(r.qty || ''); else $modal.find('#outputOtherModal-qty').val(r.qty || '');
+            toggleOutputOtherSiapOption($modal, r.status);
             $modal.find('#outputOtherModal-status').val(r.status || 'belum_siap');
             $modal.find('#outputOtherModal-tgl-mulai').val(r.tanggal_mulai ? r.tanggal_mulai.substring(0,10) : '');
             $modal.find('#outputOtherModal-tgl-selesai').val(r.tanggal_selesai ? r.tanggal_selesai.substring(0,10) : '');
@@ -3837,7 +3828,6 @@ function loadWoBudgetData(idWo) {
             const woStatus = res.wo_status || '';
             const isLocked = woStatus === 'completed';
 
-            BudgetSections.applyPct($wrap, `/wo-budgets/${idWo}/basis`);
             if (!plans.length) {
                 $wrap.html(`<div class="text-center text-muted py-4" style="font-size:13px;">
                     <i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>
@@ -3847,6 +3837,7 @@ function loadWoBudgetData(idWo) {
             }
             window._woBudgetPlans = plans;
             $wrap.html(renderWoBudgetList(plans, isLocked));
+            BudgetSections.applyPct($wrap, `/wo-budgets/${idWo}/basis`);
         })
         .fail(function () {
             $wrap.html('<div class="text-center text-danger py-3">Gagal memuat data budget.</div>');
@@ -4099,7 +4090,6 @@ function buildWoBudgetItemRow(item) {
                 <i class="fa-solid fa-trash" style="color:#dc2626;"></i>
             </button>
         </td>
-    total: '#woBudgetModalTotal',
     </tr>`;
 }
 
@@ -4109,6 +4099,7 @@ const WO_BUDGET_SECTIONS = {
     modal: '#woBudgetPlanModal',
     rowSel: '.wo-budget-item-row',
     buildRow: buildWoBudgetItemRow,
+    total: '#woBudgetModalTotal',
     onChange: () => recalcWoBudgetTotal(),
 };
 
@@ -4162,7 +4153,6 @@ function openWoBudgetModal(idWo, budgetData) {
     // Info rentang tanggal WO sebagai referensi (cuma informasi, tidak
     // membatasi input tanggal budget plan).
     const woMulai   = currentWoData ? currentWoData.tanggal_mulai : null;
-    BudgetSections.loadBasis(WO_BUDGET_SECTIONS, `/wo-budgets/${idWo}/basis`);
     const woSelesai = currentWoData ? currentWoData.tanggal_selesai : null;
     $('#woBudgetModal-hint-tgl-mulai')
         .text(woMulai ? 'Tanggal mulai WO: ' + fmtDate(woMulai) : '')
@@ -4172,6 +4162,7 @@ function openWoBudgetModal(idWo, budgetData) {
         .toggle(!!woSelesai);
 
     $('#woBudgetItemsBody').empty();
+    BudgetSections.loadBasis(WO_BUDGET_SECTIONS, `/wo-budgets/${idWo}/basis`);
     BudgetSections.fill(WO_BUDGET_SECTIONS, isEdit ? (budgetData.items || []) : []).done(function () {
         BudgetSections.initSelects(WO_BUDGET_SECTIONS);
         initNumericMask(document.getElementById('woBudgetPlanModal'));

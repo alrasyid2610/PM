@@ -45,6 +45,8 @@
 <script src="{{ asset('assets/js/core/permissionEngine.js') }}"></script>
 <script src="{{ asset('assets/js/core/modalGuard.js') }}?v={{ @filemtime(public_path('assets/js/core/modalGuard.js')) }}"></script>
 <script src="{{ asset('assets/js/pm.js') }}"></script>
+{{-- renderFilePreviewButton()/openFilePreview() — dipakai tombol "Lihat (n)" lampiran output di form Termin (embed) --}}
+<script src="{{ asset('assets/js/core/filePreview.js') }}"></script>
 @auth
 <script>
     window.userPermissions = @json(getUserPermissions(auth()->id()));

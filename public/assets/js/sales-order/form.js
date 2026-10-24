@@ -143,6 +143,13 @@ function renderForm(res) {
                             Termin
                         </button>
                     </li>
+                    <li role="presentation">
+                        <button class="pm-tab-btn" type="button" role="tab" id="tab-so-output-other-btn"
+                            data-bs-toggle="tab" data-bs-target="#tabSoOutputOther" data-so-id="${res.id_so}">
+                            <i class="fa-solid fa-file-circle-plus me-1" style="color:#0f766e;font-size:11px;"></i>
+                            Output Other
+                        </button>
+                    </li>
                 </ul>
                 <div class="pm-tab-actions">
                     <div id="soTabActionsInfo" class="d-flex align-items-center gap-2">
@@ -168,6 +175,17 @@ function renderForm(res) {
                             data-so-id="${res.id_so}" data-no-disable>
                             <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                             <i class="fa-solid fa-file-invoice-dollar" style="font-size:11px;"></i> Termin
+                        </button>` : ''}
+                    </div>
+                    <div id="soTabActionsOutputOther" class="d-flex align-items-center gap-2 d-none">
+                        <button type="button" id="btnRefreshSoOutputOther" data-so-id="${res.id_so}"
+                            class="pm-btn-icon" title="Refresh" data-no-disable>
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+                        ${!isDeleted && can('sales-orders', 'can_create') ? `<button type="button" class="pm-btn-pill pm-btn-pill--teal" id="btnAddSoOutputOther"
+                            data-so-id="${res.id_so}" data-no-disable>
+                            <i class="fa-solid fa-plus" style="font-size:10px;"></i>
+                            <i class="fa-solid fa-file-circle-plus" style="font-size:11px;"></i> Output Other
                         </button>` : ''}
                     </div>
                 </div>
@@ -627,10 +645,94 @@ function renderForm(res) {
                         </div>
                     </div>
 
+                    <!-- TAB: OUTPUT OTHER (level SO — bisa ditarik saat tambah Termin) -->
+                    <div class="tab-pane fade" id="tabSoOutputOther" role="tabpanel">
+                        <div class="card card-body">
+                            <div class="text-muted mb-2" style="font-size:11px;">
+                                <i class="fa-solid fa-circle-info me-1"></i>
+                                Output Other di level SO (tanpa WO). Item berstatus <b>Siap</b> bisa dipilih saat menambah Termin.
+                            </div>
+                            <div id="soOutputOtherContent">
+                                <div class="text-center text-muted py-4">
+                                    <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
 
 </form>
+
+    <!-- MODAL: TAMBAH/EDIT OUTPUT OTHER (level SO) -->
+    <div class="modal fade" id="soOutputOtherModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:560px;">
+            <div class="modal-content">
+                <div class="modal-header py-2 px-3" style="border-bottom:1px solid #e2e8f0;">
+                    <h6 class="modal-title mb-0" id="soOutputOtherModalLabel">
+                        <i class="fa-solid fa-file-circle-plus me-2" style="color:#0f766e;"></i>Tambah Output Other
+                    </h6>
+                    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3 px-3">
+                    <input type="hidden" id="soOutputOtherModal-id">
+                    <input type="hidden" id="soOutputOtherModal-id-so">
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Nama Item <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="soOutputOtherModal-nama" data-no-disable></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Qty <span class="text-danger">*</span></label>
+                            <input type="text" inputmode="numeric" class="form-control form-control-sm input-num-mask input-num-int"
+                                id="soOutputOtherModal-qty" placeholder="0" data-no-disable>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Satuan</label>
+                            <select class="form-select form-select-sm" id="soOutputOtherModal-satuan" data-no-disable></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Status</label>
+                            <select class="form-select form-select-sm" id="soOutputOtherModal-status" data-no-disable>
+                                <option value="belum_siap">Belum Siap</option>
+                                <option value="siap">Siap</option>
+                                <option value="terkirim">Terkirim</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Mulai</label>
+                            <input type="text" class="form-control form-control-sm fp-date" id="soOutputOtherModal-tgl-mulai" name="so_output_other_tgl_mulai" autocomplete="off" data-no-disable>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Selesai</label>
+                            <input type="text" class="form-control form-control-sm fp-date" id="soOutputOtherModal-tgl-selesai" name="so_output_other_tgl_selesai" autocomplete="off" data-no-disable>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;"><i class="fa-brands fa-google-drive me-1" style="color:#1a73e8;"></i>Link Drive</label>
+                            <input type="url" class="form-control form-control-sm" id="soOutputOtherModal-link-drive"
+                                placeholder="https://drive.google.com/..." data-no-disable>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Lampiran</label>
+                            <div id="soOutputOtherModal-existing-files" class="mb-2"></div>
+                            <input type="file" id="soOutputOtherModal-attachments" multiple data-no-disable>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:12px;">Keterangan</label>
+                            <textarea class="form-control form-control-sm" id="soOutputOtherModal-keterangan" rows="2" placeholder="Opsional" data-no-disable></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3" style="border-top:1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" data-no-disable>Batal</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="soOutputOtherModal-btn-save" data-no-disable>
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Simpan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 `;
 }

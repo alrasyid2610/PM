@@ -341,10 +341,15 @@ class TerminController extends Controller
 
         // Output Other (output_tambahan): hanya yang berstatus Siap & belum ditagihkan
         if ($this->otherReady()) {
+            // Milik WO dari SO ini, atau milik SO ini langsung (Output Other level SO, no_wo = null)
             $other = DB::table('output_tambahan as ot')
-                ->join('work_orders as wo', 'wo.id_wo', '=', 'ot.id_wo')
-                ->where('wo.id_so', $id_so)
-                ->whereNull('wo.deleted_at')
+                ->leftJoin('work_orders as wo', function ($j) {
+                    $j->on('wo.id_wo', '=', 'ot.id_wo')->whereNull('wo.deleted_at');
+                })
+                ->where(function ($q) use ($id_so) {
+                    $q->where('wo.id_so', $id_so);
+                    if ($this->soReady()) $q->orWhere('ot.id_so', $id_so);
+                })
                 ->whereNull('ot.deleted_at')
                 ->where('ot.status', 'siap')
                 ->whereNull('ot.id_termin')
@@ -355,7 +360,8 @@ class TerminController extends Controller
                     'ot.status', 'ot.tanggal_selesai', 'ot.attachments', 'ot.link_drive', 'wo.no_wo', 'wo.id_wo',
                 ]);
             $other->each(fn ($o) => $o->tipe = 'other');
-            $outputs = $outputs->concat($other)->sortBy('no_wo')->values();
+            // Level SO (tanpa WO) diurutkan paling akhir
+            $outputs = $outputs->concat($other)->sortBy(fn ($o) => $o->no_wo ?? "\u{10FFFF}")->values();
         }
 
         return response()->json($outputs);
@@ -492,6 +498,12 @@ class TerminController extends Controller
         return Schema::hasColumn('output_tambahan', 'id_termin');
     }
 
+    /** Kolom id_so (Output Other level SO) baru ada setelah migration 2026_10_26_000002 dijalankan. */
+    private function soReady(): bool
+    {
+        return Schema::hasColumn('output_tambahan', 'id_so');
+    }
+
     /**
      * Pasang Output Other ke Termin. Hanya yang milik WO dari SO yang sama, berstatus Siap,
      * dan belum ditagihkan (atau sudah milik Termin ini) yang diterima; id lain diabaikan.
@@ -502,9 +514,13 @@ class TerminController extends Controller
         if (!$ids || !$idSo || !$this->otherReady()) return;
 
         $valid = DB::table('output_tambahan as ot')
-            ->join('work_orders as wo', 'wo.id_wo', '=', 'ot.id_wo')
-            ->where('wo.id_so', $idSo)
-            ->whereNull('wo.deleted_at')
+            ->leftJoin('work_orders as wo', function ($j) {
+                $j->on('wo.id_wo', '=', 'ot.id_wo')->whereNull('wo.deleted_at');
+            })
+            ->where(function ($q) use ($idSo) {
+                $q->where('wo.id_so', $idSo);
+                if ($this->soReady()) $q->orWhere('ot.id_so', $idSo); // Output Other level SO
+            })
             ->whereNull('ot.deleted_at')
             ->whereIn('ot.id_output_tambahan', $ids)
             ->where(function ($q) use ($idTermin) {
@@ -544,7 +560,7 @@ class TerminController extends Controller
                 ->orderBy('ot.id_output_tambahan')
                 ->get();
             $other->each(fn ($o) => $o->tipe = 'other');
-            $rows = $rows->concat($other)->sortBy('no_wo')->values();
+            $rows = $rows->concat($other)->sortBy(fn ($o) => $o->no_wo ?? "\u{10FFFF}")->values();
         }
 
         return $rows;

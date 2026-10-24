@@ -596,7 +596,7 @@ $(document).on(
     '#soDetailTabs button[data-bs-toggle="tab"]',
     function (e) {
         const target = $(e.target).data("bs-target");
-        $("#soTabActionsInfo, #soTabActionsWo, #soTabActionsTermin").addClass(
+        $("#soTabActionsInfo, #soTabActionsWo, #soTabActionsTermin, #soTabActionsOutputOther").addClass(
             "d-none",
         );
         if (target === "#tabInfoSo")
@@ -604,8 +604,252 @@ $(document).on(
         if (target === "#tabWo") $("#soTabActionsWo").removeClass("d-none");
         if (target === "#tabTermin")
             $("#soTabActionsTermin").removeClass("d-none");
+        if (target === "#tabSoOutputOther")
+            $("#soTabActionsOutputOther").removeClass("d-none");
     },
 );
+
+// ── OUTPUT OTHER level SO (tab Output Other; item Siap bisa ditarik saat tambah Termin) ──
+// Pola sama dengan Output Other di WO (work-order/index.js), endpoint /so-output-other (izin sales-orders).
+let soOutputOtherFilePond = null;
+const SO_OO_STATUS_LABEL = { belum_siap: 'Belum Siap', siap: 'Siap', terkirim: 'Terkirim' };
+const SO_OO_STATUS_COLOR = {
+    belum_siap: { bg: '#fee2e2', color: '#dc2626' },
+    siap:       { bg: '#dbeafe', color: '#1d4ed8' },
+    terkirim:   { bg: '#dcfce7', color: '#15803d' },
+};
+
+function loadSoOutputOther(idSo) {
+    const $wrap = $('#soOutputOtherContent');
+    $wrap.html('<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>');
+    $.get('/so-output-other/' + idSo + '/list')
+        .done(function (res) { $wrap.html(renderSoOutputOtherList(res.data || [], !!res.locked)); })
+        .fail(function () { $wrap.html('<div class="text-center text-danger py-4">Gagal memuat data.</div>'); });
+}
+
+function renderSoOutputOtherList(rows, isLocked) {
+    if (!rows.length) {
+        return '<div class="text-center text-muted py-4"><i class="fa-solid fa-file-circle-plus fa-2x d-block mb-2 opacity-25"></i>Belum ada item Output Other</div>';
+    }
+    const body = rows.map(function (r, i) {
+        const st = SO_OO_STATUS_COLOR[r.status] || SO_OO_STATUS_COLOR.belum_siap;
+        const periode = r.tanggal_mulai || r.tanggal_selesai
+            ? (r.tanggal_mulai ? r.tanggal_mulai.substring(0, 10) : '—') + ' s/d ' + (r.tanggal_selesai ? r.tanggal_selesai.substring(0, 10) : '—')
+            : '—';
+        const files = renderFilePreviewButton(r.attachments || [], { title: (r.nama_item || 'Output') + ' — Lampiran' });
+        const drive = r.link_drive
+            ? '<a href="' + escHtml(r.link_drive) + '" target="_blank" style="font-size:11px;color:#1a56db;"><i class="fa-brands fa-google-drive me-1"></i>Drive</a>'
+            : '';
+        const siap = !isLocked && r.status === 'belum_siap' && can('output-pekerjaan-siap', 'can_update')
+            ? '<button type="button" class="btn btn-sm btn-success py-0 px-2 me-1 btn-so-output-other-siap" data-id="' + r.id_output_tambahan + '" title="Tandai Siap" style="font-size:11px;" data-no-disable><i class="fa-solid fa-check me-1"></i>Siap</button>'
+            : '';
+        const edit = !isLocked && can('sales-orders', 'can_create')
+            ? '<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-so-output-other-edit" data-id="' + r.id_output_tambahan + '" title="Edit" style="font-size:11px;"><i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i></button>'
+            : '';
+        const del = !isLocked && can('sales-orders', 'can_delete')
+            ? '<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-so-output-other-delete" data-id="' + r.id_output_tambahan + '" data-nama="' + escHtml(r.nama_item) + '" title="Hapus" style="font-size:11px;"><i class="fa-solid fa-trash" style="color:#dc2626;"></i></button>'
+            : '';
+        return '<tr>'
+            + '<td style="font-size:12px;color:#94a3b8;width:36px;">' + (i + 1) + '</td>'
+            + '<td style="font-size:12px;">' + escHtml(r.nama_item) + '</td>'
+            + '<td style="font-size:12px;text-align:right;white-space:nowrap;">' + (r.qty ?? 0) + ' ' + escHtml(r.satuan || '') + '</td>'
+            + '<td style="text-align:center;white-space:nowrap;"><span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:' + st.bg + ';color:' + st.color + ';">' + (SO_OO_STATUS_LABEL[r.status] || r.status) + '</span></td>'
+            + '<td style="font-size:11px;white-space:nowrap;color:#64748b;">' + periode + '</td>'
+            + '<td style="font-size:11px;">' + files + drive + '</td>'
+            + '<td class="text-center" style="white-space:nowrap;">' + siap + edit + del + '</td>'
+            + '</tr>';
+    }).join('');
+
+    return '<div class="table-responsive"><table class="pm-table"><thead><tr>'
+        + '<th style="width:36px;">No</th><th>Nama Item</th><th style="width:100px;text-align:right;">Qty</th>'
+        + '<th style="width:90px;text-align:center;">Status</th><th style="width:170px;">Periode</th>'
+        + '<th style="width:140px;">Lampiran</th><th style="width:72px;"></th>'
+        + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+}
+
+function initSoOutputOtherSatuan(idVal, labelVal) {
+    const $sel = $('#soOutputOtherModal-satuan');
+    if ($sel.hasClass('select2-hidden-accessible')) $sel.select2('destroy');
+    $sel.empty();
+    if (idVal && labelVal) $sel.append(new Option(labelVal, idVal, true, true));
+    $sel.select2({
+        width: '100%', placeholder: '— Pilih —', allowClear: true, minimumInputLength: 0,
+        dropdownParent: $('#soOutputOtherModal'),
+        ajax: { url: '/satuan/select2', delay: 200, dataType: 'json', data: (p) => ({ q: p.term ?? '' }), processResults: (d) => ({ results: d }) },
+        language: { noResults: () => '<span>Tidak ditemukan. <a href="/satuan/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>' },
+        escapeMarkup: (m) => m,
+    });
+}
+
+$(document).on('click', '#btnRefreshSoOutputOther', function () {
+    loadSoOutputOther($(this).data('so-id'));
+});
+
+// Opsi "Siap" di dropdown Status hanya untuk user ber-izin aksi khusus (atau bila item memang sudah Siap)
+function toggleSoOutputOtherSiapOption($modal, statusSaatIni) {
+    const boleh = can('output-pekerjaan-siap', 'can_update') || statusSaatIni === 'siap';
+    $modal.find('#soOutputOtherModal-status option[value="siap"]').prop('disabled', !boleh);
+}
+
+// Tombol aksi "Siap" di daftar (sama dengan tombol Siap di Output Pekerjaan WO)
+$(document).on('click', '.btn-so-output-other-siap', function () {
+    const $btn = $(this);
+    const id = $btn.data('id');
+    const idSo = $('#tab-so-output-other-btn').data('so-id');
+    Notify.confirm('Ubah status menjadi <b>Siap</b>?', function () {
+        $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
+        $.ajax({
+            url: '/so-output-other/' + id + '/status',
+            method: 'POST',
+            data: { _token: window.route.csrf, status: 'siap' },
+            success: function () { Notify.success('Status diperbarui menjadi Siap'); loadSoOutputOther(idSo); },
+            error: function (xhr) {
+                Notify.error(xhr.responseJSON?.message || 'Gagal mengubah status');
+                $btn.prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i>Siap');
+            },
+        });
+    });
+});
+
+$(document).on('click', '#btnAddSoOutputOther', function () {
+    const idSo = $(this).data('so-id');
+    const $modal = $('#soOutputOtherModal');
+    toggleSoOutputOtherSiapOption($modal, '');
+    $modal.find('#soOutputOtherModalLabel').html('<i class="fa-solid fa-file-circle-plus me-2" style="color:#0f766e;"></i>Tambah Output Other');
+    $modal.find('#soOutputOtherModal-id').val('');
+    $modal.find('#soOutputOtherModal-id-so').val(idSo);
+    $modal.find('#soOutputOtherModal-qty').val('');
+    $modal.find('#soOutputOtherModal-status').val('belum_siap');
+    $modal.find('#soOutputOtherModal-tgl-mulai').val('');
+    $modal.find('#soOutputOtherModal-tgl-selesai').val('');
+    $modal.find('#soOutputOtherModal-link-drive').val('');
+    $modal.find('#soOutputOtherModal-keterangan').val('');
+    $modal.find('#soOutputOtherModal-existing-files').empty();
+    initSoOutputOtherSatuan();
+    initJudulOutputSelect($modal.find('#soOutputOtherModal-nama'), 'other', $modal, '');
+
+    if (soOutputOtherFilePond) { soOutputOtherFilePond.destroy(); soOutputOtherFilePond = null; }
+    soOutputOtherFilePond = createFileUploader('#soOutputOtherModal-attachments');
+
+    new bootstrap.Modal($modal[0]).show();
+    initNumericMask($modal[0]);
+    initFpDate($modal[0]);
+});
+
+$(document).on('click', '.btn-so-output-other-edit', function (e) {
+    e.stopPropagation();
+    const id = $(this).data('id');
+    const $modal = $('#soOutputOtherModal');
+    $modal.find('#soOutputOtherModalLabel').html('<i class="fa-solid fa-pen me-2" style="color:#0f766e;"></i>Edit Output Other');
+    $modal.find('#soOutputOtherModal-id').val(id);
+
+    $.get('/so-output-other/' + id)
+        .done(function (r) {
+            $modal.find('#soOutputOtherModal-id-so').val(r.id_so);
+            initJudulOutputSelect($modal.find('#soOutputOtherModal-nama'), 'other', $modal, r.nama_item || '');
+            const qtyEl = $modal.find('#soOutputOtherModal-qty')[0];
+            if (qtyEl && qtyEl._cleave) qtyEl._cleave.setRawValue(r.qty || ''); else $modal.find('#soOutputOtherModal-qty').val(r.qty || '');
+            toggleSoOutputOtherSiapOption($modal, r.status);
+            $modal.find('#soOutputOtherModal-status').val(r.status || 'belum_siap');
+            $modal.find('#soOutputOtherModal-tgl-mulai').val(r.tanggal_mulai ? r.tanggal_mulai.substring(0, 10) : '');
+            $modal.find('#soOutputOtherModal-tgl-selesai').val(r.tanggal_selesai ? r.tanggal_selesai.substring(0, 10) : '');
+            $modal.find('#soOutputOtherModal-link-drive').val(r.link_drive || '');
+            $modal.find('#soOutputOtherModal-keterangan').val(r.keterangan || '');
+            initSoOutputOtherSatuan(r.id_satuan, r.satuan);
+
+            const filesHtml = (r.attachments || []).map(function (f) {
+                return '<div class="d-flex align-items-center gap-2 mb-1" style="font-size:12px;">'
+                    + '<i class="fa-solid fa-paperclip"></i>'
+                    + '<span class="text-truncate" style="max-width:260px;" title="' + escHtml(filePreviewName(f)) + '">' + escHtml(filePreviewName(f)) + '</span>'
+                    + renderFilePreviewButton([f])
+                    + '<a href="#" class="btn-remove-existing-so-output-file" style="font-size:11px;color:#dc2626;cursor:pointer;">Hapus</a>'
+                    + '<input type="hidden" class="existing-so-output-file-path" value="' + escHtml(f) + '">'
+                    + '</div>';
+            }).join('');
+            $modal.find('#soOutputOtherModal-existing-files').html(filesHtml);
+        })
+        .always(function () {
+            if (soOutputOtherFilePond) { soOutputOtherFilePond.destroy(); soOutputOtherFilePond = null; }
+            soOutputOtherFilePond = createFileUploader('#soOutputOtherModal-attachments');
+            new bootstrap.Modal($modal[0]).show();
+            initNumericMask($modal[0]);
+            initFpDate($modal[0]);
+        });
+});
+
+$(document).on('click', '.btn-remove-existing-so-output-file', function (e) {
+    e.preventDefault();
+    $(this).closest('div').remove();
+});
+
+$(document).on('hidden.bs.modal', '#soOutputOtherModal', function () {
+    if (soOutputOtherFilePond) { soOutputOtherFilePond.destroy(); soOutputOtherFilePond = null; }
+});
+
+$(document).on('click', '#soOutputOtherModal-btn-save', function () {
+    const $modal = $('#soOutputOtherModal');
+    const id   = $modal.find('#soOutputOtherModal-id').val();
+    const idSo = $modal.find('#soOutputOtherModal-id-so').val();
+    const $btn = $(this);
+
+    const namaItem = ($modal.find('#soOutputOtherModal-nama').val() || '').trim();
+    const qty = rawNumVal($modal.find('#soOutputOtherModal-qty')[0]);
+    if (!namaItem) { Notify.warning('Nama item wajib diisi.'); return; }
+    if (!qty)      { Notify.warning('Qty wajib diisi.'); return; }
+
+    const fd = new FormData();
+    fd.append('_token', window.route.csrf);
+    fd.append('id_so', idSo);
+    fd.append('nama_item', namaItem);
+    fd.append('qty', qty);
+    fd.append('id_satuan', $modal.find('#soOutputOtherModal-satuan').val() || '');
+    fd.append('status', $modal.find('#soOutputOtherModal-status').val());
+    fd.append('tanggal_mulai', $modal.find('#soOutputOtherModal-tgl-mulai').val() || '');
+    fd.append('tanggal_selesai', $modal.find('#soOutputOtherModal-tgl-selesai').val() || '');
+    fd.append('link_drive', $modal.find('#soOutputOtherModal-link-drive').val().trim());
+    fd.append('keterangan', $modal.find('#soOutputOtherModal-keterangan').val().trim());
+    $modal.find('.existing-so-output-file-path').each(function () { fd.append('existing_attachments[]', $(this).val()); });
+    if (soOutputOtherFilePond) soOutputOtherFilePond.getFiles().forEach(function (f) { fd.append('attachments[]', f.file); });
+
+    $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...');
+    $.ajax({ url: id ? '/so-output-other/' + id : '/so-output-other', method: 'POST', data: fd, processData: false, contentType: false })
+        .done(function (res) {
+            if (res.success) {
+                bootstrap.Modal.getInstance($modal[0])?.hide();
+                Notify.success('Item berhasil disimpan.');
+                loadSoOutputOther(idSo);
+            } else {
+                Notify.error(res.message || 'Gagal menyimpan item.');
+            }
+        })
+        .fail(function (xhr) { Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan item.'); })
+        .always(function () { $btn.prop('disabled', false).html('<i class="fa-solid fa-floppy-disk me-1"></i> Simpan'); });
+});
+
+$(document).on('click', '.btn-so-output-other-delete', function () {
+    const id = $(this).data('id');
+    const nama = $(this).data('nama');
+    const idSo = $('#tab-so-output-other-btn').data('so-id');
+    Swal.fire({
+        title: 'Hapus Item?',
+        html: 'Item <strong>' + escHtml(nama) + '</strong> akan dihapus.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#dc2626',
+        reverseButtons: true,
+    }).then(function (result) {
+        if (!result.isConfirmed) return;
+        $.ajax({
+            url: '/so-output-other/' + id,
+            method: 'DELETE',
+            headers: { 'X-CSRF-TOKEN': window.route.csrf },
+            success: function () { Notify.success('Item berhasil dihapus.'); loadSoOutputOther(idSo); },
+            error: function (xhr) { Notify.error(xhr.responseJSON?.message || 'Gagal menghapus item.'); },
+        });
+    });
+});
 
 // ── Load Termin ────────────────────────────────────────────────────────────────
 function loadTerminList(id_so, onDone) {
@@ -957,6 +1201,7 @@ $(document).ready(function () {
             initSoSiteFields();
             loadWoProgress(res.id_so);
             loadTerminList(res.id_so);
+            loadSoOutputOther(res.id_so);
             initFpDate('#detailContent');
         },
     });
