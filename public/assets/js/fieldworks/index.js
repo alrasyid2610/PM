@@ -2297,7 +2297,14 @@ function loadSampleData(idFwo) {
 
             if (idSite) {
                 $.get(`/lab-samples/sampling-points/${idSite}`)
-                    .done(function (data) { window._samplingPoints = data || []; })
+                    .done(function (data) {
+                        window._samplingPoints = data || [];
+                        // Peta label titik → koordinat (null = titik ada tapi koordinat belum diisi)
+                        window._spCoord = {};
+                        (data || []).forEach(function (sp) {
+                            window._spCoord[sp.text] = (sp.lat != null && sp.lng != null) ? { lat: sp.lat, lng: sp.lng } : null;
+                        });
+                    })
                     .always(renderAll);
             } else {
                 renderAll();
@@ -2306,6 +2313,22 @@ function loadSampleData(idFwo) {
         .fail(function () {
             $wrap.html('<div class="text-center text-danger py-4">Gagal memuat data sample.</div>');
         });
+}
+
+// Koordinat + link Google Maps untuk titik sample yang dipilih (label = nilai titik_lokasi).
+// Label yang tidak dikenal (data lama berupa teks bebas) → kosong; titik tanpa koordinat → keterangan redup.
+function titikKoordinatHtml(label) {
+    if (!label) return '';
+    const map = window._spCoord || {};
+    if (!(label in map)) return '';
+    const c = map[label];
+    if (!c) return '<span style="color:#94a3b8;font-style:italic;">Koordinat belum diisi</span>';
+    const lat = Number(c.lat), lng = Number(c.lng);
+    const url = 'https://www.google.com/maps?q=' + lat + ',' + lng;
+    return '<i class="fa-solid fa-location-dot me-1" style="color:#dc2626;"></i>'
+        + '<span style="color:#475569;">' + lat.toFixed(6) + ', ' + lng.toFixed(6) + '</span>'
+        + ' <a href="' + url + '" target="_blank" rel="noopener" title="Buka di Google Maps" style="margin-left:4px;white-space:nowrap;">'
+        + 'Maps <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:9px;"></i></a>';
 }
 
 function _spOptions(usedLocations, currentVal) {
@@ -2371,6 +2394,11 @@ function initSampleTitikSelect2(container) {
         });
     });
 }
+
+// Koordinat + link Maps di modal edit sample mengikuti pilihan titik
+$(document).off('change.sample-modal-koord', '#sampleModal-titik').on('change.sample-modal-koord', '#sampleModal-titik', function () {
+    $('#sampleModal-titik-koord').html(titikKoordinatHtml($(this).val()));
+});
 
 function initSampleModalTitikSelect2() {
     const $sel = $('#sampleModal-titik');
@@ -2444,12 +2472,13 @@ function renderSampleList(boqs, isLocked) {
                     : `<span style="color:#94a3b8;font-style:italic;font-size:11px;">–</span>`;
 
                 const titikVal  = s.titik_lokasi || '';
+                const titikKoord = `<div class="sample-titik-koord mt-1" style="font-size:10.5px;">${titikKoordinatHtml(titikVal)}</div>`;
                 const titikCell = !isLocked
                     ? `<select class="form-select form-select-sm sample-inline-titik"
                             data-id="${s.id_lab_sample}"
                             data-current="${escHtml(titikVal)}"
-                            style="font-size:11px;width:260px;"></select>`
-                    : (titikVal ? escHtml(titikVal) : '<span style="color:#94a3b8;font-style:italic;">–</span>');
+                            style="font-size:11px;width:260px;"></select>${titikKoord}`
+                    : ((titikVal ? escHtml(titikVal) : '<span style="color:#94a3b8;font-style:italic;">–</span>') + titikKoord);
 
                 const tglCell = fmtSampleDate(s.tanggal_pengambilan)
                     ? `<span style="font-size:11px;white-space:nowrap;">${fmtSampleDate(s.tanggal_pengambilan)}</span>`
@@ -2620,6 +2649,7 @@ $(document).off('click.sample', '.btn-sample-edit').on('click.sample', '.btn-sam
     const $titikSel = $modal.find('#sampleModal-titik');
     $titikSel.data('_pendingVal', '');
     if ($titikSel.data('select2')) $titikSel.val(null).trigger('change');
+    $('#sampleModal-titik-koord').empty();
     $modal.find('#sampleModal-kondisi').val('');
     $modal.find('#sampleModal-status').val('belum_diambil');
     $modal.find('#sampleModal-keterangan').val('');
@@ -2757,6 +2787,9 @@ $(document).off('change.sample-titik', '.sample-inline-titik').on('change.sample
     const $sel   = $(this);
     const id     = $sel.data('id');
     const val    = $sel.val() || null;
+
+    // Koordinat + link Maps mengikuti titik yang dipilih
+    $sel.closest('td').find('.sample-titik-koord').html(titikKoordinatHtml(val));
 
     // Update data-current lalu reinit semua titik dalam tabel yang sama
     $sel.data('current', val || '');

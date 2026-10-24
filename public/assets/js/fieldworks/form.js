@@ -495,6 +495,7 @@ function renderFwoForm(res) {
                         <div class="col-12">
                             <label class="form-label fw-semibold" style="font-size:12px;">Titik / Lokasi</label>
                             <select class="form-select form-select-sm" id="sampleModal-titik" data-no-disable></select>
+                            <div id="sampleModal-titik-koord" class="mt-1" style="font-size:11px;"></div>
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold" style="font-size:12px;">Status</label>

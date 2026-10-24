@@ -122,11 +122,13 @@ class WoSampleController extends Controller
             ->whereNull('deleted_at')
             ->orderBy('jenis')
             ->orderBy('nama')
-            ->get(['id_sp', 'jenis', 'kode', 'nama']);
+            ->get(['id_sp', 'jenis', 'kode', 'nama', 'latitude', 'longitude']);
 
         $results = $rows->map(fn($r) => [
             'id'   => $r->id_sp,
             'text' => "[{$r->jenis}] " . ($r->kode ? "{$r->kode} – " : '') . $r->nama,
+            'lat'  => $r->latitude !== null ? (float) $r->latitude : null,
+            'lng'  => $r->longitude !== null ? (float) $r->longitude : null,
         ]);
 
         return response()->json($results);
