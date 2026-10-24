@@ -469,9 +469,8 @@ function renderOutputOtherList(rows, total, isLocked) {
             ? `${r.tanggal_mulai ? r.tanggal_mulai.substring(0,10) : '—'} s/d ${r.tanggal_selesai ? r.tanggal_selesai.substring(0,10) : '—'}`
             : '—';
         const files = r.attachments || [];
-        const filesHtml = files.length
-            ? files.map(f => `<div class="d-flex align-items-center gap-1" style="font-size:11px;"><i class="fa-solid fa-paperclip me-1"></i><span class="text-truncate" title="${escHtml(filePreviewName(f))}">${escHtml(filePreviewName(f))}</span>${renderFilePreviewButton([f])}</div>`).join('')
-            : '<span class="text-muted" style="font-size:11px;">—</span>';
+        // Ringkas: satu tombol "Lihat" / "Lihat (n)"; daftar file ada di modal preview
+        const filesHtml = renderFilePreviewButton(files, { title: (r.nama_item || 'Output') + ' — Lampiran' });
         const drive = r.link_drive
             ? `<a href="${escHtml(r.link_drive)}" target="_blank" style="font-size:11px;color:#1a56db;"><i class="fa-brands fa-google-drive me-1"></i>Drive</a>`
             : '';
@@ -2389,18 +2388,8 @@ function renderOutputTable(outputs) {
                             ? JSON.parse(item.attachments)
                             : item.attachments || [];
                     if (files && files.length) {
-                        attachHtml = files
-                            .map(function (p) {
-                                return (
-                                    '<a href="#" class="btn-file-preview" data-title="' + escHtml(outputFileName(p)) + '" data-files=\'' + escHtml(JSON.stringify([p])) + '\' ' +
-                                    'class="d-inline-flex align-items-center gap-1 me-1" ' +
-                                    'style="font-size:11px;color:#1a56db;text-decoration:none;">' +
-                                    '<i class="fa-solid fa-paperclip" style="font-size:10px;"></i>' +
-                                    escHtml(outputFileName(p)) +
-                                    "</a>"
-                                );
-                            })
-                            .join("");
+                        // Ringkas: satu tombol "Lihat" / "Lihat (n)"; daftar file ada di modal preview
+                        attachHtml = renderFilePreviewButton(files, { title: (item.judul_output || 'Output') + ' — Lampiran' });
                     }
                 } catch (e) {}
                 // Status badge

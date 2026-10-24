@@ -96,8 +96,9 @@
 @endsection
 
 @section('custom-script')
+<script src="{{ asset('assets/js/termin/output-lampiran.js') }}?v={{ @filemtime(public_path('assets/js/termin/output-lampiran.js')) }}"></script>
 <script>
-    var preselectSoId = new URLSearchParams(window.location.search).get('id_so');
+    var preselectSoId =new URLSearchParams(window.location.search).get('id_so');
 
     $(document).ready(function () {
         initNumericMask(document);
@@ -223,6 +224,7 @@
                     '<td ' + TD + '>' + escHtml(item.judul_output) +
                         (item.tipe === 'other' ? ' <span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;background:#f3e8ff;color:#7e22ce;border:1px solid #e9d5ff;">Other</span>' : '') + '</td>' +
                     '<td ' + TD + '>' + statusBadge + '</td>' +
+                    '<td ' + TD + '>' + terminOutputLampiran(item) + '</td>' +
                     '<td ' + TD + ' style="white-space:nowrap;color:#64748b;font-size:12px;">' + (item.tanggal_selesai ? item.tanggal_selesai.substring(0, 10) : '—') + '</td>' +
                 '</tr>';
             }).join('');
@@ -238,11 +240,12 @@
                     '<div class="termin-output-accordion-body">' +
                         '<div class="table-responsive">' +
                         '<table class="table table-sm table-hover mb-0" style="font-size:13px;table-layout:fixed;width:100%;">' +
-                        '<colgroup><col style="width:44px;"><col><col style="width:110px;"><col style="width:120px;"></colgroup>' +
+                        '<colgroup><col style="width:44px;"><col><col style="width:110px;"><col style="width:150px;"><col style="width:120px;"></colgroup>' +
                         '<thead style="background:#f8fafc;border-bottom:1px solid #e2e8f0;"><tr>' +
                         '<th ' + TH + '></th>' +
                         '<th ' + TH + '>Judul Output</th>' +
                         '<th ' + TH + '>Status</th>' +
+                        '<th ' + TH + '>Lampiran</th>' +
                         '<th ' + TH + '>Tgl Selesai</th>' +
                         '</tr></thead>' +
                         '<tbody>' + rows + '</tbody>' +

@@ -172,6 +172,7 @@ $(document).ready(function () {
                         '</td>' +
                         '<td ' + TD + '>' + escHtml(item.judul_output) + (item.tipe === 'other' ? ' ' + outputOtherBadge() : '') + '</td>' +
                         '<td ' + TD + '>' + outputStatusBadge(item.status) + '</td>' +
+                        '<td ' + TD + '>' + terminOutputLampiran(item) + '</td>' +
                         '<td ' + TD + ' style="white-space:nowrap;color:#64748b;font-size:12px;">' + (tglSelesai || '—') + '</td>' +
                     '</tr>';
                 }).join('');
@@ -187,11 +188,12 @@ $(document).ready(function () {
                         '<div class="output-pick-accordion-body">' +
                             '<div class="table-responsive">' +
                             '<table class="table table-sm table-hover mb-0" style="font-size:13px;table-layout:fixed;width:100%;">' +
-                            '<colgroup><col style="width:44px;"><col><col style="width:110px;"><col style="width:120px;"></colgroup>' +
+                            '<colgroup><col style="width:44px;"><col><col style="width:110px;"><col style="width:150px;"><col style="width:120px;"></colgroup>' +
                             '<thead style="background:#f8fafc;border-bottom:1px solid #e2e8f0;"><tr>' +
                             '<th ' + TH + '></th>' +
                             '<th ' + TH + '>Judul Output</th>' +
                             '<th ' + TH + '>Status</th>' +
+                            '<th ' + TH + '>Lampiran</th>' +
                             '<th ' + TH + '>Tgl Selesai</th>' +
                             '</tr></thead>' +
                             '<tbody>' + rows + '</tbody>' +
@@ -392,35 +394,13 @@ $(document).ready(function () {
             method: 'POST',
             data: { _token: window.route.csrf, ids: ids, ids_other: idsOther },
             success: function () {
-                var $tbody = $('#assignedOutputsTbody');
-                $checked.each(function () {
-                    var id     = $(this).data('id');
-                    var isOther = $(this).data('tipe') === 'other';
-                    var fieldName = isOther ? 'selected_other[]' : 'selected_outputs[]';
-                    var wo     = $(this).data('wo');
-                    var judul  = $(this).data('judul');
-                    var status = $(this).data('status') || '';
-                    if ($('input[name="' + fieldName + '"][value="' + id + '"]').length) return;
-                    $tbody.append(
-                        '<tr class="assigned-output-row" data-id="' + id + '" data-tipe="' + (isOther ? 'other' : 'pekerjaan') + '">' +
-                        '<input type="hidden" name="' + fieldName + '" value="' + id + '">' +
-                        '<td ' + TD_STYLE + ' style="white-space:nowrap;">' +
-                            ($(this).data('wo-id')
-                                ? '<a href="/work-orders?open=' + $(this).data('wo-id') + '" class="fw-semibold text-decoration-none" style="color:#1a56db;font-size:12px;">' + escHtml(wo) + '</a>'
-                                : '<span style="font-size:12px;color:#64748b;">' + escHtml(wo) + '</span>'
-                            ) +
-                        '</td>' +
-                        '<td ' + TD_STYLE + '>' + escHtml(judul) + (isOther ? ' ' + outputOtherBadge() : '') + '</td>' +
-                        '<td ' + TD_STYLE + '>' + outputStatusBadge(status) + '</td>' +
-                        '<td ' + TD_STYLE + ' style="text-align:right;">' +
-                            '<button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-remove-output-termin" ' +
-                            'data-id="' + id + '" data-tipe="' + (isOther ? 'other' : 'pekerjaan') + '" data-no-disable style="font-size:11px;">' +
-                            '<i class="fa-solid fa-trash"></i></button>' +
-                        '</td></tr>'
-                    );
+                // Muat ulang daftar dari server supaya baris baru lengkap (termasuk lampiran/preview),
+                // sama persis dengan tampilan saat halaman dibuka.
+                $.get(window.route.update + terminId + '/detail', function (res) {
+                    $('#outputTerminContent').html(renderAssignedOutputsInner(res.assigned_outputs || []));
+                }).fail(function () {
+                    Notify.error('Output tersimpan, tetapi daftar gagal dimuat ulang. Klik Refresh.');
                 });
-                $('#assignedOutputsTableWrap').show();
-                $('#noAssignedOutputMsg').hide();
                 $('#addOutputTerminWrap').html('');
                 Notify.success('Output berhasil ditambahkan ke tagihan');
             },

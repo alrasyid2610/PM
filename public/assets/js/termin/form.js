@@ -30,6 +30,7 @@ function renderAssignedOutputsInner(outputs) {
                 </td>
                 <td ${TD}>${escHtml(item.judul_output)}${isOther ? ' ' + outputOtherBadge() : ''}</td>
                 <td ${TD}>${outputStatusBadge(item.status)}</td>
+                <td ${TD}>${terminOutputLampiran(item)}</td>
                 <td ${TD} style="text-align:right;white-space:nowrap;">
                     <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-remove-output-termin"
                         data-id="${item.id_output}" data-tipe="${isOther ? 'other' : 'pekerjaan'}" data-no-disable style="font-size:11px;">
@@ -40,11 +41,12 @@ function renderAssignedOutputsInner(outputs) {
         }).join('');
         return `<div class="table-responsive" id="assignedOutputsTableWrap">
             <table class="table table-sm table-hover mb-0" style="font-size:13px;table-layout:fixed;width:100%;">
-                <colgroup><col style="width:120px;"><col><col style="width:100px;"><col style="width:52px;"></colgroup>
+                <colgroup><col style="width:120px;"><col><col style="width:100px;"><col style="width:150px;"><col style="width:52px;"></colgroup>
                 <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;"><tr>
                     <th ${TH}>No WO</th>
                     <th ${TH}>Judul Output</th>
                     <th ${TH}>Status</th>
+                    <th ${TH}>Lampiran</th>
                     <th ${TH}></th>
                 </tr></thead>
                 <tbody id="assignedOutputsTbody">${rows}</tbody>
@@ -56,12 +58,12 @@ function renderAssignedOutputsInner(outputs) {
             <i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>Belum ada output yang ditagihkan
         </div>
         <table class="table table-sm mb-0" style="display:none;font-size:13px;table-layout:fixed;width:100%;" id="assignedOutputsTableWrap">
-            <colgroup><col style="width:120px;"><col style="width:35%;"><col style="width:100px;"><col style="width:30%;"><col style="width:64px;"></colgroup>
+            <colgroup><col style="width:120px;"><col><col style="width:100px;"><col style="width:150px;"><col style="width:52px;"></colgroup>
             <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;"><tr>
                 <th ${TH}>No WO</th>
                 <th ${TH}>Judul Output</th>
                 <th ${TH}>Status</th>
-                <th ${TH}>Judul Tagihan <span style="font-size:10px;color:#94a3b8;">(opsional)</span></th>
+                <th ${TH}>Lampiran</th>
                 <th ${TH}></th>
             </tr></thead>
             <tbody id="assignedOutputsTbody"></tbody>

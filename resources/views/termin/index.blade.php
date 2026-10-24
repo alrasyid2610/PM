@@ -44,6 +44,7 @@
     }
 </script>
 
-<script src="{{ asset('assets/js/termin/form.js') }}"></script>
-<script src="{{ asset('assets/js/termin/index.js') }}"></script>
+<script src="{{ asset('assets/js/termin/output-lampiran.js') }}?v={{ @filemtime(public_path('assets/js/termin/output-lampiran.js')) }}"></script>
+<script src="{{ asset('assets/js/termin/form.js') }}?v={{ @filemtime(public_path('assets/js/termin/form.js')) }}"></script>
+<script src="{{ asset('assets/js/termin/index.js') }}?v={{ @filemtime(public_path('assets/js/termin/index.js')) }}"></script>
 @endsection

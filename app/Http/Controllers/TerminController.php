@@ -332,7 +332,7 @@ class TerminController extends Controller
                           ->whereColumn('termin.id_termin', 'op.id_termin');
                   });
             })
-            ->select('op.id_output', 'op.judul_output', 'op.judul_dokumen', 'op.status', 'op.tanggal_selesai', 'wo.no_wo', 'wo.id_wo')
+            ->select('op.id_output', 'op.judul_output', 'op.judul_dokumen', 'op.status', 'op.tanggal_selesai', 'op.attachments', 'op.link_drive', 'wo.no_wo', 'wo.id_wo')
             ->orderBy('wo.no_wo')
             ->orderBy('op.id_output')
             ->get();
@@ -352,7 +352,7 @@ class TerminController extends Controller
                 ->orderBy('ot.id_output_tambahan')
                 ->get([
                     'ot.id_output_tambahan as id_output', 'ot.nama_item as judul_output',
-                    'ot.status', 'ot.tanggal_selesai', 'wo.no_wo', 'wo.id_wo',
+                    'ot.status', 'ot.tanggal_selesai', 'ot.attachments', 'ot.link_drive', 'wo.no_wo', 'wo.id_wo',
                 ]);
             $other->each(fn ($o) => $o->tipe = 'other');
             $outputs = $outputs->concat($other)->sortBy('no_wo')->values();
@@ -528,7 +528,7 @@ class TerminController extends Controller
         $rows = DB::table('output_pekerjaan as op')
             ->leftJoin('work_orders as wo', 'wo.id_wo', '=', 'op.id_wo')
             ->where('op.id_termin', $idTermin)
-            ->select('op.id_output', 'op.id_wo', 'op.judul_output', 'op.judul_tagihan', 'op.status', 'wo.no_wo')
+            ->select('op.id_output', 'op.id_wo', 'op.judul_output', 'op.judul_tagihan', 'op.status', 'op.attachments', 'op.link_drive', 'wo.no_wo')
             ->orderBy('wo.no_wo')
             ->orderBy('op.id_output')
             ->get();
@@ -539,7 +539,7 @@ class TerminController extends Controller
                 ->leftJoin('work_orders as wo', 'wo.id_wo', '=', 'ot.id_wo')
                 ->where('ot.id_termin', $idTermin)
                 ->whereNull('ot.deleted_at')
-                ->select('ot.id_output_tambahan as id_output', 'ot.id_wo', 'ot.nama_item as judul_output', 'ot.judul_tagihan', 'ot.status', 'wo.no_wo')
+                ->select('ot.id_output_tambahan as id_output', 'ot.id_wo', 'ot.nama_item as judul_output', 'ot.judul_tagihan', 'ot.status', 'ot.attachments', 'ot.link_drive', 'wo.no_wo')
                 ->orderBy('wo.no_wo')
                 ->orderBy('ot.id_output_tambahan')
                 ->get();
