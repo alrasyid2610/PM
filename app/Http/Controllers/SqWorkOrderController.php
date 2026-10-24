@@ -104,7 +104,8 @@ class SqWorkOrderController extends Controller
             // Perusahaan diturunkan dari Site untuk badge action bar.
             ->leftJoin('business_relations as br', 'br.id_br', '=', DB::raw('COALESCE(w.id_pelanggan_pekerjaan, brs.id_br)'))
             ->leftJoin('entitas as ent', 'ent.id_entitas', '=', 'br.id_entitas')
-            ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'w.id_pic_pelanggan_pekerjaan')
+            // PIC Pekerjaan = user Pramatek (users), sama seperti work_orders — bukan kontak pelanggan.
+            ->leftJoin('users as pic', 'pic.id', '=', 'w.id_pic_pelanggan_pekerjaan')
             ->where('w.id_sq_wo', $id)
             ->select([
                 'w.*',
@@ -113,7 +114,7 @@ class SqWorkOrderController extends Controller
                 'br.nama as nama_pelanggan_pekerjaan',
                 'ent.nama as entitas_pelanggan_pekerjaan',
                 'brs.nama_lokasi as nama_site_pelanggan_pekerjaan',
-                'brc.nama_pic as nama_pic',
+                'pic.name as nama_pic',
             ])
             ->first();
 

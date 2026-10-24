@@ -9,11 +9,10 @@ window.datatableHeaderLabels = Object.assign({}, window.datatableHeaderLabels, {
     durasi_hari: 'Durasi',
 });
 
-// PIC Pekerjaan di-scope oleh Site Pekerjaan yang dipilih (PIC milik Site itu
-// atau PIC level Perusahaan) — pola sama initWoSiteField() di work-order/index.js.
+// PIC Pekerjaan = user Pramatek (User Management), tidak tergantung Site — sama seperti
+// Work Order asli (`work_orders.id_pic_pelanggan_pekerjaan` → users.id).
 function initSqWoPicField() {
     const $pic = $('#detail_id_pic_pelanggan_pekerjaan');
-    const $site = $('#detail_id_site_pelanggan_pekerjaan');
     if (!$pic.length) return;
     if ($pic.hasClass('select2-hidden-accessible')) $pic.select2('destroy');
 
@@ -24,20 +23,14 @@ function initSqWoPicField() {
         allowClear: true,
         minimumInputLength: 0,
         ajax: {
-            url: '/business-relation-contacts/select2',
+            url: '/users/select2',
             dataType: 'json',
             delay: 250,
-            data: function (params) {
-                return { q: params.term || '', with_site: 1, id_site: $site.val() || '' };
-            },
+            data: function (params) { return { q: params.term || '' }; },
             processResults: function (data) { return { results: data }; },
             cache: false,
         },
         escapeMarkup: function (m) { return m; },
-    });
-
-    $site.off('change.sqWoPicClear').on('change.sqWoPicClear', function () {
-        $pic.val(null).trigger('change');
     });
 }
 

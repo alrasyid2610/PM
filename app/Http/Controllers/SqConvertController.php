@@ -200,10 +200,9 @@ class SqConvertController extends Controller
                         'id_so' => $idSo,
                         'id_pelanggan_pekerjaan' => $brId,
                         'id_site_pelanggan_pekerjaan' => $siteId,
-                        // PIC Pekerjaan WO SQ merujuk kontak pelanggan, sedangkan
-                        // work_orders merujuk users — tidak bisa dipetakan, diisi
-                        // manual di detail WO.
-                        'id_pic_pelanggan_pekerjaan' => null,
+                        // PIC Pekerjaan SQ WO dan work_orders sama-sama merujuk users.id
+                        // (sejak 2026-10-25) — langsung dibawa.
+                        'id_pic_pelanggan_pekerjaan' => $wo->id_pic_pelanggan_pekerjaan ?: null,
                         'judul_pekerjaan' => $wo->judul_pekerjaan ?: ($sq->judul_order ?: 'Work Order'),
                         'interval_bulan' => $wo->interval_bulan,
                         'no_urut_period' => $wo->no_urut_period,

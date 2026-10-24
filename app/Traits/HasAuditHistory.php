@@ -200,7 +200,7 @@ trait HasAuditHistory
         'sq_work_orders' => [
             'id_pelanggan_pekerjaan'      => ['business_relations', 'id_br', 'nama'],
             'id_site_pelanggan_pekerjaan' => ['business_relation_sites', 'id_site', 'nama_lokasi'],
-            'id_pic_pelanggan_pekerjaan'  => ['business_relation_contacts', 'id_contact', 'nama_pic'],
+            'id_pic_pelanggan_pekerjaan'  => ['users', 'id', 'name'],
         ],
         'sq_fieldworks' => [
             'id_site_pelanggan_pekerjaan' => ['business_relation_sites', 'id_site', 'nama_lokasi'],

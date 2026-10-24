@@ -176,23 +176,16 @@
             escapeMarkup: (m) => m,
         });
 
+        // PIC Pekerjaan = user Pramatek (User Management), sama seperti Work Order asli — bukan kontak pelanggan.
         $('select[name="id_pic_pelanggan_pekerjaan"]').select2({
             width: '100%', placeholder: 'Pilih PIC', allowClear: true, minimumInputLength: 0,
             ajax: {
-                url: "{{ route('business-relation-contacts.select2') }}",
+                url: "{{ route('users.select2') }}",
                 dataType: 'json', delay: 250,
-                data: (p) => ({ q: p.term, with_site: 1, id_site: $('select[name="id_site_pelanggan_pekerjaan"]').val() || '' }), processResults: (d) => ({ results: d }), cache: false,
-            },
-            language: {
-                noResults: () => '<span>Tidak ditemukan. <a href="/business-relation-contacts/create" target="_blank" class="btn btn-primary btn-sm ms-2"><i class="fa-solid fa-plus"></i> Add Data</a></span>',
+                data: (p) => ({ q: p.term || '' }), processResults: (d) => ({ results: d }), cache: false,
             },
             escapeMarkup: (m) => m,
         });
-    });
-
-    // Ganti Site → PIC lama belum tentu milik Site baru
-    $(document).on('change', 'select[name="id_site_pelanggan_pekerjaan"]', function () {
-        $('select[name="id_pic_pelanggan_pekerjaan"]').val(null).trigger('change');
     });
 
     // Urutan ke- otomatis = jumlah WO SQ ini dgn frekuensi sama + 1 (pola sama Create WO)
