@@ -14,6 +14,14 @@ class FwoBudgetController extends Controller
     protected function auditTable(): string { return 'fwo_budgets'; }
     protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_budget']; }
 
+    /** Nilai acuan persentase budget (lihat App\Support\BudgetBasis). */
+    public function basis($id_fwo)
+    {
+        $idSo = DB::table('fieldworks as f')->join('work_orders as w', 'w.id_wo', '=', 'f.id_wo')
+            ->where('f.id_fwo', $id_fwo)->value('w.id_so');
+        return response()->json(\App\Support\BudgetBasis::forSo($idSo ? (int) $idSo : null));
+    }
+
     public function listByFwo($id_fwo)
     {
         $budgets = DB::table('fwo_budgets as b')

@@ -1018,6 +1018,7 @@ function loadSqWoBudget(idSqWo) {
     $('#sqWoBudgetContent').html('<div class="text-center text-muted py-3"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>');
     $.get(window.sqWoRoute.budgetList + idSqWo + '/list', function (plans) {
         renderSqWoBudgetList(plans || []);
+        BudgetSections.applyPct($('#sqWoBudgetContent'), `/sq-wo-budgets/${idSqWo}/basis`);
     }).fail(function () {
         $('#sqWoBudgetContent').html('<div class="text-center text-danger py-3">Gagal memuat Budget.</div>');
     });
@@ -1042,7 +1043,7 @@ function renderSqWoBudgetList(plans) {
                 <td style="width:36px;text-align:center;color:#94a3b8;font-size:11px;">${idx + 1}</td>
                 <td>${categoryCell}</td>
                 <td><span class="fw-semibold">${escHtml(item.nama_account)}</span>${caBadge}</td>
-                <td style="color:#1d4ed8;font-weight:600;">${formatRupiahSqWo(item.nominal_budget)}</td>
+                <td style="color:#1d4ed8;font-weight:600;" data-pct-val="${item.nominal_budget}">${formatRupiahSqWo(item.nominal_budget)}</td>
                 <td>${escHtml(item.keterangan || '—')}</td>
             </tr>`;
         }).join('');
@@ -1058,7 +1059,7 @@ function renderSqWoBudgetList(plans) {
                     ${p.keterangan ? `<span class="text-muted ms-1" style="font-size:11px;">· ${escHtml(p.keterangan)}</span>` : ''}
                 </div>
                 <div class="d-flex align-items-center gap-3">
-                    <span style="font-size:12px;">Total: <b style="color:#1d4ed8;">${formatRupiahSqWo(p.total_budget)}</b></span>
+                    <span style="font-size:12px;">Total: <b style="color:#1d4ed8;" data-pct-val="${p.total_budget}">${formatRupiahSqWo(p.total_budget)}</b></span>
                     <button type="button" class="pm-btn-icon btn-edit-sq-wo-budget" title="Edit" data-no-disable>
                         <i class="fa-solid fa-pen" style="font-size:11px;"></i>
                     </button>
@@ -1109,6 +1110,7 @@ const SQ_WO_BUDGET_SECTIONS = {
     modal: '#sqWoBudgetPlanModal',
     rowSel: '.sq-wo-budget-item-row',
     buildRow: buildSqWoBudgetItemRow,
+    total: '#sqWoBudgetModalTotal',
     onChange: () => recalcSqWoBudgetTotal(),
 };
 
@@ -1186,6 +1188,7 @@ function openSqWoBudgetModal(data) {
     $('#sqWoBudgetModal-hari-selesai').val(isEdit ? (data.hari_selesai || '') : '');
 
     $('#sqWoBudgetItemsBody').empty();
+    BudgetSections.loadBasis(SQ_WO_BUDGET_SECTIONS, `/sq-wo-budgets/${currentSqWoId}/basis`);
     BudgetSections.fill(SQ_WO_BUDGET_SECTIONS, isEdit ? (data.items || []) : []).done(function () {
         BudgetSections.initSelects(SQ_WO_BUDGET_SECTIONS);
         initNumericMask(document.getElementById('sqWoBudgetPlanModal'));

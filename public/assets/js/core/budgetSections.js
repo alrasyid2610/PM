@@ -20,6 +20,29 @@ window.BudgetSections = (function () {
         return parseInt(String($(tr).find('.bi-nominal').val() || '').replace(/,/g, ''), 10) || 0;
     }
 
+    // Persentase terhadap nilai acuan (nilai bersih SO / SQ). Basis 0 → tidak ditampilkan.
+    function fmtPct(n, basis) {
+        if (!basis || basis <= 0) return '';
+        var v = n / basis * 100;
+        if (v > 0 && v < 0.01) return '<0,01%';
+        return v.toLocaleString('id-ID', { maximumFractionDigits: 2 }) + '%';
+    }
+
+    function fetchBasis(url) {
+        return $.getJSON(url).then(function (r) { return r || { nilai: 0 }; }, function () { return $.Deferred().resolve({ nilai: 0 }).promise(); });
+    }
+
+    function basisOf(cfg) { return $(cfg.modal).data('bsBasis') || { nilai: 0 }; }
+
+    // Ambil nilai acuan untuk modal ini, lalu hitung ulang persentase
+    function loadBasis(cfg, url) {
+        $(cfg.modal).data('bsBasis', { nilai: 0 });
+        return fetchBasis(url).then(function (b) {
+            $(cfg.modal).data('bsBasis', b);
+            refresh(cfg);
+        });
+    }
+
     function letter(i) { return i < 26 ? String.fromCharCode(65 + i) : String(i + 1); }
 
     // Daftar kategori + sub kategori (di-cache per halaman)
@@ -132,7 +155,21 @@ window.BudgetSections = (function () {
     function refresh(cfg) {
         if (!cfg || !$(cfg.body).length) return;
         var empties = [];
+        var thH = $(cfg.body).closest('table').find('thead').outerHeight();
+        if (thH) $(cfg.body).closest('table').get(0).style.setProperty('--bi-th-h', thH + 'px');
+        var barH = $(cfg.modal).find('.bi-sec-bar').outerHeight();
+        if (barH) $(cfg.body).closest('table').get(0).style.setProperty('--bi-bar-h', barH + 'px');
+        var basis = basisOf(cfg).nilai;
         var $headers = $(cfg.body).children('.bi-cat-header');
+        var grand = 0;
+        $(cfg.body).children(cfg.rowSel).each(function () {
+            var n = nominalOf(this);
+            grand += n;
+            var $td = $(this).find('.bi-nominal').closest('td');
+            var $p = $td.find('.bi-pct');
+            if (!$p.length) $p = $('<small class="bi-pct d-block text-muted" style="font-size:10.5px;"></small>').appendTo($td);
+            $p.text(n > 0 ? fmtPct(n, basis) : '');
+        });
         $(cfg.body).children('.bi-cat-placeholder').remove();
         if (!$headers.length) {
             $(cfg.body).append('<tr class="bi-cat-placeholder"><td colspan="5" class="text-center text-muted py-4" style="font-size:12px;">' +
@@ -147,9 +184,20 @@ window.BudgetSections = (function () {
             $rows.each(function () { sum += nominalOf(this); });
             $h.find('.bi-cat-count').text($rows.length + ' item').toggle($rows.length > 0);
             $h.find('.bi-cat-empty').toggle($rows.length === 0);
-            $h.find('.bi-cat-sub').text($rows.length ? fmtRp(sum) : '');
+            var sp = $rows.length ? fmtPct(sum, basis) : '';
+            $h.find('.bi-cat-sub').text($rows.length ? fmtRp(sum) + (sp ? ' · ' + sp : '') : '');
             if (!$rows.length) empties.push(letter(idx) + '. ' + $t.attr('data-nama'));
         });
+
+        if (cfg.total) {
+            var $t = $(cfg.total);
+            var $tp = $t.parent().find('.bi-total-pct');
+            if (!$tp.length) $tp = $('<span class="bi-total-pct ms-2 fw-normal" style="font-size:12px;"></span>').insertAfter($t);
+            var b = basisOf(cfg);
+            $tp.text(b.nilai > 0
+                ? '(' + fmtPct(grand, b.nilai) + ' dari nilai ' + (b.jenis || 'SO') + (b.no ? ' ' + b.no : '') + ' ' + fmtRp(b.nilai) + ')'
+                : '(nilai ' + (b.jenis || 'SO') + ' belum ada)');
+        }
 
         var $sum = $(cfg.modal).find('.bi-cat-summary');
         if (empties.length) {
@@ -166,6 +214,8 @@ window.BudgetSections = (function () {
     // Tombol "+ Kategori" (dropdown berisi kategori yang belum ditambahkan), disisipkan sebelum ringkasan
     function ensureToolbar(cfg) {
         var $modal = $(cfg.modal);
+        $(cfg.body).closest('table').addClass('bi-sec-table').parent().addClass('bi-sec-wrap');
+        $modal.find('.bi-cat-summary').parent().addClass('bi-sec-bar');
         if ($modal.find('.bi-cat-toolbar').length) return;
         $modal.find('.bi-cat-summary').before(
             '<div class="dropdown bi-cat-toolbar ms-auto">' +
@@ -259,5 +309,21 @@ window.BudgetSections = (function () {
             toggle($(this));
         });
 
-    return { load: load, fill: fill, initSelects: initSelects, refresh: refresh, addRow: addRow };
+    // Kartu plan (daftar): isi persentase di setiap elemen [data-pct-val] di dalam $scope.
+    // <td> diisi di dalam sel; elemen lain diberi catatan tepat di sampingnya.
+    function applyPct($scope, url) {
+        return fetchBasis(url).then(function (b) {
+            $scope.find('.bi-pct-note').remove();
+            if (!b.nilai || b.nilai <= 0) return;
+            $scope.find('[data-pct-val]').each(function () {
+                var txt = fmtPct(Number($(this).attr('data-pct-val')) || 0, b.nilai);
+                if (!txt) return;
+                var note = $('<small class="bi-pct-note text-muted" style="font-size:10.5px;"></small>');
+                if (this.tagName === 'TD') note.addClass('d-block').text(txt).appendTo(this);
+                else note.addClass('ms-1').text('(' + txt + ' dari nilai ' + (b.jenis || 'SO') + ')').insertAfter(this);
+            });
+        });
+    }
+
+    return { applyPct: applyPct, fmtPct: fmtPct, fetchBasis: fetchBasis, loadBasis: loadBasis, load: load, fill: fill, initSelects: initSelects, refresh: refresh, addRow: addRow };
 })();

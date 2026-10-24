@@ -281,7 +281,7 @@ function renderSqFwoBudgetList(plans) {
                 <td style="width:36px;text-align:center;color:#94a3b8;font-size:11px;">${idx + 1}</td>
                 <td>${categoryCell}</td>
                 <td><span class="fw-semibold">${escHtml(item.nama_account)}</span>${caBadge}</td>
-                <td style="color:#1d4ed8;font-weight:600;">${formatRupiahSqFwo(item.nominal_budget)}</td>
+                <td style="color:#1d4ed8;font-weight:600;" data-pct-val="${item.nominal_budget}">${formatRupiahSqFwo(item.nominal_budget)}</td>
                 <td>${escHtml(item.keterangan || '—')}</td>
             </tr>`;
         }).join('');
@@ -297,7 +297,7 @@ function renderSqFwoBudgetList(plans) {
                     ${p.keterangan ? `<span class="text-muted ms-1" style="font-size:11px;">· ${escHtml(p.keterangan)}</span>` : ''}
                 </div>
                 <div class="d-flex align-items-center gap-3">
-                    <span style="font-size:12px;">Total: <b style="color:#1d4ed8;">${formatRupiahSqFwo(p.total_budget)}</b></span>
+                    <span style="font-size:12px;">Total: <b style="color:#1d4ed8;" data-pct-val="${p.total_budget}">${formatRupiahSqFwo(p.total_budget)}</b></span>
                     <button type="button" class="pm-btn-icon btn-edit-sq-fwo-budget" title="Edit" data-no-disable>
                         <i class="fa-solid fa-pen" style="font-size:11px;"></i>
                     </button>

@@ -809,6 +809,7 @@ Route::prefix('sq-fieldworks')->name('sq-fieldworks.')->group(function () {
     Route::get('/create', [SqFieldworkController::class, 'create'])->name('create');
     Route::post('/', [SqFieldworkController::class, 'store'])->name('store');
     Route::get('/{id_sq_wo}/list', [SqFieldworkController::class, 'byWo'])->name('list')->whereNumber('id_sq_wo');
+    Route::get('/{id_sq_wo}/basis', [SqWoBudgetController::class, 'basis'])->name('basis')->whereNumber('id_sq_wo');
     Route::get('/{id}', [SqFieldworkController::class, 'show'])->name('show')->whereNumber('id');
     Route::put('/{id}', [SqFieldworkController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}', [SqFieldworkController::class, 'destroy'])->name('destroy')->whereNumber('id');
@@ -836,6 +837,7 @@ Route::prefix('sales-orders')->name('sales-orders.')->group(function () {
     Route::get('/data', [SalesOrderController::class, 'data'])->name('data');
 
     Route::get('/create', [SalesOrderController::class, 'create'])->name('create');
+    Route::get('/{id_sq_fwo}/basis', [SqFwoBudgetController::class, 'basis'])->name('basis')->whereNumber('id_sq_fwo');
     Route::post('/', [SalesOrderController::class, 'store'])->name('store');
 
     Route::get('/select2', [SalesOrderController::class, 'select2'])
@@ -959,6 +961,7 @@ Route::prefix('fwo-budgets')->name('fwo-budgets.')->group(function () {
 Route::prefix('fwo-budget-actuals')->name('fwo-budget-actuals.')->group(function () {
     Route::post('/',              [FwoBudgetActualController::class, 'store'])->name('store');
     Route::get('/{id}',           [FwoBudgetActualController::class, 'show'])->name('show')->whereNumber('id');
+    Route::get('/{id_fwo}/basis', [FwoBudgetController::class, 'basis'])->name('basis')->whereNumber('id_fwo');
     Route::post('/{id}',          [FwoBudgetActualController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}',        [FwoBudgetActualController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::post('/{id}/verify',   [FwoBudgetActualController::class, 'verify'])->name('verify')->whereNumber('id');
@@ -979,6 +982,7 @@ Route::prefix('wo-budgets')->name('wo-budgets.')->group(function () {
 Route::prefix('wo-budget-actuals')->name('wo-budget-actuals.')->group(function () {
     Route::post('/',              [WoBudgetActualController::class, 'store'])->name('store');
     Route::get('/{id}',           [WoBudgetActualController::class, 'show'])->name('show')->whereNumber('id');
+    Route::get('/{id_wo}/basis', [WoBudgetController::class, 'basis'])->name('basis')->whereNumber('id_wo');
     Route::post('/{id}',          [WoBudgetActualController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}',        [WoBudgetActualController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::post('/{id}/verify',   [WoBudgetActualController::class, 'verify'])->name('verify')->whereNumber('id');

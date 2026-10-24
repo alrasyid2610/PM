@@ -319,6 +319,7 @@ function loadSqFwoBudget(idSqFwo) {
     $('#sqFwoBudgetContent').html('<div class="text-center text-muted py-3"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>');
     $.get(window.sqFwoRoute.budgetList + idSqFwo + '/list', function (plans) {
         $('#sqFwoBudgetContent').html(renderSqFwoBudgetList(plans || []));
+        BudgetSections.applyPct($('#sqFwoBudgetContent'), `/sq-fwo-budgets/${idSqFwo}/basis`);
     }).fail(function () {
         $('#sqFwoBudgetContent').html('<div class="text-center text-danger py-3">Gagal memuat Budget.</div>');
     });
@@ -352,6 +353,7 @@ const SQ_FWO_BUDGET_SECTIONS = {
     modal: '#sqFwoBudgetPlanModal',
     rowSel: '.sq-fwo-budget-item-row',
     buildRow: buildSqFwoBudgetItemRow,
+    total: '#sqFwoBudgetModalTotal',
     onChange: () => recalcSqFwoBudgetTotal(),
 };
 
@@ -403,6 +405,7 @@ function openSqFwoBudgetModal(data) {
     $('#sqFwoBudgetModal-hari-selesai').val(isEdit ? (data.hari_selesai || '') : '');
 
     $('#sqFwoBudgetItemsBody').empty();
+    BudgetSections.loadBasis(SQ_FWO_BUDGET_SECTIONS, `/sq-fwo-budgets/${currentSqFwoId}/basis`);
     BudgetSections.fill(SQ_FWO_BUDGET_SECTIONS, isEdit ? (data.items || []) : []).done(function () {
         BudgetSections.initSelects(SQ_FWO_BUDGET_SECTIONS);
         initNumericMask(document.getElementById('sqFwoBudgetPlanModal'));

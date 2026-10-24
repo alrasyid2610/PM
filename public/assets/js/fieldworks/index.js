@@ -301,6 +301,7 @@ function loadBudgetData(idFwo) {
             }
             window._budgetPlans = plans;
             $wrap.html(renderBudgetList(plans, isLocked));
+            BudgetSections.applyPct($wrap, `/fwo-budgets/${idFwo}/basis`);
         })
         .fail(function () {
             $wrap.html('<div class="text-center text-danger py-3">Gagal memuat data budget.</div>');
@@ -397,7 +398,7 @@ function renderBudgetList(plans, isLocked) {
                 <td style="width:36px;text-align:center;color:#94a3b8;font-size:11px;">${itemIdx + 1}</td>
                 <td>${categoryCell}</td>
                 <td><span class="fw-semibold">${escHtml(item.nama_account)}</span>${caBadge}</td>
-                <td style="color:#1d4ed8;font-weight:600;">${fmtRp(item.nominal_budget)}</td>
+                <td style="color:#1d4ed8;font-weight:600;" data-pct-val="${item.nominal_budget}">${fmtRp(item.nominal_budget)}</td>
                 <td>
                     ${struksHtml || '<span class="text-muted" style="font-size:11px;">Belum ada realisasi</span>'}
                 </td>
@@ -428,7 +429,7 @@ function renderBudgetList(plans, isLocked) {
                     ${p.keterangan ? `<span class="text-muted ms-1" style="font-size:11px;">· ${escHtml(p.keterangan)}</span>` : ''}
                 </div>
                 <div class="d-flex align-items-center gap-3">
-                    <span style="font-size:12px;">Budget: <b style="color:#1d4ed8;">${fmtRp(p.total_budget)}</b></span>
+                    <span style="font-size:12px;">Budget: <b style="color:#1d4ed8;" data-pct-val="${p.total_budget}">${fmtRp(p.total_budget)}</b></span>
                     <span style="font-size:12px;">Actual: <b>${fmtRp(p.total_actual)}</b></span>
                     <span style="font-size:12px;">Selisih: <b style="color:${selisihColor};">${fmtRp(selisih)}</b></span>
                     ${p.dokumen_realisasi ? renderFilePreviewButton([p.dokumen_realisasi], { title: 'Dokumen Realisasi (ditandatangani)' }) : ''}
@@ -520,7 +521,7 @@ function renderBudgetList(plans, isLocked) {
     <div class="d-flex align-items-center gap-4 px-3 py-2 mb-3 rounded"
         style="background:#f8fafc;border:1px solid #e2e8f0;font-size:12px;">
         <span style="color:#64748b;font-weight:500;">Ringkasan ${plans.length} Plan:</span>
-        <span>Total Budget: <b style="color:#1d4ed8;">${fmtRp(grandBudget)}</b></span>
+        <span>Total Budget: <b style="color:#1d4ed8;" data-pct-val="${grandBudget}">${fmtRp(grandBudget)}</b></span>
         <span>Total Realisasi: <b>${fmtRp(grandActual)}</b></span>
         <span>${selLabel}: <b style="color:${selColor};">${fmtRp(Math.abs(grandSelisih))}</b></span>
     </div>`;
@@ -569,6 +570,7 @@ const FWO_BUDGET_SECTIONS = {
     modal: '#budgetPlanModal',
     rowSel: '.budget-item-row',
     buildRow: buildBudgetItemRow,
+    total: '#budgetModalTotal',
     onChange: () => recalcBudgetTotal(),
 };
 
@@ -631,6 +633,7 @@ function openBudgetModal(idFwo, budgetData) {
         .toggle(!!fwoSelesai);
 
     $('#budgetItemsBody').empty();
+    BudgetSections.loadBasis(FWO_BUDGET_SECTIONS, `/fwo-budgets/${idFwo}/basis`);
     BudgetSections.fill(FWO_BUDGET_SECTIONS, isEdit ? (budgetData.items || []) : []).done(function () {
         BudgetSections.initSelects(FWO_BUDGET_SECTIONS);
         initNumericMask(document.getElementById('budgetPlanModal'));

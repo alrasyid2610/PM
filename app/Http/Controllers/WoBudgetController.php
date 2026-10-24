@@ -14,6 +14,13 @@ class WoBudgetController extends Controller
     protected function auditTable(): string { return 'wo_budgets'; }
     protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_budget']; }
 
+    /** Nilai acuan persentase budget (lihat App\Support\BudgetBasis). */
+    public function basis($id_wo)
+    {
+        $idSo = DB::table('work_orders')->where('id_wo', $id_wo)->value('id_so');
+        return response()->json(\App\Support\BudgetBasis::forSo($idSo ? (int) $idSo : null));
+    }
+
     public function listByWo($id_wo)
     {
         $budgets = DB::table('wo_budgets as b')

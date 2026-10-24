@@ -21,6 +21,13 @@ class SqWoBudgetController extends Controller
     protected function auditTable(): string { return 'sq_wo_budgets'; }
     protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_sq_budget']; }
 
+    /** Nilai acuan persentase budget (lihat App\Support\BudgetBasis). */
+    public function basis($id_sq_wo)
+    {
+        $idSq = DB::table('sq_work_orders')->where('id_sq_wo', $id_sq_wo)->value('id_sq');
+        return response()->json(\App\Support\BudgetBasis::forSq($idSq ? (int) $idSq : null));
+    }
+
     public function listByWo($id_sq_wo)
     {
         $budgets = DB::table('sq_wo_budgets as b')

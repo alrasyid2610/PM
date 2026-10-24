@@ -3837,6 +3837,7 @@ function loadWoBudgetData(idWo) {
             const woStatus = res.wo_status || '';
             const isLocked = woStatus === 'completed';
 
+            BudgetSections.applyPct($wrap, `/wo-budgets/${idWo}/basis`);
             if (!plans.length) {
                 $wrap.html(`<div class="text-center text-muted py-4" style="font-size:13px;">
                     <i class="fa-solid fa-inbox fa-2x d-block mb-2 opacity-25"></i>
@@ -3933,7 +3934,7 @@ function renderWoBudgetList(plans, isLocked) {
                 <td style="width:36px;text-align:center;color:#94a3b8;font-size:11px;">${itemIdx + 1}</td>
                 <td>${categoryCell}</td>
                 <td><span class="fw-semibold">${escHtml(item.nama_account)}</span>${caBadge}</td>
-                <td style="color:#1d4ed8;font-weight:600;">${woFmtRp(item.nominal_budget)}</td>
+                <td style="color:#1d4ed8;font-weight:600;" data-pct-val="${item.nominal_budget}">${woFmtRp(item.nominal_budget)}</td>
                 <td>
                     ${struksHtml || '<span class="text-muted" style="font-size:11px;">Belum ada realisasi</span>'}
                 </td>
@@ -3964,7 +3965,7 @@ function renderWoBudgetList(plans, isLocked) {
                     ${p.keterangan ? `<span class="text-muted ms-1" style="font-size:11px;">· ${escHtml(p.keterangan)}</span>` : ''}
                 </div>
                 <div class="d-flex align-items-center gap-3">
-                    <span style="font-size:12px;">Budget: <b style="color:#1d4ed8;">${woFmtRp(p.total_budget)}</b></span>
+                    <span style="font-size:12px;">Budget: <b style="color:#1d4ed8;" data-pct-val="${p.total_budget}">${woFmtRp(p.total_budget)}</b></span>
                     <span style="font-size:12px;">Actual: <b>${woFmtRp(p.total_actual)}</b></span>
                     <span style="font-size:12px;">Selisih: <b style="color:${selisihColor};">${woFmtRp(selisih)}</b></span>
                     ${p.dokumen_realisasi ? renderFilePreviewButton([p.dokumen_realisasi], { title: 'Dokumen Realisasi (ditandatangani)' }) : ''}
@@ -4058,7 +4059,7 @@ function renderWoBudgetList(plans, isLocked) {
     <div class="d-flex align-items-center gap-4 px-3 py-2 mb-3 rounded"
         style="background:#f8fafc;border:1px solid #e2e8f0;font-size:12px;">
         <span style="color:#64748b;font-weight:500;">Ringkasan ${plans.length} Plan:</span>
-        <span>Total Budget: <b style="color:#1d4ed8;">${woFmtRp(grandBudget)}</b></span>
+        <span>Total Budget: <b style="color:#1d4ed8;" data-pct-val="${grandBudget}">${woFmtRp(grandBudget)}</b></span>
         <span>Total Realisasi: <b>${woFmtRp(grandActual)}</b></span>
         <span>${selLabel}: <b style="color:${selColor};">${woFmtRp(Math.abs(grandSelisih))}</b></span>
     </div>`;
@@ -4098,6 +4099,7 @@ function buildWoBudgetItemRow(item) {
                 <i class="fa-solid fa-trash" style="color:#dc2626;"></i>
             </button>
         </td>
+    total: '#woBudgetModalTotal',
     </tr>`;
 }
 
@@ -4160,6 +4162,7 @@ function openWoBudgetModal(idWo, budgetData) {
     // Info rentang tanggal WO sebagai referensi (cuma informasi, tidak
     // membatasi input tanggal budget plan).
     const woMulai   = currentWoData ? currentWoData.tanggal_mulai : null;
+    BudgetSections.loadBasis(WO_BUDGET_SECTIONS, `/wo-budgets/${idWo}/basis`);
     const woSelesai = currentWoData ? currentWoData.tanggal_selesai : null;
     $('#woBudgetModal-hint-tgl-mulai')
         .text(woMulai ? 'Tanggal mulai WO: ' + fmtDate(woMulai) : '')

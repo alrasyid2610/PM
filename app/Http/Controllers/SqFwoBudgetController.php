@@ -20,6 +20,14 @@ class SqFwoBudgetController extends Controller
     protected function auditTable(): string { return 'sq_fwo_budgets'; }
     protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_sq_budget']; }
 
+    /** Nilai acuan persentase budget (lihat App\Support\BudgetBasis). */
+    public function basis($id_sq_fwo)
+    {
+        $idSq = DB::table('sq_fieldworks as f')->join('sq_work_orders as w', 'w.id_sq_wo', '=', 'f.id_sq_wo')
+            ->where('f.id_sq_fwo', $id_sq_fwo)->value('w.id_sq');
+        return response()->json(\App\Support\BudgetBasis::forSq($idSq ? (int) $idSq : null));
+    }
+
     public function listByFwo($id_sq_fwo)
     {
         $budgets = DB::table('sq_fwo_budgets as b')
