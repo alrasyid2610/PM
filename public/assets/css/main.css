@@ -2598,6 +2598,16 @@ tr.shown td.dt-control i {
     background-color: #f8f9fa;
 }
 
+/* ── Modal Budget Plan (WO, FWO, SQ WO, SQ FWO) ───────────────────────────────
+   Tinggi seragam: body punya tinggi minimum supaya modal tidak "loncat" mengikuti jumlah item
+   (1 item vs banyak). Kalau item banyak, modal-dialog-scrollable membuat body scroll sendiri. */
+#woBudgetPlanModal .modal-body,
+#budgetPlanModal .modal-body,
+#sqWoBudgetPlanModal .modal-body,
+#sqFwoBudgetPlanModal .modal-body {
+    min-height: 60vh;
+}
+
 /* ── Table ────────────────────────────────────────────────────────────────── */
 .pm-table {
     width: 100%;
