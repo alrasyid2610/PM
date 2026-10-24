@@ -1,5 +1,5 @@
 // Item Anggaran per kategori di modal Budget Plan (WO, FWO, SQ WO, SQ FWO).
-// Kategori = parent di Budget Account (urutan dari kolom `urutan`). Tiap kategori jadi satu section
+// Kategori = parent di Budget Account. Tiap kategori jadi satu section
 // (baris header + baris item) yang bisa dilipat. User menambah kategori sendiri lewat "+ Kategori" (kategori yang
 // sudah ditambahkan tidak bisa dipilih lagi), lalu item lewat tombol "+ Item" di section-nya.
 // Baris item tetap `<tr>` buatan masing-masing modul (class baris & kolomnya tidak berubah), hanya diberi
@@ -73,9 +73,16 @@ window.BudgetSections = (function () {
             if (needOther) cats.push({ id_kategori: OTHER, nama: 'Lainnya (tanpa kategori)', children: [] });
 
             var $body = $(cfg.body).empty().data('bsCfg', cfg).data('bsCats', cats);
-            cats.forEach(function (cat) {
-                var its = grouped[cat.id_kategori];
-                if (!its) return;
+            // urutan section = urutan kemunculan item (urutan user saat menyusun plan)
+            var seen = [];
+            (items || []).forEach(function (it) {
+                var k = catOf[it.id_account] === undefined ? OTHER : catOf[it.id_account];
+                if (seen.indexOf(k) < 0) seen.push(k);
+            });
+            seen.forEach(function (k) {
+                var cat = cats.filter(function (c) { return String(c.id_kategori) === String(k); })[0];
+                var its = grouped[k];
+                if (!cat || !its) return;
                 $body.append(headerHtml(cat, 0));
                 its.forEach(function (it) {
                     $body.append(cfg.buildRow(it)).children().last().attr('data-cat', cat.id_kategori);
@@ -185,16 +192,8 @@ window.BudgetSections = (function () {
         cats.forEach(function (c, i) { if (String(c.id_kategori) === String(key)) idx = i; });
         if (idx < 0 || addedKeys(cfg).indexOf(String(key)) >= 0) return;
 
-        // sisipkan sesuai urutan kategori
-        var $before = null;
-        $(cfg.body).children('.bi-cat-header').each(function () {
-            var k = String($(this).attr('data-cat'));
-            var i = -1;
-            cats.forEach(function (c, n) { if (String(c.id_kategori) === k) i = n; });
-            if (i > idx) { $before = $(this); return false; }
-        });
-        var html = headerHtml(cats[idx], 0);
-        if ($before) $before.before(html); else $(cfg.body).append(html);
+        // section baru selalu di paling bawah (urutan = urutan user menambahkan)
+        $(cfg.body).append(headerHtml(cats[idx], 0));
         refresh(cfg);
         addRow(cfg, key);
     }
