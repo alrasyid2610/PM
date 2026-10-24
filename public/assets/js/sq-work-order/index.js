@@ -1103,19 +1103,14 @@ $(document).on('click', '.btn-remove-sq-wo-budget', function () {
     });
 });
 
-function initSqWoBudgetAccountSelect2() {
-    $('#sqWoBudgetItemsBody .bi-account').each(function () {
-        if ($(this).hasClass('select2-hidden-accessible')) return;
-        $(this).select2({
-            dropdownParent: $('#sqWoBudgetPlanModal'),
-            placeholder: 'Pilih Account', allowClear: false, width: '100%', minimumInputLength: 0,
-            ajax: {
-                url: window.sqWoRoute.select2Account, dataType: 'json', delay: 200,
-                data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }), cache: true,
-            },
-        });
-    });
-}
+// Item Anggaran dikelompokkan per kategori — lihat core/budgetSections.js
+const SQ_WO_BUDGET_SECTIONS = {
+    body: '#sqWoBudgetItemsBody',
+    modal: '#sqWoBudgetPlanModal',
+    rowSel: '.sq-wo-budget-item-row',
+    buildRow: buildSqWoBudgetItemRow,
+    onChange: () => recalcSqWoBudgetTotal(),
+};
 
 // Pilih Account yang punya Nilai Default → isi otomatis ke Nominal, kalau baris itu
 // masih kosong ATAU nilainya sendiri hasil auto-fill sebelumnya (bukan diedit manual).
@@ -1177,6 +1172,7 @@ function recalcSqWoBudgetTotal() {
         total += parseInt(($(this).val() || '').replace(/,/g, ''), 10) || 0;
     });
     $('#sqWoBudgetModalTotal').text(formatRupiahSqWo(total));
+    BudgetSections.refresh(SQ_WO_BUDGET_SECTIONS);
 }
 
 function openSqWoBudgetModal(data) {
@@ -1189,23 +1185,15 @@ function openSqWoBudgetModal(data) {
     $('#sqWoBudgetModal-hari-mulai').val(isEdit ? (data.hari_mulai || '') : '');
     $('#sqWoBudgetModal-hari-selesai').val(isEdit ? (data.hari_selesai || '') : '');
 
-    const $body = $('#sqWoBudgetItemsBody').empty();
-    const items = isEdit ? (data.items || []) : [];
-    if (items.length) items.forEach((item) => $body.append(buildSqWoBudgetItemRow(item)));
-    else $body.append(buildSqWoBudgetItemRow(null));
-
-    initSqWoBudgetAccountSelect2();
-    initNumericMask(document.getElementById('sqWoBudgetPlanModal'));
-    recalcSqWoBudgetTotal();
+    $('#sqWoBudgetItemsBody').empty();
+    BudgetSections.fill(SQ_WO_BUDGET_SECTIONS, isEdit ? (data.items || []) : []).done(function () {
+        BudgetSections.initSelects(SQ_WO_BUDGET_SECTIONS);
+        initNumericMask(document.getElementById('sqWoBudgetPlanModal'));
+        recalcSqWoBudgetTotal();
+    });
 
     new bootstrap.Modal(document.getElementById('sqWoBudgetPlanModal')).show();
 }
-
-$(document).on('click', '#btnSqWoBudgetAddRow', function () {
-    $('#sqWoBudgetItemsBody').append(buildSqWoBudgetItemRow(null));
-    initSqWoBudgetAccountSelect2();
-    initNumericMask(document.getElementById('sqWoBudgetPlanModal'));
-});
 
 $(document).on('click', '.btn-sq-wo-budget-remove-row', function () {
     $(this).closest('tr').remove();

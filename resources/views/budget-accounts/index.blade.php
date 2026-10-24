@@ -79,6 +79,13 @@
                             placeholder="Opsional" data-no-disable>
                         <small class="text-muted">Dipakai sebagai nilai awal saat account ini dipilih di baris Budget Item — tetap bisa diubah manual.</small>
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Urutan</label>
+                        <input type="text" inputmode="numeric"
+                            class="form-control form-control-sm input-num-mask input-num-int" id="accountModal-urutan"
+                            placeholder="cth: 1" data-no-disable>
+                        <small class="text-muted">Urutan tampil di modal Budget Plan (kecil = di atas). Kategori diurutkan antar kategori; sub kategori di dalam kategorinya.</small>
+                    </div>
                     <div class="col-md-12">
                         <label class="form-label">Keterangan</label>
                         <textarea class="form-control form-control-sm" id="accountModal-keterangan"

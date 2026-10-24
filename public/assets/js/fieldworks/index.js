@@ -563,27 +563,14 @@ function buildBudgetItemRow(item) {
     </tr>`;
 }
 
-function initBudgetAccountSelect2() {
-    $('#budgetItemsBody .bi-account').each(function () {
-        if ($(this).hasClass('select2-hidden-accessible')) return;
-        $(this).select2({
-            dropdownParent: $('#budgetPlanModal'),
-            placeholder: 'Pilih Account',
-            allowClear: false,
-            width: '100%',
-            minimumInputLength: 0,
-            ajax: {
-                url: '/budget-accounts/select2',
-                dataType: 'json',
-                delay: 200,
-                data: function (params) { return { q: params.term }; },
-                // Response sudah grouped: [{text:'Kategori', children:[...]}]
-                processResults: function (data) { return { results: data }; },
-                cache: true,
-            },
-        });
-    });
-}
+// Item Anggaran dikelompokkan per kategori — lihat core/budgetSections.js
+const FWO_BUDGET_SECTIONS = {
+    body: '#budgetItemsBody',
+    modal: '#budgetPlanModal',
+    rowSel: '.budget-item-row',
+    buildRow: buildBudgetItemRow,
+    onChange: () => recalcBudgetTotal(),
+};
 
 // Pilih Account yang punya Nilai Default → isi otomatis ke Nominal, kalau baris itu
 // masih kosong ATAU nilainya sendiri hasil auto-fill sebelumnya (bukan diedit manual).
@@ -619,6 +606,7 @@ function recalcBudgetTotal() {
         total += parseInt($(this).val().replace(/,/g, ''), 10) || 0;
     });
     $('#budgetModalTotal').text(fmtRp(total));
+    BudgetSections.refresh(FWO_BUDGET_SECTIONS);
 }
 
 function openBudgetModal(idFwo, budgetData) {
@@ -642,17 +630,12 @@ function openBudgetModal(idFwo, budgetData) {
         .text(fwoSelesai ? 'Tanggal selesai FWO: ' + fmtTgl(fwoSelesai) : '')
         .toggle(!!fwoSelesai);
 
-    const $body = $('#budgetItemsBody').empty();
-    const items = isEdit ? (budgetData.items || []) : [];
-    if (items.length) {
-        items.forEach(function (item) { $body.append(buildBudgetItemRow(item)); });
-    } else {
-        $body.append(buildBudgetItemRow(null));
-    }
-
-    initBudgetAccountSelect2();
-    initNumericMask(document.getElementById('budgetPlanModal'));
-    recalcBudgetTotal();
+    $('#budgetItemsBody').empty();
+    BudgetSections.fill(FWO_BUDGET_SECTIONS, isEdit ? (budgetData.items || []) : []).done(function () {
+        BudgetSections.initSelects(FWO_BUDGET_SECTIONS);
+        initNumericMask(document.getElementById('budgetPlanModal'));
+        recalcBudgetTotal();
+    });
 
     // Init Flatpickr tanggal setelah modal ada di DOM
     const modal = new bootstrap.Modal(document.getElementById('budgetPlanModal'));
@@ -700,12 +683,7 @@ $(document).off('click.budget', '.btn-budget-add').on('click.budget', '.btn-budg
     openBudgetModal(idFwo, null);
 });
 
-// ── Tambah baris item di modal ──
-$(document).off('click.budget', '#btnBudgetAddRow').on('click.budget', '#btnBudgetAddRow', function () {
-    $('#budgetItemsBody').append(buildBudgetItemRow(null));
-    initBudgetAccountSelect2();
-    initNumericMask(document.getElementById('budgetPlanModal'));
-});
+// Tambah item: tombol "+ Item" di tiap section kategori (core/budgetSections.js)
 
 // ── Hapus baris item di modal ──
 $(document).off('click.budget', '.btn-remove-row').on('click.budget', '.btn-remove-row', function () {

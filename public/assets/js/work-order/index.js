@@ -4101,26 +4101,14 @@ function buildWoBudgetItemRow(item) {
     </tr>`;
 }
 
-function initWoBudgetAccountSelect2() {
-    $('#woBudgetItemsBody .bi-account').each(function () {
-        if ($(this).hasClass('select2-hidden-accessible')) return;
-        $(this).select2({
-            dropdownParent: $('#woBudgetPlanModal'),
-            placeholder: 'Pilih Account',
-            allowClear: false,
-            width: '100%',
-            minimumInputLength: 0,
-            ajax: {
-                url: '/budget-accounts/select2',
-                dataType: 'json',
-                delay: 200,
-                data: function (params) { return { q: params.term }; },
-                processResults: function (data) { return { results: data }; },
-                cache: true,
-            },
-        });
-    });
-}
+// Item Anggaran dikelompokkan per kategori — lihat core/budgetSections.js
+const WO_BUDGET_SECTIONS = {
+    body: '#woBudgetItemsBody',
+    modal: '#woBudgetPlanModal',
+    rowSel: '.wo-budget-item-row',
+    buildRow: buildWoBudgetItemRow,
+    onChange: () => recalcWoBudgetTotal(),
+};
 
 // Pilih Account yang punya Nilai Default → isi otomatis ke Nominal, kalau baris itu
 // masih kosong ATAU nilainya sendiri hasil auto-fill sebelumnya (bukan diedit manual).
@@ -4156,6 +4144,7 @@ function recalcWoBudgetTotal() {
         total += parseInt($(this).val().replace(/,/g, ''), 10) || 0;
     });
     $('#woBudgetModalTotal').text(woFmtRp(total));
+    BudgetSections.refresh(WO_BUDGET_SECTIONS);
 }
 
 function openWoBudgetModal(idWo, budgetData) {
@@ -4179,17 +4168,12 @@ function openWoBudgetModal(idWo, budgetData) {
         .text(woSelesai ? 'Tanggal selesai WO: ' + fmtDate(woSelesai) : '')
         .toggle(!!woSelesai);
 
-    const $body = $('#woBudgetItemsBody').empty();
-    const items = isEdit ? (budgetData.items || []) : [];
-    if (items.length) {
-        items.forEach(function (item) { $body.append(buildWoBudgetItemRow(item)); });
-    } else {
-        $body.append(buildWoBudgetItemRow(null));
-    }
-
-    initWoBudgetAccountSelect2();
-    initNumericMask(document.getElementById('woBudgetPlanModal'));
-    recalcWoBudgetTotal();
+    $('#woBudgetItemsBody').empty();
+    BudgetSections.fill(WO_BUDGET_SECTIONS, isEdit ? (budgetData.items || []) : []).done(function () {
+        BudgetSections.initSelects(WO_BUDGET_SECTIONS);
+        initNumericMask(document.getElementById('woBudgetPlanModal'));
+        recalcWoBudgetTotal();
+    });
 
     const modal = new bootstrap.Modal(document.getElementById('woBudgetPlanModal'));
     modal.show();
@@ -4229,12 +4213,7 @@ $(document).off('click.wobudget', '.btn-wo-budget-add').on('click.wobudget', '.b
     openWoBudgetModal(idWo, null);
 });
 
-// ── Tambah baris item di modal ──
-$(document).off('click.wobudget', '#btnWoBudgetAddRow').on('click.wobudget', '#btnWoBudgetAddRow', function () {
-    $('#woBudgetItemsBody').append(buildWoBudgetItemRow(null));
-    initWoBudgetAccountSelect2();
-    initNumericMask(document.getElementById('woBudgetPlanModal'));
-});
+// Tambah item: tombol "+ Item" di tiap section kategori (core/budgetSections.js)
 
 // ── Hapus baris item di modal ──
 $(document).off('click.wobudget', '.btn-wo-remove-row').on('click.wobudget', '.btn-wo-remove-row', function () {

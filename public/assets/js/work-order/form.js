@@ -581,13 +581,12 @@ function renderForm(res) {
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                         <span class="fw-semibold" style="font-size:13px;">
                             <i class="fa-solid fa-list me-1" style="color:#0f766e;"></i> Item Anggaran
+                            <span class="text-muted fw-normal ms-1" style="font-size:11px;">tambah kategori, lalu item di dalamnya</span>
                         </span>
-                        <button type="button" class="pm-btn-pill pm-btn-pill--teal" id="btnWoBudgetAddRow" data-no-disable>
-                            <i class="fa-solid fa-plus" style="font-size:10px;"></i> Tambah Item
-                        </button>
+                        <span class="bi-cat-summary" style="display:none;font-size:11px;color:#b45309;"></span>
                     </div>
 
                     <div class="table-responsive">

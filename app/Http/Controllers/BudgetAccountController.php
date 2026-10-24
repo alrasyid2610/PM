@@ -7,8 +7,44 @@ use Illuminate\Support\Facades\DB;
 
 class BudgetAccountController extends Controller
 {
+    /**
+     * Struktur untuk modal Budget Plan per kategori: semua kategori aktif (berurut `urutan`, lalu nama)
+     * beserta sub kategorinya. Sub kategori nonaktif ikut dikirim (is_aktif = 0) supaya item lama
+     * tetap bisa dipetakan ke kategorinya; yang nonaktif tidak ditawarkan untuk dipilih.
+     * Lewat route select2 (segment terbuka) agar tidak butuh izin menu Budget Account.
+     */
+    private function sections(): \Illuminate\Http\JsonResponse
+    {
+        $parents = DB::table('budget_accounts')
+            ->whereNull('deleted_at')->whereNull('id_parent')->where('is_aktif', 1)
+            ->orderBy('urutan')->orderBy('nama')
+            ->get(['id_account', 'nama']);
+
+        $children = DB::table('budget_accounts')
+            ->whereNull('deleted_at')->whereNotNull('id_parent')
+            ->orderBy('urutan')->orderBy('nama')
+            ->get(['id_account as id', 'id_parent', 'nama as text', 'kode', 'nilai_default', 'is_aktif'])
+            ->groupBy('id_parent');
+
+        return response()->json($parents->map(fn($p) => [
+            'id_kategori' => $p->id_account,
+            'nama'        => $p->nama,
+            'children'    => ($children[$p->id_account] ?? collect())->map(fn($c) => [
+                'id'            => $c->id,
+                'text'          => $c->text,
+                'kode'          => $c->kode,
+                'nilai_default' => $c->nilai_default,
+                'is_aktif'      => (int) $c->is_aktif,
+            ])->values(),
+        ])->values());
+    }
+
     public function select2(Request $request)
     {
+        if ($request->input('mode') === 'sections') {
+            return $this->sections();
+        }
+
         $q = $request->input('q', '');
 
         // Ambil semua parent (kategori)
@@ -16,6 +52,7 @@ class BudgetAccountController extends Controller
             ->whereNull('deleted_at')
             ->whereNull('id_parent')
             ->where('is_aktif', 1)
+            ->orderBy('urutan')
             ->orderBy('nama')
             ->get(['id_account', 'nama']);
 
@@ -30,6 +67,7 @@ class BudgetAccountController extends Controller
                     $query->where('nama', 'like', "%{$q}%")
                           ->orWhere('kode', 'like', "%{$q}%");
                 }))
+                ->orderBy('urutan')
                 ->orderBy('nama')
                 ->get(['id_account as id', 'nama as text', 'kode', 'nilai_default']);
 
@@ -70,6 +108,7 @@ class BudgetAccountController extends Controller
         $parents = DB::table('budget_accounts')
             ->whereNull('deleted_at')
             ->whereNull('id_parent')
+            ->orderBy('urutan')
             ->orderBy('nama')
             ->get();
 
@@ -77,6 +116,7 @@ class BudgetAccountController extends Controller
             $parent->children = DB::table('budget_accounts')
                 ->whereNull('deleted_at')
                 ->where('id_parent', $parent->id_account)
+                ->orderBy('urutan')
                 ->orderBy('nama')
                 ->get();
             return $parent;
@@ -105,6 +145,7 @@ class BudgetAccountController extends Controller
             'kode'          => 'required|string|max:50',
             'id_parent'     => 'nullable|integer',
             'nilai_default' => 'nullable|integer|min:0',
+            'urutan'        => 'nullable|integer|min:0|max:65535',
         ]);
 
         $exists = DB::table('budget_accounts')
@@ -134,6 +175,7 @@ class BudgetAccountController extends Controller
             'nama'          => $request->nama,
             'kode'          => strtoupper($request->kode),
             'nilai_default' => $request->filled('nilai_default') ? (int) $request->nilai_default : null,
+            'urutan'        => $request->filled('urutan') ? (int) $request->urutan : 0,
             'keterangan'    => $request->keterangan,
             'is_aktif'      => 1,
             'created_at'    => now(),
@@ -150,6 +192,7 @@ class BudgetAccountController extends Controller
             'kode'          => 'required|string|max:50',
             'id_parent'     => 'nullable|integer',
             'nilai_default' => 'nullable|integer|min:0',
+            'urutan'        => 'nullable|integer|min:0|max:65535',
         ]);
 
         // Validasi: parent tidak boleh punya id_parent sendiri
@@ -180,6 +223,7 @@ class BudgetAccountController extends Controller
             'nama'          => $request->nama,
             'kode'          => strtoupper($request->kode),
             'nilai_default' => $request->filled('nilai_default') ? (int) $request->nilai_default : null,
+            'urutan'        => $request->filled('urutan') ? (int) $request->urutan : 0,
             'keterangan'    => $request->keterangan,
             'is_aktif'      => $request->boolean('is_aktif', true) ? 1 : 0,
             'updated_at'    => now(),
