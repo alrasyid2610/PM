@@ -24,6 +24,18 @@ class WoSampleController extends Controller
         return $wo && $wo->status === 'completed';
     }
 
+    /** Sample asal FWO hanya boleh diubah/dihapus dari FWO; di WO hanya preview. */
+    private function guardFromFwo($sample)
+    {
+        if (!empty($sample->id_fwo)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sample ini berasal dari FWO. Ubah datanya lewat tab Sample di FWO.',
+            ], 403);
+        }
+        return null;
+    }
+
     private function nextNoSample(): string
     {
         $year = date('y');
@@ -574,8 +586,8 @@ class WoSampleController extends Controller
             return response()->json(['success' => false, 'message' => 'Tidak ada field yang diisi.'], 422);
         }
 
-        $ids = DB::table('lab_samples')->where('id_wo', $id_wo)->where('id_boq', $id_boq)->pluck('id_lab_sample');
-        DB::table('lab_samples')->where('id_wo', $id_wo)->where('id_boq', $id_boq)->update($update);
+        $ids = DB::table('lab_samples')->where('id_wo', $id_wo)->where('id_boq', $id_boq)->whereNull('id_fwo')->pluck('id_lab_sample');
+        DB::table('lab_samples')->where('id_wo', $id_wo)->where('id_boq', $id_boq)->whereNull('id_fwo')->update($update);
 
         if ($ids->isNotEmpty()) {
             $isi = collect($update)->except('updated_at')->map(fn ($v, $k) => "{$k} = {$v}")->implode(', ');
@@ -594,7 +606,9 @@ class WoSampleController extends Controller
             return response()->json(['success' => false, 'message' => 'WO sudah selesai.'], 403);
         }
 
-        $allowed = ['titik_lokasi', 'jenis_sample', 'kondisi_sample', 'status', 'tanggal_pengambilan', 'keterangan'];
+        if ($resp = $this->guardFromFwo($sample)) return $resp;
+
+        $allowed = ['titik_lokasi','jenis_sample', 'kondisi_sample', 'status', 'tanggal_pengambilan', 'keterangan'];
         $field   = $request->input('field');
 
         if (!in_array($field, $allowed)) {
@@ -619,6 +633,7 @@ class WoSampleController extends Controller
         if ($this->woIsCompleted($sample->id_wo)) {
             return response()->json(['success' => false, 'message' => 'WO sudah selesai, tidak dapat mengubah sample.'], 403);
         }
+        if ($resp = $this->guardFromFwo($sample)) return $resp;
 
         $request->validate([
             'jenis_sample'        => 'nullable|in:env,we,mp,product',
@@ -665,6 +680,8 @@ class WoSampleController extends Controller
         if ($this->woIsCompleted($sample->id_wo)) {
             return response()->json(['success' => false, 'message' => 'WO sudah selesai.'], 403);
         }
+
+        if ($resp = $this->guardFromFwo($sample)) return $resp;
 
         $before = $this->sampleJson($id);
         DB::table('lab_samples')->where('id_lab_sample', $id)->delete();

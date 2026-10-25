@@ -1038,16 +1038,19 @@ function _woRegSampleRow(s, isLocked, groupId) {
         ? `<span class="pm-badge pm-badge--completed" style="font-size:10px;">Diterima</span>`
         : `<span class="text-muted" style="font-size:11px;font-style:italic;">–</span>`;
 
+    // Sample asal FWO: sumber datanya di FWO, di WO hanya boleh dilihat (preview)
+    const fromFwo    = !!s.id_fwo;
+    const readOnly   = isLocked || fromFwo;
     const attCountWo = (s.attachments || []).length;
     const attBadgeWo = attCountWo > 0
-        ? `<span class="btn-wo-sample-edit" data-id="${s.id_lab_sample}"
+        ? `<span class="btn-wo-sample-edit" data-id="${s.id_lab_sample}" data-preview="${fromFwo ? 1 : 0}"
                 title="${attCountWo} lampiran" style="font-size:11px;color:#0369a1;cursor:pointer;white-space:nowrap;">
                 <i class="fa-solid fa-paperclip"></i> ${attCountWo}
            </span>`
         : `<span style="color:#94a3b8;font-style:italic;font-size:11px;">–</span>`;
 
     const titikVal  = s.titik_lokasi || '';
-    const titikCell = !isLocked
+    const titikCell = !readOnly
         ? `<select class="form-select form-select-sm wo-sample-inline-titik"
                 data-id="${s.id_lab_sample}"
                 data-current="${escHtml(titikVal)}"
@@ -1075,7 +1078,7 @@ function _woRegSampleRow(s, isLocked, groupId) {
         <td style="width:100px;">${tglCellWo}</td>
         <td style="width:100px;">${kondisiCellWo}</td>
         <td style="font-size:12px;width:150px;">
-            ${!isLocked
+            ${!readOnly
                 ? `<select class="form-select form-select-sm wo-sample-inline-status"
                         data-id="${s.id_lab_sample}"
                         style="font-size:11px;width:140px;">
@@ -1090,12 +1093,17 @@ function _woRegSampleRow(s, isLocked, groupId) {
         <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${keteranganCellWo}</td>
         <td style="width:80px;text-align:center;">${attBadgeWo}</td>
         <td class="text-center" style="width:72px;white-space:nowrap;">
-            ${!isLocked && can('work-orders', 'can_update') ? `
+            ${fromFwo ? `
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-wo-sample-edit"
+                data-id="${s.id_lab_sample}" data-preview="1" title="Lihat (diubah dari FWO)" style="font-size:11px;">
+                <i class="fa-solid fa-eye" style="color:#0369a1;"></i>
+            </button>` : ''}
+            ${!fromFwo && !isLocked && can('work-orders', 'can_update') ? `
             <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-wo-sample-edit"
                 data-id="${s.id_lab_sample}" title="Edit" style="font-size:11px;">
                 <i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i>
             </button>` : ''}
-            ${!isLocked && can('work-orders', 'can_delete') ? `
+            ${!fromFwo && !isLocked && can('work-orders', 'can_delete') ? `
             <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-wo-sample-delete"
                 data-id="${s.id_lab_sample}" data-no="${escHtml(s.no_sample || 'Sample #' + s.id_lab_sample)}"
                 title="Hapus" style="font-size:11px;">
@@ -1544,9 +1552,14 @@ $(document).on('click', '.btn-wo-sample-edit', function (e) {
     const idSample = $(this).data('id');
     const $tr      = $(this).closest('tr');
     const boqName  = $tr.data('boq-name') || '';
+    const preview  = String($(this).data('preview')) === '1'; // sample asal FWO: hanya lihat
 
     const $modal = $('#woSampleDetailModal');
-    $modal.find('#woSampleDetailModalLabel').html(`<i class="fa-solid fa-flask me-2" style="color:#0369a1;"></i>Detail Sample – ${escHtml(boqName)}`);
+    $modal.find('#woSampleDetailModalLabel').html(`<i class="fa-solid fa-flask me-2" style="color:#0369a1;"></i>${preview ? 'Preview' : 'Detail'} Sample – ${escHtml(boqName)}`);
+    $modal.find('input:not([type=hidden]), select, textarea').prop('disabled', false);
+    $modal.find('#woSampleModal-btn-save').toggle(!preview);
+    $modal.find('#woSampleModal-attachments').closest('.col-12').find('.filepond--root, input[type=file]').show();
+    $modal.find('.wo-sample-preview-note').remove();
     $modal.find('#woSampleModal-id').val(idSample);
     $modal.find('#woSampleModal-jenis').val('');
     $modal.find('#woSampleModal-no').val('');
@@ -1584,10 +1597,11 @@ $(document).on('click', '.btn-wo-sample-edit', function (e) {
                     </div>`).join('')
                 : '';
             $modal.find('#woSampleModal-existing-files').html(filesHtml);
+            if (preview) $modal.find('.btn-remove-existing-wo-sample-file').remove();
         })
         .always(function () {
             if (woSampleFilePond) { woSampleFilePond.destroy(); woSampleFilePond = null; }
-            woSampleFilePond = createFileUploader('#woSampleModal-attachments');
+            if (!preview) woSampleFilePond = createFileUploader('#woSampleModal-attachments');
 
             // Init Select2 untuk field enum
             const s2OptsWo = { width: '100%', dropdownParent: $modal, allowClear: true };
@@ -1608,6 +1622,12 @@ $(document).on('click', '.btn-wo-sample-edit', function (e) {
 
             new bootstrap.Modal($modal[0]).show();
             initFpDate('#woSampleDetailModal');
+
+            if (preview) {
+                $modal.find('input:not([type=hidden]), select, textarea').prop('disabled', true);
+                $modal.find('#woSampleModal-attachments').hide();
+                $modal.find('#woSampleModal-existing-files').after('<div class="wo-sample-preview-note text-muted" style="font-size:11px;">Sample ini berasal dari FWO — ubah datanya lewat tab Sample di FWO.</div>');
+            }
         });
 });
 
