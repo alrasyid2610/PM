@@ -17,9 +17,8 @@ class CheckMenuPermission
     // (termasuk yang sudah punya permission tersimpan di DB), berlaku sampai
     // dihapus dari sini. Juga dihapus dari config/menus.php supaya tidak
     // muncul di sidebar maupun matrix permission (Grup Menu/User Management).
-    // 'lab-data-import' — Import Data Lab, dinonaktifkan 2026-09-07 karena
-    // fiturnya belum terverifikasi.
-    private const DISABLED_SEGMENTS = ['lab-data-import'];
+    // Saat ini kosong (Import Data Lab yang sebelumnya di sini sudah dihapus 2026-10-26).
+    private const DISABLED_SEGMENTS = [];
 
     // Endpoint supporting — tidak perlu cek permission spesifik
     private const OPEN_LAST_SEGMENTS = ['select2', 'select2byid', 'data', 'pdf'];

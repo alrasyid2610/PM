@@ -113,15 +113,6 @@ return [
             ['slug' => 'menu-groups', 'label' => 'Grup Menu',        'icon' => 'fa-sitemap'],
             ['slug' => 'users',       'label' => 'User Management',  'icon' => 'fa-users-gear'],
             ['slug' => 'personnel',   'label' => 'Personnel',        'icon' => 'fa-people-group'],
-            // 'lab-data-import' (Import Data Lab) dinonaktifkan 2026-09-07 —
-            // fiturnya belum terverifikasi. Diblokir 403 di semua route
-            // lewat DISABLED_SEGMENTS di CheckMenuPermission, dan sengaja
-            // dihapus dari sini supaya tidak muncul di sidebar maupun
-            // matrix permission (Grup Menu/User Management). Row permission
-            // lama di menu_group_permissions/user_menu_permissions untuk
-            // slug ini SENGAJA dibiarkan (tidak dihapus dari DB) — begitu
-            // modul ini di-uncomment lagi nanti, akses lama otomatis balik
-            // tanpa perlu setup ulang.
             ['slug' => 'documentations', 'label' => 'Dokumentasi', 'icon' => 'fa-book'],
         ],
     ],
