@@ -367,6 +367,16 @@ class WoBudgetController extends Controller
         $after = $this->budgetJson($id);
         saveAudit('wo_budgets', $id, 'Close', $before, $after, ['work_orders', $budget->id_wo]);
 
+        \App\Services\NotificationDispatcher::fire('wo_budget.plan_selesai', [
+            'title' => 'Plan Budget WO selesai: {{no_wo}}',
+            'body'  => '{{label_plan}}',
+            'url'   => url('work-orders?open=' . $budget->id_wo . '&tab=tabWoBudget'),
+        ], [
+            'no_wo'      => DB::table('work_orders')->where('id_wo', $budget->id_wo)->value('no_wo'),
+            'label_plan' => $budget->label,
+            'nama_user'  => \Illuminate\Support\Facades\Auth::user()?->name,
+        ], \App\Support\NotificationRoles::wo((int) $budget->id_wo));
+
         return response()->json(['success' => true]);
     }
 

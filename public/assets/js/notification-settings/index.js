@@ -10,13 +10,18 @@ function loadNotifEvents() {
 function recipientLabel(rule) {
     if (rule.recipient_type === 'all') return 'Semua user aktif';
     if (rule.recipient_type === 'permission') return `Akses modul: <code>${escHtml(rule.permission_slug || '-')}</code>`;
+    if (rule.recipient_type === 'roles') {
+        const ev = notifEvents.find((e) => e.id === rule.notification_event_id);
+        const names = (rule.recipient_roles || []).map((k) => escHtml((ev && ev.roles && ev.roles[k]) || k));
+        return 'Peran: ' + (names.join(', ') || '-');
+    }
     return 'User tertentu';
 }
 
 function renderNotifEvents() {
     const $wrap = $('#notifEventList');
     if (!notifEvents.length) {
-        $wrap.html('<div class="text-muted">Belum ada event notifikasi yang pernah terpicu.</div>');
+        $wrap.html('<div class="text-muted">Belum ada event yang ditambahkan. Klik <b>Tambah Event</b> untuk memilih dari daftar master.</div>');
         return;
     }
 
@@ -48,6 +53,7 @@ function renderNotifEvents() {
                         <div class="d-flex align-items-center" style="gap:8px;">
                             <input type="text" class="form-control form-control-sm evt-label" value="${escHtml(ev.label)}" style="max-width:260px;font-weight:600;">
                             <code style="font-size:11px;color:#94a3b8;">${escHtml(ev.key)}</code>
+                            <span class="badge bg-light text-secondary border" style="font-size:10px;">${escHtml(ev.module || '')}</span>
                         </div>
                         <textarea class="form-control form-control-sm evt-desc mt-2" rows="1"
                                   placeholder="Deskripsi (opsional)">${escHtml(ev.description || '')}</textarea>
@@ -58,6 +64,7 @@ function renderNotifEvents() {
                             <label class="form-check-label" style="font-size:12px;">Aktif</label>
                         </div>
                         <button type="button" class="btn btn-sm btn-primary btn-evt-save">Simpan</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-evt-remove" title="Lepas event dari daftar"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                 </div>
 
@@ -103,6 +110,76 @@ $(function () {
         const v = $(this).val();
         $('#ruleSlugWrap').toggle(v === 'permission');
         $('#ruleUsersWrap').toggle(v === 'users');
+        $('#ruleRolesWrap').toggle(v === 'roles');
+    });
+
+    // Checklist peran dari data — sesuai peran yang tersedia untuk event ybs (master)
+    function renderRuleRoles(eventId, selected) {
+        const ev = notifEvents.find((e) => e.id === Number(eventId));
+        const roles = (ev && ev.roles) || {};
+        const sel = selected || [];
+        $('#ruleRolesList').html(Object.keys(roles).map((k) => `
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input rule-role" id="role_${k}" value="${k}" ${sel.includes(k) ? 'checked' : ''}>
+                <label class="form-check-label" for="role_${k}">${escHtml(roles[k])}</label>
+            </div>`).join('') || '<span class="text-muted">Event ini tidak punya peran dari data.</span>');
+    }
+
+    // ── Tambah / lepas Event dari master ──
+    $('#btnEventAdd').on('click', function () {
+        $.get('/notification-settings/catalog', function (list) {
+            const $sel = $('#eventAddSelect');
+            if ($sel.data('select2')) $sel.select2('destroy');
+            $sel.empty();
+            $('#eventAddEmpty').toggle(!list.length);
+            $('#btnEventAddSave').prop('disabled', !list.length);
+            $('#eventAddDesc').text('');
+
+            const byModule = {};
+            list.forEach((e) => { (byModule[e.module] = byModule[e.module] || []).push(e); });
+            Object.keys(byModule).forEach((m) => {
+                const $g = $('<optgroup>').attr('label', m);
+                byModule[m].forEach((e) => {
+                    const $o = $('<option>').val(e.key).text(e.label).attr('data-desc', e.description || '');
+                    $g.append($o);
+                });
+                $sel.append($g);
+            });
+            $sel.select2({ width: '100%', dropdownParent: $('#eventAddModal') });
+            $sel.off('change.desc').on('change.desc', function () {
+                $('#eventAddDesc').text($(this).find('option:selected').attr('data-desc') || '');
+            }).trigger('change.desc');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('eventAddModal')).show();
+        });
+    });
+
+    $('#btnEventAddSave').on('click', function () {
+        const key = $('#eventAddSelect').val();
+        if (!key) return;
+        $.post('/notification-settings/events', { _token: window.csrfToken, key: key })
+            .done(function () {
+                Notify.success('Event ditambahkan');
+                bootstrap.Modal.getInstance(document.getElementById('eventAddModal')).hide();
+                loadNotifEvents();
+            })
+            .fail(function (xhr) { Notify.error(xhr.responseJSON?.message || 'Gagal menambah event'); });
+    });
+
+    $(document).on('click', '.btn-evt-remove', function () {
+        const id = $(this).closest('.card').data('event-id');
+        Swal.fire({
+            title: 'Lepas event dari daftar?',
+            text: 'Event berhenti mengirim notifikasi. Rule-nya tetap tersimpan dan kembali aktif kalau event ditambahkan lagi.',
+            icon: 'warning', showCancelButton: true,
+            confirmButtonText: 'Ya, lepas', cancelButtonText: 'Batal', confirmButtonColor: '#dc2626',
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+            $.ajax({
+                url: `/notification-settings/events/${id}`, method: 'DELETE', data: { _token: window.csrfToken },
+                success: function () { Notify.success('Event dilepas'); loadNotifEvents(); },
+                error: function (xhr) { Notify.error(xhr.responseJSON?.message || 'Gagal melepas event'); },
+            });
+        });
     });
 
     $(document).on('click', '.btn-evt-save', function () {
@@ -134,12 +211,12 @@ $(function () {
         const ev = notifEvents.find((e) => e.id === eventId);
         const fields = (ev && ev.available_fields) || [];
         if (!fields.length) {
-            $('#ruleFieldChips').html('<span class="text-muted">Belum ada data field tercatat untuk event ini — event perlu terpicu minimal 1x dulu.</span>');
+            $('#ruleFieldChips').html('<span class="text-muted">Event ini belum punya field untuk template pesan.</span>');
             return;
         }
         $('#ruleFieldChips').html(
             '<span class="text-muted me-1">Field tersedia:</span> ' +
-            fields.map((f) => `<button type="button" class="btn btn-sm btn-outline-secondary chip-field py-0 px-2 me-1 mb-1" data-field="${f}" style="font-size:11px;">@{{${f}}}</button>`).join('')
+            fields.map((f) => `<button type="button" class="btn btn-sm btn-outline-secondary chip-field py-0 px-2 me-1 mb-1" data-field="${f}" style="font-size:11px;">{{${f}}}</button>`).join('')
         );
     }
 
@@ -161,6 +238,7 @@ $(function () {
         $('#ruleEventId').val(eventId);
         $('#ruleUsers').val(null).trigger('change');
         $('#ruleRecipientType').val('permission').trigger('change');
+        renderRuleRoles(eventId, []);
         renderRuleFieldChips(eventId);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('ruleModal')).show();
     });
@@ -173,6 +251,7 @@ $(function () {
         $('#ruleSlug').val(r.permission_slug || '');
         $('#ruleTemplate').val(r.message_template);
         $('#ruleActive').prop('checked', !!r.is_active);
+        renderRuleRoles(r.notification_event_id, r.recipient_roles || []);
         renderRuleFieldChips(r.notification_event_id);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('ruleModal')).show();
     });
@@ -211,6 +290,7 @@ $(function () {
             message_template: $('#ruleTemplate').val(),
             is_active: $('#ruleActive').is(':checked') ? 1 : 0,
             user_ids: $('#ruleUsers').val() || [],
+            recipient_roles: $('.rule-role:checked').map(function () { return this.value; }).get(),
         };
 
         $.ajax({

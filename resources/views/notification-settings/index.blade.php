@@ -10,14 +10,42 @@
 
     <div class="alert alert-info" style="font-size:13px;">
         <i class="fa-solid fa-circle-info me-1"></i>
-        Daftar di bawah ini adalah <b>katalog event</b> notifikasi — baris baru otomatis muncul begitu
-        sebuah event pertama kali dipicu dari sistem. Tiap event bisa punya lebih dari satu
-        <b>Rule</b> (aturan penerima + template pesan). Placeholder di template pesan ditulis
-        <code>@{{nama_field}}</code>.
+        Pilih event yang ingin diaktifkan lewat <b>Tambah Event</b> (daftar master kejadian di sistem), lalu atur
+        <b>Rule</b>-nya — aturan penerima + template pesan. Satu event bisa punya lebih dari satu rule.
+        Penerima bisa berupa akses modul, user tertentu, semua user, atau <b>peran dari data</b> (mis. PIC Order, Penyelia FWO).
+        Placeholder di template pesan ditulis <code>@{{nama_field}}</code>.
+    </div>
+
+    <div class="d-flex justify-content-end mb-3">
+        <button type="button" class="btn btn-primary btn-sm" id="btnEventAdd">
+            <i class="fa-solid fa-plus me-1"></i> Tambah Event
+        </button>
     </div>
 
     <div id="notifEventList"></div>
 </section>
+
+{{-- Modal tambah Event dari master --}}
+<div class="modal fade" id="eventAddModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Tambah Event Notifikasi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label required">Event</label>
+                <select id="eventAddSelect" class="form-select" style="width:100%;"></select>
+                <small class="text-muted d-block mt-2" id="eventAddDesc"></small>
+                <div class="text-muted mt-2" id="eventAddEmpty" style="display:none;">Semua event di master sudah ditambahkan.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary" id="btnEventAddSave">Tambah</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {{-- Modal tambah/edit Rule --}}
 <div class="modal fade" id="ruleModal" tabindex="-1">
@@ -38,7 +66,14 @@
                             <option value="permission">Punya akses modul (slug)</option>
                             <option value="all">Semua user aktif</option>
                             <option value="users">User tertentu</option>
+                            <option value="roles">Peran dari data (mis. PIC, Penyelia)</option>
                         </select>
+                    </div>
+
+                    <div class="mb-3" id="ruleRolesWrap" style="display:none;">
+                        <label class="form-label">Peran Penerima</label>
+                        <div id="ruleRolesList"></div>
+                        <small class="text-muted">Penerima diambil dari data record yang memicu event (hanya user aktif).</small>
                     </div>
 
                     <div class="mb-3" id="ruleSlugWrap">

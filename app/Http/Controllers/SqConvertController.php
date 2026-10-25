@@ -369,6 +369,18 @@ class SqConvertController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
+        $sqRow = DB::table('sales_quotations')->where('id_sq', $id)->first(['no_sq', 'judul_order']);
+        \App\Services\NotificationDispatcher::fire('sq.terbit_so', [
+            'title' => 'SQ {{no_sq}} diterbitkan jadi SO {{no_so}}',
+            'body'  => '{{judul_order}}',
+            'url'   => url('sales-orders?open=' . $result['id_so']),
+        ], [
+            'no_sq'       => $sqRow->no_sq ?? '',
+            'no_so'       => $result['no_so'],
+            'judul_order' => $sqRow->judul_order ?? '',
+            'nama_user'   => \Illuminate\Support\Facades\Auth::user()?->name,
+        ], \App\Support\NotificationRoles::sq((int) $id));
+
         return response()->json(array_merge(['success' => true, 'message' => "Berhasil diterbitkan menjadi {$result['no_so']} ({$result['total_wo']} WO)"], $result));
     }
 

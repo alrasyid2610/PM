@@ -277,6 +277,17 @@ class FieldworkController extends Controller
         $after = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
         saveAudit('fieldworks', $id, 'create', null, $after, $this->parentWo($id));
 
+        \App\Services\NotificationDispatcher::fire('fwo.created', [
+            'title' => 'FWO Baru: {{no_fwo}}',
+            'body'  => '{{judul_pekerjaan}}',
+            'url'   => url('fieldworks?open=' . $id),
+        ], [
+            'no_fwo'          => DB::table('fieldworks')->where('id_fwo', $id)->value('no_fwo'),
+            'judul_pekerjaan' => $validated['judul_pekerjaan'],
+            'no_wo'           => $wo->no_wo ?? '',
+            'nama_user'       => \Illuminate\Support\Facades\Auth::user()?->name,
+        ], \App\Support\NotificationRoles::fwo((int) $id));
+
         return response()->json(['success' => true, 'message' => 'Fieldwork berhasil disimpan', 'id_fwo' => $id]);
     }
 
@@ -514,6 +525,19 @@ class FieldworkController extends Controller
         ]);
         $after = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
         saveAudit('fieldworks', $id, 'update', $before, $after, $this->parentWo($id));
+
+        $fwoRow = DB::table('fieldworks as f')->leftJoin('work_orders as w', 'w.id_wo', '=', 'f.id_wo')
+            ->where('f.id_fwo', $id)->first(['f.no_fwo', 'f.judul_pekerjaan', 'w.no_wo']);
+        \App\Services\NotificationDispatcher::fire('fwo.completed', [
+            'title' => 'FWO Selesai: {{no_fwo}}',
+            'body'  => '{{judul_pekerjaan}}',
+            'url'   => url('fieldworks?open=' . $id),
+        ], [
+            'no_fwo'          => $fwoRow->no_fwo ?? '',
+            'judul_pekerjaan' => $fwoRow->judul_pekerjaan ?? '',
+            'no_wo'           => $fwoRow->no_wo ?? '',
+            'nama_user'       => \Illuminate\Support\Facades\Auth::user()?->name,
+        ], \App\Support\NotificationRoles::fwo((int) $id));
 
         return response()->json(['success' => true, 'message' => 'FWO berhasil diselesaikan']);
     }

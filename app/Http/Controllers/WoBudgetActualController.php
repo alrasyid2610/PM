@@ -79,6 +79,24 @@ class WoBudgetActualController extends Controller
         $after = $this->actualJson($id);
         saveAudit('wo_budget_actuals', $id, 'Create', '', $after, $this->parentWo($request->id_budget_item));
 
+        $ctx = DB::table('wo_budget_items as bi')
+            ->join('wo_budgets as b', 'b.id_budget', '=', 'bi.id_budget')
+            ->join('work_orders as w', 'w.id_wo', '=', 'b.id_wo')
+            ->where('bi.id_budget_item', $request->id_budget_item)
+            ->first(['w.id_wo', 'w.no_wo', 'b.label']);
+        if ($ctx) {
+            \App\Services\NotificationDispatcher::fire('wo_budget.verifikasi_dibutuhkan', [
+                'title' => 'Budget WO butuh verifikasi: {{no_wo}}',
+                'body'  => '{{label_plan}} — Rp {{nominal}}',
+                'url'   => url('work-orders?open=' . $ctx->id_wo . '&tab=tabWoBudget'),
+            ], [
+                'no_wo'      => $ctx->no_wo,
+                'label_plan' => $ctx->label,
+                'nominal'    => number_format((int) $request->nominal_actual, 0, ',', '.'),
+                'nama_user'  => \Illuminate\Support\Facades\Auth::user()?->name,
+            ], \App\Support\NotificationRoles::wo((int) $ctx->id_wo));
+        }
+
         return response()->json(['success' => true, 'id' => $id]);
     }
 

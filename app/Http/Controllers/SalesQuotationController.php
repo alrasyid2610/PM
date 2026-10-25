@@ -98,6 +98,8 @@ class SalesQuotationController extends Controller
         $after = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
         saveAudit('sales_quotations', $id, 'Create', '', $after);
 
+        $this->notifySq('sq.created', $id, 'SQ baru: {{no_sq}}');
+
         return response()->json([
             'success' => true,
             'message' => 'Sales Quotation berhasil dibuat',
@@ -345,6 +347,7 @@ class SalesQuotationController extends Controller
         ]);
         saveAudit('sales_quotations', $id, 'update', $before, DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson());
 
+        $this->notifySq('sq.diajukan', $id, 'SQ diajukan: {{no_sq}}');
         return response()->json(['success' => true, 'message' => 'SQ diajukan untuk approval manager. SQ terkunci sampai ada keputusan.']);
     }
 
@@ -395,6 +398,7 @@ class SalesQuotationController extends Controller
         ]);
         saveAudit('sales_quotations', $id, 'update', $before, DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson());
 
+        $this->notifySq('sq.disetujui', $id, 'SQ disetujui: {{no_sq}}');
         return response()->json(['success' => true, 'message' => 'SQ disetujui dan sekarang Final (terkunci).']);
     }
 
@@ -422,6 +426,7 @@ class SalesQuotationController extends Controller
         ]);
         saveAudit('sales_quotations', $id, 'update', $before, DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson());
 
+        $this->notifySq('sq.ditolak', $id, 'SQ ditolak: {{no_sq}}', ['catatan' => (string) $request->catatan]);
         return response()->json(['success' => true, 'message' => 'SQ ditolak dan dikembalikan ke Draft.']);
     }
 
@@ -461,7 +466,26 @@ class SalesQuotationController extends Controller
         ]);
         saveAudit('sales_quotations', $id, 'update', $before, DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson());
 
+        if (in_array($status, ['win', 'lose'], true)) {
+            $this->notifySq('sq.' . $status, $id, 'SQ ' . strtoupper($status) . ': {{no_sq}}');
+        }
+
         return response()->json(['success' => true, 'message' => $pesanOk]);
+    }
+
+    /** Picu notifikasi event SQ (peran penerima diambil dari data SQ terbaru). Tidak pernah menggagalkan aksi utama. */
+    private function notifySq(string $event, $id, string $title, array $extra = []): void
+    {
+        $sq = DB::table('sales_quotations')->where('id_sq', $id)->first(['no_sq', 'judul_order']);
+        \App\Services\NotificationDispatcher::fire($event, [
+            'title' => $title,
+            'body'  => '{{judul_order}}',
+            'url'   => url('sales-quotations?open=' . $id),
+        ], [
+            'no_sq'       => $sq->no_sq ?? '',
+            'judul_order' => $sq->judul_order ?? '',
+            'nama_user'   => auth()->user()?->name,
+        ] + $extra, \App\Support\NotificationRoles::sq((int) $id));
     }
 
     /**

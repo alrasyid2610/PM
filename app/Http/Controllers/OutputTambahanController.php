@@ -79,6 +79,24 @@ class OutputTambahanController extends Controller
         $after = DB::table('output_tambahan')->where('id_output_tambahan', $id)->get()->toJson();
         saveAudit('output_tambahan', $id, 'Update', $before, $after, $this->auditParent($row));
 
+        if ($request->status === 'siap' && $row->status !== 'siap') {
+            $noDok = $row->id_wo
+                ? DB::table('work_orders')->where('id_wo', $row->id_wo)->value('no_wo')
+                : DB::table('sales_orders')->where('id_so', $row->id_so)->value('no_so');
+            $roles = $row->id_wo
+                ? \App\Support\NotificationRoles::wo((int) $row->id_wo)
+                : \App\Support\NotificationRoles::so($row->id_so ? (int) $row->id_so : null);
+            \App\Services\NotificationDispatcher::fire('output_other.siap', [
+                'title' => 'Output Other Siap: {{nama_item}}',
+                'body'  => '{{no_dokumen}}',
+                'url'   => $row->id_wo ? url('work-orders?open=' . $row->id_wo) : url('sales-orders?open=' . $row->id_so),
+            ], [
+                'nama_item'  => $row->nama_item ?? '',
+                'no_dokumen' => $noDok ?? '',
+                'nama_user'  => \Illuminate\Support\Facades\Auth::user()?->name,
+            ], $roles);
+        }
+
         return response()->json(['success' => true, 'status' => $request->status]);
     }
 

@@ -5,27 +5,26 @@ namespace App\Services;
 use App\Models\Notification;
 use App\Models\NotificationEvent;
 use App\Models\NotificationRule;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Titik tunggal untuk memicu notifikasi dari kode (controller, dll).
  *
  * Pemakaian:
- *   NotificationDispatcher::fire('so.created', [
- *       'title' => "SO Baru: {{no_so}}",
- *       'body'  => "{{judul_order}} — {{nama_pelanggan}}",
- *       'url'   => url('sales-orders?open=' . $id),
- *       'label' => 'SO Dibuat', // dipakai kalau event baru pertama kali didaftarkan
+ *   NotificationDispatcher::fire('wo.created', [
+ *       'title' => 'WO Baru: {{no_wo}}',
+ *       'body'  => '{{judul_pekerjaan}}',
+ *       'url'   => url('work-orders?open=' . $id),
  *   ], [
- *       'no_so' => $no_so, 'judul_order' => ..., 'nama_pelanggan' => ...,
- *   ]);
+ *       'no_wo' => $no_wo, 'judul_pekerjaan' => ..., 'nama_user' => ...,
+ *   ], NotificationRoles::wo($id));
  *
- * - Kalau event key belum ada di katalog (`notification_events`), baris baru
- *   dibuat otomatis (self-register) dengan label dari $meta['label'] (fallback
- *   ke key itu sendiri), is_active = true — admin tinggal atur lanjutannya dari
- *   menu "Pengaturan Notifikasi", tidak perlu insert manual.
- * - Event yang di-nonaktifkan admin (is_active = false) tidak mengirim apa pun.
+ * - Event harus ada di master (App\Support\NotificationCatalog) DAN sudah ditambahkan admin
+ *   (notification_events.is_enabled = 1) DAN aktif. Selain itu fire() keluar tanpa efek.
  * - Placeholder di message_template memakai format {{key}}, diisi dari $data.
+ * - $roles = peran penerima dari data record (lihat App\Support\NotificationRoles); peran
+ *   'actor' (user yang sedang login) ditambahkan otomatis.
  * - Penerima dari beberapa rule otomatis di-dedupe (1 user cuma 1 baris notifikasi
  *   per event meski match lebih dari 1 rule).
  */
@@ -38,25 +37,21 @@ class NotificationDispatcher
      * itu TIDAK BOLEH menggagalkan aksi utama yang sedang berjalan — cukup
      * dicatat ke log, prosesnya tetap lanjut seperti notifikasi tidak ada.
      */
-    public static function fire(string $eventKey, array $meta, array $data = []): void
+    public static function fire(string $eventKey, array $meta, array $data = [], array $roles = []): void
     {
         try {
-            self::dispatch($eventKey, $meta, $data);
+            self::dispatch($eventKey, $meta, $data, $roles);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error("NotificationDispatcher gagal untuk event [{$eventKey}]: " . $e->getMessage());
         }
     }
 
-    private static function dispatch(string $eventKey, array $meta, array $data): void
+    private static function dispatch(string $eventKey, array $meta, array $data, array $roles): void
     {
-        $event = NotificationEvent::firstOrCreate(
-            ['key' => $eventKey],
-            ['label' => $meta['label'] ?? $eventKey, 'is_active' => true]
-        );
+        $event = NotificationEvent::where('key', $eventKey)->first();
 
-        self::rememberAvailableFields($event, array_keys($data));
-
-        if (!$event->is_active) {
+        // Belum ditambahkan admin dari master / nonaktif → tidak kirim apa pun.
+        if (!$event || !$event->is_enabled || !$event->is_active) {
             return;
         }
 
@@ -68,6 +63,10 @@ class NotificationDispatcher
             return;
         }
 
+        if (Auth::id()) {
+            $roles['actor'] = [(int) Auth::id()];
+        }
+
         $defaultTitle = self::render($meta['title'] ?? $event->label, $data);
         $body         = isset($meta['body']) ? self::render($meta['body'], $data) : null;
         $url          = $meta['url'] ?? null;
@@ -77,7 +76,7 @@ class NotificationDispatcher
         $titleByUser = [];
         foreach ($rules as $rule) {
             $templateText = $rule->message_template ? self::render($rule->message_template, $data) : $defaultTitle;
-            foreach (self::resolveRecipients($rule) as $userId) {
+            foreach (self::resolveRecipients($rule, $roles) as $userId) {
                 $titleByUser[$userId] ??= $templateText;
             }
         }
@@ -104,34 +103,30 @@ class NotificationDispatcher
         Notification::insert($rows);
     }
 
-    /** Gabungkan field baru ke available_fields event (union, bukan replace — field
-     *  dari pemanggilan fire() sebelumnya tidak hilang walau kali ini datanya beda).
-     *  Gagal di sini (mis. kolom belum ada karena migration belum jalan) tidak
-     *  boleh menghentikan pengiriman notifikasi itu sendiri — cukup dilewati. */
-    private static function rememberAvailableFields(NotificationEvent $event, array $keys): void
-    {
-        if (empty($keys)) return;
-
-        try {
-            $existing = $event->available_fields ?? [];
-            $merged   = array_values(array_unique(array_merge($existing, $keys)));
-            sort($merged);
-            if ($merged !== $existing) {
-                $event->update(['available_fields' => $merged]);
-            }
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning("Gagal mencatat available_fields event [{$event->key}]: " . $e->getMessage());
-        }
-    }
-
-    private static function resolveRecipients(NotificationRule $rule): array
+    private static function resolveRecipients(NotificationRule $rule, array $roles): array
     {
         return match ($rule->recipient_type) {
             'all'        => DB::table('users')->where('is_active', 1)->pluck('id')->all(),
             'users'      => $rule->recipients()->pluck('users.id')->all(),
             'permission' => self::resolveByPermission($rule->permission_slug),
+            'roles'      => self::resolveByRoles($rule->recipient_roles ?? [], $roles),
             default      => [],
         };
+    }
+
+    /** Peran dari data record → user id aktif. @return int[] */
+    private static function resolveByRoles(array|string|null $selected, array $roles): array
+    {
+        if (is_string($selected)) $selected = json_decode($selected, true) ?: [];
+        $ids = [];
+        foreach ((array) $selected as $role) {
+            foreach ($roles[$role] ?? [] as $uid) {
+                $ids[] = (int) $uid;
+            }
+        }
+        if (empty($ids)) return [];
+
+        return DB::table('users')->whereIn('id', array_unique($ids))->where('is_active', 1)->pluck('id')->all();
     }
 
     /** @return int[] */

@@ -182,7 +182,6 @@ class SalesOrderController extends Controller
         saveAudit('sales_orders', $id, 'Create', '', $after);
 
         \App\Services\NotificationDispatcher::fire('so.created', [
-            'label' => 'SO Dibuat',
             'title' => 'SO Baru: {{no_so}}',
             'body'  => '{{judul_order}}',
             'url'   => url('sales-orders?open=' . $id),
@@ -190,7 +189,7 @@ class SalesOrderController extends Controller
             'no_so'       => $soNumber,
             'judul_order' => $request->judul_order,
             'nama_user'   => \Illuminate\Support\Facades\Auth::user()?->name,
-        ]);
+        ], \App\Support\NotificationRoles::so((int) $id));
 
         return response()->json([
             'success' => true,

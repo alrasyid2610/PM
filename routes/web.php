@@ -329,7 +329,10 @@ Route::prefix('notifications')->name('notifications.')->group(function () {
 Route::prefix('notification-settings')->name('notification-settings.')->group(function () {
     Route::get('/', [NotificationSettingController::class, 'index'])->name('index');
     Route::get('/data', [NotificationSettingController::class, 'data'])->name('data');
+    Route::get('/catalog', [NotificationSettingController::class, 'catalog'])->name('catalog');
+    Route::post('/events', [NotificationSettingController::class, 'addEvent'])->name('events.add');
     Route::put('/events/{id}', [NotificationSettingController::class, 'updateEvent'])->name('events.update')->whereNumber('id');
+    Route::delete('/events/{id}', [NotificationSettingController::class, 'removeEvent'])->name('events.remove')->whereNumber('id');
     Route::post('/events/{eventId}/rules', [NotificationSettingController::class, 'storeRule'])->name('rules.store')->whereNumber('eventId');
     Route::put('/rules/{id}', [NotificationSettingController::class, 'updateRule'])->name('rules.update')->whereNumber('id');
     Route::delete('/rules/{id}', [NotificationSettingController::class, 'destroyRule'])->name('rules.destroy')->whereNumber('id');

@@ -143,11 +143,27 @@ class OutputPekerjaanController extends Controller
         }
 
         $before = $this->outputJson($id);
+        $prev   = DB::table('output_pekerjaan')->where('id_output', $id)->value('status');
         DB::table('output_pekerjaan')->where('id_output', $id)->update([
             'status'     => $request->status,
             'updated_at' => now(),
         ]);
         $this->auditOutput($id, 'Update', $before);
+
+        if ($request->status === 'siap' && $prev !== 'siap') {
+            $row = DB::table('output_pekerjaan as o')->leftJoin('work_orders as w', 'w.id_wo', '=', 'o.id_wo')
+                ->where('o.id_output', $id)->first(['o.id_wo', 'o.judul_output', 'w.no_wo']);
+            \App\Services\NotificationDispatcher::fire('output_pekerjaan.siap', [
+                'title' => 'Output Siap: {{nama_output}}',
+                'body'  => '{{no_wo}}',
+                'url'   => $row?->id_wo ? url('work-orders?open=' . $row->id_wo) : null,
+            ], [
+                'nama_output' => $row->judul_output ?? '',
+                'no_wo'       => $row->no_wo ?? '',
+                'nama_user'   => \Illuminate\Support\Facades\Auth::user()?->name,
+            ], \App\Support\NotificationRoles::wo($row?->id_wo ? (int) $row->id_wo : null));
+        }
+
         return response()->json(['success' => true, 'status' => $request->status]);
     }
 

@@ -106,6 +106,17 @@ class WorkOrderController extends Controller
         $after = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
         saveAudit('work_orders', $id, 'Create', '', $after, $this->parentSo($id));
 
+        \App\Services\NotificationDispatcher::fire('wo.created', [
+            'title' => 'WO Baru: {{no_wo}}',
+            'body'  => '{{judul_pekerjaan}}',
+            'url'   => url('work-orders?open=' . $id),
+        ], [
+            'no_wo'           => $no_wo,
+            'judul_pekerjaan' => $request->judul_order,
+            'no_so'           => DB::table('sales_orders')->where('id_so', $request->id_sales_order)->value('no_so'),
+            'nama_user'       => \Illuminate\Support\Facades\Auth::user()?->name,
+        ], \App\Support\NotificationRoles::wo((int) $id));
+
         return response()->json([
             'status' => 'success',
             'message' => 'Sales Order berhasil dibuat',
@@ -434,6 +445,19 @@ class WorkOrderController extends Controller
             'updated_at' => now(),
         ]);
         saveAudit('work_orders', $id, 'update', $before, DB::table('work_orders')->where('id_wo', $id)->get()->toJson(), $this->parentSo($id));
+
+        $woRow = DB::table('work_orders as w')->leftJoin('sales_orders as s', 's.id_so', '=', 'w.id_so')
+            ->where('w.id_wo', $id)->first(['w.no_wo', 'w.judul_pekerjaan', 's.no_so']);
+        \App\Services\NotificationDispatcher::fire('wo.completed', [
+            'title' => 'WO Selesai: {{no_wo}}',
+            'body'  => '{{judul_pekerjaan}}',
+            'url'   => url('work-orders?open=' . $id),
+        ], [
+            'no_wo'           => $woRow->no_wo ?? '',
+            'judul_pekerjaan' => $woRow->judul_pekerjaan ?? '',
+            'no_so'           => $woRow->no_so ?? '',
+            'nama_user'       => \Illuminate\Support\Facades\Auth::user()?->name,
+        ], \App\Support\NotificationRoles::wo((int) $id));
 
         return response()->json(['success' => true, 'message' => 'Work Order berhasil diselesaikan']);
     }

@@ -357,6 +357,16 @@ class FwoBudgetController extends Controller
         $after = $this->budgetJson($id);
         saveAudit('fwo_budgets', $id, 'Close', $before, $after, ['fieldworks', $budget->id_fwo]);
 
+        \App\Services\NotificationDispatcher::fire('fwo_budget.plan_selesai', [
+            'title' => 'Plan Budget FWO selesai: {{no_fwo}}',
+            'body'  => '{{label_plan}}',
+            'url'   => url('fieldworks?open=' . $budget->id_fwo . '&tab=tabFwoBudget'),
+        ], [
+            'no_fwo'     => DB::table('fieldworks')->where('id_fwo', $budget->id_fwo)->value('no_fwo'),
+            'label_plan' => $budget->label,
+            'nama_user'  => \Illuminate\Support\Facades\Auth::user()?->name,
+        ], \App\Support\NotificationRoles::fwo((int) $budget->id_fwo));
+
         return response()->json(['success' => true]);
     }
 

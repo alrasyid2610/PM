@@ -272,6 +272,19 @@ class TerminController extends Controller
             'updated_at' => now(),
         ]);
         $this->auditTermin($id, 'update', $before);
+
+        $t = DB::table('termin as t')->leftJoin('sales_orders as s', 's.id_so', '=', 't.id_so')
+            ->where('t.id_termin', $id)->first(['t.id_so', 't.no_termin', 's.no_so']);
+        \App\Services\NotificationDispatcher::fire('termin.siap_kirim', [
+            'title' => 'Termin siap kirim: {{no_termin}}',
+            'body'  => '{{no_so}}',
+            'url'   => $t?->id_so ? url('sales-orders?open=' . $t->id_so . '&tab=tabTermin') : null,
+        ], [
+            'no_termin' => $t->no_termin ?? '',
+            'no_so'     => $t->no_so ?? '',
+            'nama_user' => \Illuminate\Support\Facades\Auth::user()?->name,
+        ], \App\Support\NotificationRoles::so($t?->id_so ? (int) $t->id_so : null));
+
         return response()->json(['success' => true]);
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\NotificationCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -41,19 +42,81 @@ class NotificationSettingController extends Controller
         return $slugs;
     }
 
-    /** Katalog event + semua rule-nya, untuk render halaman. */
+    /** Event yang sudah ditambahkan admin + semua rule-nya, untuk render halaman. */
     public function data()
     {
-        $events = DB::table('notification_events')->orderBy('label')->get();
+        $events = DB::table('notification_events')->where('is_enabled', 1)->orderBy('module')->orderBy('label')->get();
         $rules  = DB::table('notification_rules')->orderBy('id')->get()->groupBy('notification_event_id');
 
         $events = $events->map(function ($e) use ($rules) {
-            $e->rules = $rules->get($e->id, collect())->values();
-            $e->available_fields = !empty($e->available_fields ?? null) ? json_decode($e->available_fields) : [];
+            $e->rules = $rules->get($e->id, collect())->map(function ($r) {
+                $r->recipient_roles = $r->recipient_roles ? json_decode($r->recipient_roles, true) : [];
+                return $r;
+            })->values();
+
+            // Field & peran penerima bersumber dari master (NotificationCatalog) — bukan dari event yang sudah pernah terpicu.
+            $cat = NotificationCatalog::get($e->key);
+            $e->available_fields = $cat['fields'] ?? (!empty($e->available_fields) ? json_decode($e->available_fields) : []);
+            $e->roles            = $cat ? NotificationCatalog::rolesOf($e->key) : (object) [];
+            $e->module           = $cat['module'] ?? ($e->module ?: 'Lainnya');
             return $e;
         });
 
         return response()->json($events);
+    }
+
+    /** Master event yang BELUM ditambahkan, dikelompokkan per modul — untuk dropdown "Tambah Event". */
+    public function catalog()
+    {
+        $enabled = DB::table('notification_events')->where('is_enabled', 1)->pluck('key')->all();
+
+        $out = [];
+        foreach (NotificationCatalog::all() as $key => $def) {
+            if (in_array($key, $enabled, true)) continue;
+            $out[] = ['key' => $key, 'label' => $def['label'], 'module' => $def['module'], 'description' => $def['description'] ?? ''];
+        }
+        return response()->json($out);
+    }
+
+    /** Tambah event dari master → mulai dikelola (rule bisa ditambahkan setelahnya). */
+    public function addEvent(Request $request)
+    {
+        $validated = $request->validate(['key' => 'required|string|max:100']);
+        $def = NotificationCatalog::get($validated['key']);
+        if (!$def) return response()->json(['message' => 'Event tidak ada di master.'], 422);
+
+        $existing = DB::table('notification_events')->where('key', $validated['key'])->first();
+        $payload = [
+            'module'           => $def['module'],
+            'available_fields' => json_encode($def['fields']),
+            'available_roles'  => json_encode(array_keys(NotificationCatalog::rolesOf($validated['key']))),
+            'is_enabled'       => 1,
+            'updated_at'       => now(),
+        ];
+
+        if ($existing) {
+            DB::table('notification_events')->where('id', $existing->id)->update($payload);
+        } else {
+            DB::table('notification_events')->insert($payload + [
+                'key'         => $validated['key'],
+                'label'       => $def['label'],
+                'description' => $def['description'] ?? null,
+                'is_active'   => 1,
+                'created_at'  => now(),
+            ]);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Event ditambahkan']);
+    }
+
+    /** Lepas event dari daftar kelola (rule-nya tetap tersimpan, tapi event berhenti mengirim). */
+    public function removeEvent($id)
+    {
+        $event = DB::table('notification_events')->where('id', $id)->first();
+        if (!$event) return response()->json(['message' => 'Event tidak ditemukan'], 404);
+
+        DB::table('notification_events')->where('id', $id)->update(['is_enabled' => 0, 'updated_at' => now()]);
+        return response()->json(['success' => true, 'message' => 'Event dilepas dari daftar']);
     }
 
     public function updateEvent(Request $request, $id)
@@ -82,12 +145,13 @@ class NotificationSettingController extends Controller
         $event = DB::table('notification_events')->where('id', $eventId)->first();
         if (!$event) return response()->json(['message' => 'Event tidak ditemukan'], 404);
 
-        $validated = $this->validateRule($request);
+        $validated = $this->validateRule($request, $eventId);
 
         $id = DB::table('notification_rules')->insertGetId([
             'notification_event_id' => $eventId,
             'recipient_type'        => $validated['recipient_type'],
             'permission_slug'       => $validated['permission_slug'] ?? null,
+            'recipient_roles'       => $validated['recipient_type'] === 'roles' ? json_encode(array_values($validated['recipient_roles'])) : null,
             'message_template'      => $validated['message_template'],
             'is_active'             => $validated['is_active'],
             'created_at'            => now(),
@@ -106,11 +170,12 @@ class NotificationSettingController extends Controller
         $rule = DB::table('notification_rules')->where('id', $id)->first();
         if (!$rule) return response()->json(['message' => 'Rule tidak ditemukan'], 404);
 
-        $validated = $this->validateRule($request);
+        $validated = $this->validateRule($request, $rule->notification_event_id);
 
         DB::table('notification_rules')->where('id', $id)->update([
             'recipient_type'   => $validated['recipient_type'],
             'permission_slug'  => $validated['permission_slug'] ?? null,
+            'recipient_roles'  => $validated['recipient_type'] === 'roles' ? json_encode(array_values($validated['recipient_roles'])) : null,
             'message_template' => $validated['message_template'],
             'is_active'        => $validated['is_active'],
             'updated_at'       => now(),
@@ -136,17 +201,25 @@ class NotificationSettingController extends Controller
         return response()->json(['success' => true, 'message' => 'Rule dihapus']);
     }
 
-    private function validateRule(Request $request): array
+    private function validateRule(Request $request, $eventId): array
     {
+        $eventKey  = DB::table('notification_events')->where('id', $eventId)->value('key');
+        $roleKeys  = array_keys(NotificationCatalog::rolesOf((string) $eventKey));
+
         return $request->validate([
-            'recipient_type'            => 'required|in:all,permission,users',
+            'recipient_type'            => 'required|in:all,permission,users,roles',
             'permission_slug'           => 'nullable|string|max:100|required_if:recipient_type,permission',
+            'recipient_roles'           => 'nullable|array|required_if:recipient_type,roles|min:1',
+            'recipient_roles.*'         => ['string', \Illuminate\Validation\Rule::in($roleKeys)],
             'message_template'          => 'required|string|max:500',
             'is_active'                 => 'required|boolean',
             'user_ids'                  => 'nullable|array',
             'user_ids.*'                => 'integer|exists:users,id',
         ], [
-            'permission_slug.required_if' => 'Slug menu wajib diisi untuk tipe penerima "Akses Modul".',
+            'permission_slug.required_if'  => 'Slug menu wajib diisi untuk tipe penerima "Akses Modul".',
+            'recipient_roles.required_if'  => 'Pilih minimal 1 peran untuk tipe penerima "Peran dari data".',
+            'recipient_roles.min'          => 'Pilih minimal 1 peran untuk tipe penerima "Peran dari data".',
+            'recipient_roles.*.in'         => 'Ada peran yang tidak tersedia untuk event ini.',
         ]);
     }
 

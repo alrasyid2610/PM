@@ -79,6 +79,24 @@ class FwoBudgetActualController extends Controller
         $after = $this->actualJson($id);
         saveAudit('fwo_budget_actuals', $id, 'Create', '', $after, $this->parentFwo($request->id_budget_item));
 
+        $ctx = DB::table('fwo_budget_items as bi')
+            ->join('fwo_budgets as b', 'b.id_budget', '=', 'bi.id_budget')
+            ->join('fieldworks as f', 'f.id_fwo', '=', 'b.id_fwo')
+            ->where('bi.id_budget_item', $request->id_budget_item)
+            ->first(['f.id_fwo', 'f.no_fwo', 'b.label']);
+        if ($ctx) {
+            \App\Services\NotificationDispatcher::fire('fwo_budget.verifikasi_dibutuhkan', [
+                'title' => 'Budget FWO butuh verifikasi: {{no_fwo}}',
+                'body'  => '{{label_plan}} — Rp {{nominal}}',
+                'url'   => url('fieldworks?open=' . $ctx->id_fwo . '&tab=tabFwoBudget'),
+            ], [
+                'no_fwo'     => $ctx->no_fwo,
+                'label_plan' => $ctx->label,
+                'nominal'    => number_format((int) $request->nominal_actual, 0, ',', '.'),
+                'nama_user'  => \Illuminate\Support\Facades\Auth::user()?->name,
+            ], \App\Support\NotificationRoles::fwo((int) $ctx->id_fwo));
+        }
+
         return response()->json(['success' => true, 'id' => $id]);
     }
 
