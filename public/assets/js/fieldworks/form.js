@@ -322,6 +322,16 @@ function renderFwoForm(res) {
                                         value="${res.waktu_kedatangan ? String(res.waktu_kedatangan).substring(0, 16).replace("T", " ") : ""}"
                                         placeholder="Pilih tanggal & jam" autocomplete="off">
                                 </div>
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">Link Dokumentasi</label>
+                                    <input type="text" name="link_dokumentasi" class="form-control disabled"
+                                        value="${$("<div>").text(res.link_dokumentasi ?? "").html().replace(/"/g, "&quot;")}"
+                                        placeholder="https://drive.google.com/..." autocomplete="off">
+                                    <div class="form-text">
+                                        Wajib diisi sebelum FWO diselesaikan.
+                                        ${res.link_dokumentasi && /^https?:\/\//i.test(res.link_dokumentasi) ? `<a href="${encodeURI(res.link_dokumentasi)}" target="_blank" rel="noopener">Buka link <i class="ti ti-external-link"></i></a>` : ""}
+                                    </div>
+                                </div>
                                 ${formGroup.textarea("keterangan", "Keterangan", res.keterangan ?? "", { className: "col-md-12" })}
                             </div>`,
                         )}

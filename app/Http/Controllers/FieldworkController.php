@@ -292,6 +292,9 @@ class FieldworkController extends Controller
             'tanggal_selesai'             => 'nullable|date',
             'waktu_kedatangan'            => 'nullable|date',
             'keterangan'                  => 'nullable|string',
+            'link_dokumentasi'            => 'nullable|url|max:2048', // wajib terisi saat Selesaikan FWO (lihat complete())
+        ], [
+            'link_dokumentasi.url' => 'Link Dokumentasi harus berupa alamat web yang valid (diawali http:// atau https://).',
         ]);
 
         $fwoMulai        = !empty($validated['tanggal_mulai'])   ? substr($validated['tanggal_mulai'], 0, 10) : null;
@@ -484,16 +487,20 @@ class FieldworkController extends Controller
 
         $adaSampleMasalah = $belumDikirim->isNotEmpty() || $belumLengkap || $belumReg->isNotEmpty() || $alasanKurang;
 
-        if ($belumAdaBoq || $belumAdaBudget || $totalKurang > 0 || $adaSampleMasalah || $budgetBelumSelesai > 0) {
+        // Syarat: Link Dokumentasi (tab Informasi) wajib terisi (sejak 2026-10-27)
+        $belumAdaLink = $blank($fwo->link_dokumentasi ?? null);
+
+        if ($belumAdaBoq || $belumAdaBudget || $totalKurang > 0 || $adaSampleMasalah || $budgetBelumSelesai > 0 || $belumAdaLink) {
             $alasan = [];
             if ($belumAdaBoq)            $alasan[] = "Belum ada BOQ pada FWO ini";
             if ($belumAdaBudget)         $alasan[] = "Belum ada Budget Plan pada FWO ini";
             if ($totalKurang > 0)        $alasan[] = "{$totalKurang} titik belum dibuat sample";
-            if ($belumDikirim->isNotEmpty()) $alasan[] = "{$belumDikirim->count()} sample belum berstatus Dikirim: " . $daftar($belumDikirim->map($nomor));
+            if ($belumDikirim->isNotEmpty()) $alasan[] = "{$belumDikirim->count()} sample belum registrasi lab: " . $daftar($belumDikirim->map($nomor));
             if ($belumLengkap)           $alasan[] = count($belumLengkap) . " sample belum lengkap isiannya: " . $daftar($belumLengkap);
             if ($belumReg->isNotEmpty()) $alasan[] = "{$belumReg->count()} sample belum diregistrasi di Lab Sample Reg: " . $daftar($belumReg->map($nomor));
             if ($alasanKurang)           $alasan[] = count($alasanKurang) . " sample Tidak Terlaksana belum lengkap: " . $daftar($alasanKurang);
             if ($budgetBelumSelesai > 0) $alasan[] = "{$budgetBelumSelesai} Budget Plan belum diselesaikan";
+            if ($belumAdaLink)           $alasan[] = "Link Dokumentasi belum diisi (isi di tab Informasi)";
             return response()->json([
                 'message' => 'FWO belum bisa diselesaikan.',
                 'alasan'  => $alasan,
