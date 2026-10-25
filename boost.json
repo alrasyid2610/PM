@@ -2,8 +2,12 @@
     "agents": [
         "copilot"
     ],
+    "cloud": true,
     "skills": [
-        "pest-testing",
+        "infer-conventions",
+        "deploying-to-cloud",
+        "laravel-best-practices",
+        "testing-best-practices",
         "tailwindcss-development"
     ]
 }
