@@ -773,12 +773,15 @@ $(document).off('click.budget', '.btn-budget-collapse').on('click.budget', '.btn
     });
 });
 
+const sampleOpenPanels = new Set();
 $(document).off('click.sample', '.btn-sample-collapse').on('click.sample', '.btn-sample-collapse', function () {
     const $icon   = $(this).find('i');
     const $target = $($(this).data('target'));
     $target.slideToggle(180, function () {
         const visible = $target.is(':visible');
         $icon.toggleClass('fa-chevron-up', visible).toggleClass('fa-chevron-down', !visible);
+        const id = $target.attr('id');
+        if (visible) sampleOpenPanels.add(id); else sampleOpenPanels.delete(id);
     });
 });
 
@@ -2568,6 +2571,8 @@ function renderSampleList(boqs, isLocked) {
             </div>` : '';
 
         const collapseId = `sampleCollapse_${boq.id_fwo_boq}`;
+        // Default tertutup; panel yang sedang dibuka user tetap terbuka saat daftar dimuat ulang
+        const isOpen = sampleOpenPanels.has(collapseId);
         return `
         <div class="mb-3 border rounded" style="background:#fff;">
             <div class="d-flex justify-content-between align-items-center px-3 py-2"
@@ -2583,11 +2588,11 @@ function renderSampleList(boqs, isLocked) {
                     ${addBtn}
                     <button type="button" class="btn btn-sm btn-plan-icon btn-sample-collapse"
                         data-target="#${collapseId}" title="Sembunyikan / Tampilkan">
-                        <i class="fa-solid fa-chevron-up"></i>
+                        <i class="fa-solid ${isOpen ? 'fa-chevron-up' : 'fa-chevron-down'}"></i>
                     </button>
                 </div>
             </div>
-            <div id="${collapseId}">
+            <div id="${collapseId}"${isOpen ? '' : ' style="display:none;"'}>
                 <div style="padding:4px 12px 0;">
                     <div class="progress" style="height:3px;border-radius:0;">
                         <div class="progress-bar" style="width:${pct}%;background:${barColor};"></div>
