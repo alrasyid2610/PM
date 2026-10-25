@@ -1264,20 +1264,31 @@ function _openProductModal({ idBr, isEdit, data }) {
 // ─── SITE (picker + workspace per-site) ────────────────────────────────────
 
 function renderSiteTab(idBr) {
+    // Class DataTables dipakai supaya tampilan (toolbar, tabel, info, paginasi) seragam dengan list lain.
     return `
-    <div id="site-picker-wrap" data-id-br="${idBr}">
-        <div class="mb-3">
-            <div class="pm-search">
-                <span class="pm-search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
-                <input type="text" id="site-picker-search" placeholder="Cari nama site atau kota..." data-no-disable>
-                <button type="button" id="site-picker-search-clear" class="pm-search-clear d-none" title="Hapus" data-no-disable>
-                    <i class="fa-solid fa-times"></i>
-                </button>
+    <div id="site-picker-wrap" data-id-br="${idBr}" class="card card-body">
+        <div class="dataTables_wrapper">
+            <div class="dt-top d-flex align-items-center gap-2 mb-3">
+                <div class="dataTables_length">
+                    <label>Show
+                        <select id="site-page-size" data-no-disable>
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        entries
+                    </label>
+                </div>
+                <div class="ms-auto dataTables_filter">
+                    <label><input type="search" id="site-picker-search" class="form-control form-control-sm"
+                        placeholder="Cari..." data-no-disable></label>
+                </div>
             </div>
-        </div>
-        <div id="site-picker-list">
-            <div class="text-center text-muted py-4">
-                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data...
+            <div id="site-picker-list">
+                <div class="text-center text-muted py-4">
+                    <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data...
+                </div>
             </div>
         </div>
     </div>
@@ -1286,46 +1297,120 @@ function renderSiteTab(idBr) {
     </div>`;
 }
 
-function renderSitePickerRows(sites) {
-    if (!sites.length) {
+// Daftar Site berupa tabel + paginasi sisi klien (semua site 1 BR dimuat sekali; search & halaman diproses di browser).
+const sitePicker = { rows: [], q: '', page: 1, size: 10 };
+
+function sitePickerFiltered() {
+    const q = sitePicker.q;
+    if (!q) return sitePicker.rows;
+    return sitePicker.rows.filter(function (s) {
+        return [s.nama_lokasi, s.kota_kabupaten, s.provinsi, s.nama_gedung, s.nama_kawasan_bisnis]
+            .filter(Boolean).join(' ').toLowerCase().includes(q);
+    });
+}
+
+function sitePickerPages(total, page) {
+    // jendela nomor halaman: 1 … (page-1) page (page+1) … total
+    const pages = [];
+    for (let i = 1; i <= total; i++) {
+        if (i === 1 || i === total || Math.abs(i - page) <= 1) pages.push(i);
+        else if (pages[pages.length - 1] !== '…') pages.push('…');
+    }
+    return pages;
+}
+
+function renderSitePickerRows() {
+    if (!sitePicker.rows.length) {
         return `<div class="text-center text-muted py-4" style="font-size:13px;">
             <i class="fa-solid fa-location-dot me-1"></i> Belum ada Site terdaftar untuk Business Relation ini.
         </div>`;
     }
 
+    const list  = sitePickerFiltered();
+    const total = list.length;
+    if (!total) {
+        return `<div class="text-center text-muted py-4" style="font-size:13px;">
+            <i class="fa-solid fa-magnifying-glass me-1"></i> Tidak ada Site yang cocok dengan pencarian.
+        </div>`;
+    }
+
+    const size  = sitePicker.size;
+    const pages = Math.max(1, Math.ceil(total / size));
+    if (sitePicker.page > pages) sitePicker.page = pages;
+    const page  = sitePicker.page;
+    const start = (page - 1) * size;
+    const slice = list.slice(start, start + size);
+
     const badgeAktif = `<span class="badge" style="background:#dcfce7;color:#166534;font-size:10px;font-weight:600;padding:2px 7px;">Aktif</span>`;
     const badgeNon   = `<span class="badge" style="background:#f1f5f9;color:#64748b;font-size:10px;font-weight:600;padding:2px 7px;">Non-Aktif</span>`;
     const badgePusat = `<span class="badge ms-1" style="background:#dbeafe;color:#1d4ed8;font-size:10px;font-weight:600;padding:2px 7px;">Kantor Pusat</span>`;
+    const dash       = '<span class="text-muted">—</span>';
 
-    const rows = sites.map(function (s) {
-        const alamatSingkat = [s.kota_kabupaten, s.provinsi].filter(Boolean).join(', ');
-        const searchVal = [s.nama_lokasi, s.kota_kabupaten, s.provinsi].filter(Boolean).join(' ').toLowerCase();
+    const rows = slice.map(function (s, i) {
+        const lokasi = s.nama_gedung || s.nama_kawasan_bisnis;
         return `
-        <div class="pm-site-card btn-site-pick" data-id-site="${s.id}" data-search="${escHtml(searchVal)}">
-            <div>
-                <div class="fw-semibold" style="font-size:13px;">
-                    ${escHtml(s.nama_lokasi)}${s.is_kantor_pusat ? badgePusat : ''}
-                    ${s.is_aktif ? badgeAktif : badgeNon}
-                </div>
-                <div class="text-muted" style="font-size:12px;">
-                    <i class="fa-solid fa-location-dot me-1"></i>${alamatSingkat ? escHtml(alamatSingkat) : '—'}
-                </div>
-            </div>
-            <i class="fa-solid fa-chevron-right text-muted"></i>
-        </div>`;
+        <tr class="btn-site-pick" data-id-site="${s.id}" style="cursor:pointer;" title="Klik untuk membuka Site">
+            <td style="text-align:center;color:#9ca3af;font-size:12px;">${start + i + 1}</td>
+            <td class="fw-semibold">${escHtml(s.nama_lokasi)}${s.is_kantor_pusat ? badgePusat : ''}</td>
+            <td>${s.kota_kabupaten ? escHtml(s.kota_kabupaten) : dash}</td>
+            <td>${s.provinsi ? escHtml(s.provinsi) : dash}</td>
+            <td>${lokasi ? escHtml(lokasi) : dash}</td>
+            <td>${s.is_aktif ? badgeAktif : badgeNon}</td>
+            <td style="text-align:center;"><i class="fa-solid fa-chevron-right text-muted" style="font-size:11px;"></i></td>
+        </tr>`;
     }).join('');
 
-    return `<div id="site-picker-rows">${rows}</div>`;
+    const btn = function (label, target, cls) {
+        return `<a class="paginate_button ${cls || ''} site-page-go" href="#" data-page="${target}">${label}</a>`;
+    };
+    const pageBtns = sitePickerPages(pages, page).map(function (n) {
+        if (n === '…') return `<span class="paginate_button disabled" style="border-color:transparent !important;">…</span>`;
+        return btn(n, n, n === page ? 'current' : '');
+    }).join('');
+
+    return `
+    <div class="table-responsive">
+        <table class="table dataTable no-footer" style="width:100%;">
+            <thead>
+                <tr>
+                    <th style="width:44px;text-align:center;">NO</th>
+                    <th>SITE</th>
+                    <th>KOTA / KABUPATEN</th>
+                    <th>PROVINSI</th>
+                    <th>GEDUNG / KAWASAN</th>
+                    <th style="width:100px;">STATUS</th>
+                    <th style="width:40px;"></th>
+                </tr>
+            </thead>
+            <tbody id="site-picker-rows">${rows}</tbody>
+        </table>
+    </div>
+    <div class="dt-bottom d-flex align-items-center justify-content-between mt-3">
+        <div class="dataTables_info">Showing ${start + 1} to ${Math.min(start + size, total)} of ${total} entries</div>
+        ${pages > 1 ? `
+        <div class="dataTables_paginate">
+            ${btn('&lsaquo;', page - 1, 'previous' + (page === 1 ? ' disabled' : ''))}
+            ${pageBtns}
+            ${btn('&rsaquo;', page + 1, 'next' + (page === pages ? ' disabled' : ''))}
+        </div>` : ''}
+    </div>`;
+}
+
+function redrawSitePicker() {
+    $('#site-picker-list').html(renderSitePickerRows());
 }
 
 function loadSitePickerList(idBr) {
     $('#site-picker-search').val('');
-    $('#site-picker-search-clear').addClass('d-none');
+    $('#site-page-size').val(sitePicker.size);
+    sitePicker.q = '';
+    sitePicker.page = 1;
     $('#site-picker-list').html(`<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data...</div>`);
 
     $.get(`/business-relations/${idBr}/sites`)
         .done(function (sites) {
-            $('#site-picker-list').html(renderSitePickerRows(sites || []));
+            sitePicker.rows = sites || [];
+            redrawSitePicker();
         })
         .fail(function () {
             $('#site-picker-list').html('<div class="text-center text-danger py-3">Gagal memuat data Site.</div>');
@@ -1574,13 +1659,20 @@ function initSiteTabEvents() {
     // Search Site picker
     $panel.on('input', '#site-picker-search', function () {
         const q = $(this).val().toLowerCase().trim();
-        $('#site-picker-rows .btn-site-pick').each(function () {
-            $(this).toggle(!q || ($(this).data('search') || '').includes(q));
-        });
-        $('#site-picker-search-clear').toggleClass('d-none', !q);
+        sitePicker.q = q;
+        sitePicker.page = 1;
+        redrawSitePicker();
     });
-    $panel.on('click', '#site-picker-search-clear', function () {
-        $('#site-picker-search').val('').trigger('input');
+    $panel.on('click', '.site-page-go', function (e) {
+        e.preventDefault();
+        if ($(this).hasClass('disabled') || $(this).hasClass('current')) return;
+        sitePicker.page = parseInt($(this).data('page'), 10) || 1;
+        redrawSitePicker();
+    });
+    $panel.on('change', '#site-page-size', function () {
+        sitePicker.size = parseInt($(this).val(), 10) || 10;
+        sitePicker.page = 1;
+        redrawSitePicker();
     });
 
     // Tampilkan action bar Informasi Site
