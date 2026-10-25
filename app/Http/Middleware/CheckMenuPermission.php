@@ -11,7 +11,10 @@ class CheckMenuPermission
     private const PUBLIC_SEGMENTS = ['login', 'logout', 'up', 'test-pdf', 'test-pdf-view', 'test-pdf-download', 'test-so-pdf', 'test-fwo-view', 'wilayah', 'forgot-password', 'reset-password'];
 
     // Route yang tidak perlu cek permission (cukup auth)
-    private const OPEN_SEGMENTS = ['dashboard', 'api', 'calendar', 'ui-guideline', 'profile'];
+    // 'notifications' = kotak masuk notifikasi milik user sendiri — bukan modul/menu,
+    // jadi cukup login, tidak ada permission per-slug (beda dari 'notification-settings'
+    // yang memang menu admin dan tetap dicek permission biasa).
+    private const OPEN_SEGMENTS = ['dashboard', 'api', 'calendar', 'ui-guideline', 'profile', 'notifications'];
 
     // Modul yang di-nonaktifkan sementara — diblokir 403 untuk SEMUA user
     // (termasuk yang sudah punya permission tersimpan di DB), berlaku sampai

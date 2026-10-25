@@ -18,21 +18,31 @@
                 </a>
             </li>
 
-            {{-- NOTIFICATION (optional, static dulu) --}}
-            <li class="nav-item dropdown me-2">
-                <a href="#" data-bs-toggle="dropdown"
-                   class="nav-link dropdown-toggle nav-link-lg">
+            {{-- NOTIFICATION — Fase 1: data dimuat saat dropdown dibuka / halaman pindah,
+                 belum polling otomatis. Lihat public/assets/js/core/notifications.js --}}
+            @auth
+            <li class="nav-item dropdown me-2" id="notifBell">
+                <a href="#" data-bs-toggle="dropdown" id="notifBellToggle"
+                   class="nav-link dropdown-toggle nav-link-lg position-relative">
                     <i data-feather="bell"></i>
+                    <span id="notifBadge" class="badge rounded-pill bg-danger position-absolute"
+                          style="top:2px;right:2px;font-size:10px;display:none;"></span>
                 </a>
-                <div class="dropdown-menu dropdown-menu-end dropdown-menu-large">
-                    <h6 class="py-2 px-4">Notifications</h6>
-                    <ul class="list-group list-group-flush">
+                <div class="dropdown-menu dropdown-menu-end dropdown-menu-large" style="width:340px;max-width:90vw;">
+                    <div class="d-flex justify-content-between align-items-center py-2 px-3">
+                        <h6 class="mb-0">Notifikasi</h6>
+                        <button type="button" id="notifMarkAllRead" class="btn btn-link btn-sm p-0" style="font-size:12px;">
+                            Tandai semua dibaca
+                        </button>
+                    </div>
+                    <ul class="list-group list-group-flush" id="notifList" style="max-height:360px;overflow-y:auto;">
                         <li class="list-group-item">
-                            <small class="text-muted">Belum ada notifikasi</small>
+                            <small class="text-muted">Memuat...</small>
                         </li>
                     </ul>
                 </div>
             </li>
+            @endauth
 
             {{-- USER DROPDOWN --}}
             @auth

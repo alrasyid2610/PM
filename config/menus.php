@@ -114,6 +114,7 @@ return [
             ['slug' => 'users',       'label' => 'User Management',  'icon' => 'fa-users-gear'],
             ['slug' => 'personnel',   'label' => 'Personnel',        'icon' => 'fa-people-group'],
             ['slug' => 'documentations', 'label' => 'Dokumentasi', 'icon' => 'fa-book'],
+            ['slug' => 'notification-settings', 'label' => 'Pengaturan Notifikasi', 'icon' => 'fa-bell'],
         ],
     ],
     [
