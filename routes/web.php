@@ -59,6 +59,7 @@ use App\Http\Controllers\BrsSamplingPointController;
 use App\Http\Controllers\BrsMpController;
 use App\Http\Controllers\BrProductController;
 use App\Http\Controllers\BudgetAccountController;
+use App\Http\Controllers\DataImportController;
 use App\Http\Controllers\FwoBudgetController;
 use App\Http\Controllers\FwoBudgetActualController;
 use App\Http\Controllers\WoBudgetController;
@@ -237,6 +238,16 @@ Route::prefix('so-output-other')->name('so-output-other.')->group(function () {
     Route::delete('/{id}', [OutputTambahanController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/history', [OutputTambahanController::class, 'history'])->name('history')->whereNumber('id');
     Route::post('/{id}/status', [OutputTambahanController::class, 'updateStatus'])->name('status')->whereNumber('id');
+});
+
+// Import Data (Excel per jenis data) — izin: menu data-import + can_create business-relations (dicek di controller)
+Route::prefix('data-import')->name('data-import.')->group(function () {
+    Route::get('/', [DataImportController::class, 'index'])->name('index');
+    Route::get('/options/{source}', [DataImportController::class, 'options'])->name('options');
+    Route::get('/template', [DataImportController::class, 'template'])->name('template');
+    Route::post('/preview', [DataImportController::class, 'preview'])->name('preview');
+    Route::post('/process', [DataImportController::class, 'process'])->name('process');
+    Route::get('/result/{file}', [DataImportController::class, 'downloadResult'])->name('result');
 });
 
 Route::prefix('personnel')->name('personnel.')->group(function () {
