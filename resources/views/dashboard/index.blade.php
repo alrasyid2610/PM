@@ -184,6 +184,7 @@
         fwo:     "{{ url('fieldworks') }}",
         so:      "{{ url('sales-orders') }}",
         sq:      "{{ url('sales-quotations') }}",
+        'sq-approval': "{{ url('sales-quotations') }}",
         termin:  "{{ url('termin') }}",
     }
     window.route.petaGeo = "{{ asset('assets/vendor/indonesia-geo/indonesia-38-provinces.geojson') }}";

@@ -771,7 +771,10 @@ Route::prefix('sales-quotations')->name('sales-quotations.')->group(function () 
     Route::get('/{id}/history', [SalesQuotationController::class, 'history'])->name('history')->whereNumber('id');
     Route::get('/{id}/executive-summary', [SalesQuotationController::class, 'executiveSummaryPdf'])->name('executive-summary')->whereNumber('id');
     Route::get('/{id}/penawaran', [SalesQuotationController::class, 'penawaranPdf'])->name('penawaran')->whereNumber('id');
-    Route::post('/{id}/finalize', [SalesQuotationController::class, 'finalize'])->name('finalize')->whereNumber('id');
+    Route::post('/{id}/ajukan', [SalesQuotationController::class, 'ajukan'])->name('ajukan')->whereNumber('id');
+    Route::post('/{id}/tarik', [SalesQuotationController::class, 'tarik'])->name('tarik')->whereNumber('id');
+    Route::post('/{id}/setujui', [SalesQuotationController::class, 'setujui'])->name('setujui')->whereNumber('id');
+    Route::post('/{id}/tolak', [SalesQuotationController::class, 'tolak'])->name('tolak')->whereNumber('id');
     Route::post('/{id}/win', [SalesQuotationController::class, 'win'])->name('win')->whereNumber('id');
     Route::post('/{id}/lose', [SalesQuotationController::class, 'lose'])->name('lose')->whereNumber('id');
     Route::post('/{id}/void', [SalesQuotationController::class, 'void'])->name('void')->whereNumber('id');
@@ -983,10 +986,10 @@ Route::prefix('fwo-budget-actuals')->name('fwo-budget-actuals.')->group(function
 Route::prefix('wo-budgets')->name('wo-budgets.')->group(function () {
     Route::get('/{id_wo}/list', [WoBudgetController::class, 'listByWo'])->name('list')->whereNumber('id_wo');
     Route::get('/{id_wo}/basis', [WoBudgetController::class, 'basis'])->name('basis')->whereNumber('id_wo');
+    Route::get('/{id_wo}/summary', [WoBudgetController::class, 'summary'])->name('summary')->whereNumber('id_wo');
     Route::post('/',             [WoBudgetController::class, 'store'])->name('store');
     Route::get('/{id}',          [WoBudgetController::class, 'show'])->name('show')->whereNumber('id');
     Route::put('/{id}',          [WoBudgetController::class, 'update'])->name('update')->whereNumber('id');
-    Route::get('/{id_wo}/summary', [WoBudgetController::class, 'summary'])->name('summary')->whereNumber('id_wo');
     Route::delete('/{id}',       [WoBudgetController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/print',           [WoBudgetController::class, 'printPdf'])->name('print')->whereNumber('id');
     Route::get('/{id}/print-realisasi', [WoBudgetController::class, 'printRealisasiPdf'])->name('print-realisasi')->whereNumber('id');

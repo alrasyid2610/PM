@@ -27,6 +27,7 @@
         ['label' => 'Status',          'value' => 'status', 'type' => 'select', 'options' => [
             ['label' => 'All',        'value' => 'all'],
             ['label' => 'Draft',      'value' => 'draft'],
+            ['label' => 'Menunggu Approval', 'value' => 'pending'],
             ['label' => 'Final',      'value' => 'final'],
             ['label' => 'Win',        'value' => 'win'],
             ['label' => 'Lose',       'value' => 'lose'],

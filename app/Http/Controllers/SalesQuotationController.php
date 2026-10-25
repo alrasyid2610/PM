@@ -34,7 +34,7 @@ class SalesQuotationController extends Controller
 
     protected function auditExcludeFields(): array
     {
-        return ['updated_at', 'created_at', 'id_sq'];
+        return ['updated_at', 'created_at', 'id_sq', 'diajukan_oleh', 'approval_oleh'];
     }
 
     public function index()
@@ -199,6 +199,13 @@ class SalesQuotationController extends Controller
         $sq->pelanggan_pay_display = brDisplayName($sq->entitas_pay, $sq->pelanggan_pay);
         $sq->attachment = $sq->attachment ? json_decode($sq->attachment) : [];
 
+        // Approval: nama pengaju & pengambil keputusan, dan apakah user ini boleh menarik pengajuan
+        $namaUser = DB::table('users')->whereIn('id', array_filter([$sq->diajukan_oleh, $sq->approval_oleh]))->pluck('name', 'id');
+        $sq->diajukan_oleh_nama = $namaUser[$sq->diajukan_oleh] ?? null;
+        $sq->approval_oleh_nama = $namaUser[$sq->approval_oleh] ?? null;
+        $sq->bisa_tarik = $sq->status === 'pending'
+            && ((int) $sq->diajukan_oleh === (int) auth()->id() || userCan('sq-approve', 'can_update'));
+
         $rootId = $sq->id_sq_induk ?: $sq->id_sq;
         $sq->riwayat_revisi = DB::table('sales_quotations')
             ->where(fn($q) => $q->where('id_sq', $rootId)->orWhere('id_sq_induk', $rootId))
@@ -247,16 +254,11 @@ class SalesQuotationController extends Controller
     }
 
     /**
-     * Draft → Final. SQ Final terkunci (tidak bisa diedit) dan siap
-     * diterbitkan jadi SO. Validasi minimal: punya judul & minimal 1 WO.
+     * Semua syarat SQ boleh diajukan / difinalkan, dikumpulkan dulu supaya user melihat seluruh
+     * kekurangan sekaligus. Kosong = lengkap. Dipakai saat Ajukan Approval dan dicek ulang saat Setujui.
      */
-    public function finalize($id)
+    private function syaratFinalkan($id): array
     {
-        $sq = DB::table('sales_quotations')->where('id_sq', $id)->whereNull('deleted_at')->first();
-        if (!$sq) return response()->json(['message' => 'Sales Quotation tidak ditemukan'], 404);
-        if ($sq->status !== 'draft') {
-            return response()->json(['message' => 'Hanya SQ berstatus Draft yang bisa difinalkan.'], 422);
-        }
         // Semua syarat dikumpulkan dulu supaya user melihat seluruh kekurangan sekaligus
         $alasan = [];
 
@@ -310,19 +312,117 @@ class SalesQuotationController extends Controller
             $alasan[] = 'Keterangan penawaran belum lengkap (tab Keterangan): ' . implode('; ', $belumLengkap) . '.';
         }
 
-        if ($alasan) {
-            return response()->json([
-                'message' => 'SQ belum bisa difinalkan: ' . implode(' ', $alasan),
-                'alasan'  => $alasan,
-            ], 422);
+        return $alasan;
+    }
+
+    private function gagalSyarat(array $alasan)
+    {
+        return response()->json([
+            'message' => 'SQ belum bisa diproses: ' . implode(' ', $alasan),
+            'alasan'  => $alasan,
+        ], 422);
+    }
+
+    /** Draft → Menunggu Approval (terkunci). Syarat kelengkapan SQ diperiksa di sini, bukan baru saat disetujui. */
+    public function ajukan($id)
+    {
+        $sq = DB::table('sales_quotations')->where('id_sq', $id)->whereNull('deleted_at')->first();
+        if (!$sq) return response()->json(['message' => 'Sales Quotation tidak ditemukan'], 404);
+        if ($sq->status !== 'draft') {
+            return response()->json(['message' => 'Hanya SQ berstatus Draft yang bisa diajukan untuk approval.'], 422);
+        }
+        if ($alasan = $this->syaratFinalkan($id)) return $this->gagalSyarat($alasan);
+
+        $before = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
+        DB::table('sales_quotations')->where('id_sq', $id)->update([
+            'status'           => 'pending',
+            'diajukan_oleh'    => auth()->id(),
+            'diajukan_at'      => now(),
+            'approval_oleh'    => null,
+            'approval_at'      => null,
+            'catatan_approval' => null,
+            'updated_at'       => now(),
+        ]);
+        saveAudit('sales_quotations', $id, 'update', $before, DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson());
+
+        return response()->json(['success' => true, 'message' => 'SQ diajukan untuk approval manager. SQ terkunci sampai ada keputusan.']);
+    }
+
+    /** Menunggu Approval → Draft, ditarik kembali oleh pengaju (atau approver). */
+    public function tarik($id)
+    {
+        $sq = DB::table('sales_quotations')->where('id_sq', $id)->whereNull('deleted_at')->first();
+        if (!$sq) return response()->json(['message' => 'Sales Quotation tidak ditemukan'], 404);
+        if ($sq->status !== 'pending') {
+            return response()->json(['message' => 'Hanya SQ berstatus Menunggu Approval yang bisa ditarik kembali.'], 422);
+        }
+        if ((int) $sq->diajukan_oleh !== (int) auth()->id() && !userCan('sq-approve', 'can_update')) {
+            return response()->json(['message' => 'Hanya pengaju atau approver yang bisa menarik pengajuan ini.'], 403);
         }
 
         $before = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
-        SqKeterangan::snapshot((int) $id); // teks keterangan dikunci
-        DB::table('sales_quotations')->where('id_sq', $id)->update(['status' => 'final', 'terkirim_at' => null, 'updated_at' => now()]);
+        DB::table('sales_quotations')->where('id_sq', $id)->update([
+            'status' => 'draft', 'diajukan_oleh' => null, 'diajukan_at' => null, 'updated_at' => now(),
+        ]);
         saveAudit('sales_quotations', $id, 'update', $before, DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson());
 
-        return response()->json(['success' => true, 'message' => 'Sales Quotation difinalkan. SQ sekarang terkunci dan siap diterbitkan jadi SO.']);
+        return response()->json(['success' => true, 'message' => 'Pengajuan ditarik. SQ kembali Draft dan bisa diedit.']);
+    }
+
+    /** Menunggu Approval → Final. Butuh slug aksi `sq-approve`. Teks keterangan dikunci seperti Finalkan sebelumnya. */
+    public function setujui($id)
+    {
+        if (!userCan('sq-approve', 'can_update')) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk menyetujui SQ'], 403);
+        }
+        $sq = DB::table('sales_quotations')->where('id_sq', $id)->whereNull('deleted_at')->first();
+        if (!$sq) return response()->json(['message' => 'Sales Quotation tidak ditemukan'], 404);
+        if ($sq->status !== 'pending') {
+            return response()->json(['message' => 'Hanya SQ berstatus Menunggu Approval yang bisa disetujui.'], 422);
+        }
+        // Data master (rekening, kontak, dst.) bisa berubah sejak diajukan — cek ulang sebelum dikunci
+        if ($alasan = $this->syaratFinalkan($id)) return $this->gagalSyarat($alasan);
+
+        $before = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
+        SqKeterangan::snapshot((int) $id); // teks keterangan dikunci
+        DB::table('sales_quotations')->where('id_sq', $id)->update([
+            'status'           => 'final',
+            'terkirim_at'      => null,
+            'approval_oleh'    => auth()->id(),
+            'approval_at'      => now(),
+            'catatan_approval' => null,
+            'updated_at'       => now(),
+        ]);
+        saveAudit('sales_quotations', $id, 'update', $before, DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson());
+
+        return response()->json(['success' => true, 'message' => 'SQ disetujui dan sekarang Final (terkunci).']);
+    }
+
+    /** Menunggu Approval → Draft dengan alasan wajib. Butuh slug aksi `sq-approve`. */
+    public function tolak(Request $request, $id)
+    {
+        if (!userCan('sq-approve', 'can_update')) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk menolak SQ'], 403);
+        }
+        $request->validate(['catatan' => 'required|string|max:1000'], ['catatan.required' => 'Alasan penolakan wajib diisi.']);
+
+        $sq = DB::table('sales_quotations')->where('id_sq', $id)->whereNull('deleted_at')->first();
+        if (!$sq) return response()->json(['message' => 'Sales Quotation tidak ditemukan'], 404);
+        if ($sq->status !== 'pending') {
+            return response()->json(['message' => 'Hanya SQ berstatus Menunggu Approval yang bisa ditolak.'], 422);
+        }
+
+        $before = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
+        DB::table('sales_quotations')->where('id_sq', $id)->update([
+            'status'           => 'draft',
+            'approval_oleh'    => auth()->id(),
+            'approval_at'      => now(),
+            'catatan_approval' => $request->catatan,
+            'updated_at'       => now(),
+        ]);
+        saveAudit('sales_quotations', $id, 'update', $before, DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson());
+
+        return response()->json(['success' => true, 'message' => 'SQ ditolak dan dikembalikan ke Draft.']);
     }
 
     /** Final → Win (customer setuju; SQ siap diterbitkan jadi SO). Status akhir, tidak bisa dibatalkan. */
@@ -539,8 +639,12 @@ class SalesQuotationController extends Controller
 
     public function destroy($id)
     {
-        if (DB::table('sales_quotations')->where('id_sq', $id)->value('status') === 'win') {
+        $statusHapus = DB::table('sales_quotations')->where('id_sq', $id)->value('status');
+        if ($statusHapus === 'win') {
             return response()->json(['message' => 'SQ berstatus Win tidak bisa dihapus.'], 422);
+        }
+        if ($statusHapus === 'pending') {
+            return response()->json(['message' => 'SQ yang sedang menunggu approval tidak bisa dihapus. Tarik pengajuan dulu.'], 422);
         }
         $before = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
         DB::table('sales_quotations')->where('id_sq', $id)->update(['deleted_at' => now()]);

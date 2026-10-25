@@ -74,6 +74,7 @@ class CheckMenuPermission
         'fwo-budget-actuals' => ['verify' => 'fwo-budget-verify', 'bulk-verify' => 'fwo-budget-verify'],
         'wo-budget-actuals'  => ['verify' => 'wo-budget-verify', 'bulk-verify' => 'wo-budget-verify'],
         'termin'             => ['siap-kirim' => 'termin-siap-kirim', 'selesai' => 'termin-selesai'],
+        'sales-quotations'   => ['setujui' => 'sq-approve', 'tolak' => 'sq-approve'],
     ];
 
     public function handle(Request $request, Closure $next): mixed

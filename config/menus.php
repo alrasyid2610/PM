@@ -148,6 +148,7 @@ return [
             ['slug' => 'termin-selesai',        'label' => 'Selesaikan Termin',         'icon' => 'fa-flag-checkered'],
             ['slug' => 'wo-budget-close',       'label' => 'Selesaikan Plan Budget WO', 'icon' => 'fa-box-archive'],
             ['slug' => 'fwo-budget-close',      'label' => 'Selesaikan Plan Budget FWO','icon' => 'fa-box-archive'],
+            ['slug' => 'sq-approve',            'label' => 'Setujui/Tolak SQ (Approval)', 'icon' => 'fa-circle-check'],
         ],
     ],
     [

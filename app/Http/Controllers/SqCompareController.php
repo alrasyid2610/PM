@@ -15,7 +15,7 @@ class SqCompareController extends Controller
 {
     private function label(object $r): string
     {
-        $status = ['draft' => 'Draft', 'final' => 'Final', 'win' => 'Win', 'lose' => 'Lose', 'void' => 'Void'][$r->status] ?? $r->status;
+        $status = ['draft' => 'Draft', 'pending' => 'Menunggu Approval', 'final' => 'Final', 'win' => 'Win', 'lose' => 'Lose', 'void' => 'Void'][$r->status] ?? $r->status;
         return $r->no_sq . ' Rev.' . $r->revisi . ' · ' . $status;
     }
 

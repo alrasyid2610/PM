@@ -60,6 +60,7 @@ class DashboardController extends Controller
             'dash-peta-customer'       => $this->petaCustomer($request),
             'dash-so-nilai-per-bulan'  => $this->chartSoNilaiPerBulan($request),
             'dash-sq-final'            => $this->kpiSqFinal(),
+            'dash-sq-pending'          => $this->kpiSqPending(),
             'dash-sq-kedaluwarsa'      => $this->kpiSqKedaluwarsa(),
             'dash-sq-per-status'       => $this->chartSqPerStatus(),
             default                    => ['message' => 'Widget belum punya data'],
@@ -322,6 +323,20 @@ class DashboardController extends Controller
         return ['value' => $this->sqWinBelumSoQuery()->count(), 'sub' => 'menunggu diterbitkan SO'];
     }
 
+    /** SQ terbaru yang sudah diajukan dan menunggu keputusan manager (status pending). */
+    private function sqPendingQuery()
+    {
+        return DB::table('sales_quotations as sq')
+            ->whereNull('sq.deleted_at')
+            ->where('sq.is_latest', true)
+            ->where('sq.status', 'pending');
+    }
+
+    private function kpiSqPending(): array
+    {
+        return ['value' => $this->sqPendingQuery()->count(), 'sub' => 'menunggu keputusan manager'];
+    }
+
     private function kpiSqKedaluwarsa(): array
     {
         $today = now()->toDateString();
@@ -353,6 +368,7 @@ class DashboardController extends Controller
         // Urutan & warna tetap supaya konsisten dengan badge status SQ
         $def = [
             'draft'     => ['Draft', '#94a3b8'],
+            'pending'   => ['Menunggu Approval', '#d97706'],
             'final'     => ['Final', '#1d4ed8'],
             'win'       => ['Win', '#15803d'],
             'lose'      => ['Lose', '#dc2626'],
@@ -566,6 +582,23 @@ class DashboardController extends Controller
                 ])
                 ->orderByRaw('sq.berlaku_sampai IS NULL, sq.berlaku_sampai ASC')
                 ->orderByDesc('sq.created_at')
+                ->get();
+
+        } elseif ($type === 'sq-approval') {
+            // SQ menunggu approval; yang paling lama menunggu di atas. "pic" = pengaju, "deadline" = waktu pengajuan
+            $rows = $this->sqPendingQuery()
+                ->leftJoin('business_relations as br', 'br.id_br', '=', 'sq.id_pelanggan')
+                ->leftJoin('users as u', 'u.id', '=', 'sq.diajukan_oleh')
+                ->select([
+                    'sq.id_sq as id_rec',
+                    'sq.no_sq as no',
+                    'sq.judul_order as judul',
+                    'br.nama as pelanggan',
+                    'u.name as pic',
+                    DB::raw("DATE_FORMAT(sq.diajukan_at, '%Y-%m-%d %H:%i') as deadline"),
+                    'sq.status',
+                ])
+                ->orderBy('sq.diajukan_at')
                 ->get();
 
         } elseif ($type === 'so') {

@@ -10,6 +10,7 @@ window.datatableColumnRenderers = Object.assign({}, window.datatableColumnRender
     status: function (data) {
         var map = {
             draft:     { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0', icon: 'fa-pen',          label: 'Draft' },
+            pending:   { bg: '#fffbeb', color: '#b45309', border: '#fde68a', icon: 'fa-hourglass-half', label: 'Menunggu Approval' },
             final:     { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-lock',         label: 'Final' },
             win:       { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-trophy',       label: 'Win' },
             lose:      { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: 'fa-thumbs-down',  label: 'Lose' },
@@ -422,7 +423,7 @@ window.addEventListener('storage', function (e) {
     }
 });
 
-// ── Status SQ: Finalkan, Win, Lose & Void (dengan konfirmasi) ──────────────────
+// ── Status SQ: Ajukan/Setujui/Tolak Approval, Win, Lose & Void (dengan konfirmasi) ──────────────────
 function sqStatusAction(url, data, doneMsg) {
     $.ajax({
         url: url,
@@ -437,7 +438,7 @@ function sqStatusAction(url, data, doneMsg) {
             if (alasan && alasan.length) {
                 Swal.fire({
                     icon: 'warning',
-                    title: 'SQ belum bisa difinalkan',
+                    title: url.indexOf('/ajukan') !== -1 ? 'SQ belum bisa diajukan' : 'SQ belum bisa disetujui',
                     html: '<ul style="text-align:left;margin:0;padding-left:18px;">'
                         + alasan.map(function (a) { return '<li>' + $('<div>').text(a).html() + '</li>'; }).join('')
                         + '</ul>',
@@ -450,17 +451,65 @@ function sqStatusAction(url, data, doneMsg) {
     });
 }
 
-function finalizeSq(idSq) {
+function ajukanSq(idSq) {
     Swal.fire({
-        title: 'Finalkan Sales Quotation?',
-        html: 'Setelah difinalkan, SQ <strong>terkunci</strong> dan tidak bisa diedit lagi (header, WO, BOQ, Budget). Setelah itu tandai hasilnya: <strong>Win</strong> (customer setuju) atau <strong>Lose</strong> (ditolak).',
+        title: 'Ajukan untuk approval?',
+        html: 'SQ akan dikirim ke manager untuk disetujui dan <strong>terkunci</strong> selama menunggu keputusan. Setelah disetujui SQ menjadi Final; kalau ditolak, SQ kembali Draft beserta alasannya.',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'Ya, Finalkan',
+        confirmButtonText: 'Ya, Ajukan',
         cancelButtonText: 'Batal',
         reverseButtons: true,
     }).then(function (result) {
-        if (result.isConfirmed) sqStatusAction('/sales-quotations/' + idSq + '/finalize', {}, 'SQ difinalkan.');
+        if (result.isConfirmed) sqStatusAction('/sales-quotations/' + idSq + '/ajukan', {}, 'SQ diajukan untuk approval.');
+    });
+}
+
+function tarikSq(idSq) {
+    Swal.fire({
+        title: 'Tarik pengajuan?',
+        html: 'SQ kembali ke <strong>Draft</strong> dan bisa diedit lagi. Pengajuan harus dilakukan ulang untuk mendapat approval.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Tarik',
+        cancelButtonText: 'Batal',
+        reverseButtons: true,
+    }).then(function (result) {
+        if (result.isConfirmed) sqStatusAction('/sales-quotations/' + idSq + '/tarik', {}, 'Pengajuan ditarik.');
+    });
+}
+
+function setujuiSq(idSq) {
+    Swal.fire({
+        title: 'Setujui Sales Quotation?',
+        html: 'SQ menjadi <strong>Final</strong> dan terkunci. Setelah itu tandai hasilnya: <strong>Win</strong> (customer setuju) atau <strong>Lose</strong> (ditolak).',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Setujui',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#16a34a',
+        reverseButtons: true,
+    }).then(function (result) {
+        if (result.isConfirmed) sqStatusAction('/sales-quotations/' + idSq + '/setujui', {}, 'SQ disetujui.');
+    });
+}
+
+function tolakSq(idSq) {
+    Swal.fire({
+        title: 'Tolak pengajuan SQ?',
+        html: 'SQ dikembalikan ke <strong>Draft</strong> agar diperbaiki. Alasan penolakan wajib diisi dan akan terlihat oleh pengaju.',
+        input: 'textarea',
+        inputPlaceholder: 'Alasan penolakan',
+        inputAttributes: { maxlength: 1000 },
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Tolak',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#dc2626',
+        reverseButtons: true,
+        inputValidator: function (v) { return (v && v.trim()) ? null : 'Alasan penolakan wajib diisi.'; },
+    }).then(function (result) {
+        if (result.isConfirmed) sqStatusAction('/sales-quotations/' + idSq + '/tolak', { catatan: result.value.trim() }, 'SQ ditolak.');
     });
 }
 
@@ -544,7 +593,7 @@ function reviseSq(idSq) {
 function showRiwayatRevisiSq(idSq) {
     $.get('/sales-quotations/' + idSq, function (res) {
         const rows = (res.riwayat_revisi || []).map(function (r) {
-            const badge = { draft: 'secondary', final: 'primary', win: 'success', lose: 'danger', void: 'warning' }[r.status] || 'secondary';
+            const badge = { draft: 'secondary', pending: 'warning', final: 'primary', win: 'success', lose: 'danger', void: 'warning' }[r.status] || 'secondary';
             const current = r.id_sq === idSq ? ' <strong>(sedang dibuka)</strong>' : '';
             return `<tr>
                 <td style="text-align:center;">${r.revisi === 0 ? '—' : 'Rev.' + r.revisi}</td>
@@ -1137,7 +1186,7 @@ function sqKetRenderSummary() {
         $badge.removeClass('d-none').text(belum);
         $('#sqKetSummary').html(`<div class="d-flex align-items-center gap-2 mb-2 px-3 py-2" style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#92400e;">
             <i class="fa-solid fa-triangle-exclamation"></i>
-            <span><b>${belum} dari ${rows.length} poin</b> isiannya belum lengkap — lengkapi sebelum Finalkan SQ.</span>
+            <span><b>${belum} dari ${rows.length} poin</b> isiannya belum lengkap — lengkapi sebelum Ajukan Approval.</span>
             <a href="#" class="ms-auto sq-ket-lompat" style="font-weight:600;white-space:nowrap;">Lihat poin pertama</a>
         </div>`);
     } else {

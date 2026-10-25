@@ -31,8 +31,8 @@ function switchTab(type) {
         no:         'No.',
         judul:      'Judul',
         pelanggan:  'Pelanggan',
-        pic:        'PIC',
-        deadline:   type === 'sq' ? 'Berlaku Sampai' : 'Deadline',
+        pic:        type === 'sq-approval' ? 'Diajukan Oleh' : 'PIC',
+        deadline:   type === 'sq' ? 'Berlaku Sampai' : (type === 'sq-approval' ? 'Diajukan Pada' : 'Deadline'),
         status:     'Status',
     };
 
@@ -50,6 +50,7 @@ function switchTab(type) {
                 planned:       '<span class="badge bg-info text-dark">Planned</span>',
                 draft:         '<span class="badge bg-secondary">Draft</span>',
                 final:         '<span class="badge" style="background:#1d4ed8;">Final</span>',
+                pending:       '<span class="badge" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;">Menunggu Approval</span>',
             };
             return map[data] ?? ('<span class="badge bg-secondary">' + (data ?? '-') + '</span>');
         },

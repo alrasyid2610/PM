@@ -67,7 +67,7 @@ class SqLock
     {
         if ($status === null || $status === 'draft') return null;
 
-        $label = ['final' => 'Final', 'win' => 'Win', 'lose' => 'Lose', 'void' => 'Void'][$status] ?? $status;
+        $label = ['pending' => 'Menunggu Approval', 'final' => 'Final', 'win' => 'Win', 'lose' => 'Lose', 'void' => 'Void'][$status] ?? $status;
         return response()->json([
             'message' => "Sales Quotation berstatus {$label} dan tidak bisa diubah. Hanya SQ berstatus Draft yang bisa diedit.",
         ], 423);

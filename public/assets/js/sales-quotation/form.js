@@ -6,6 +6,7 @@ function sqStatusBadge(res) {
     }
     const map = {
         draft:     { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0', icon: 'fa-pen', label: 'Draft' },
+        pending:   { bg: '#fffbeb', color: '#b45309', border: '#fde68a', icon: 'fa-hourglass-half', label: 'Menunggu Approval' },
         final:     { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-lock', label: 'Final' },
         win:       { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-trophy', label: 'Win' },
         lose:      { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: 'fa-thumbs-down', label: 'Lose' },
@@ -21,6 +22,7 @@ function renderForm(res) {
     const isDeleted = !!res.deleted_at;
     // Hanya Draft yang bisa diedit; Final/Win/Lose/Void terkunci
     const isDraft = res.status === 'draft';
+    const isPending = res.status === 'pending';
     const isFinal = res.status === 'final';
     const isWin   = res.status === 'win';
     const isLose  = res.status === 'lose';
@@ -84,9 +86,23 @@ function renderForm(res) {
                 attrs: `onclick="openCompareSqModal(${res.id_sq}, '${escHtml(res.no_sq ?? '')} Rev.${res.revisi ?? 0}')"`,
             }] : []),
             ...(!isDeleted && isDraft && can('sales-quotations', 'can_update') ? [{
-                label: "Finalkan SQ",
-                icon: "fa-solid fa-lock",
-                attrs: `onclick="finalizeSq(${res.id_sq})"`,
+                label: "Ajukan Approval",
+                icon: "fa-solid fa-paper-plane",
+                attrs: `onclick="ajukanSq(${res.id_sq})"`,
+            }] : []),
+            ...(!isDeleted && isPending && res.bisa_tarik ? [{
+                label: "Tarik Pengajuan",
+                icon: "fa-solid fa-rotate-left",
+                attrs: `onclick="tarikSq(${res.id_sq})"`,
+            }] : []),
+            ...(!isDeleted && isPending && can('sq-approve', 'can_update') ? [{
+                label: "Setujui SQ",
+                icon: "fa-solid fa-circle-check",
+                attrs: `onclick="setujuiSq(${res.id_sq})"`,
+            }, {
+                label: "Tolak SQ",
+                icon: "fa-solid fa-circle-xmark",
+                attrs: `onclick="tolakSq(${res.id_sq})"`,
             }] : []),
             ...(!isDeleted && isFinal && can('sales-quotations', 'can_update') ? [{
                 label: "Tandai Win",
@@ -113,7 +129,17 @@ function renderForm(res) {
                 attrs: `onclick="openConvertSqModal(${res.id_sq})"`,
             }] : []),
         ],
-        extra: (!isDeleted && !isDraft)
+        extra: (!isDeleted && isPending)
+            ? `<span style="font-size:11px;color:#b45309;display:flex;align-items:center;gap:5px;">
+                   <i class="fa-solid fa-hourglass-half" style="font-size:10px;"></i>
+                   Menunggu approval manager — diajukan oleh <b>${escHtml(res.diajukan_oleh_nama || '—')}</b>${res.diajukan_at ? ' pada ' + new Date(res.diajukan_at).toLocaleString('id-ID') : ''}. SQ terkunci sampai ada keputusan.
+               </span>`
+            : (!isDeleted && isDraft && res.catatan_approval)
+            ? `<span style="font-size:11px;color:#b91c1c;display:flex;align-items:center;gap:5px;">
+                   <i class="fa-solid fa-circle-xmark" style="font-size:10px;"></i>
+                   Pengajuan ditolak oleh <b>${escHtml(res.approval_oleh_nama || '—')}</b>${res.approval_at ? ' pada ' + new Date(res.approval_at).toLocaleString('id-ID') : ''}: ${escHtml(res.catatan_approval)}
+               </span>`
+            : (!isDeleted && !isDraft)
             ? `<span style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:5px;">
                    <i class="fa-solid fa-lock" style="font-size:10px;"></i>
                    SQ berstatus ${escHtml(res.status)} — terkunci, tidak bisa diedit
