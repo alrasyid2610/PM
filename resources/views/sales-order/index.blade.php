@@ -83,31 +83,6 @@
     </div>
 </div>
 
-{{-- Modal: Copy WO --}}
-<div class="modal fade" id="modalCopyWo" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width:92vw;">
-        <div class="modal-content">
-            <div class="modal-header py-2 px-3" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
-                <span class="fw-semibold" style="font-size:14px;">
-                    <i class="fa-solid fa-copy me-2" style="color:#1a56db;"></i>
-                    Salin Work Order
-                </span>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="modalCopyWoBody">
-                <div class="text-center py-4">
-                    <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data WO...
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
-                <button type="button" id="btnConfirmCopyWo" class="btn btn-primary btn-sm" disabled>
-                    <i class="fa-solid fa-copy me-1"></i> Buat Salinan
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 @endsection
 
 @section('custom-script')
@@ -119,7 +94,6 @@
         update:     "{{ url('sales-orders') }}/",
         deleteAttachment: "{{ route('sales-orders.delete-attachment') }}",
         woProgress:   "{{ url('sales-orders') }}/",
-        woDuplicate:  "{{ url('work-orders') }}/",
         woDetail:     "{{ url('work-orders') }}/",
         terminBySo:   "{{ url('termin/by-so') }}/",
         siteSelect2:  "{{ url('business-relations/sites/select2') }}",

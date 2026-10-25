@@ -7,6 +7,8 @@ let cloneSourceData = null;
 let woIndexCounter = 0;
 let fwoIndexCounter = 0;
 const PERSONEL_ROLES = ['Leader', 'Driver', 'Anggota', 'PIC Project'];
+// Mode Clone WO: 1 WO disalin ke SO-nya sendiri — tanpa form SO, tanpa Personel, tanpa Realisasi budget.
+const WO_ONLY = !!window.cloneRoute.woOnly;
 
 $(document).ready(function () {
     loadCloneSourceData();
@@ -87,12 +89,20 @@ function loadCloneSourceData() {
 }
 
 function renderClonePage(res) {
-    $('#cloneSourceLabel').text(res.so.no_so + (res.so.judul_order ? ' — ' + res.so.judul_order : ''));
-    fillSoForm(res.so);
+    if (WO_ONLY) {
+        const w = (res.wos || [])[0];
+        $('#cloneSourceLabel').text(w ? w.no_wo + (w.judul_pekerjaan ? ' — ' + w.judul_pekerjaan : '') : '-');
+    } else {
+        $('#cloneSourceLabel').text(res.so.no_so + (res.so.judul_order ? ' — ' + res.so.judul_order : ''));
+        fillSoForm(res.so);
+    }
     renderWoAccordion(res.wos || []);
 
     $('#cloneLoading').addClass('d-none');
     $('#cloneSoForm').removeClass('d-none');
+
+    // Mode Clone WO cuma ada 1 card — langsung dibuka supaya field bisa diedit tanpa klik tambahan
+    if (WO_ONLY) $('#woAccordion .wo-toggle').first().trigger('click');
 }
 
 // ── SO form ──────────────────────────────────────────────────────────────
@@ -516,7 +526,7 @@ function renderFwoAccordion($woBody, wo) {
     $woBody.find('.fwo-summary').text(
         fwos.length
             ? `${fwos.length} FWO — ${fwos.reduce((s, f) => s + (f.fieldwork_boq?.length || 0), 0)} Fieldwork BOQ, ` +
-              `${fwos.reduce((s, f) => s + (f.personel?.length || 0), 0)} Personel`
+              (WO_ONLY ? `${fwos.reduce((s, f) => s + (f.fwo_boq_other?.length || 0) + (f.fwo_boq_sampling?.length || 0), 0)} BOQ Other/Sampling` : `${fwos.reduce((s, f) => s + (f.personel?.length || 0), 0)} Personel`)
             : ''
     );
 
@@ -541,7 +551,7 @@ function renderFwoAccordion($woBody, wo) {
                     <button class="accordion-button collapsed fwo-toggle" type="button">
                         <strong class="me-2">${escHtml(fwo.no_fwo)}</strong> ${escHtml(fwo.judul_pekerjaan || '-')}
                         <span class="pm-badge pm-badge--blue ms-2">${(fwo.fieldwork_boq || []).length} Fieldwork BOQ</span>
-                        <span class="pm-badge ms-1">${(fwo.personel || []).length} Personel</span>
+                        ${WO_ONLY ? '' : `<span class="pm-badge ms-1">${(fwo.personel || []).length} Personel</span>`}
                     </button>
                 </h2>
                 <div id="${collapseId}" class="accordion-collapse d-none">
@@ -637,8 +647,8 @@ function buildFwoBodyHtml(fwo) {
         <h6 class="mb-2 mt-3"><i class="fa-solid fa-vial me-1 text-success"></i> BOQ Sampling</h6>
         ${buildBoqTambahanTableHtml(fwo.fwo_boq_sampling || [], 'fwo-boq-sampling')}
 
-        <h6 class="mb-2 mt-3"><i class="fa-solid fa-users me-1 text-secondary"></i> Personel</h6>
-        ${buildPersonelTableHtml(fwo.personel || [])}
+        ${WO_ONLY ? '' : `<h6 class="mb-2 mt-3"><i class="fa-solid fa-users me-1 text-secondary"></i> Personel</h6>
+        ${buildPersonelTableHtml(fwo.personel || [])}`}
 
         <h6 class="mb-2 mt-3"><i class="fa-solid fa-wallet me-1" style="color:#0f766e;"></i> Budget</h6>
         <div class="fwo-budget-list">${buildBudgetPlanListHtml(fwo.budgets || [], 'fwo-budget')}</div>
@@ -784,7 +794,7 @@ function buildBudgetPlanCardHtml(b, rowClass) {
         <tr>
             <td>${escHtml(it.nama_account || '-')} ${it.is_cash_advance ? '<span class="pm-badge pm-badge--blue ms-1" style="font-size:9px;">CA</span>' : ''}</td>
             <td class="text-end" style="white-space:nowrap;">${formatRupiah(it.nominal_budget)}</td>
-            <td class="text-end" style="white-space:nowrap;">${formatRupiah((it.actuals || []).reduce((s, a) => s + Number(a.nominal_actual || 0), 0))}</td>
+            ${WO_ONLY ? '' : `<td class="text-end" style="white-space:nowrap;">${formatRupiah((it.actuals || []).reduce((s, a) => s + Number(a.nominal_actual || 0), 0))}</td>`}
         </tr>`).join('');
 
     return `
@@ -826,14 +836,14 @@ function buildBudgetPlanCardHtml(b, rowClass) {
                 <div class="table-responsive mt-2">
                     <table class="table table-sm table-bordered align-middle mb-1">
                         <thead class="table-light">
-                            <tr><th>Account</th><th class="text-end" style="width:130px;">Budget</th><th class="text-end" style="width:130px;">Realisasi</th></tr>
+                            <tr><th>Account</th><th class="text-end" style="width:130px;">Budget</th>${WO_ONLY ? '' : '<th class="text-end" style="width:130px;">Realisasi</th>'}</tr>
                         </thead>
-                        <tbody>${itemRows || '<tr><td colspan="3" class="text-muted fst-italic small">Tidak ada item.</td></tr>'}</tbody>
+                        <tbody>${itemRows || `<tr><td colspan="${WO_ONLY ? 2 : 3}" class="text-muted fst-italic small">Tidak ada item.</td></tr>`}</tbody>
                     </table>
                 </div>
                 <div class="d-flex justify-content-end gap-3 small text-muted">
                     <span>Total Budget: <b>${formatRupiah(totalBudget)}</b></span>
-                    <span>Total Realisasi: <b>${formatRupiah(totalActual)}</b></span>
+                    ${WO_ONLY ? '' : `<span>Total Realisasi: <b>${formatRupiah(totalActual)}</b></span>`}
                 </div>
             </div>
         </div>`;
@@ -1324,6 +1334,26 @@ function recomputeFwoSelesaiMin($fwoBody) {
     if (minDate && $selesai[0]._fp.selectedDates[0] && $selesai.val() < minDate) {
         $selesai[0]._fp.clear();
     }
+    syncFwoWaktuKedatangan($fwoBody);
+}
+
+// Waktu Kedatangan FWO hanya boleh dipilih di dalam rentang Tanggal Mulai–Selesai FWO-nya sendiri.
+// Dipanggil tiap tanggal FWO berubah/bergeser (termasuk ikut tergeser dari tanggal WO): kalau nilai
+// yang sudah terisi jatuh di luar rentang baru, dikosongkan supaya user memilih ulang.
+function syncFwoWaktuKedatangan($fwoBody) {
+    const $tiba = $fwoBody.find('.fwo-waktu-kedatangan');
+    if (!$tiba[0] || !$tiba[0]._fp) return;
+    const mulai = $fwoBody.find('.fwo-tgl-mulai').val() || null;
+    const selesai = $fwoBody.find('.fwo-tgl-selesai').val() || null;
+    $tiba[0]._fp.set('minDate', mulai ? mulai + ' 00:00' : null);
+    $tiba[0]._fp.set('maxDate', selesai ? selesai + ' 23:59' : null);
+
+    const val = $tiba.val();
+    if (!val) return;
+    const day = val.substring(0, 10);
+    if ((mulai && day < mulai) || (selesai && day > selesai)) {
+        $tiba[0]._fp.clear();
+    }
 }
 
 function initFwoBodyPlugins($fwoCard, fwo, wo, $woBody) {
@@ -1359,16 +1389,13 @@ function initFwoBodyPlugins($fwoCard, fwo, wo, $woBody) {
     // sudah ditangani initFpDate bawaan lewat field tanggal_mulai-nya).
     const $fwoSelesai = $body.find('.fwo-tgl-selesai');
     if ($fwoSelesai[0] && $fwoSelesai[0]._fp) {
-        $fwoSelesai[0]._fp.set('onChange', function (selectedDates, dateStr) {
-            const $tiba = $body.find('.fwo-waktu-kedatangan');
-            if (!$tiba[0] || !$tiba[0]._fp) return;
-            $tiba[0]._fp.set('maxDate', dateStr ? dateStr + ' 23:59' : null);
-            const tibaVal = $tiba.val();
-            if (dateStr && tibaVal && tibaVal.substring(0, 10) > dateStr) {
-                $tiba[0]._fp.clear();
-            }
+        $fwoSelesai[0]._fp.set('onChange', function () {
+            syncFwoWaktuKedatangan($body);
         });
     }
+    // Awal buka: nilai Waktu Kedatangan sumber yang di luar rentang FWO (mis. tanggal FWO sudah
+    // diganti/digeser) langsung dikosongkan.
+    syncFwoWaktuKedatangan($body);
 
     const $site = $body.find('.fwo-site');
     $site.select2({
@@ -1912,7 +1939,7 @@ function validateWosPayload(wosPayload) {
 function submitClone() {
     if (!cloneSourceData) return;
 
-    const soPayload = {
+    const soPayload = WO_ONLY ? null : {
         tanggal_so: $('input[name="tanggal_so"]').val(),
         judul_order: $('input[name="judul_order"]').val(),
         tanggal_mulai: $('input[name="tanggal_mulai"]').val() || null,
@@ -1940,19 +1967,21 @@ function submitClone() {
         keterangan: $('textarea[name="keterangan"]').val() || null,
     };
 
-    if (!soPayload.tanggal_so || !soPayload.id_pelanggan) {
-        Notify.error('Tanggal SO dan Perusahaan (Pemesan) wajib diisi.');
-        return;
-    }
+    if (!WO_ONLY) {
+        if (!soPayload.tanggal_so || !soPayload.id_pelanggan) {
+            Notify.error('Tanggal SO dan Perusahaan (Pemesan) wajib diisi.');
+            return;
+        }
 
-    if (!soPayload.id_so_referensi) {
-        Notify.error('SO Reference wajib dipilih.');
-        return;
-    }
+        if (!soPayload.id_so_referensi) {
+            Notify.error('SO Reference wajib dipilih.');
+            return;
+        }
 
-    if (soPayload.tanggal_mulai && soPayload.tanggal_selesai && soPayload.tanggal_selesai < soPayload.tanggal_mulai) {
-        Notify.error('Tanggal Selesai SO tidak boleh sebelum Tanggal Mulai SO.');
-        return;
+        if (soPayload.tanggal_mulai && soPayload.tanggal_selesai && soPayload.tanggal_selesai < soPayload.tanggal_mulai) {
+            Notify.error('Tanggal Selesai SO tidak boleh sebelum Tanggal Mulai SO.');
+            return;
+        }
     }
 
     const wosPayload = [];
@@ -1987,6 +2016,9 @@ function submitClone() {
         wosPayload.push(collectWoPayload($(this), wo));
     });
 
+    // Mode Clone WO: Personel tidak ikut disalin (backend juga mengabaikannya)
+    if (WO_ONLY) wosPayload.forEach((w) => (w.fwos || []).forEach((f) => { f.personel = []; }));
+
     const validationErrors = validateWosPayload(wosPayload);
     if (validationErrors.length) {
         Notify.error(validationErrors.join('<br>'));
@@ -1995,19 +2027,27 @@ function submitClone() {
 
     const includedCount = wosPayload.filter((w) => w.include).length;
 
-    Notify.confirm(`Buat salinan Sales Order ini beserta ${includedCount} WO yang dicentang?`, function () {
+    const confirmMsg = WO_ONLY
+        ? 'Buat salinan Work Order ini beserta BOQ, FWO, dan Budget-nya?'
+        : `Buat salinan Sales Order ini beserta ${includedCount} WO yang dicentang?`;
+
+    Notify.confirm(confirmMsg, function () {
         const $btn = $('#btnSubmitClone');
         $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i> Memproses...');
 
         $.ajax({
             url: window.cloneRoute.submit,
             method: 'POST',
-            data: JSON.stringify({ _token: window.cloneRoute.csrf, so: soPayload, wos: wosPayload }),
+            data: JSON.stringify(WO_ONLY
+                ? { _token: window.cloneRoute.csrf, wo_only: true, wos: wosPayload }
+                : { _token: window.cloneRoute.csrf, so: soPayload, wos: wosPayload }),
             contentType: 'application/json',
             success: function (res) {
-                Notify.success(res.message || 'Sales Order berhasil disalin');
+                Notify.success(res.message || (WO_ONLY ? 'Work Order berhasil disalin' : 'Sales Order berhasil disalin'));
                 setTimeout(function () {
-                    window.location.href = '/sales-orders?open=' + res.id_so;
+                    window.location.href = WO_ONLY
+                        ? '/work-orders?open=' + (res.id_wo || '')
+                        : '/sales-orders?open=' + res.id_so;
                 }, 800);
             },
             error: function (xhr) {

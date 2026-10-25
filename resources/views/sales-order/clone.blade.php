@@ -1,11 +1,19 @@
 @extends('layouts.app')
 
-@section('page-title', 'Clone Sales Order')
-@section('page-descrip', 'Salin SO ini beserta seluruh WO & BOQ-nya menjadi SO baru')
+{{-- Mode "Clone WO" ($woOnly = true, $woId terisi): halaman yang sama dipakai untuk menyalin 1 WO ke SO-nya sendiri
+     (tanpa membuat SO baru). Section SO disembunyikan, Personel & Realisasi tidak ikut. $id = id SO pemilik WO. --}}
+@php $woOnly = !empty($woOnly); @endphp
+@section('page-title', $woOnly ? 'Clone Work Order' : 'Clone Sales Order')
+@section('page-descrip', $woOnly ? 'Salin WO ini beserta BOQ, FWO, dan Budget-nya menjadi WO baru' : 'Salin SO ini beserta seluruh WO & BOQ-nya menjadi SO baru')
 
 @section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{ url('sales-orders') }}">Sales Orders</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Clone</li>
+    @if ($woOnly)
+        <li class="breadcrumb-item"><a href="{{ url('sales-orders') }}?open={{ $id }}">Sales Orders</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Clone Work Order</li>
+    @else
+        <li class="breadcrumb-item"><a href="{{ url('sales-orders') }}">Sales Orders</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Clone</li>
+    @endif
 @endsection
 
 @section('style')
@@ -107,14 +115,23 @@
         <div class="col-12">
             <div class="alert alert-info d-flex align-items-start gap-2 mb-0">
                 <i class="fa-solid fa-circle-info mt-1"></i>
+                @if ($woOnly)
+                <div>
+                    Menyalin <strong id="cloneSourceLabel">-</strong> menjadi WO baru di SO yang sama. Semua field di bawah pre-filled dari WO sumber
+                    dan bisa diedit bebas sebelum disimpan. Ikut disalin: BOQ, BOQ Other/Sampling, FWO (Fieldwork BOQ, BOQ Other/Sampling), dan Budget Plan WO &amp; FWO beserta item.
+                    <strong>Tidak ikut:</strong> Realisasi budget, Personel, Sample, Lampiran, Output.
+                </div>
+                @else
                 <div>
                     Menyalin dari <strong id="cloneSourceLabel">-</strong>. Semua field di bawah pre-filled dari data sumber
                     dan bisa diedit bebas sebelum disimpan. WO yang tidak dicentang "Sertakan" tidak akan ikut disalin
                     (beserta seluruh BOQ, FWO, Fieldwork BOQ, dan Personel di dalamnya). <strong>Belum termasuk Budget Plan & Realisasi</strong> — menyusul di tahap berikutnya.
                 </div>
+                @endif
             </div>
         </div>
 
+        @if (!$woOnly)
         <!-- SECTION SO -->
         <div class="col-12">
             <x-section-card icon="fa-file-lines" color="icon-navy" title="Informasi Sales Order" subtitle="Data SO hasil salinan">
@@ -258,6 +275,8 @@
             </x-section-card>
         </div>
 
+        @endif
+
         <!-- SECTION WORK ORDER (hierarki: BOQ menempel di dalam tiap card WO) -->
         <div class="col-12" id="woSectionWrap">
             <x-section-card icon="fa-briefcase" color="icon-blue" title="Work Order" subtitle="Pilih & sesuaikan WO yang ikut disalin">
@@ -296,8 +315,14 @@
 @section('custom-script')
 <script>
     window.cloneRoute = {
+        woOnly: {{ $woOnly ? 'true' : 'false' }},
+        @if ($woOnly)
+        data:   "{{ url('work-orders') }}/{{ $woId }}/clone-data",
+        submit: "{{ url('work-orders') }}/{{ $woId }}/clone",
+        @else
         data:   "{{ url('sales-orders') }}/{{ $id }}/clone-data",
         submit: "{{ url('sales-orders') }}/{{ $id }}/clone",
+        @endif
         csrf:   "{{ csrf_token() }}",
         select2Br:       "{{ route('business-relations.select2') }}",
         select2Site:     "{{ url('business-relations/sites/select2') }}",

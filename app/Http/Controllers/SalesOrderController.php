@@ -973,8 +973,11 @@ class SalesOrderController extends Controller
      * bisa di-preselect di select2 dan dikirim balik sebagai `source_id_*`
      * saat submit clone.
      */
-    public function cloneData($id)
+    public function cloneData(Request $request, $id)
     {
+        // Mode Clone WO (?wo=ID, dipanggil dari WorkOrderController::cloneData): cuma 1 WO yang dimuat.
+        $onlyWoId = $request->query('wo');
+
         // Join sama seperti printPdf()/show() — dibutuhkan label tampilan
         // (nama Perusahaan/Site/PIC/Office) untuk preselect select2 di wizard.
         $so = DB::table('sales_orders as so')
@@ -1018,6 +1021,7 @@ class SalesOrderController extends Controller
             ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
             ->leftJoin('users as pic', 'pic.id', '=', 'wo.id_pic_pelanggan_pekerjaan')
             ->where('wo.id_so', $id)
+            ->when($onlyWoId, fn ($q) => $q->where('wo.id_wo', $onlyWoId))
             ->whereNull('wo.deleted_at')
             ->orderBy('wo.id_wo')
             ->select([
@@ -1266,7 +1270,11 @@ class SalesOrderController extends Controller
         // field SO lain (judul_order, no_po, id_office, PIC, dst) senyap
         // hilang saat insert walau terkirim benar dari frontend. Setiap field
         // SO yang dipakai di insert WAJIB punya baris rule di sini juga.
-        $validated = $request->validate([
+        // Mode Clone WO (`wo_only`, dari WorkOrderController::clonePost): TIDAK membuat SO baru — WO hasil
+        // salinan masuk ke SO sumber ($id). Personel & Realisasi budget tidak ikut disalin.
+        $woOnly = $request->boolean('wo_only');
+
+        $rules = [
             'so'                              => 'required|array',
             'so.tanggal_so'                   => 'required|date',
             'so.judul_order'                  => 'nullable|string|max:255',
@@ -1403,16 +1411,29 @@ class SalesOrderController extends Controller
             'wos.*.fwos.*.budgets.*.keterangan'       => 'nullable|string',
             'wos.*.fwos.*.budgets.*.tanggal_mulai'    => 'nullable|date',
             'wos.*.fwos.*.budgets.*.tanggal_selesai'  => 'nullable|date|after_or_equal:wos.*.fwos.*.budgets.*.tanggal_mulai',
-        ], [
+        ];
+
+        if ($woOnly) {
+            // Tanpa blok SO; wajib tepat 1 WO.
+            $rules = array_filter($rules, fn ($key) => $key !== 'so' && !str_starts_with($key, 'so.'), ARRAY_FILTER_USE_KEY);
+            $rules['wos'] = 'required|array|size:1';
+        }
+
+        $validated = $request->validate($rules, [
             'so.id_so_referensi.required' => 'SO Reference wajib dipilih.',
             'so.id_so_referensi.exists'   => 'SO Reference yang dipilih tidak valid.',
         ]);
 
-        $soInput = $validated['so'];
+        $soInput = $woOnly ? [] : $validated['so'];
         $wosInput = collect($validated['wos'] ?? [])->where('include', true)->values();
 
         try {
-            $newSoId = DB::transaction(function () use ($id, $soInput, $wosInput) {
+            $newSoId = DB::transaction(function () use ($id, $soInput, $wosInput, $woOnly) {
+                $newWoIds = [];
+
+                if ($woOnly) {
+                    $newSoId = (int) $id;
+                } else {
                 $newNoSo = $this->generateSoNumber();
 
                 $newSoId = DB::table('sales_orders')->insertGetId([
@@ -1452,6 +1473,7 @@ class SalesOrderController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+                }
 
                 // Dilaporkan lewat pesan sukses di akhir — bukan dianggap
                 // gagal (kesepakatan Fase 2): alokasi Fieldwork BOQ yang
@@ -1500,6 +1522,16 @@ class SalesOrderController extends Controller
                         'created_at'                  => now(),
                         'updated_at'                  => now(),
                     ]);
+                    $newWoIds[] = $newWoId;
+
+                    if ($woOnly) {
+                        saveAudit(
+                            'work_orders', $newWoId, 'Create',
+                            json_encode(['note' => "Clone dari WO {$sourceWo->no_wo}"]),
+                            DB::table('work_orders')->where('id_wo', $newWoId)->get()->toJson(),
+                            ['sales_orders', $id]
+                        );
+                    }
 
                     // Dipakai untuk validasi rentang tanggal FWO terhadap WO
                     // (Fase 2, di bawah) — pakai tanggal WO HASIL CLONE (yang
@@ -1735,7 +1767,8 @@ class SalesOrderController extends Controller
                                 'updated_at'      => now(),
                             ]);
 
-                            $sourceActuals = DB::table('wo_budget_actuals')->where('id_budget_item', $sourceItem->id_budget_item)->get();
+                            // Mode Clone WO: Realisasi tidak ikut disalin
+                            $sourceActuals = $woOnly ? collect() : DB::table('wo_budget_actuals')->where('id_budget_item', $sourceItem->id_budget_item)->get();
                             foreach ($sourceActuals as $sourceActual) {
                                 DB::table('wo_budget_actuals')->insert([
                                     'id_budget_item'     => $newItemId,
@@ -1956,7 +1989,8 @@ class SalesOrderController extends Controller
                             }
                         }
 
-                        foreach (($fwoInput['personel'] ?? []) as $personelInput) {
+                        // Mode Clone WO: Personel tidak ikut disalin
+                        foreach (($woOnly ? [] : ($fwoInput['personel'] ?? [])) as $personelInput) {
                             if (empty($personelInput['include'])) continue;
 
                             $personnelId = $personelInput['id_personnel'] ?? null;
@@ -2023,7 +2057,8 @@ class SalesOrderController extends Controller
                                     'updated_at'      => now(),
                                 ]);
 
-                                $sourceActuals = DB::table('fwo_budget_actuals')->where('id_budget_item', $sourceItem->id_budget_item)->get();
+                                // Mode Clone WO: Realisasi tidak ikut disalin
+                                $sourceActuals = $woOnly ? collect() : DB::table('fwo_budget_actuals')->where('id_budget_item', $sourceItem->id_budget_item)->get();
                                 foreach ($sourceActuals as $sourceActual) {
                                     DB::table('fwo_budget_actuals')->insert([
                                         'id_budget_item'     => $newItemId,
@@ -2043,14 +2078,16 @@ class SalesOrderController extends Controller
                     }
                 }
 
-                $after = DB::table('sales_orders')->where('id_so', $newSoId)->get()->toJson();
-                // old_value/new_value punya CHECK constraint JSON valid (MariaDB) —
-                // catatan "clone dari mana" harus dibungkus JSON, tidak bisa
-                // string polos.
-                $cloneNote = json_encode(['note' => "Clone dari SO {$this->sourceNoSoLabel($id)}"]);
-                saveAudit('sales_orders', $newSoId, 'Create', $cloneNote, $after);
+                if (!$woOnly) {
+                    $after = DB::table('sales_orders')->where('id_so', $newSoId)->get()->toJson();
+                    // old_value/new_value punya CHECK constraint JSON valid (MariaDB) —
+                    // catatan "clone dari mana" harus dibungkus JSON, tidak bisa
+                    // string polos.
+                    $cloneNote = json_encode(['note' => "Clone dari SO {$this->sourceNoSoLabel($id)}"]);
+                    saveAudit('sales_orders', $newSoId, 'Create', $cloneNote, $after);
+                }
 
-                return ['id_so' => $newSoId, 'skipped_fwo_boq' => $skippedFwoBoqTotal];
+                return ['id_so' => $newSoId, 'id_wo' => $newWoIds[0] ?? null, 'skipped_fwo_boq' => $skippedFwoBoqTotal];
             });
         } catch (\Throwable $e) {
             report($e);
@@ -2060,7 +2097,7 @@ class SalesOrderController extends Controller
             ], 422);
         }
 
-        $message = 'Sales Order berhasil disalin';
+        $message = $woOnly ? 'Work Order berhasil disalin' : 'Sales Order berhasil disalin';
         if ($newSoId['skipped_fwo_boq'] > 0) {
             $message .= " ({$newSoId['skipped_fwo_boq']} alokasi Fieldwork BOQ dilewati karena BOQ WO terkait tidak disertakan)";
         }
@@ -2069,6 +2106,7 @@ class SalesOrderController extends Controller
             'success' => true,
             'message' => $message,
             'id_so'   => $newSoId['id_so'],
+            'id_wo'   => $newSoId['id_wo'],
         ]);
     }
 

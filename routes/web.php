@@ -917,7 +917,10 @@ Route::prefix('work-orders')->name('work-orders.')->group(function () {
     Route::delete('/{id}', [WorkOrderController::class, 'destroy'])->name('destroy');
     Route::get('/{id}/history', [WorkOrderController::class, 'history'])->name('history')->whereNumber('id');
     Route::get('/{id}/boq-progress', [WorkOrderController::class, 'boqProgress'])->name('boq-progress')->whereNumber('id');
-    Route::post('/{id}/duplicate', [WorkOrderController::class, 'duplicate'])->name('duplicate')->whereNumber('id');
+    // Clone WO (halaman penuh, memakai ulang UI Clone SO dalam mode "wo only")
+    Route::get('/{id}/clone', [WorkOrderController::class, 'clonePage'])->name('clone-page')->whereNumber('id');
+    Route::get('/{id}/clone-data', [WorkOrderController::class, 'cloneData'])->name('clone-data')->whereNumber('id');
+    Route::post('/{id}/clone', [WorkOrderController::class, 'clonePost'])->name('clone')->whereNumber('id');
     Route::post('/{id}/complete', [WorkOrderController::class, 'complete'])->name('complete')->whereNumber('id');
     Route::get('/{id}/outputs', [OutputPekerjaanController::class, 'byWo'])->name('outputs')->whereNumber('id');
 });
