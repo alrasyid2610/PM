@@ -21,6 +21,47 @@ class WoBudgetController extends Controller
         return response()->json(\App\Support\BudgetBasis::forSo($idSo ? (int) $idSo : null));
     }
 
+    /**
+     * Ringkasan nilai budget WO ini untuk kartu KPI di detail WO: Budget WO (plan milik WO) dan
+     * Budget FWO (semua plan milik FWO di bawah WO ini), masing-masing Estimasi (SUM nominal item)
+     * dan Realisasi (SUM semua actual yang tercatat, sama dengan angka di kartu plan).
+     * `nilai` = Total Nilai WO (BOQ setelah discount item + BOQ Other + BOQ Sampling) sebagai dasar persentase.
+     */
+    public function summary($id_wo)
+    {
+        $wo = DB::table('work_orders')->where('id_wo', $id_wo)->first(['id_wo']);
+        if (!$wo) return response()->json(['message' => 'Data tidak ditemukan'], 404);
+
+        $woEst = (int) DB::table('wo_budget_items as i')
+            ->join('wo_budgets as b', 'b.id_budget', '=', 'i.id_budget')
+            ->where('b.id_wo', $id_wo)->whereNull('b.deleted_at')->sum('i.nominal_budget');
+        $woReal = (int) DB::table('wo_budget_actuals as a')
+            ->join('wo_budget_items as i', 'i.id_budget_item', '=', 'a.id_budget_item')
+            ->join('wo_budgets as b', 'b.id_budget', '=', 'i.id_budget')
+            ->where('b.id_wo', $id_wo)->whereNull('b.deleted_at')->sum('a.nominal_actual');
+
+        $fwoEst = (int) DB::table('fwo_budget_items as i')
+            ->join('fwo_budgets as b', 'b.id_budget', '=', 'i.id_budget')
+            ->join('fieldworks as f', 'f.id_fwo', '=', 'b.id_fwo')
+            ->where('f.id_wo', $id_wo)->whereNull('f.deleted_at')->whereNull('b.deleted_at')->sum('i.nominal_budget');
+        $fwoReal = (int) DB::table('fwo_budget_actuals as a')
+            ->join('fwo_budget_items as i', 'i.id_budget_item', '=', 'a.id_budget_item')
+            ->join('fwo_budgets as b', 'b.id_budget', '=', 'i.id_budget')
+            ->join('fieldworks as f', 'f.id_fwo', '=', 'b.id_fwo')
+            ->where('f.id_wo', $id_wo)->whereNull('f.deleted_at')->whereNull('b.deleted_at')->sum('a.nominal_actual');
+
+        $nilai = (int) DB::table('boq')->where('id_wo', $id_wo)->whereNull('deleted_at')
+                ->selectRaw('COALESCE(SUM(GREATEST(0, qty * harga - discount)), 0) as t')->value('t')
+            + (int) DB::table('boq_tambahan')->where('id_wo', $id_wo)->whereNull('deleted_at')
+                ->selectRaw('COALESCE(SUM(qty * harga), 0) as t')->value('t');
+
+        return response()->json([
+            'nilai' => $nilai,
+            'fwo'   => ['estimasi' => $fwoEst, 'realisasi' => $fwoReal],
+            'wo'    => ['estimasi' => $woEst,  'realisasi' => $woReal],
+        ]);
+    }
+
     public function listByWo($id_wo)
     {
         $budgets = DB::table('wo_budgets as b')
@@ -32,6 +73,7 @@ class WoBudgetController extends Controller
         foreach ($budgets as $budget) {
             $items = DB::table('wo_budget_items as bi')
                 ->join('budget_accounts as ba', 'ba.id_account', '=', 'bi.id_account')
+                ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'bi.id_satuan')
                 ->leftJoin('budget_accounts as bp', 'bp.id_account', '=', 'ba.id_parent')
                 ->where('bi.id_budget', $budget->id_budget)
                 ->get([
@@ -40,7 +82,7 @@ class WoBudgetController extends Controller
                     'ba.nama as nama_account',
                     'ba.kode as kode_account',
                     'bp.nama as nama_category',
-                    'bi.nominal_budget',
+                    'bi.nominal_budget', 'bi.qty', 'bi.hari', 'bi.harga_satuan', 'bi.id_satuan', 'sat.nama as satuan',
                     'bi.keterangan',
                     'bi.is_cash_advance',
                 ]);
@@ -88,9 +130,10 @@ class WoBudgetController extends Controller
         $dipakai = [];
         $items = DB::table('wo_budget_items as bi')
             ->leftJoin('budget_accounts as a', 'a.id_account', '=', 'bi.id_account')
+            ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'bi.id_satuan')
             ->where('bi.id_budget', $id)
             ->orderBy('bi.id_budget_item')
-            ->get(['a.nama', 'bi.nominal_budget', 'bi.keterangan', 'bi.is_cash_advance']);
+            ->get(['a.nama', 'bi.nominal_budget', 'bi.qty', 'bi.hari', 'bi.harga_satuan', 'sat.nama as satuan', 'bi.keterangan', 'bi.is_cash_advance']);
 
         foreach ($items as $i) {
             $kunci = 'Item • ' . ($i->nama ?? '?');
@@ -98,6 +141,7 @@ class WoBudgetController extends Controller
             if ($dipakai[$kunci] > 1) $kunci .= ' (' . $dipakai[$kunci] . ')'; // akun yang sama dipakai lebih dari sekali
 
             $plan[$kunci] = 'Rp ' . number_format($i->nominal_budget, 0, ',', '.')
+                . (($rinci = \App\Support\BudgetItemInput::label($i->qty, $i->satuan, $i->harga_satuan, $i->hari)) ? ' (' . $rinci . ')' : '')
                 . ($i->is_cash_advance ? ' [Cash Advance]' : '')
                 . ($i->keterangan ? ' — ' . $i->keterangan : '');
         }
@@ -118,6 +162,10 @@ class WoBudgetController extends Controller
             'items'          => 'required|array|min:1',
             'items.*.id_account'      => 'required|integer',
             'items.*.nominal_budget'  => 'required|integer|min:1',
+            'items.*.qty'          => 'nullable|numeric|min:0.01',
+            'items.*.hari'         => 'nullable|numeric|min:0.01',
+            'items.*.harga_satuan'  => 'nullable|integer|min:0',
+            'items.*.id_satuan'     => 'nullable|integer',
             'items.*.keterangan'      => 'nullable|string',
         ], [
             'items.*.nominal_budget.min' => 'Nominal setiap item harus lebih dari 0.',
@@ -138,7 +186,7 @@ class WoBudgetController extends Controller
                 DB::table('wo_budget_items')->insert([
                     'id_budget'       => $id,
                     'id_account'      => $item['id_account'],
-                    'nominal_budget'  => $item['nominal_budget'],
+                    ...\App\Support\BudgetItemInput::fields($item),
                     'keterangan'      => $item['keterangan'] ?? null,
                     'is_cash_advance' => $item['is_cash_advance'] ?? 0,
                     'created_at'      => now(),
@@ -160,13 +208,14 @@ class WoBudgetController extends Controller
 
         $budget->items = DB::table('wo_budget_items as bi')
             ->join('budget_accounts as ba', 'ba.id_account', '=', 'bi.id_account')
+            ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'bi.id_satuan')
             ->where('bi.id_budget', $id)
             ->get([
                 'bi.id_budget_item',
                 'bi.id_account',
                 'ba.nama as nama_account',
-                'bi.nominal_budget',
-                'bi.keterangan',
+                'bi.nominal_budget', 'bi.qty', 'bi.hari', 'bi.harga_satuan', 'bi.id_satuan', 'sat.nama as satuan',
+                'bi.keterangan', 'bi.is_cash_advance',
             ]);
 
         return response()->json($budget);
@@ -190,6 +239,10 @@ class WoBudgetController extends Controller
             'items'          => 'required|array|min:1',
             'items.*.id_account'     => 'required|integer',
             'items.*.nominal_budget' => 'required|integer|min:1',
+            'items.*.qty'          => 'nullable|numeric|min:0.01',
+            'items.*.hari'         => 'nullable|numeric|min:0.01',
+            'items.*.harga_satuan'  => 'nullable|integer|min:0',
+            'items.*.id_satuan'     => 'nullable|integer',
             'items.*.keterangan'     => 'nullable|string',
         ], [
             'items.*.nominal_budget.min' => 'Nominal setiap item harus lebih dari 0.',
@@ -224,7 +277,7 @@ class WoBudgetController extends Controller
                 if (!empty($item['id_budget_item'])) {
                     DB::table('wo_budget_items')->where('id_budget_item', $item['id_budget_item'])->update([
                         'id_account'      => $item['id_account'],
-                        'nominal_budget'  => $item['nominal_budget'],
+                        ...\App\Support\BudgetItemInput::fields($item),
                         'keterangan'      => $item['keterangan'] ?? null,
                         'is_cash_advance' => $item['is_cash_advance'] ?? 0,
                         'updated_at'      => now(),
@@ -233,7 +286,7 @@ class WoBudgetController extends Controller
                     DB::table('wo_budget_items')->insert([
                         'id_budget'       => $id,
                         'id_account'      => $item['id_account'],
-                        'nominal_budget'  => $item['nominal_budget'],
+                        ...\App\Support\BudgetItemInput::fields($item),
                         'keterangan'      => $item['keterangan'] ?? null,
                         'is_cash_advance' => $item['is_cash_advance'] ?? 0,
                         'created_at'      => now(),

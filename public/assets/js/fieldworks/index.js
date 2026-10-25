@@ -398,7 +398,7 @@ function renderBudgetList(plans, isLocked) {
                 <td style="width:36px;text-align:center;color:#94a3b8;font-size:11px;">${itemIdx + 1}</td>
                 <td>${categoryCell}</td>
                 <td><span class="fw-semibold">${escHtml(item.nama_account)}</span>${caBadge}</td>
-                <td style="color:#1d4ed8;font-weight:600;" data-pct-val="${item.nominal_budget}">${fmtRp(item.nominal_budget)}</td>
+                <td style="color:#1d4ed8;font-weight:600;" data-pct-val="${item.nominal_budget}">${fmtRp(item.nominal_budget)}${BudgetSections.detail(item)}</td>
                 <td>
                     ${struksHtml || '<span class="text-muted" style="font-size:11px;">Belum ada realisasi</span>'}
                 </td>
@@ -456,6 +456,14 @@ function renderBudgetList(plans, isLocked) {
                                     <i class="fa-solid fa-file-invoice me-2 text-muted"></i>Print Realisasi
                                 </a>
                             </li>
+                            ${!isLocked && can('fieldworks', 'can_create') ? `
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <button type="button" class="dropdown-item btn-budget-clone"
+                                    data-id="${p.id_budget}" data-no-disable>
+                                    <i class="fa-solid fa-clone me-2" style="color:#0f766e;"></i>Clone Plan
+                                </button>
+                            </li>` : ''}
                             ${!planLocked ? `
                             <li><hr class="dropdown-divider my-1"></li>
                             <li>
@@ -537,11 +545,28 @@ function buildBudgetItemRow(item) {
                 ${item ? `<option value="${item.id_account}" selected>${escHtml(item.nama_account)}</option>` : '<option value="">Pilih Account</option>'}
             </select>
         </td>
+        <td style="width:80px;">
+            <input type="number" step="any" min="0" class="form-control form-control-sm bi-hari"
+                value="${item ? Number(item.hari || 1) : 1}" data-no-disable>
+        </td>
+        <td style="width:90px;">
+            <input type="number" step="any" min="0" class="form-control form-control-sm bi-qty"
+                value="${item ? Number(item.qty || 1) : 1}" data-no-disable>
+        </td>
+        <td style="min-width:130px;">
+            <select class="form-select form-select-sm bi-unit" data-no-disable>
+                ${item && item.id_satuan ? `<option value="${item.id_satuan}" selected>${escHtml(item.satuan || '')}</option>` : '<option value=""></option>'}
+            </select>
+        </td>
         <td>
             <input type="text" inputmode="numeric"
                 class="form-control form-control-sm input-num-mask input-num-int bi-nominal"
-                value="${item ? Number(item.nominal_budget).toLocaleString('en-US') : ''}"
+                value="${item ? Number(item.harga_satuan || item.nominal_budget).toLocaleString('en-US') : ''}"
                 placeholder="0" data-no-disable>
+        </td>
+        <td style="min-width:140px;">
+            <input type="text" class="form-control form-control-sm bi-total" readonly tabindex="-1" data-no-disable
+                style="background:#f8fafc;font-weight:600;text-align:right;">
         </td>
         <td>
             <input type="text" class="form-control form-control-sm bi-keterangan"
@@ -571,6 +596,8 @@ const FWO_BUDGET_SECTIONS = {
     rowSel: '.budget-item-row',
     buildRow: buildBudgetItemRow,
     total: '#budgetModalTotal',
+    dateSel: '#budgetModal-tgl-mulai, #budgetModal-tgl-selesai',
+    days: () => BudgetSections.daysFromDates($('#budgetModal-tgl-mulai').val(), $('#budgetModal-tgl-selesai').val()),
     onChange: () => recalcBudgetTotal(),
 };
 
@@ -604,22 +631,23 @@ $(document).off('input.biManual', '#budgetItemsBody .bi-nominal')
 
 function recalcBudgetTotal() {
     let total = 0;
-    $('#budgetItemsBody .bi-nominal').each(function () {
-        total += parseInt($(this).val().replace(/,/g, ''), 10) || 0;
+    $('#budgetItemsBody tr[data-cat]').each(function () {
+        total += BudgetSections.rowTotal(this);
     });
     $('#budgetModalTotal').text(fmtRp(total));
     BudgetSections.refresh(FWO_BUDGET_SECTIONS);
 }
 
-function openBudgetModal(idFwo, budgetData) {
-    const isEdit = !!budgetData;
+// isClone: budgetData dipakai sebagai isian awal plan BARU (disimpan lewat Tambah, bukan Edit)
+function openBudgetModal(idFwo, budgetData, isClone) {
+    const isEdit = !!budgetData && !isClone;
     $('#budgetPlanModalLabel').html(
-        `<i class="fa-solid fa-wallet me-2" style="color:#0f766e;"></i>${isEdit ? 'Edit' : 'Tambah'} Budget Plan`
+        `<i class="fa-solid fa-wallet me-2" style="color:#0f766e;"></i>${isClone ? 'Clone' : (isEdit ? 'Edit' : 'Tambah')} Budget Plan`
     );
     $('#budgetModal-id').val(isEdit ? budgetData.id_budget : '');
     $('#budgetModal-id-fwo').val(idFwo);
-    $('#budgetModal-label').val(isEdit ? budgetData.label : '');
-    $('#budgetModal-keterangan').val(isEdit ? (budgetData.keterangan || '') : '');
+    $('#budgetModal-label').val(isClone ? budgetData.label + ' (Salinan)' : (isEdit ? budgetData.label : ''));
+    $('#budgetModal-keterangan').val(budgetData ? (budgetData.keterangan || '') : '');
 
     // Info rentang tanggal FWO sebagai referensi (cuma informasi, tidak
     // membatasi input tanggal budget plan).
@@ -634,7 +662,8 @@ function openBudgetModal(idFwo, budgetData) {
 
     $('#budgetItemsBody').empty();
     BudgetSections.loadBasis(FWO_BUDGET_SECTIONS, `/fwo-budgets/${idFwo}/basis`);
-    BudgetSections.fill(FWO_BUDGET_SECTIONS, isEdit ? (budgetData.items || []) : []).done(function () {
+    const cloneItems = isClone ? (budgetData.items || []).map(it => ({ ...it, id_budget_item: '' })) : null;
+    BudgetSections.fill(FWO_BUDGET_SECTIONS, isClone ? cloneItems : (isEdit ? (budgetData.items || []) : [])).done(function () {
         BudgetSections.initSelects(FWO_BUDGET_SECTIONS);
         initNumericMask(document.getElementById('budgetPlanModal'));
         recalcBudgetTotal();
@@ -658,14 +687,14 @@ function openBudgetModal(idFwo, budgetData) {
             allowInput: false,
             minDate: fwoMulai || null,
             maxDate: fwoSelesai || null,
-            defaultDate: isEdit ? (budgetData.tanggal_mulai || null) : (fwoMulai || null),
+            defaultDate: isEdit ? (budgetData.tanggal_mulai || null) : (isClone ? null : (fwoMulai || null)),
         });
         const fpSelesai = flatpickr(elSelesai, {
             dateFormat: 'Y-m-d',
             allowInput: false,
             minDate: isEdit && budgetData.tanggal_mulai ? budgetData.tanggal_mulai : (fwoMulai || null),
             maxDate: fwoSelesai || null,
-            defaultDate: isEdit ? (budgetData.tanggal_selesai || null) : (fwoSelesai || null),
+            defaultDate: isEdit ? (budgetData.tanggal_selesai || null) : (isClone ? null : (fwoSelesai || null)),
         });
 
         // Saat tanggal mulai berubah → update minDate selesai
@@ -712,13 +741,13 @@ $(document).off('click.budget', '#budgetModal-btn-save').on('click.budget', '#bu
     let zeroNominal = false;
     $('#budgetItemsBody .budget-item-row').each(function () {
         const idAccount = $(this).find('.bi-account').val();
-        const nominal   = parseInt($(this).find('.bi-nominal').val().replace(/,/g, ''), 10) || 0;
+        const nominal = BudgetSections.rowTotal(this);
         const ket       = $(this).find('.bi-keterangan').val();
         const biId      = $(this).find('.bi-id').val();
         const isCa      = $(this).find('.bi-ca').is(':checked') ? 1 : 0;
         if (!idAccount) { valid = false; return false; }
         if (nominal <= 0) { zeroNominal = true; return false; }
-        items.push({ id_budget_item: biId || null, id_account: idAccount, nominal_budget: nominal, keterangan: ket, is_cash_advance: isCa });
+        items.push({ id_budget_item: biId || null, id_account: idAccount, nominal_budget: nominal, qty: $(this).find('.bi-qty').val() || 1, hari: $(this).find('.bi-hari').val() || 1, id_satuan: $(this).find('.bi-unit').val() || null, harga_satuan: parseInt(($(this).find('.bi-nominal').val() || '').replace(/,/g, ''), 10) || 0, keterangan: ket, is_cash_advance: isCa });
     });
 
     if (!valid) return Swal.fire('Perhatian', 'Semua baris harus memilih Account.', 'warning');
@@ -760,6 +789,14 @@ $(document).off('click.budget', '.btn-budget-edit').on('click.budget', '.btn-bud
     const idFwo = getBudgetFwoId();
     $.get(`/fwo-budgets/${id}`)
         .done(function (data) { openBudgetModal(idFwo, data); });
+});
+
+// ── Clone Budget Plan: buka modal Tambah berisi item plan sumber (tanggal dikosongkan), user sesuaikan lalu simpan ──
+$(document).off('click.budget', '.btn-budget-clone').on('click.budget', '.btn-budget-clone', function () {
+    const id    = $(this).data('id');
+    const idFwo = getBudgetFwoId();
+    $.get(`/fwo-budgets/${id}`)
+        .done(function (data) { openBudgetModal(idFwo, data, true); });
 });
 
 // ── Hapus Budget Plan ──

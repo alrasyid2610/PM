@@ -1773,7 +1773,7 @@ function renderBoqSummary(data) {
                     <div class="pm-kpi-value">${totalOutput} <span style="font-size:12px;font-weight:400;color:#94a3b8;">dokumen</span></div>
                 </div>
             </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <div style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;">
                 <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">
                     <i class="fa-solid fa-clock me-1" style="font-size:9px;"></i>${outBelumSiap} Belum Siap
                 </span>
@@ -1802,7 +1802,7 @@ function renderBoqSummary(data) {
                     <div class="pm-kpi-value">${totalOther} <span style="font-size:12px;font-weight:400;color:#94a3b8;">item</span></div>
                 </div>
             </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <div style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;">
                 ${otherPill('fa-clock', '#fef2f2', '#dc2626', '#fecaca', otherBelumSiap + ' Belum Siap')}
                 ${otherPill('fa-check', '#f0fdf4', '#16a34a', '#bbf7d0', otherSiap + ' Siap')}
                 ${otherTerkirim ? otherPill('fa-paper-plane', '#eff6ff', '#1d4ed8', '#bfdbfe', otherTerkirim + ' Terkirim') : ''}
@@ -1827,6 +1827,17 @@ function renderBoqSummary(data) {
             </div>
         </div>`;
 
+    // Card "Nilai Budget" (Budget FWO + Budget WO) — isinya diisi async oleh loadWoBudgetValueCard()
+    const budgetValueCardShell = `
+        <div class="pm-kpi-card kpi-tab-link" data-tab-target="#tabWoBudget" id="woBudgetValueCard"
+            style="flex:2 1 420px;flex-direction:column;align-items:stretch;gap:6px;min-width:380px;cursor:pointer;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div class="pm-kpi-icon" style="background:#0f766e;flex-shrink:0;"><i class="fa-solid fa-wallet"></i></div>
+                <div class="pm-kpi-label">Nilai Budget</div>
+            </div>
+            <div class="text-muted" style="font-size:12px;"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>
+        </div>`;
+
     $("#boqSummaryCard").html(
         kpiCard("fa-layer-group", "#0891b2", "Total BOQ", totalBoqItems + " item", '', "#tabBoq") +
         `<div class="pm-kpi-card kpi-tab-link" data-tab-target="#tabFwo" style="cursor:pointer;">
@@ -1841,7 +1852,8 @@ function renderBoqSummary(data) {
         </div>` +
         outputCard +
         outputOtherCard +
-        totalNilaiCard
+        totalNilaiCard +
+        budgetValueCardShell
     );
 }
 
@@ -1859,6 +1871,7 @@ function loadBoqProgress(id_wo) {
         renderBoqSummary(data);
         renderBoqView(data, id_wo);
         loadBoqValueSummary(id_wo, data.total_boq_amount || 0);
+        loadWoBudgetValueCard(id_wo);
     }).fail(function () {
         $("#boqProgressContent").html(
             '<div class="text-center text-danger py-3"><i class="fa-solid fa-circle-exclamation me-1"></i> Gagal memuat data</div>',
@@ -1929,6 +1942,53 @@ function updateBoqValueCard(boqAmount, otherAmount, samplingAmount) {
         </div>
         ${badgesHtml ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${badgesHtml}</div>` : ""}
     `);
+}
+
+// ── Card "Nilai Budget" di row KPI: Budget FWO & Budget WO (Estimasi, Realisasi, Persentase terhadap Total Nilai WO) ──
+function loadWoBudgetValueCard(id_wo) {
+    $.get("/wo-budgets/" + id_wo + "/summary").done(function (r) {
+        const $card = $("#woBudgetValueCard");
+        if (!$card.length) return; // detail sudah berganti sebelum request selesai
+
+        const fmt = (n) => "Rp " + Number(n || 0).toLocaleString("en-US");
+        const pct = (n) => {
+            if (!r.nilai) return "—";
+            return (n / r.nilai * 100).toLocaleString("id-ID", { maximumFractionDigits: 2 }) + "%";
+        };
+        const cell = 'padding:4px 10px;font-size:12px;white-space:nowrap;border-bottom:1px solid #e5e7eb;';
+        const head = 'padding:4px 10px;font-size:10.5px;font-weight:600;color:#64748b;text-transform:uppercase;background:#f1f5f9;border-bottom:1px solid #e2e8f0;white-space:nowrap;';
+        const row = (label, v, bg) => `<tr style="background:${bg};">
+            <td style="${cell}">${label}</td>
+            <td style="${cell}">${fmt(v.estimasi)}</td>
+            <td style="${cell}">${fmt(v.realisasi)}</td>
+            <td style="${cell}"><b>${pct(v.estimasi)}</b><span class="text-muted" style="font-size:10.5px;"> · real. ${pct(v.realisasi)}</span></td>
+        </tr>`;
+        const total = r.fwo.estimasi + r.wo.estimasi;
+
+        $card.html(`
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div class="pm-kpi-icon" style="background:#0f766e;flex-shrink:0;"><i class="fa-solid fa-wallet"></i></div>
+                <div>
+                    <div class="pm-kpi-label">Nilai Budget</div>
+                    <div class="pm-kpi-value">${fmt(total)}</div>
+                </div>
+                <div class="text-muted ms-auto" style="font-size:10.5px;">% terhadap Total Nilai WO ${fmt(r.nilai)}</div>
+            </div>
+            <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead><tr>
+                        <th style="${head}text-align:left;">Kategori</th>
+                        <th style="${head}text-align:left;">Estimasi</th>
+                        <th style="${head}text-align:left;">Realisasi</th>
+                        <th style="${head}text-align:left;">Persentase</th>
+                    </tr></thead>
+                    <tbody>
+                        ${row("Budget FWO", r.fwo, "#ffffff")}
+                        ${row("Budget WO", r.wo, "#f8fafc")}
+                    </tbody>
+                </table>
+            </div>`);
+    });
 }
 
 function renderBoqProgressTable(data, id_wo) {
@@ -3839,6 +3899,7 @@ function woFmtTgl(val) {
 }
 
 function loadWoBudgetData(idWo) {
+    loadWoBudgetValueCard(idWo);
     const $wrap = $('#woBudgetWrap');
     $wrap.html('<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...</div>');
 
@@ -3945,7 +4006,7 @@ function renderWoBudgetList(plans, isLocked) {
                 <td style="width:36px;text-align:center;color:#94a3b8;font-size:11px;">${itemIdx + 1}</td>
                 <td>${categoryCell}</td>
                 <td><span class="fw-semibold">${escHtml(item.nama_account)}</span>${caBadge}</td>
-                <td style="color:#1d4ed8;font-weight:600;" data-pct-val="${item.nominal_budget}">${woFmtRp(item.nominal_budget)}</td>
+                <td style="color:#1d4ed8;font-weight:600;" data-pct-val="${item.nominal_budget}">${woFmtRp(item.nominal_budget)}${BudgetSections.detail(item)}</td>
                 <td>
                     ${struksHtml || '<span class="text-muted" style="font-size:11px;">Belum ada realisasi</span>'}
                 </td>
@@ -4003,6 +4064,14 @@ function renderWoBudgetList(plans, isLocked) {
                                     <i class="fa-solid fa-file-invoice me-2 text-muted"></i>Print Realisasi
                                 </a>
                             </li>
+                            ${!isLocked && can('work-orders', 'can_create') ? `
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <button type="button" class="dropdown-item btn-wo-budget-clone"
+                                    data-id="${p.id_budget}" data-no-disable>
+                                    <i class="fa-solid fa-clone me-2" style="color:#0f766e;"></i>Clone Plan
+                                </button>
+                            </li>` : ''}
                             ${!planLocked ? `
                             ${can('work-orders', 'can_update') ? `
                             <li><hr class="dropdown-divider my-1"></li>
@@ -4086,11 +4155,28 @@ function buildWoBudgetItemRow(item) {
                 ${item ? `<option value="${item.id_account}" selected>${escHtml(item.nama_account)}</option>` : '<option value="">Pilih Account</option>'}
             </select>
         </td>
+        <td style="width:80px;">
+            <input type="number" step="any" min="0" class="form-control form-control-sm bi-hari"
+                value="${item ? Number(item.hari || 1) : 1}" data-no-disable>
+        </td>
+        <td style="width:90px;">
+            <input type="number" step="any" min="0" class="form-control form-control-sm bi-qty"
+                value="${item ? Number(item.qty || 1) : 1}" data-no-disable>
+        </td>
+        <td style="min-width:130px;">
+            <select class="form-select form-select-sm bi-unit" data-no-disable>
+                ${item && item.id_satuan ? `<option value="${item.id_satuan}" selected>${escHtml(item.satuan || '')}</option>` : '<option value=""></option>'}
+            </select>
+        </td>
         <td>
             <input type="text" inputmode="numeric"
                 class="form-control form-control-sm input-num-mask input-num-int bi-nominal"
-                value="${item ? Number(item.nominal_budget).toLocaleString('en-US') : ''}"
+                value="${item ? Number(item.harga_satuan || item.nominal_budget).toLocaleString('en-US') : ''}"
                 placeholder="0" data-no-disable>
+        </td>
+        <td style="min-width:140px;">
+            <input type="text" class="form-control form-control-sm bi-total" readonly tabindex="-1" data-no-disable
+                style="background:#f8fafc;font-weight:600;text-align:right;">
         </td>
         <td>
             <input type="text" class="form-control form-control-sm bi-keterangan"
@@ -4120,6 +4206,8 @@ const WO_BUDGET_SECTIONS = {
     rowSel: '.wo-budget-item-row',
     buildRow: buildWoBudgetItemRow,
     total: '#woBudgetModalTotal',
+    dateSel: '#woBudgetModal-tgl-mulai, #woBudgetModal-tgl-selesai',
+    days: () => BudgetSections.daysFromDates($('#woBudgetModal-tgl-mulai').val(), $('#woBudgetModal-tgl-selesai').val()),
     onChange: () => recalcWoBudgetTotal(),
 };
 
@@ -4153,22 +4241,23 @@ $(document).off('input.biManual', '#woBudgetItemsBody .bi-nominal')
 
 function recalcWoBudgetTotal() {
     let total = 0;
-    $('#woBudgetItemsBody .bi-nominal').each(function () {
-        total += parseInt($(this).val().replace(/,/g, ''), 10) || 0;
+    $('#woBudgetItemsBody tr[data-cat]').each(function () {
+        total += BudgetSections.rowTotal(this);
     });
     $('#woBudgetModalTotal').text(woFmtRp(total));
     BudgetSections.refresh(WO_BUDGET_SECTIONS);
 }
 
-function openWoBudgetModal(idWo, budgetData) {
-    const isEdit = !!budgetData;
+// isClone: budgetData dipakai sebagai isian awal plan BARU (disimpan lewat Tambah, bukan Edit)
+function openWoBudgetModal(idWo, budgetData, isClone) {
+    const isEdit = !!budgetData && !isClone;
     $('#woBudgetPlanModalLabel').html(
-        `<i class="fa-solid fa-wallet me-2" style="color:#0f766e;"></i>${isEdit ? 'Edit' : 'Tambah'} Budget Plan`
+        `<i class="fa-solid fa-wallet me-2" style="color:#0f766e;"></i>${isClone ? 'Clone' : (isEdit ? 'Edit' : 'Tambah')} Budget Plan`
     );
     $('#woBudgetModal-id').val(isEdit ? budgetData.id_budget : '');
     $('#woBudgetModal-id-wo').val(idWo);
-    $('#woBudgetModal-label').val(isEdit ? budgetData.label : '');
-    $('#woBudgetModal-keterangan').val(isEdit ? (budgetData.keterangan || '') : '');
+    $('#woBudgetModal-label').val(isClone ? budgetData.label + ' (Salinan)' : (isEdit ? budgetData.label : ''));
+    $('#woBudgetModal-keterangan').val(budgetData ? (budgetData.keterangan || '') : '');
 
     // Info rentang tanggal WO sebagai referensi (cuma informasi, tidak
     // membatasi input tanggal budget plan).
@@ -4183,7 +4272,8 @@ function openWoBudgetModal(idWo, budgetData) {
 
     $('#woBudgetItemsBody').empty();
     BudgetSections.loadBasis(WO_BUDGET_SECTIONS, `/wo-budgets/${idWo}/basis`);
-    BudgetSections.fill(WO_BUDGET_SECTIONS, isEdit ? (budgetData.items || []) : []).done(function () {
+    const cloneItems = isClone ? (budgetData.items || []).map(it => ({ ...it, id_budget_item: '' })) : null;
+    BudgetSections.fill(WO_BUDGET_SECTIONS, isClone ? cloneItems : (isEdit ? (budgetData.items || []) : [])).done(function () {
         BudgetSections.initSelects(WO_BUDGET_SECTIONS);
         initNumericMask(document.getElementById('woBudgetPlanModal'));
         recalcWoBudgetTotal();
@@ -4253,13 +4343,13 @@ $(document).off('click.wobudget', '#woBudgetModal-btn-save').on('click.wobudget'
     let zeroNominal = false;
     $('#woBudgetItemsBody .wo-budget-item-row').each(function () {
         const idAccount = $(this).find('.bi-account').val();
-        const nominal   = parseInt($(this).find('.bi-nominal').val().replace(/,/g, ''), 10) || 0;
+        const nominal = BudgetSections.rowTotal(this);
         const ket       = $(this).find('.bi-keterangan').val();
         const biId      = $(this).find('.bi-id').val();
         const isCa      = $(this).find('.bi-ca').is(':checked') ? 1 : 0;
         if (!idAccount) { valid = false; return false; }
         if (nominal <= 0) { zeroNominal = true; return false; }
-        items.push({ id_budget_item: biId || null, id_account: idAccount, nominal_budget: nominal, keterangan: ket, is_cash_advance: isCa });
+        items.push({ id_budget_item: biId || null, id_account: idAccount, nominal_budget: nominal, qty: $(this).find('.bi-qty').val() || 1, hari: $(this).find('.bi-hari').val() || 1, id_satuan: $(this).find('.bi-unit').val() || null, harga_satuan: parseInt(($(this).find('.bi-nominal').val() || '').replace(/,/g, ''), 10) || 0, keterangan: ket, is_cash_advance: isCa });
     });
 
     if (!valid) return Swal.fire('Perhatian', 'Semua baris harus memilih Account.', 'warning');
@@ -4301,6 +4391,14 @@ $(document).off('click.wobudget', '.btn-wo-budget-edit').on('click.wobudget', '.
     const idWo = getWoBudgetWoId();
     $.get(`/wo-budgets/${id}`)
         .done(function (data) { openWoBudgetModal(idWo, data); });
+});
+
+// ── Clone Budget Plan: buka modal Tambah berisi item plan sumber (tanggal dikosongkan), user sesuaikan lalu simpan ──
+$(document).off('click.wobudget', '.btn-wo-budget-clone').on('click.wobudget', '.btn-wo-budget-clone', function () {
+    const id   = $(this).data('id');
+    const idWo = getWoBudgetWoId();
+    $.get(`/wo-budgets/${id}`)
+        .done(function (data) { openWoBudgetModal(idWo, data, true); });
 });
 
 // ── Collapse / Expand panel BOQ di tab Lab Sample Reg ──

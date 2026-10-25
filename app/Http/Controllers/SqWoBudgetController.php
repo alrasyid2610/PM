@@ -38,12 +38,13 @@ class SqWoBudgetController extends Controller
         foreach ($budgets as $budget) {
             $items = DB::table('sq_wo_budget_items as bi')
                 ->join('budget_accounts as ba', 'ba.id_account', '=', 'bi.id_account')
+                ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'bi.id_satuan')
                 ->leftJoin('budget_accounts as bp', 'bp.id_account', '=', 'ba.id_parent')
                 ->where('bi.id_sq_budget', $budget->id_sq_budget)
                 ->get([
                     'bi.id_sq_budget_item', 'bi.id_account', 'ba.nama as nama_account',
                     'ba.kode as kode_account', 'bp.nama as nama_category',
-                    'bi.nominal_budget', 'bi.keterangan', 'bi.is_cash_advance',
+                    'bi.nominal_budget', 'bi.qty', 'bi.hari', 'bi.harga_satuan', 'bi.id_satuan', 'sat.nama as satuan', 'bi.keterangan', 'bi.is_cash_advance',
                 ]);
 
             $budget->items = $items;
@@ -66,9 +67,10 @@ class SqWoBudgetController extends Controller
         $dipakai = [];
         $items = DB::table('sq_wo_budget_items as bi')
             ->leftJoin('budget_accounts as a', 'a.id_account', '=', 'bi.id_account')
+            ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'bi.id_satuan')
             ->where('bi.id_sq_budget', $id)
             ->orderBy('bi.id_sq_budget_item')
-            ->get(['a.nama', 'bi.nominal_budget', 'bi.keterangan', 'bi.is_cash_advance']);
+            ->get(['a.nama', 'bi.nominal_budget', 'bi.qty', 'bi.hari', 'bi.harga_satuan', 'sat.nama as satuan', 'bi.keterangan', 'bi.is_cash_advance']);
 
         foreach ($items as $i) {
             $kunci = 'Item • ' . ($i->nama ?? '?');
@@ -76,6 +78,7 @@ class SqWoBudgetController extends Controller
             if ($dipakai[$kunci] > 1) $kunci .= ' (' . $dipakai[$kunci] . ')';
 
             $plan[$kunci] = 'Rp ' . number_format($i->nominal_budget, 0, ',', '.')
+                . (($rinci = \App\Support\BudgetItemInput::label($i->qty, $i->satuan, $i->harga_satuan, $i->hari)) ? ' (' . $rinci . ')' : '')
                 . ($i->is_cash_advance ? ' [Cash Advance]' : '')
                 . ($i->keterangan ? ' — ' . $i->keterangan : '');
         }
@@ -95,6 +98,10 @@ class SqWoBudgetController extends Controller
             'items' => 'required|array|min:1',
             'items.*.id_account' => 'required|integer',
             'items.*.nominal_budget' => 'required|integer|min:0',
+            'items.*.qty'          => 'nullable|numeric|min:0.01',
+            'items.*.hari'         => 'nullable|numeric|min:0.01',
+            'items.*.harga_satuan'  => 'nullable|integer|min:0',
+            'items.*.id_satuan'     => 'nullable|integer',
             'items.*.keterangan' => 'nullable|string',
         ]);
 
@@ -113,7 +120,7 @@ class SqWoBudgetController extends Controller
                 DB::table('sq_wo_budget_items')->insert([
                     'id_sq_budget' => $id,
                     'id_account' => $item['id_account'],
-                    'nominal_budget' => $item['nominal_budget'],
+                    ...\App\Support\BudgetItemInput::fields($item),
                     'keterangan' => $item['keterangan'] ?? null,
                     'is_cash_advance' => $item['is_cash_advance'] ?? 0,
                     'created_at' => now(),
@@ -137,8 +144,9 @@ class SqWoBudgetController extends Controller
 
         $budget->items = DB::table('sq_wo_budget_items as bi')
             ->join('budget_accounts as ba', 'ba.id_account', '=', 'bi.id_account')
+            ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'bi.id_satuan')
             ->where('bi.id_sq_budget', $id)
-            ->get(['bi.id_sq_budget_item', 'bi.id_account', 'ba.nama as nama_account', 'bi.nominal_budget', 'bi.keterangan', 'bi.is_cash_advance']);
+            ->get(['bi.id_sq_budget_item', 'bi.id_account', 'ba.nama as nama_account', 'bi.nominal_budget', 'bi.qty', 'bi.hari', 'bi.harga_satuan', 'bi.id_satuan', 'sat.nama as satuan', 'bi.keterangan', 'bi.is_cash_advance']);
 
         return response()->json($budget);
     }
@@ -157,6 +165,10 @@ class SqWoBudgetController extends Controller
             'items' => 'required|array|min:1',
             'items.*.id_account' => 'required|integer',
             'items.*.nominal_budget' => 'required|integer|min:0',
+            'items.*.qty'          => 'nullable|numeric|min:0.01',
+            'items.*.hari'         => 'nullable|numeric|min:0.01',
+            'items.*.harga_satuan'  => 'nullable|integer|min:0',
+            'items.*.id_satuan'     => 'nullable|integer',
             'items.*.keterangan' => 'nullable|string',
         ]);
 
@@ -182,7 +194,7 @@ class SqWoBudgetController extends Controller
                 if (!empty($item['id_sq_budget_item'])) {
                     DB::table('sq_wo_budget_items')->where('id_sq_budget_item', $item['id_sq_budget_item'])->update([
                         'id_account' => $item['id_account'],
-                        'nominal_budget' => $item['nominal_budget'],
+                        ...\App\Support\BudgetItemInput::fields($item),
                         'keterangan' => $item['keterangan'] ?? null,
                         'is_cash_advance' => $item['is_cash_advance'] ?? 0,
                         'updated_at' => now(),
@@ -191,7 +203,7 @@ class SqWoBudgetController extends Controller
                     DB::table('sq_wo_budget_items')->insert([
                         'id_sq_budget' => $id,
                         'id_account' => $item['id_account'],
-                        'nominal_budget' => $item['nominal_budget'],
+                        ...\App\Support\BudgetItemInput::fields($item),
                         'keterangan' => $item['keterangan'] ?? null,
                         'is_cash_advance' => $item['is_cash_advance'] ?? 0,
                         'created_at' => now(),

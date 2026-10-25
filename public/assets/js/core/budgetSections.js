@@ -16,8 +16,45 @@ window.BudgetSections = (function () {
 
     function fmtRp(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
 
-    function nominalOf(tr) {
+    // Harga satuan (.bi-nominal), Qty (.bi-qty, kosong = 1) → Total baris = qty × harga satuan
+    function hargaOf(tr) {
         return parseInt(String($(tr).find('.bi-nominal').val() || '').replace(/,/g, ''), 10) || 0;
+    }
+    function qtyOf(tr) {
+        var raw = String($(tr).find('.bi-qty').val() || '').replace(',', '.');
+        var q = parseFloat(raw);
+        return isFinite(q) && q > 0 ? q : 1;
+    }
+    function hariOf(tr) {
+        var h = parseFloat(String($(tr).find('.bi-hari').val() || '').replace(',', '.'));
+        return isFinite(h) && h > 0 ? h : 1;
+    }
+    // Total baris = harga satuan × qty × hari
+    function nominalOf(tr) {
+        return Math.round(qtyOf(tr) * hariOf(tr) * hargaOf(tr));
+    }
+
+    // Jumlah hari plan (tanggal mulai–selesai, inklusif); tanpa/invalid → 1
+    function daysFromDates(a, b) {
+        if (!a || !b) return 1;
+        var d1 = new Date(a + 'T00:00:00'), d2 = new Date(b + 'T00:00:00');
+        var n = Math.round((d2 - d1) / 86400000) + 1;
+        return isFinite(n) && n >= 1 ? n : 1;
+    }
+    // Versi SQ: hari ke-N mulai s/d hari ke-M selesai
+    function daysFromNumbers(a, b) {
+        var x = parseInt(a, 10), y = parseInt(b, 10);
+        if (!isFinite(x) || !isFinite(y)) return 1;
+        var n = y - x + 1;
+        return n >= 1 ? n : 1;
+    }
+    function defaultHari(cfg) {
+        var n = cfg.days ? cfg.days() : 1;
+        return n >= 1 ? n : 1;
+    }
+    // Baris baru: Hari mengikuti rentang tanggal plan sampai user mengubahnya sendiri (data-auto=1)
+    function markAutoHari(cfg, $tr) {
+        $tr.find('.bi-hari').val(defaultHari(cfg)).attr('data-auto', '1');
     }
 
     // Persentase terhadap nilai acuan (nilai bersih SO / SQ). Basis 0 → tidak ditampilkan.
@@ -62,7 +99,7 @@ window.BudgetSections = (function () {
 
     function headerHtml(cat, idx) {
         return '<tr class="bi-cat-header" data-cat="' + esc(cat.id_kategori) + '">' +
-            '<td colspan="5" style="background:#f0fdf4;border-top:2px solid #bbf7d0;cursor:pointer;padding:6px 10px;">' +
+            '<td colspan="8" style="background:#f0fdf4;border-top:2px solid #bbf7d0;cursor:pointer;padding:6px 10px;">' +
             '<div class="d-flex align-items-center gap-2 flex-wrap">' +
             '<i class="fa-solid fa-chevron-down bi-cat-chevron" style="font-size:10px;color:#0f766e;transition:transform .2s;"></i>' +
             '<span class="fw-semibold bi-cat-title" style="color:#0f766e;font-size:13px;" data-nama="' + esc(cat.nama) + '">' + letter(idx) + '. ' + esc(cat.nama) + '</span>' +
@@ -121,6 +158,7 @@ window.BudgetSections = (function () {
     // Select2 Account tiap baris dibatasi ke sub kategori dari kategori barisnya.
     function initSelects(cfg) {
         var cats = catsOf(cfg);
+        initUnits(cfg);
         $(cfg.body).find('.bi-account').each(function () {
             var $sel = $(this);
             if ($sel.hasClass('select2-hidden-accessible')) return;
@@ -151,6 +189,26 @@ window.BudgetSections = (function () {
         });
     }
 
+    // Select2 Unit (master Satuan) tiap baris
+    function initUnits(cfg) {
+        $(cfg.body).find('.bi-unit').each(function () {
+            var $sel = $(this);
+            if ($sel.hasClass('select2-hidden-accessible')) return;
+            $sel.select2({
+                dropdownParent: $(cfg.modal),
+                placeholder: 'Unit',
+                allowClear: true,
+                width: '100%',
+                ajax: {
+                    url: '/satuan/select2', dataType: 'json', delay: 200,
+                    data: function (p) { return { q: p.term }; },
+                    processResults: function (d) { return { results: d }; },
+                    cache: true,
+                },
+            });
+        });
+    }
+
     // Hitung ulang jumlah item, subtotal, penanda kategori kosong, dan ringkasan di modal.
     function refresh(cfg) {
         if (!cfg || !$(cfg.body).length) return;
@@ -159,20 +217,25 @@ window.BudgetSections = (function () {
         if (thH) $(cfg.body).closest('table').get(0).style.setProperty('--bi-th-h', thH + 'px');
         var barH = $(cfg.modal).find('.bi-sec-bar').outerHeight();
         if (barH) $(cfg.body).closest('table').get(0).style.setProperty('--bi-bar-h', barH + 'px');
+        var dh = defaultHari(cfg);
+        $(cfg.body).find('.bi-hari[data-auto="1"]').each(function () {
+            if (String($(this).val()) !== String(dh)) $(this).val(dh);
+        });
         var basis = basisOf(cfg).nilai;
         var $headers = $(cfg.body).children('.bi-cat-header');
         var grand = 0;
         $(cfg.body).children(cfg.rowSel).each(function () {
             var n = nominalOf(this);
             grand += n;
-            var $td = $(this).find('.bi-nominal').closest('td');
+            $(this).find('.bi-total').val(n ? n.toLocaleString('en-US') : '');
+            var $td = $(this).find('.bi-total').closest('td');
             var $p = $td.find('.bi-pct');
             if (!$p.length) $p = $('<small class="bi-pct d-block text-muted" style="font-size:10.5px;"></small>').appendTo($td);
             $p.text(n > 0 ? fmtPct(n, basis) : '');
         });
         $(cfg.body).children('.bi-cat-placeholder').remove();
         if (!$headers.length) {
-            $(cfg.body).append('<tr class="bi-cat-placeholder"><td colspan="5" class="text-center text-muted py-4" style="font-size:12px;">' +
+            $(cfg.body).append('<tr class="bi-cat-placeholder"><td colspan="8" class="text-center text-muted py-4" style="font-size:12px;">' +
                 'Belum ada item. Klik <b>+ Kategori</b> untuk menambahkan kategori anggaran, lalu <b>+ Item</b> di dalamnya.</td></tr>');
         }
         $headers.each(function (idx) {
@@ -216,6 +279,11 @@ window.BudgetSections = (function () {
         var $modal = $(cfg.modal);
         $(cfg.body).closest('table').addClass('bi-sec-table').parent().addClass('bi-sec-wrap');
         $modal.find('.bi-cat-summary').parent().addClass('bi-sec-bar');
+        // Tanggal plan berubah → Hari baris otomatis ikut (refresh); juga setelah modal tampil (tanggal default dipasang flatpickr)
+        if (cfg.dateSel) {
+            $(cfg.dateSel).off('change.biHari input.biHari').on('change.biHari input.biHari', function () { if (cfg.onChange) cfg.onChange(); });
+        }
+        $modal.off('shown.bs.modal.biHari').on('shown.bs.modal.biHari', function () { setTimeout(function () { if (cfg.onChange) cfg.onChange(); }, 80); });
         if ($modal.find('.bi-cat-toolbar').length) return;
         $modal.find('.bi-cat-summary').before(
             '<div class="dropdown bi-cat-toolbar ms-auto">' +
@@ -266,6 +334,7 @@ window.BudgetSections = (function () {
         var $rows = rowsOf(cfg, key);
         var $anchor = $rows.length ? $rows.last() : $h;
         var $tr = $(cfg.buildRow(null)).attr('data-cat', key);
+        markAutoHari(cfg, $tr);
         $anchor.after($tr);
 
         initSelects(cfg);
@@ -275,6 +344,11 @@ window.BudgetSections = (function () {
     }
 
     $(document)
+        .off('input.biSec', '.bi-qty, .bi-nominal, .bi-hari').on('input.biSec', '.bi-qty, .bi-nominal, .bi-hari', function () {
+            if ($(this).hasClass('bi-hari')) $(this).attr('data-auto', '0'); // diubah manual → tidak ikut tanggal lagi
+            var cfg = cfgOf(this);
+            if (cfg && cfg.onChange) cfg.onChange();
+        })
         .off('click.biSec', '.btn-bi-cat-add').on('click.biSec', '.btn-bi-cat-add', function (e) {
             e.stopPropagation();
             var cfg = cfgOf(this);
@@ -325,5 +399,15 @@ window.BudgetSections = (function () {
         });
     }
 
-    return { applyPct: applyPct, fmtPct: fmtPct, fetchBasis: fetchBasis, loadBasis: loadBasis, load: load, fill: fill, initSelects: initSelects, refresh: refresh, addRow: addRow };
+    // Teks kecil di kartu plan: "2 Unit × Rp 700.000" (kosong bila qty 1 tanpa unit)
+    function detail(item) {
+        var q = Number(item.qty || 1), h = Number(item.hari || 1);
+        if (q === 1 && h === 1 && !item.satuan) return '';
+        var qs = q.toLocaleString('id-ID', { maximumFractionDigits: 2 });
+        var hs = h !== 1 ? h.toLocaleString('id-ID', { maximumFractionDigits: 2 }) + ' hari × ' : '';
+        return '<small class="d-block text-muted" style="font-size:10.5px;font-weight:400;">' + hs + qs +
+            (item.satuan ? ' ' + esc(item.satuan) : '') + ' × Rp ' + Number(item.harga_satuan || item.nominal_budget || 0).toLocaleString('id-ID') + '</small>';
+    }
+
+    return { daysFromDates: daysFromDates, daysFromNumbers: daysFromNumbers, detail: detail, rowTotal: nominalOf, applyPct: applyPct, fmtPct: fmtPct, fetchBasis: fetchBasis, loadBasis: loadBasis, load: load, fill: fill, initSelects: initSelects, refresh: refresh, addRow: addRow };
 })();

@@ -281,7 +281,7 @@ function renderSqFwoBudgetList(plans) {
                 <td style="width:36px;text-align:center;color:#94a3b8;font-size:11px;">${idx + 1}</td>
                 <td>${categoryCell}</td>
                 <td><span class="fw-semibold">${escHtml(item.nama_account)}</span>${caBadge}</td>
-                <td style="color:#1d4ed8;font-weight:600;" data-pct-val="${item.nominal_budget}">${formatRupiahSqFwo(item.nominal_budget)}</td>
+                <td style="color:#1d4ed8;font-weight:600;" data-pct-val="${item.nominal_budget}">${formatRupiahSqFwo(item.nominal_budget)}${BudgetSections.detail(item)}</td>
                 <td>${escHtml(item.keterangan || '—')}</td>
             </tr>`;
         }).join('');
@@ -298,6 +298,9 @@ function renderSqFwoBudgetList(plans) {
                 </div>
                 <div class="d-flex align-items-center gap-3">
                     <span style="font-size:12px;">Total: <b style="color:#1d4ed8;" data-pct-val="${p.total_budget}">${formatRupiahSqFwo(p.total_budget)}</b></span>
+                    <button type="button" class="pm-btn-icon btn-clone-sq-fwo-budget" title="Clone Plan" data-no-disable>
+                        <i class="fa-solid fa-clone" style="font-size:11px;"></i>
+                    </button>
                     <button type="button" class="pm-btn-icon btn-edit-sq-fwo-budget" title="Edit" data-no-disable>
                         <i class="fa-solid fa-pen" style="font-size:11px;"></i>
                     </button>
@@ -326,9 +329,26 @@ function buildSqFwoBudgetItemRow(item) {
                 ${item ? `<option value="${item.id_account}" selected>${escHtml(item.nama_account)}</option>` : '<option value="">Pilih Account</option>'}
             </select>
         </td>
+        <td style="width:80px;">
+            <input type="number" step="any" min="0" class="form-control form-control-sm bi-hari"
+                value="${item ? Number(item.hari || 1) : 1}" data-no-disable>
+        </td>
+        <td style="width:90px;">
+            <input type="number" step="any" min="0" class="form-control form-control-sm bi-qty"
+                value="${item ? Number(item.qty || 1) : 1}" data-no-disable>
+        </td>
+        <td style="min-width:130px;">
+            <select class="form-select form-select-sm bi-unit" data-no-disable>
+                ${item && item.id_satuan ? `<option value="${item.id_satuan}" selected>${escHtml(item.satuan || '')}</option>` : '<option value=""></option>'}
+            </select>
+        </td>
         <td>
             <input type="text" inputmode="numeric" class="form-control form-control-sm input-num-mask input-num-int bi-nominal"
-                value="${item ? Number(item.nominal_budget).toLocaleString('en-US') : ''}" placeholder="0" data-no-disable>
+                value="${item ? Number(item.harga_satuan || item.nominal_budget).toLocaleString('en-US') : ''}" placeholder="0" data-no-disable>
+        </td>
+        <td style="min-width:140px;">
+            <input type="text" class="form-control form-control-sm bi-total" readonly tabindex="-1" data-no-disable
+                style="background:#f8fafc;font-weight:600;text-align:right;">
         </td>
         <td>
             <input type="text" class="form-control form-control-sm bi-keterangan" value="${item ? escHtml(item.keterangan || '') : ''}" placeholder="Opsional" data-no-disable>

@@ -334,6 +334,12 @@ $(document).on('click', '.btn-edit-sq-fwo-budget', function () {
     $.get(window.sqFwoRoute.budgetShow + id, function (data) { openSqFwoBudgetModal(data); });
 });
 
+// Clone: buka modal Tambah berisi item plan sumber (hari dikosongkan), user sesuaikan lalu simpan
+$(document).on('click', '.btn-clone-sq-fwo-budget', function () {
+    const id = $(this).closest('[data-id-sq-budget]').data('idSqBudget');
+    $.get(window.sqFwoRoute.budgetShow + id, function (data) { openSqFwoBudgetModal(data, true); });
+});
+
 $(document).on('click', '.btn-remove-sq-fwo-budget', function () {
     const id = $(this).closest('[data-id-sq-budget]').data('idSqBudget');
     Notify.confirmDelete('Hapus Budget Plan ini?', function () {
@@ -352,8 +358,10 @@ const SQ_FWO_BUDGET_SECTIONS = {
     body: '#sqFwoBudgetItemsBody',
     modal: '#sqFwoBudgetPlanModal',
     rowSel: '.sq-fwo-budget-item-row',
-    buildRow: buildSqFwoBudgetItemRow,
+    buildRow: (item) => buildSqFwoBudgetItemRow(item), // lazy: fungsinya didefinisikan di form.js yang dimuat setelah file ini
     total: '#sqFwoBudgetModalTotal',
+    dateSel: '#sqFwoBudgetModal-hari-mulai, #sqFwoBudgetModal-hari-selesai',
+    days: () => BudgetSections.daysFromNumbers($('#sqFwoBudgetModal-hari-mulai').val(), $('#sqFwoBudgetModal-hari-selesai').val()),
     onChange: () => recalcSqFwoBudgetTotal(),
 };
 
@@ -387,26 +395,28 @@ $(document).off('input.biManual', '#sqFwoBudgetItemsBody .bi-nominal')
 
 function recalcSqFwoBudgetTotal() {
     let total = 0;
-    $('#sqFwoBudgetItemsBody .bi-nominal').each(function () {
-        total += parseInt(($(this).val() || '').replace(/,/g, ''), 10) || 0;
+    $('#sqFwoBudgetItemsBody tr[data-cat]').each(function () {
+        total += BudgetSections.rowTotal(this);
     });
     $('#sqFwoBudgetModalTotal').text(formatRupiahSqFwo(total));
     BudgetSections.refresh(SQ_FWO_BUDGET_SECTIONS);
 }
 
-function openSqFwoBudgetModal(data) {
-    const isEdit = !!data;
-    $('#sqFwoBudgetPlanModalLabel').html(`<i class="fa-solid fa-wallet me-2" style="color:#0f766e;"></i>${isEdit ? 'Edit' : 'Tambah'} Budget Plan`);
+// isClone: data dipakai sebagai isian awal plan BARU (disimpan lewat Tambah, bukan Edit)
+function openSqFwoBudgetModal(data, isClone) {
+    const isEdit = !!data && !isClone;
+    $('#sqFwoBudgetPlanModalLabel').html(`<i class="fa-solid fa-wallet me-2" style="color:#0f766e;"></i>${isClone ? 'Clone' : (isEdit ? 'Edit' : 'Tambah')} Budget Plan`);
     $('#sqFwoBudgetModal-id').val(isEdit ? data.id_sq_budget : '');
     $('#sqFwoBudgetModal-id-sq-fwo').val(currentSqFwoId);
-    $('#sqFwoBudgetModal-label').val(isEdit ? data.label : '');
-    $('#sqFwoBudgetModal-keterangan').val(isEdit ? (data.keterangan || '') : '');
+    $('#sqFwoBudgetModal-label').val(isClone ? data.label + ' (Salinan)' : (isEdit ? data.label : ''));
+    $('#sqFwoBudgetModal-keterangan').val(data ? (data.keterangan || '') : '');
     $('#sqFwoBudgetModal-hari-mulai').val(isEdit ? (data.hari_mulai || '') : '');
     $('#sqFwoBudgetModal-hari-selesai').val(isEdit ? (data.hari_selesai || '') : '');
 
     $('#sqFwoBudgetItemsBody').empty();
     BudgetSections.loadBasis(SQ_FWO_BUDGET_SECTIONS, `/sq-fwo-budgets/${currentSqFwoId}/basis`);
-    BudgetSections.fill(SQ_FWO_BUDGET_SECTIONS, isEdit ? (data.items || []) : []).done(function () {
+    const cloneItems = isClone ? (data.items || []).map(it => ({ ...it, id_sq_budget_item: '' })) : null;
+    BudgetSections.fill(SQ_FWO_BUDGET_SECTIONS, isClone ? cloneItems : (isEdit ? (data.items || []) : [])).done(function () {
         BudgetSections.initSelects(SQ_FWO_BUDGET_SECTIONS);
         initNumericMask(document.getElementById('sqFwoBudgetPlanModal'));
         recalcSqFwoBudgetTotal();
@@ -434,12 +444,12 @@ $(document).on('click', '#sqFwoBudgetModal-btn-save', function () {
     let valid = true;
     $('#sqFwoBudgetItemsBody .sq-fwo-budget-item-row').each(function () {
         const idAccount = $(this).find('.bi-account').val();
-        const nominal = parseInt(($(this).find('.bi-nominal').val() || '').replace(/,/g, ''), 10) || 0;
+        const nominal = BudgetSections.rowTotal(this);
         const ket = $(this).find('.bi-keterangan').val();
         const biId = $(this).find('.bi-id').val();
         const isCa = $(this).find('.bi-ca').is(':checked') ? 1 : 0;
         if (!idAccount) { valid = false; return false; }
-        items.push({ id_sq_budget_item: biId || null, id_account: idAccount, nominal_budget: nominal, keterangan: ket, is_cash_advance: isCa });
+        items.push({ id_sq_budget_item: biId || null, id_account: idAccount, nominal_budget: nominal, qty: $(this).find('.bi-qty').val() || 1, hari: $(this).find('.bi-hari').val() || 1, id_satuan: $(this).find('.bi-unit').val() || null, harga_satuan: parseInt(($(this).find('.bi-nominal').val() || '').replace(/,/g, ''), 10) || 0, keterangan: ket, is_cash_advance: isCa });
     });
     if (!valid) { Notify.warning('Semua baris harus memilih Account.'); return; }
     if (!items.length) { Notify.warning('Minimal 1 item anggaran.'); return; }

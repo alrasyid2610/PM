@@ -2917,3 +2917,6 @@ body.perm-no-create [data-perm="can_create"] {
     position: sticky; top: calc(var(--bi-bar-h, 0px) + var(--bi-th-h, 38px)); z-index: 2;
     box-shadow: 0 1px 0 #bbf7d0, 0 -1px 0 #bbf7d0;
 }
+
+/* KPI row detail WO: isi kartu rata ke atas (bukan di tengah vertikal) */
+#boqSummaryCard .pm-kpi-card { align-items: flex-start; }

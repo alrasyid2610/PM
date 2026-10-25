@@ -986,6 +986,7 @@ Route::prefix('wo-budgets')->name('wo-budgets.')->group(function () {
     Route::post('/',             [WoBudgetController::class, 'store'])->name('store');
     Route::get('/{id}',          [WoBudgetController::class, 'show'])->name('show')->whereNumber('id');
     Route::put('/{id}',          [WoBudgetController::class, 'update'])->name('update')->whereNumber('id');
+    Route::get('/{id_wo}/summary', [WoBudgetController::class, 'summary'])->name('summary')->whereNumber('id_wo');
     Route::delete('/{id}',       [WoBudgetController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/print',           [WoBudgetController::class, 'printPdf'])->name('print')->whereNumber('id');
     Route::get('/{id}/print-realisasi', [WoBudgetController::class, 'printRealisasiPdf'])->name('print-realisasi')->whereNumber('id');

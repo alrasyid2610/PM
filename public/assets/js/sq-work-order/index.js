@@ -1043,7 +1043,7 @@ function renderSqWoBudgetList(plans) {
                 <td style="width:36px;text-align:center;color:#94a3b8;font-size:11px;">${idx + 1}</td>
                 <td>${categoryCell}</td>
                 <td><span class="fw-semibold">${escHtml(item.nama_account)}</span>${caBadge}</td>
-                <td style="color:#1d4ed8;font-weight:600;" data-pct-val="${item.nominal_budget}">${formatRupiahSqWo(item.nominal_budget)}</td>
+                <td style="color:#1d4ed8;font-weight:600;" data-pct-val="${item.nominal_budget}">${formatRupiahSqWo(item.nominal_budget)}${BudgetSections.detail(item)}</td>
                 <td>${escHtml(item.keterangan || '—')}</td>
             </tr>`;
         }).join('');
@@ -1060,6 +1060,9 @@ function renderSqWoBudgetList(plans) {
                 </div>
                 <div class="d-flex align-items-center gap-3">
                     <span style="font-size:12px;">Total: <b style="color:#1d4ed8;" data-pct-val="${p.total_budget}">${formatRupiahSqWo(p.total_budget)}</b></span>
+                    <button type="button" class="pm-btn-icon btn-clone-sq-wo-budget" title="Clone Plan" data-no-disable>
+                        <i class="fa-solid fa-clone" style="font-size:11px;"></i>
+                    </button>
                     <button type="button" class="pm-btn-icon btn-edit-sq-wo-budget" title="Edit" data-no-disable>
                         <i class="fa-solid fa-pen" style="font-size:11px;"></i>
                     </button>
@@ -1091,6 +1094,12 @@ $(document).on('click', '.btn-edit-sq-wo-budget', function () {
     $.get(window.sqWoRoute.budgetShow + id, function (data) { openSqWoBudgetModal(data); });
 });
 
+// Clone: buka modal Tambah berisi item plan sumber (hari dikosongkan), user sesuaikan lalu simpan
+$(document).on('click', '.btn-clone-sq-wo-budget', function () {
+    const id = $(this).closest('[data-id-sq-budget]').data('idSqBudget');
+    $.get(window.sqWoRoute.budgetShow + id, function (data) { openSqWoBudgetModal(data, true); });
+});
+
 $(document).on('click', '.btn-remove-sq-wo-budget', function () {
     const id = $(this).closest('[data-id-sq-budget]').data('idSqBudget');
     Notify.confirmDelete('Hapus Budget Plan ini?', function () {
@@ -1111,6 +1120,8 @@ const SQ_WO_BUDGET_SECTIONS = {
     rowSel: '.sq-wo-budget-item-row',
     buildRow: buildSqWoBudgetItemRow,
     total: '#sqWoBudgetModalTotal',
+    dateSel: '#sqWoBudgetModal-hari-mulai, #sqWoBudgetModal-hari-selesai',
+    days: () => BudgetSections.daysFromNumbers($('#sqWoBudgetModal-hari-mulai').val(), $('#sqWoBudgetModal-hari-selesai').val()),
     onChange: () => recalcSqWoBudgetTotal(),
 };
 
@@ -1150,9 +1161,26 @@ function buildSqWoBudgetItemRow(item) {
                 ${item ? `<option value="${item.id_account}" selected>${escHtml(item.nama_account)}</option>` : '<option value="">Pilih Account</option>'}
             </select>
         </td>
+        <td style="width:80px;">
+            <input type="number" step="any" min="0" class="form-control form-control-sm bi-hari"
+                value="${item ? Number(item.hari || 1) : 1}" data-no-disable>
+        </td>
+        <td style="width:90px;">
+            <input type="number" step="any" min="0" class="form-control form-control-sm bi-qty"
+                value="${item ? Number(item.qty || 1) : 1}" data-no-disable>
+        </td>
+        <td style="min-width:130px;">
+            <select class="form-select form-select-sm bi-unit" data-no-disable>
+                ${item && item.id_satuan ? `<option value="${item.id_satuan}" selected>${escHtml(item.satuan || '')}</option>` : '<option value=""></option>'}
+            </select>
+        </td>
         <td>
             <input type="text" inputmode="numeric" class="form-control form-control-sm input-num-mask input-num-int bi-nominal"
-                value="${item ? Number(item.nominal_budget).toLocaleString('en-US') : ''}" placeholder="0" data-no-disable>
+                value="${item ? Number(item.harga_satuan || item.nominal_budget).toLocaleString('en-US') : ''}" placeholder="0" data-no-disable>
+        </td>
+        <td style="min-width:140px;">
+            <input type="text" class="form-control form-control-sm bi-total" readonly tabindex="-1" data-no-disable
+                style="background:#f8fafc;font-weight:600;text-align:right;">
         </td>
         <td>
             <input type="text" class="form-control form-control-sm bi-keterangan" value="${item ? escHtml(item.keterangan || '') : ''}" placeholder="Opsional" data-no-disable>
@@ -1170,26 +1198,28 @@ function buildSqWoBudgetItemRow(item) {
 
 function recalcSqWoBudgetTotal() {
     let total = 0;
-    $('#sqWoBudgetItemsBody .bi-nominal').each(function () {
-        total += parseInt(($(this).val() || '').replace(/,/g, ''), 10) || 0;
+    $('#sqWoBudgetItemsBody tr[data-cat]').each(function () {
+        total += BudgetSections.rowTotal(this);
     });
     $('#sqWoBudgetModalTotal').text(formatRupiahSqWo(total));
     BudgetSections.refresh(SQ_WO_BUDGET_SECTIONS);
 }
 
-function openSqWoBudgetModal(data) {
-    const isEdit = !!data;
-    $('#sqWoBudgetPlanModalLabel').html(`<i class="fa-solid fa-wallet me-2" style="color:#0f766e;"></i>${isEdit ? 'Edit' : 'Tambah'} Budget Plan`);
+// isClone: data dipakai sebagai isian awal plan BARU (disimpan lewat Tambah, bukan Edit)
+function openSqWoBudgetModal(data, isClone) {
+    const isEdit = !!data && !isClone;
+    $('#sqWoBudgetPlanModalLabel').html(`<i class="fa-solid fa-wallet me-2" style="color:#0f766e;"></i>${isClone ? 'Clone' : (isEdit ? 'Edit' : 'Tambah')} Budget Plan`);
     $('#sqWoBudgetModal-id').val(isEdit ? data.id_sq_budget : '');
     $('#sqWoBudgetModal-id-sq-wo').val(currentSqWoId);
-    $('#sqWoBudgetModal-label').val(isEdit ? data.label : '');
-    $('#sqWoBudgetModal-keterangan').val(isEdit ? (data.keterangan || '') : '');
+    $('#sqWoBudgetModal-label').val(isClone ? data.label + ' (Salinan)' : (isEdit ? data.label : ''));
+    $('#sqWoBudgetModal-keterangan').val(data ? (data.keterangan || '') : '');
     $('#sqWoBudgetModal-hari-mulai').val(isEdit ? (data.hari_mulai || '') : '');
     $('#sqWoBudgetModal-hari-selesai').val(isEdit ? (data.hari_selesai || '') : '');
 
     $('#sqWoBudgetItemsBody').empty();
     BudgetSections.loadBasis(SQ_WO_BUDGET_SECTIONS, `/sq-wo-budgets/${currentSqWoId}/basis`);
-    BudgetSections.fill(SQ_WO_BUDGET_SECTIONS, isEdit ? (data.items || []) : []).done(function () {
+    const cloneItems = isClone ? (data.items || []).map(it => ({ ...it, id_sq_budget_item: '' })) : null;
+    BudgetSections.fill(SQ_WO_BUDGET_SECTIONS, isClone ? cloneItems : (isEdit ? (data.items || []) : [])).done(function () {
         BudgetSections.initSelects(SQ_WO_BUDGET_SECTIONS);
         initNumericMask(document.getElementById('sqWoBudgetPlanModal'));
         recalcSqWoBudgetTotal();
@@ -1217,12 +1247,12 @@ $(document).on('click', '#sqWoBudgetModal-btn-save', function () {
     let valid = true;
     $('#sqWoBudgetItemsBody .sq-wo-budget-item-row').each(function () {
         const idAccount = $(this).find('.bi-account').val();
-        const nominal = parseInt(($(this).find('.bi-nominal').val() || '').replace(/,/g, ''), 10) || 0;
+        const nominal = BudgetSections.rowTotal(this);
         const ket = $(this).find('.bi-keterangan').val();
         const biId = $(this).find('.bi-id').val();
         const isCa = $(this).find('.bi-ca').is(':checked') ? 1 : 0;
         if (!idAccount) { valid = false; return false; }
-        items.push({ id_sq_budget_item: biId || null, id_account: idAccount, nominal_budget: nominal, keterangan: ket, is_cash_advance: isCa });
+        items.push({ id_sq_budget_item: biId || null, id_account: idAccount, nominal_budget: nominal, qty: $(this).find('.bi-qty').val() || 1, hari: $(this).find('.bi-hari').val() || 1, id_satuan: $(this).find('.bi-unit').val() || null, harga_satuan: parseInt(($(this).find('.bi-nominal').val() || '').replace(/,/g, ''), 10) || 0, keterangan: ket, is_cash_advance: isCa });
     });
     if (!valid) { Notify.warning('Semua baris harus memilih Account.'); return; }
     if (!items.length) { Notify.warning('Minimal 1 item anggaran.'); return; }

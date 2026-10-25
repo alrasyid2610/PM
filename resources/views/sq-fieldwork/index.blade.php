@@ -129,7 +129,11 @@
                         <thead>
                             <tr>
                                 <th style="min-width:200px;">Account</th>
-                                <th style="min-width:160px;">Nominal Budget (Rp)</th>
+                                <th style="width:80px;">Hari</th>
+<th style="width:90px;">Qty</th>
+<th style="min-width:130px;">Unit</th>
+<th style="min-width:150px;">Harga Satuan (Rp)</th>
+<th style="min-width:150px;">Total (Rp)</th>
                                 <th style="min-width:160px;">Keterangan</th>
                                 <th style="width:100px;text-align:center;">Cash Advance</th>
                                 <th style="width:50px;"></th>
