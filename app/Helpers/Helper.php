@@ -65,6 +65,29 @@ function userCan(string $slug, string $action = 'can_read'): bool
 }
 
 /**
+ * Akses tab detail (grup "Akses Tab" di config/menus.php), mis. 'wo-tab-boq'.
+ * Aturan: kalau user (gabungan grup + override) TIDAK punya satu pun tab dari halaman yang sama
+ * → semua tab boleh (kompatibel mundur); kalau punya ≥ 1 → hanya tab yang dicentang.
+ * Tersimpan di kolom can_update (mode 'tabs', sama seperti Aksi Khusus). Versi JS: canTab().
+ */
+function userCanTab(string $slug): bool
+{
+    if (!\Illuminate\Support\Facades\Auth::check()) return false;
+    $pos = strpos($slug, '-tab-');
+    if ($pos === false) return true;
+
+    $prefix = substr($slug, 0, $pos + 5);
+    $perms  = getUserPermissions(\Illuminate\Support\Facades\Auth::id());
+
+    foreach ($perms as $key => $p) {
+        if (str_starts_with($key, $prefix) && !empty($p['can_update'])) {
+            return !empty($perms[$slug]['can_update']);
+        }
+    }
+    return true;
+}
+
+/**
  * Prefix badan usaha (PT/CV/FA/KOP) tanpa titik untuk nama Business Relation.
  * Terima nama panjang maupun singkatan langsung, case-insensitive — isi master
  * `entitas` di tiap environment bisa beda. Entitas lain/kosong → ''.

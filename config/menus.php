@@ -145,6 +145,31 @@ return [
         ],
     ],
     [
+        // Akses tab di halaman detail (mulai 2026-10-26: Work Order). Tidak tampil di sidebar.
+        // permission_mode: 'tabs' → matrix membuat 1 baris per halaman berisi chip centang per tab
+        // (bukan 1 baris per tab), disimpan di kolom can_update seperti mode 'action'.
+        // Aturan: user/grup yang TIDAK punya satu pun tab di sebuah halaman → semua tab tampil
+        // (kompatibel mundur); begitu ada ≥ 1 tab dicentang → hanya tab itu yang tampil.
+        // 'section' = nama halaman (pengelompokan baris di matrix).
+        'group'           => 'Akses Tab',
+        'icon'            => 'fa-table-columns',
+        'type'            => 'submenu',
+        'show_in_sidebar' => false,
+        'permission_mode' => 'tabs',
+        'divider'         => 'Akses Tab',
+        'items'           => [
+            ['slug' => 'wo-tab-info',          'label' => 'Informasi',        'icon' => 'fa-circle-info',        'section' => 'Work Order'],
+            ['slug' => 'wo-tab-boq',           'label' => 'BOQ',              'icon' => 'fa-layer-group',        'section' => 'Work Order'],
+            ['slug' => 'wo-tab-boq-other',     'label' => 'BOQ Other',        'icon' => 'fa-file-invoice',       'section' => 'Work Order'],
+            ['slug' => 'wo-tab-boq-sampling',  'label' => 'BOQ Sampling',     'icon' => 'fa-vial-virus',         'section' => 'Work Order'],
+            ['slug' => 'wo-tab-fwo',           'label' => 'Fieldwork Orders', 'icon' => 'fa-hard-hat',           'section' => 'Work Order'],
+            ['slug' => 'wo-tab-output',        'label' => 'Output Pekerjaan', 'icon' => 'fa-file-circle-check',  'section' => 'Work Order'],
+            ['slug' => 'wo-tab-output-other',  'label' => 'Output Other',     'icon' => 'fa-file-circle-plus',   'section' => 'Work Order'],
+            ['slug' => 'wo-tab-budget',        'label' => 'Budget',           'icon' => 'fa-wallet',             'section' => 'Work Order'],
+            ['slug' => 'wo-tab-lab-sample-reg', 'label' => 'Lab Sample Reg',  'icon' => 'fa-vial',               'section' => 'Work Order'],
+        ],
+    ],
+    [
         // Akses per widget di halaman Dashboard (lihat config/dashboard_widgets.php).
         // Sama seperti Aksi Khusus: tidak tampil di sidebar, matrix 1 kolom "Diizinkan".
         'group'           => 'Widget Dashboard',

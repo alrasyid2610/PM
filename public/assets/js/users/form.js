@@ -32,6 +32,44 @@ function renderGroupSelect(selectedId) {
     return placeholder + opts;
 }
 
+// Grup "Akses Tab" (permission_mode 'tabs'): baris per halaman berisi chip centang per tab,
+// disimpan di can_update. Tidak ada satu pun tab tercentang → semua tab tampil (aturan canTab()).
+function renderTabAccessRows(group, perms) {
+    const sections = {};
+    group.items.forEach(item => {
+        const key = item.section || group.group;
+        (sections[key] = sections[key] || []).push(item);
+    });
+
+    return Object.keys(sections).map(section => {
+        const items = sections[section];
+        const chips = items.map(item => {
+            const p = perms[item.slug] || {};
+            return `
+            <label class="d-inline-flex align-items-center gap-1 border rounded px-2 py-1 me-1 mb-1" style="font-size:12px;cursor:pointer;">
+                <input type="checkbox" name="permissions[${item.slug}][can_update]" value="1" class="form-check-input perm-check disabled mt-0"
+                    data-col="can_update" data-slug="${item.slug}" data-tabsection="${section}" ${p.can_update ? 'checked' : ''}>
+                <i class="fa-solid ${item.icon || 'fa-table-columns'} opacity-50"></i>${item.label}
+            </label>`;
+        }).join('');
+
+        return `
+        <tr data-search="akses tab ${section.toLowerCase()} ${items.map(i => i.label.toLowerCase()).join(' ')}">
+            <td class="text-center">
+                <input type="checkbox" class="form-check-input select-all-tabs disabled" data-tabsection="${section}" title="Pilih semua tab ${section}">
+            </td>
+            <td class="ps-3">
+                <div class="fw-semibold">${section}</div>
+                <div class="text-muted" style="font-size:11px;">Tab detail yang tampil</div>
+            </td>
+            <td colspan="4">
+                ${chips}
+                <div class="text-muted" style="font-size:11px;">Kosongkan semua = semua tab tampil. Centang sebagian = hanya tab itu yang tampil.</div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
 function renderPermissionMatrix(permissions) {
     const perms = permissions || {};
     let rows = '';
@@ -48,6 +86,12 @@ function renderPermissionMatrix(permissions) {
         </tr>`;
 
         const isActionGroup = group.permission_mode === 'action';
+
+        // Akses Tab: 1 baris per halaman, tiap tab = chip centang (bukan 1 baris per tab)
+        if (group.permission_mode === 'tabs') {
+            rows += renderTabAccessRows(group, perms);
+            return;
+        }
 
         group.items.forEach(item => {
             const p = perms[item.slug] || {};
@@ -186,6 +230,12 @@ function initPermissionMatrix() {
     $(container).on('change', '.select-all-group', function () {
         const checked = $(this).is(':checked');
         $(this).closest('tr').nextUntil('tr.table-secondary').find('.perm-check, .select-all-row').prop('checked', checked);
+        syncGlobal(container);
+    });
+
+    $(container).on('change', '.select-all-tabs', function () {
+        const section = $(this).data('tabsection');
+        $(container).find(`.perm-check[data-tabsection="${section}"]`).prop('checked', $(this).is(':checked'));
         syncGlobal(container);
     });
 

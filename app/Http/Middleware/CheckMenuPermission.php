@@ -79,6 +79,19 @@ class CheckMenuPermission
         'sales-quotations'   => ['setujui' => 'sq-approve', 'tolak' => 'sq-approve'],
     ];
 
+    // Endpoint yang HANYA dipakai oleh satu tab detail WO → dijaga oleh slug "Akses Tab"-nya
+    // (grup "Akses Tab" di config/menus.php; aturan di userCanTab()). Prefix yang juga dipakai
+    // halaman lain (boq, output-pekerjaan, fieldworks, work-orders/{id}/boq-progress) sengaja
+    // BELUM dijaga di sini — lihat catatan fase berikutnya di WO.md.
+    private const TAB_ROUTES = [
+        'wo-boq-other'      => 'wo-tab-boq-other',
+        'wo-boq-sampling'   => 'wo-tab-boq-sampling',
+        'wo-output-other'   => 'wo-tab-output-other',
+        'wo-budgets'        => 'wo-tab-budget',
+        'wo-budget-actuals' => 'wo-tab-budget',
+        'wo-samples'        => 'wo-tab-lab-sample-reg',
+    ];
+
     public function handle(Request $request, Closure $next): mixed
     {
         $segments = $request->segments();
@@ -122,6 +135,16 @@ class CheckMenuPermission
         $action = $this->resolveAction($request);
 
         $perms = getUserPermissions(auth()->id());
+
+        // Akses Tab: endpoint milik tab yang tidak diizinkan → 403 (berlaku untuk semua method).
+        // wo-budgets/{id}/summary dikecualikan: itu data kartu ringkasan "Nilai Budget" di atas tab,
+        // yang sementara tetap tampil untuk semua yang bisa membuka WO (keputusan 2026-10-26).
+        $tabSlug = self::TAB_ROUTES[$first] ?? null;
+        if ($tabSlug && $last !== 'summary' && !userCanTab($tabSlug)) {
+            return $request->expectsJson()
+                ? response()->json(['success' => false, 'message' => 'Anda tidak memiliki akses ke tab ini'], 403)
+                : abort(403, 'Anda tidak memiliki akses ke tab ini');
+        }
 
         // Aksi Khusus: cukup can_read menu induk + can_update slug aksinya
         $actionSlug = $request->isMethod('POST') ? (self::ACTION_ROUTES[$first][$last] ?? null) : null;

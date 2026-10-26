@@ -105,6 +105,54 @@ window.addEventListener("storage", function (e) {
     }
 });
 
+// ── Akses Tab detail WO (grup "Akses Tab" di Grup Menu/User Management) ────────
+// Tab yang tidak diizinkan: tombolnya dihapus (dan panel isinya, kecuali Informasi yang memuat
+// form WO — cukup disembunyikan supaya form edit tidak ikut hilang). Aturan di canTab() (permissionEngine.js).
+// Penjagaan data sebenarnya ada di server (CheckMenuPermission::TAB_ROUTES).
+const WO_TAB_ACCESS = {
+    '#tabInfo':        'wo-tab-info',
+    '#tabBoq':         'wo-tab-boq',
+    '#tabBoqOther':    'wo-tab-boq-other',
+    '#tabBoqSampling': 'wo-tab-boq-sampling',
+    '#tabFwo':         'wo-tab-fwo',
+    '#tabOutput':      'wo-tab-output',
+    '#tabOutputOther': 'wo-tab-output-other',
+    '#tabWoBudget':    'wo-tab-budget',
+    '#tabSample':      'wo-tab-lab-sample-reg',
+};
+
+function applyWoTabAccess() {
+    const $nav = $('#woDetailTabs');
+    if (!$nav.length) return;
+
+    Object.keys(WO_TAB_ACCESS).forEach(function (target) {
+        if (canTab(WO_TAB_ACCESS[target])) return;
+        $nav.find('button[data-bs-target="' + target + '"]').closest('li').remove();
+        if (target === '#tabInfo') {
+            $(target).removeClass('active show').addClass('d-none');
+            $('#woTabActionsInfo').addClass('d-none');
+            $('.btn-edit-context').addClass('d-none'); // form di panel Informasi tidak tampil → edit dimatikan
+        } else {
+            $(target).remove();
+        }
+    });
+
+    const $buttons = $nav.find('button[data-bs-toggle="tab"]');
+    if (!$buttons.length) {
+        $nav.closest('.pm-tab-card').find('.tab-content').first().removeClass('d-none').html(
+            '<div class="text-center text-muted py-5"><i class="fa-solid fa-lock fa-2x d-block mb-2 opacity-50"></i>' +
+            'Anda tidak punya akses ke tab mana pun pada WO ini.</div>'
+        );
+        $('.btn-edit-context').addClass('d-none');
+        return;
+    }
+    if (!$buttons.filter('.active').length) {
+        // Informasi disembunyikan / tidak diizinkan → buka tab pertama yang diizinkan
+        $nav.closest('.pm-tab-card').find('.tab-pane.active, .tab-pane.show').removeClass('active show');
+        bootstrap.Tab.getOrCreateInstance($buttons.get(0)).show();
+    }
+}
+
 // ── Tab switch: show/hide action buttons ──────────────────────────────────────
 $(document).on(
     "shown.bs.tab",
@@ -3090,6 +3138,7 @@ $(document).ready(function () {
         detailTitle: function (res) { return res.no_wo; },
         afterLoad: function (res) {
             currentWoData = res;
+            applyWoTabAccess();
             initWoSiteField();
             loadBoqProgress(res.id_wo);
             loadOutputProgress(res.id_wo);
