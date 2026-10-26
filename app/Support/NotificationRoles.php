@@ -17,7 +17,23 @@ class NotificationRoles
         return array_values(array_unique(array_map('intval', array_filter($values))));
     }
 
+    /** Argumen fire() dievaluasi SEBELUM fire() jalan (di luar try-catch-nya), jadi resolusi peran harus aman sendiri. */
+    private static function safe(callable $fn): array
+    {
+        try {
+            return $fn();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('NotificationRoles gagal: ' . $e->getMessage());
+            return [];
+        }
+    }
+
     public static function so(?int $idSo): array
+    {
+        return self::safe(fn () => self::soRaw($idSo));
+    }
+
+    private static function soRaw(?int $idSo): array
     {
         if (!$idSo) return [];
         $so = DB::table('sales_orders')->where('id_so', $idSo)
@@ -34,15 +50,19 @@ class NotificationRoles
 
     public static function sq(?int $idSq): array
     {
+        return self::safe(fn () => self::sqRaw($idSq));
+    }
+
+    private static function sqRaw(?int $idSq): array
+    {
         if (!$idSq) return [];
         $sq = DB::table('sales_quotations')->where('id_sq', $idSq)
-            ->first(['pic_input', 'pic_order', 'pic_marketing_internal', 'pic_marketing_eksternal', 'diajukan_oleh']);
+            ->first(['pic_input', 'pic_marketing_internal', 'pic_marketing_eksternal', 'diajukan_oleh']);
         if (!$sq) return [];
 
         return [
             'pengaju'             => self::ids($sq->diajukan_oleh),
             'pic_input'           => self::ids($sq->pic_input),
-            'pic_order'           => self::ids($sq->pic_order),
             'marketing_internal'  => self::ids($sq->pic_marketing_internal),
             'marketing_eksternal' => self::ids($sq->pic_marketing_eksternal),
         ];
@@ -51,16 +71,26 @@ class NotificationRoles
     /** Peran WO + peran SO induknya. */
     public static function wo(?int $idWo): array
     {
+        return self::safe(fn () => self::woRaw($idWo));
+    }
+
+    private static function woRaw(?int $idWo): array
+    {
         if (!$idWo) return [];
         $wo = DB::table('work_orders')->where('id_wo', $idWo)->first(['id_so', 'id_pic_pelanggan_pekerjaan']);
         if (!$wo) return [];
 
-        return self::so($wo->id_so ? (int) $wo->id_so : null)
+        return self::soRaw($wo->id_so ? (int) $wo->id_so : null)
             + ['wo_pic' => self::ids($wo->id_pic_pelanggan_pekerjaan)];
     }
 
     /** Peran FWO + peran WO & SO induknya. Personel hanya yang punya akun login (personnel.id_user). */
     public static function fwo(?int $idFwo): array
+    {
+        return self::safe(fn () => self::fwoRaw($idFwo));
+    }
+
+    private static function fwoRaw(?int $idFwo): array
     {
         if (!$idFwo) return [];
         $fwo = DB::table('fieldworks')->where('id_fwo', $idFwo)->first(['id_wo', 'id_penyelia']);
@@ -72,7 +102,7 @@ class NotificationRoles
             ->whereNotNull('p.id_user')
             ->pluck('p.id_user')->all();
 
-        return self::wo($fwo->id_wo ? (int) $fwo->id_wo : null)
+        return self::woRaw($fwo->id_wo ? (int) $fwo->id_wo : null)
             + [
                 'fwo_penyelia' => self::ids($fwo->id_penyelia),
                 'fwo_personel' => self::ids(...$personel),
