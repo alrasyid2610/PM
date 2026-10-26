@@ -122,37 +122,8 @@ const WO_TAB_ACCESS = {
 };
 
 function applyWoTabAccess() {
-    const $nav = $('#woDetailTabs');
-    if (!$nav.length) return;
-
-    Object.keys(WO_TAB_ACCESS).forEach(function (target) {
-        if (canTab(WO_TAB_ACCESS[target])) return;
-        $nav.find('button[data-bs-target="' + target + '"]').closest('li').remove();
-        if (target === '#tabInfo') {
-            $(target).removeClass('active show').addClass('d-none');
-            $('#woTabActionsInfo').addClass('d-none');
-            $('.btn-edit-context').addClass('d-none'); // form di panel Informasi tidak tampil → edit dimatikan
-        } else {
-            $(target).remove();
-        }
-    });
-
-    const $buttons = $nav.find('button[data-bs-toggle="tab"]');
-    if (!$buttons.length) {
-        $nav.closest('.pm-tab-card').find('.tab-content').first().removeClass('d-none').html(
-            '<div class="text-center text-muted py-5"><i class="fa-solid fa-lock fa-2x d-block mb-2 opacity-50"></i>' +
-            'Anda tidak punya akses ke tab mana pun pada WO ini.</div>'
-        );
-        $('.btn-edit-context').addClass('d-none');
-        return;
-    }
-    if (!$buttons.filter('.active').length) {
-        // Informasi disembunyikan / tidak diizinkan → buka tab pertama yang diizinkan
-        $nav.closest('.pm-tab-card').find('.tab-pane.active, .tab-pane.show').removeClass('active show');
-        bootstrap.Tab.getOrCreateInstance($buttons.get(0)).show();
-    }
+    applyTabAccess({ nav: '#woDetailTabs', map: WO_TAB_ACCESS, infoTarget: '#tabInfo', infoActions: '#woTabActionsInfo', label: 'WO' });
 }
-
 // ── Tab switch: show/hide action buttons ──────────────────────────────────────
 $(document).on(
     "shown.bs.tab",

@@ -167,6 +167,20 @@ return [
             ['slug' => 'wo-tab-output-other',  'label' => 'Output Other',     'icon' => 'fa-file-circle-plus',   'section' => 'Work Order'],
             ['slug' => 'wo-tab-budget',        'label' => 'Budget',           'icon' => 'fa-wallet',             'section' => 'Work Order'],
             ['slug' => 'wo-tab-lab-sample-reg', 'label' => 'Lab Sample Reg',  'icon' => 'fa-vial',               'section' => 'Work Order'],
+
+            ['slug' => 'so-tab-info',          'label' => 'Informasi',        'icon' => 'fa-circle-info',        'section' => 'Sales Order'],
+            ['slug' => 'so-tab-wo',            'label' => 'Work Orders',      'icon' => 'fa-briefcase',          'section' => 'Sales Order'],
+            ['slug' => 'so-tab-termin',        'label' => 'Termin',           'icon' => 'fa-file-invoice-dollar', 'section' => 'Sales Order'],
+            ['slug' => 'so-tab-output-other',  'label' => 'Output Other',     'icon' => 'fa-file-circle-plus',   'section' => 'Sales Order'],
+
+            ['slug' => 'fwo-tab-info',         'label' => 'Informasi',        'icon' => 'fa-hard-hat',           'section' => 'Fieldwork Order'],
+            ['slug' => 'fwo-tab-personel',     'label' => 'Personel',         'icon' => 'fa-users',              'section' => 'Fieldwork Order'],
+            ['slug' => 'fwo-tab-boq',          'label' => 'Fieldwork BOQ',    'icon' => 'fa-clipboard-list',     'section' => 'Fieldwork Order'],
+            ['slug' => 'fwo-tab-boq-other',    'label' => 'BOQ Other',        'icon' => 'fa-file-invoice',       'section' => 'Fieldwork Order'],
+            ['slug' => 'fwo-tab-boq-sampling', 'label' => 'BOQ Sampling',     'icon' => 'fa-vial-virus',         'section' => 'Fieldwork Order'],
+            ['slug' => 'fwo-tab-attachment',   'label' => 'Attachment',       'icon' => 'fa-paperclip',          'section' => 'Fieldwork Order'],
+            ['slug' => 'fwo-tab-budget',       'label' => 'Budget',           'icon' => 'fa-wallet',             'section' => 'Fieldwork Order'],
+            ['slug' => 'fwo-tab-sample',       'label' => 'Sample',           'icon' => 'fa-flask',              'section' => 'Fieldwork Order'],
         ],
     ],
     [

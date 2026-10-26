@@ -992,6 +992,18 @@ $(document).ready(function () {
             // ditimpa lagi. Jadi harus dipanggil di sini (afterLoad), yang
             // jalan setelah initDynamicSelect().
             initSoSiteFields();
+            // Akses Tab (grup "Akses Tab"): sembunyikan tab yang tidak diizinkan — logika umum di core/permissionEngine.js
+            applyTabAccess({
+                nav: '#soDetailTabs',
+                map: {
+                    '#tabInfoSo':        'so-tab-info',
+                    '#tabWo':            'so-tab-wo',
+                    '#tabTermin':        'so-tab-termin',
+                    '#tabSoOutputOther': 'so-tab-output-other',
+                },
+                infoTarget: '#tabInfoSo',
+                label: 'SO',
+            });
             loadWoProgress(res.id_so);
             loadTerminList(res.id_so);
             loadSoOutputOther(res.id_so);

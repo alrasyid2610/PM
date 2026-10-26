@@ -90,6 +90,14 @@ class CheckMenuPermission
         'wo-budgets'        => 'wo-tab-budget',
         'wo-budget-actuals' => 'wo-tab-budget',
         'wo-samples'        => 'wo-tab-lab-sample-reg',
+        // SO — tab Output Other
+        'so-output-other'   => 'so-tab-output-other',
+        // FWO — tab BOQ Other, BOQ Sampling, Budget, Sample
+        'fwo-boq-other'     => 'fwo-tab-boq-other',
+        'fwo-boq-sampling'  => 'fwo-tab-boq-sampling',
+        'fwo-budgets'       => 'fwo-tab-budget',
+        'fwo-budget-actuals' => 'fwo-tab-budget',
+        'lab-samples'       => 'fwo-tab-sample',
     ];
 
     public function handle(Request $request, Closure $next): mixed

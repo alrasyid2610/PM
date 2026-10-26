@@ -1590,6 +1590,23 @@ $(document).ready(function () {
         afterLoad: function (res) {
             currentFwoData      = res;
 
+            // Akses Tab (grup "Akses Tab"): sembunyikan tab yang tidak diizinkan — logika umum di core/permissionEngine.js
+            applyTabAccess({
+                nav: '#fwoDetailTabs',
+                map: {
+                    '#tabFwoInfo':        'fwo-tab-info',
+                    '#tabFwoPersonel':    'fwo-tab-personel',
+                    '#tabFwoBoq':         'fwo-tab-boq',
+                    '#tabFwoBoqOther':    'fwo-tab-boq-other',
+                    '#tabFwoBoqSampling': 'fwo-tab-boq-sampling',
+                    '#tabFwoAttachment':  'fwo-tab-attachment',
+                    '#tabFwoBudget':      'fwo-tab-budget',
+                    '#tabFwoSample':      'fwo-tab-sample',
+                },
+                infoTarget: '#tabFwoInfo',
+                label: 'FWO',
+            });
+
             // PIC Pelanggan di-scope ke Perusahaan pemilik WO (id_pelanggan_pekerjaan).
             // Field ini pakai .form-select-dynamic (mode ajax generik) yang
             // di-init ulang oleh initDynamicSelect() setelah initSelect() —
