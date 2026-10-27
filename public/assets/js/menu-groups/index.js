@@ -4,13 +4,15 @@ $(document).ready(function () {
     page = new CrudPageController({
         primaryKey: 'id',
         renderForm: renderForm,
-        afterRender: function (res) {
-            initPermissionMatrix('#detailContent');
-        },
         onSave: function (id) {
             submitGroupForm(id);
         },
     });
+
+    // Handler centang-semua didelegasikan ke #detailContent, jadi cukup dipasang SEKALI di sini
+    // (sama seperti users/index.js). Sebelumnya dipasang lewat opsi `afterRender` yang tidak pernah
+    // dipanggil CrudPageController, sehingga semua checkbox "pilih semua" tidak berfungsi.
+    initPermissionMatrix('#detailContent');
 });
 
 function submitGroupForm(id) {
