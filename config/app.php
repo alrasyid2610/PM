@@ -61,11 +61,13 @@ return [
     |
     | Here you may specify the default timezone for your application, which
     | will be used by the PHP date and date-time functions. The timezone
-    | is set to "UTC" by default as it is suitable for most use cases.
+    | dikunci ke Asia/Jakarta (WIB) sejak 2026-10-27 supaya semua now()/Carbon,
+    | catatan login terakhir, dan audit log memakai waktu WIB di semua environment.
+    | Data lama sebelum tanggal ini tersimpan sebagai waktu UTC (lihat Project Reference).
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => 'Asia/Jakarta',
 
     /*
     |--------------------------------------------------------------------------
