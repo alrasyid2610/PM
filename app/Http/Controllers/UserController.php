@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\Facades\DataTables;
 use App\Support\StatusKepegawaian;
 
@@ -18,12 +19,21 @@ class UserController extends Controller
 
     public function data()
     {
+        // Kolom login terakhir baru ada setelah migration 2026_10_28_000003 — dijaga supaya daftar tetap jalan sebelum itu.
+        $adaLastLogin = Schema::hasColumn('users', 'last_login_at');
+
+        $kolom = ['u.id', 'u.name', 'u.email', 'u.is_active', 'mg.name as group_name', 'u.created_at'];
+        if ($adaLastLogin) $kolom[] = 'u.last_login_at';
+
         $query = DB::table('users as u')
             ->leftJoin('menu_groups as mg', 'mg.id', '=', 'u.menu_group_id')
-            ->select(['u.id', 'u.name', 'u.email', 'u.is_active', 'mg.name as group_name', 'u.created_at']);
+            ->select($kolom);
 
         return DataTables::of($query)
             ->addIndexColumn()
+            ->editColumn('last_login_at', fn ($row) => !empty($row->last_login_at)
+                ? \Illuminate\Support\Carbon::parse($row->last_login_at)->format('Y-m-d H:i')
+                : 'Belum pernah')
             ->addColumn('status_label', function ($row) {
                 return $row->is_active
                     ? '<span class="badge bg-success">Aktif</span>'
@@ -95,8 +105,11 @@ class UserController extends Controller
 
     public function show($id)
     {
+        $kolom = ['id', 'name', 'email', 'no_hp', 'is_active', 'menu_group_id', 'status_kepegawaian'];
+        if (Schema::hasColumn('users', 'last_login_at')) array_push($kolom, 'last_login_at', 'last_login_ip');
+
         $user = DB::table('users')
-            ->select(['id', 'name', 'email', 'no_hp', 'is_active', 'menu_group_id', 'status_kepegawaian'])
+            ->select($kolom)
             ->where('id', $id)
             ->first();
 

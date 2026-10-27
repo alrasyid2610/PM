@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Str;
@@ -31,6 +33,17 @@ class AuthController extends Controller
         // =========================
         if (Auth::attempt($credentials, $request->remember)) {
             $request->session()->regenerate();
+
+            // Catat login terakhir (waktu + IP). Tidak boleh menggagalkan login (mis. migration
+            // belum dijalankan di environment ini) — kegagalan cukup dicatat di log.
+            try {
+                DB::table('users')->where('id', Auth::id())->update([
+                    'last_login_at' => now(),
+                    'last_login_ip' => $request->ip(),
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('Gagal mencatat last login: ' . $e->getMessage());
+            }
 
             return redirect()->intended('/dashboard');
         }

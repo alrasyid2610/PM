@@ -31,6 +31,7 @@
         history: "{{ url('users') }}/",
         csrf:    "{{ csrf_token() }}",
     }
+    window.datatableHeaderLabels = { last_login_at: 'Terakhir Login' };
 </script>
 <script src="{{ asset('assets/js/users/form.js') }}"></script>
 <script src="{{ asset('assets/js/users/index.js') }}"></script>

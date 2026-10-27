@@ -197,6 +197,12 @@ async function renderForm(res) {
                         </select>
                     </div>
                     ${formGroup.text("password", "Password Baru", "", false, { className: "col-md-5" })}
+                    <div class="col-md-12" data-no-disable>
+                        <small class="text-muted">
+                            <i class="fa-solid fa-clock-rotate-left me-1"></i>Terakhir login:
+                            <b>${res.last_login_at ? String(res.last_login_at).substring(0, 16).replace('T', ' ') : 'belum pernah'}</b>${res.last_login_ip ? ` (IP ${res.last_login_ip})` : ''}
+                        </small>
+                    </div>
                     <div class="col-md-12">
                         <small class="text-muted">Kosongkan Password Baru jika tidak ingin mengubah password. Permission dari grup akan digabung dengan override di bawah.</small>
                     </div>
