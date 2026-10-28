@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
+use App\Support\DocumentNumber;
 use App\Traits\HasAuditHistory;
 
 
@@ -69,7 +70,6 @@ class WorkOrderController extends Controller
         // INSERT
         // ==========================
 
-        $no_wo    = $this->generateNoWo();
         $interval = $request->interval_bulan ?: null;
         $id_site  = $request->id_site_pelanggan ?: null;
         $no_urut  = null;
@@ -87,8 +87,7 @@ class WorkOrderController extends Controller
             }
         }
 
-        $id = DB::table('work_orders')->insertGetId([
-            'no_wo'                       => $no_wo,
+        $id = DocumentNumber::insertGetId('work_orders', 'no_wo', 'WO', [
             'id_so'                       => $request->id_sales_order,
             'id_pelanggan_pekerjaan'      => $request->id_pelanggan,
             'id_site_pelanggan_pekerjaan' => $id_site,
@@ -101,7 +100,7 @@ class WorkOrderController extends Controller
             'tanggal_selesai'             => $request->tanggal_selesai ?: null,
             'created_at'                  => now(),
             'updated_at'                  => now(),
-        ]);
+        ], $no_wo);
 
         $after = DB::table('work_orders')->where('id_wo', $id)->get()->toJson();
         saveAudit('work_orders', $id, 'Create', '', $after, $this->parentSo($id));
@@ -525,32 +524,6 @@ class WorkOrderController extends Controller
         $request->merge(['wo_only' => true]);
         return app(SalesOrderController::class)->clonePost($request, $wo->id_so);
     }
-
-    private function generateNoWo()
-    {
-        $year = now()->format('y');
-        $month = now()->format('m');
-
-        $prefix = "WO-{$year}-";
-
-        // Filter prefix tahun ini + urut by id_wo (bukan created_at) — kalau
-        // ada beberapa WO yang created_at-nya sama persis (presisi detik),
-        // ORDER BY created_at jadi ambigu dan bisa mengembalikan nomor yang
-        // sama berulang (duplicate entry). id_wo (PK auto-increment) selalu
-        // unik & monoton.
-        $latest = DB::table('work_orders')
-            ->where('no_wo', 'like', $prefix . '%')
-            ->orderByDesc('id_wo')
-            ->first();
-
-        if (!$latest) {
-            return $prefix . '0001';
-        }
-
-        $number = (int) explode('-', $latest->no_wo)[2] + 1;
-        return $prefix . str_pad($number, 4, '0', STR_PAD_LEFT);
-    }
-
 
     public function detail($id)
     {

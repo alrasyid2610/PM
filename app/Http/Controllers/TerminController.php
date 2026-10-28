@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use App\Support\DocumentNumber;
 use App\Traits\HasAuditHistory;
 
 class TerminController extends Controller
@@ -146,9 +147,8 @@ class TerminController extends Controller
 
         $status = $this->guardTerminStatus($request->status, 'pending');
 
-        $id = DB::table('termin')->insertGetId([
+        $id = DocumentNumber::insertGetId('termin', 'no_termin', 'ST', [
             'id_so'      => $request->id_so ?: null,
-            'no_termin'  => $this->generateNoTermin(),
             'nama'       => $request->nama,
             'persentase' => $request->persentase,
             'nilai'      => $request->nilai,
@@ -577,25 +577,6 @@ class TerminController extends Controller
         }
 
         return $rows;
-    }
-
-    private function generateNoTermin(): string
-    {
-        $year   = now()->format('y');
-        $prefix = "ST-{$year}-";
-
-        $latest = DB::table('termin')
-            ->whereNotNull('no_termin')
-            ->orderByDesc('id_termin')
-            ->value('no_termin');
-
-        if (!$latest) {
-            return $prefix . '00001';
-        }
-
-        $parts  = explode('-', $latest);
-        $number = (int) end($parts) + 1;
-        return $prefix . str_pad($number, 5, '0', STR_PAD_LEFT);
     }
 
     public function history($id)

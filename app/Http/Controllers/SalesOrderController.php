@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
+use App\Support\DocumentNumber;
 use App\Traits\HasAuditHistory;
 use App\Traits\HasAttachment;
 use Spatie\LaravelPdf\Facades\Pdf;
@@ -117,8 +118,6 @@ class SalesOrderController extends Controller
             'discount_persen.max' => 'Discount persen tidak boleh lebih dari 100.',
         ]));
 
-        $soNumber = $this->generateSoNumber();
-
         // Attachment (opsional saat create) — pakai infrastruktur generik yang
         // sama seperti update(): helper uploadAttachment() + kolom json.
         $upload = uploadAttachment($request->file('attachments'), 'sales_orders');
@@ -127,8 +126,7 @@ class SalesOrderController extends Controller
         // ==========================
         // INSERT
         // ==========================
-        $id = DB::table('sales_orders')->insertGetId([
-            'no_so'      => $soNumber,
+        $id = DocumentNumber::insertGetId('sales_orders', 'no_so', 'SO', [
             'id_sc'      => $request->filled('id_sc') ? (int)$request->id_sc : null,
             'tanggal_so' => $request->tanggal_so,
             'judul_order' => $request->judul_order,
@@ -176,7 +174,7 @@ class SalesOrderController extends Controller
 
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ], $soNumber);
 
         $after = DB::table('sales_orders')->where('id_so', $id)->get()->toJson();
         saveAudit('sales_orders', $id, 'Create', '', $after);
@@ -245,32 +243,6 @@ class SalesOrderController extends Controller
         }
         return [0, null];
     }
-
-    private function generateSoNumber()
-    {
-        $year = now()->format('y');
-        $month = now()->format('m');
-
-        $prefix = "SO-{$year}-";
-
-        $lastSo = DB::table('sales_orders')
-            ->where('no_so', 'like', $prefix . '%')
-            ->orderByDesc('id_so')
-            ->first();
-
-        if ($lastSo) {
-            $lastNumber = (int) substr($lastSo->no_so, -4);
-            $newNumber = $lastNumber + 1;
-        } else {
-            $newNumber = 1;
-        }
-
-        $running = str_pad($newNumber, 4, '0', STR_PAD_LEFT);
-
-        return $prefix . $running;
-    }
-
-
 
     public function show($id)
     {
@@ -1444,12 +1416,9 @@ class SalesOrderController extends Controller
                 if ($woOnly) {
                     $newSoId = (int) $id;
                 } else {
-                $newNoSo = $this->generateSoNumber();
-
-                $newSoId = DB::table('sales_orders')->insertGetId([
+                $newSoId = DocumentNumber::insertGetId('sales_orders', 'no_so', 'SO', [
                     'id_sq'      => null,
                     'id_sc'      => null,
-                    'no_so'      => $newNoSo,
                     'tanggal_so' => $soInput['tanggal_so'],
                     'judul_order' => $soInput['judul_order'] ?? null,
                     'tidak_ada_po' => $soInput['tidak_ada_po'] ?? 0,
@@ -1514,10 +1483,7 @@ class SalesOrderController extends Controller
                         }
                     }
 
-                    $newNoWo = $this->generateNoWo();
-
-                    $newWoId = DB::table('work_orders')->insertGetId([
-                        'no_wo'                       => $newNoWo,
+                    $newWoId = DocumentNumber::insertGetId('work_orders', 'no_wo', 'WO', [
                         'id_so'                       => $newSoId,
                         'id_pelanggan_pekerjaan'      => $sourceWo->id_pelanggan_pekerjaan,
                         'id_site_pelanggan_pekerjaan' => $targetSiteId,
@@ -1866,9 +1832,8 @@ class SalesOrderController extends Controller
                             throw new \RuntimeException("Waktu kedatangan FWO \"{$sourceFwo->no_fwo}\" tidak boleh lebih besar dari tanggal selesai FWO ({$fwoSelesaiCmp}).");
                         }
 
-                        $newFwoId = DB::table('fieldworks')->insertGetId([
+                        $newFwoId = DocumentNumber::insertGetId('fieldworks', 'no_fwo', 'FWO', [
                             'id_wo'                       => $newWoId,
-                            'no_fwo'                      => $this->generateNoFwo(),
                             'judul_pekerjaan'             => $judulPekerjaanFwo,
                             'id_site_pelanggan_pekerjaan' => $fwoSiteId,
                             'id_pic_pelanggan_pekerjaan'  => $fwoPicId,
@@ -2125,59 +2090,4 @@ class SalesOrderController extends Controller
         return DB::table('sales_orders')->where('id_so', $id)->value('no_so') ?? "#{$id}";
     }
 
-    /**
-     * Nomor FWO baru untuk hasil clone — pola sama seperti
-     * FieldworkController::generateNoFwo() (private di controller itu,
-     * jadi disalin ke sini, bukan dipanggil lintas controller — sama
-     * seperti generateNoWo()).
-     */
-    private function generateNoFwo(): string
-    {
-        $year = now()->format('y');
-
-        $latest = DB::table('fieldworks')
-            ->where('no_fwo', 'like', "FWO.{$year}.%")
-            ->orderBy('no_fwo', 'desc')
-            ->value('no_fwo');
-
-        if (!$latest) {
-            return "FWO.{$year}.A.0001";
-        }
-
-        $parts  = explode('.', $latest);
-        $letter = $parts[2] ?? 'A';
-        $number = intval($parts[3] ?? 0);
-
-        if ($number < 9999) {
-            return sprintf('FWO.%s.%s.%04d', $year, $letter, $number + 1);
-        }
-
-        return sprintf('FWO.%s.%s.0001', $year, chr(ord($letter) + 1));
-    }
-
-    /**
-     * Nomor WO baru untuk hasil clone — pola sama seperti
-     * WorkOrderController::generateNoWo() (private di controller itu,
-     * jadi disalin ke sini, bukan dipanggil lintas controller).
-     */
-    private function generateNoWo(): string
-    {
-        $year = now()->format('y');
-        $prefix = "WO-{$year}-";
-
-        // Filter prefix tahun ini + urut by id_wo (bukan created_at) — WAJIB,
-        // karena clone bisa insert banyak WO dalam 1 request yang created_at-
-        // nya bisa sama persis (presisi detik), bikin ORDER BY created_at
-        // ambigu dan generateNoWo() sempat mengembalikan nomor yang sama utk
-        // beberapa WO sekaligus (duplicate entry 'WO-xx-xxxx'). id_wo (PK
-        // auto-increment) selalu unik & monoton, jadi tidak ambigu.
-        $latest = DB::table('work_orders')
-            ->where('no_wo', 'like', $prefix . '%')
-            ->orderByDesc('id_wo')
-            ->first();
-        if (!$latest) return $prefix . '0001';
-
-        $number = (int) explode('-', $latest->no_wo)[2] + 1;
-        return $prefix . str_pad($number, 4, '0', STR_PAD_LEFT);
-    }
 }

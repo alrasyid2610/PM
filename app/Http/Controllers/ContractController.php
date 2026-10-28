@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Yajra\DataTables\Facades\DataTables;
+use App\Support\DocumentNumber;
 use App\Traits\HasAuditHistory;
 use App\Traits\HasAttachment;
 
@@ -21,18 +22,6 @@ class ContractController extends Controller
     public function index()
     {
         return view('contracts.index', ['title' => 'Contracts']);
-    }
-
-    private function generateNoContract(): string
-    {
-        $year = date('y');
-        $last = DB::table('contracts')
-            ->where('no_contract', 'like', "SC-{$year}-%")
-            ->orderByDesc('no_contract')
-            ->value('no_contract');
-
-        $seq = $last ? ((int) substr($last, -4)) + 1 : 1;
-        return "SC-{$year}-" . str_pad($seq, 4, '0', STR_PAD_LEFT);
     }
 
     public function data()
@@ -89,8 +78,7 @@ class ContractController extends Controller
         $upload = uploadAttachment($request->file('attachments'), 'contracts');
         $files  = $upload['files'];
 
-        $id = DB::table('contracts')->insertGetId([
-            'no_contract'          => $this->generateNoContract(),
+        $id = DocumentNumber::insertGetId('contracts', 'no_contract', 'SC', [
             'no_contract_client'   => $request->no_contract_client,
             'id_business_relation' => $request->id_business_relation,
             'tanggal_kontrak'      => $request->tanggal_kontrak,

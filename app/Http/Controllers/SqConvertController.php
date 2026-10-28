@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DocumentNumber;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -146,10 +147,9 @@ class SqConvertController extends Controller
                     if ($selesai->gt($soEnd)) $soEnd = $selesai->copy();
                 }
 
-                $idSo = DB::table('sales_orders')->insertGetId([
+                $idSo = DocumentNumber::insertGetId('sales_orders', 'no_so', 'SO', [
                     'id_sq' => $id,
                     'id_sc' => null,
-                    'no_so' => $this->generateSoNumber(),
                     'tanggal_so' => $input['tanggal_so'],
                     'judul_order' => $sq->judul_order,
                     'tidak_ada_po' => !empty($input['tidak_ada_po']) ? 1 : 0,
@@ -195,8 +195,7 @@ class SqConvertController extends Controller
                         ?: DB::table('business_relation_sites')->where('id_site', $siteId)->value('id_br')
                         ?: $sq->id_pelanggan;
 
-                    $idWo = DB::table('work_orders')->insertGetId([
-                        'no_wo' => $this->generateNoWo(),
+                    $idWo = DocumentNumber::insertGetId('work_orders', 'no_wo', 'WO', [
                         'id_so' => $idSo,
                         'id_pelanggan_pekerjaan' => $brId,
                         'id_site_pelanggan_pekerjaan' => $siteId,
@@ -290,9 +289,8 @@ class SqConvertController extends Controller
                         $fwoMulai = $start->copy()->addDays(max(0, (int) $fwo->hari_ke - 1));
                         $fwoSelesai = $fwoMulai->copy()->addDays(max(0, (int) ($fwo->durasi_hari ?: 1) - 1));
 
-                        $idFwo = DB::table('fieldworks')->insertGetId([
+                        $idFwo = DocumentNumber::insertGetId('fieldworks', 'no_fwo', 'FWO', [
                             'id_wo' => $idWo,
-                            'no_fwo' => $this->generateNoFwo(),
                             'judul_pekerjaan' => $fwo->judul_pekerjaan ?: ($wo->judul_pekerjaan ?: 'Fieldwork'),
                             // id_site/id_pic_pelanggan_pekerjaan sq_fieldworks sudah
                             // merujuk business_relation_sites/contacts persis sama
@@ -382,37 +380,5 @@ class SqConvertController extends Controller
         ], \App\Support\NotificationRoles::sq((int) $id));
 
         return response()->json(array_merge(['success' => true, 'message' => "Berhasil diterbitkan menjadi {$result['no_so']} ({$result['total_wo']} WO)"], $result));
-    }
-
-    // Pola sama SalesOrderController::generateSoNumber() (private di sana).
-    private function generateSoNumber(): string
-    {
-        $prefix = 'SO-' . now()->format('y') . '-';
-        $last = DB::table('sales_orders')->where('no_so', 'like', $prefix . '%')->orderByDesc('id_so')->first();
-        $n = $last ? ((int) substr($last->no_so, -4)) + 1 : 1;
-        return $prefix . str_pad($n, 4, '0', STR_PAD_LEFT);
-    }
-
-    // Pola sama SalesOrderController::generateNoWo() — urut by id_wo, bukan created_at.
-    private function generateNoWo(): string
-    {
-        $prefix = 'WO-' . now()->format('y') . '-';
-        $latest = DB::table('work_orders')->where('no_wo', 'like', $prefix . '%')->orderByDesc('id_wo')->first();
-        if (!$latest) return $prefix . '0001';
-        return $prefix . str_pad(((int) explode('-', $latest->no_wo)[2]) + 1, 4, '0', STR_PAD_LEFT);
-    }
-
-    // Pola sama SalesOrderController::generateNoFwo() (format FWO.YY.A.NNNN, huruf naik tiap 9999).
-    private function generateNoFwo(): string
-    {
-        $year = now()->format('y');
-        $latest = DB::table('fieldworks')->where('no_fwo', 'like', "FWO.{$year}.%")->orderBy('no_fwo', 'desc')->value('no_fwo');
-        if (!$latest) return "FWO.{$year}.A.0001";
-
-        $parts = explode('.', $latest);
-        $letter = $parts[2] ?? 'A';
-        $number = intval($parts[3] ?? 0);
-        if ($number < 9999) return sprintf('FWO.%s.%s.%04d', $year, $letter, $number + 1);
-        return sprintf('FWO.%s.%s.0001', $year, chr(ord($letter) + 1));
     }
 }

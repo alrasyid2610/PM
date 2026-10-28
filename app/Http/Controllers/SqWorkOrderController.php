@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Support\DocumentNumber;
 use App\Support\SqLock;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
@@ -64,8 +65,7 @@ class SqWorkOrderController extends Controller
 
         $urutan = 1 + (int) DB::table('sq_work_orders')->where('id_sq', $validated['id_sq'])->max('urutan');
 
-        $id = DB::table('sq_work_orders')->insertGetId(array_merge($validated, [
-            'no_sq_wo' => $this->generateNoSqWo(),
+        $id = DocumentNumber::insertGetId('sq_work_orders', 'no_sq_wo', 'SQWO', array_merge($validated, [
             'urutan' => $urutan,
             'created_at' => now(),
             'updated_at' => now(),
@@ -75,24 +75,6 @@ class SqWorkOrderController extends Controller
         saveAudit('sq_work_orders', $id, 'Create', '', $after, ['sales_quotations', $validated['id_sq']]);
 
         return response()->json(['success' => true, 'id' => $id]);
-    }
-
-    private function generateNoSqWo(): string
-    {
-        $prefix = 'SQWO-' . now()->format('y') . '-';
-
-        // ORDER BY id_sq_wo (bukan created_at) — id auto-increment selalu unik &
-        // monoton, menghindari ambiguitas kalau ada 2 WO dibuat di detik yang
-        // sama (pola sama seperti bug nomor WO duplikat yang pernah ditemukan
-        // di generateNoWo(), lihat Sales Order.md Fase 2).
-        $latest = DB::table('sq_work_orders')
-            ->where('no_sq_wo', 'like', $prefix . '%')
-            ->orderByDesc('id_sq_wo')
-            ->first();
-
-        $newNumber = $latest ? ((int) substr($latest->no_sq_wo, -4)) + 1 : 1;
-
-        return $prefix . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
     }
 
     public function show($id)

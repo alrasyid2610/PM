@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Support\DocumentNumber;
 use App\Support\SqLock;
 use App\Support\SqKeterangan;
 use Illuminate\Support\Facades\DB;
@@ -71,12 +72,9 @@ class SalesQuotationController extends Controller
     {
         $request->validate($this->sqRequiredRules(), $this->sqRequiredMessages());
 
-        $noSq = $this->generateNoSq();
-
-        $id = DB::table('sales_quotations')->insertGetId(array_merge(
+        $id = DocumentNumber::insertGetId('sales_quotations', 'no_sq', 'SQ', array_merge(
             self::orderPartyColumns($request),
             [
-                'no_sq' => $noSq,
                 'revisi' => 0,
                 'is_latest' => true,
                 'tanggal_sq' => $request->tanggal_sq,
@@ -105,46 +103,6 @@ class SalesQuotationController extends Controller
             'message' => 'Sales Quotation berhasil dibuat',
             'id_sq' => $id,
         ]);
-    }
-
-    /**
-     * Nomor SQ Work Order baru untuk hasil revisi — pola sama persis
-     * SqWorkOrderController::generateNoSqWo() (private di sana, disalin ke
-     * sini seperti pola SqConvertController::generateNoWo()). ORDER BY
-     * id_sq_wo (bukan created_at) supaya aman kalau banyak WO dibuat dalam
-     * 1 transaksi yang timestamp-nya bisa sama persis.
-     */
-    private function generateNoSqWo(): string
-    {
-        $prefix = 'SQWO-' . now()->format('y') . '-';
-        $latest = DB::table('sq_work_orders')->where('no_sq_wo', 'like', $prefix . '%')->orderByDesc('id_sq_wo')->first();
-        $newNumber = $latest ? ((int) substr($latest->no_sq_wo, -4)) + 1 : 1;
-        return $prefix . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
-    }
-
-    /** Nomor FWO SQ berikutnya — sama dengan SqFieldworkController::generateNoSqFwo() (dipakai saat revisi menyalin FWO). */
-    private function generateNoSqFwo(): string
-    {
-        $prefix = 'SQFWO-' . now()->format('y') . '-';
-        $latest = DB::table('sq_fieldworks')->where('no_sq_fwo', 'like', $prefix . '%')->orderByDesc('id_sq_fwo')->first();
-        $newNumber = $latest ? ((int) substr($latest->no_sq_fwo, -4)) + 1 : 1;
-        return $prefix . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
-    }
-
-    private function generateNoSq(): string
-    {
-        $year = now()->format('y');
-        $prefix = "SQ-{$year}-";
-
-        $last = DB::table('sales_quotations')
-            ->where('no_sq', 'like', $prefix . '%')
-            ->where('revisi', 0)
-            ->orderByDesc('id_sq')
-            ->first();
-
-        $newNumber = $last ? ((int) substr($last->no_sq, -4)) + 1 : 1;
-
-        return $prefix . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
     }
 
     public function show($id)
@@ -530,10 +488,10 @@ class SalesQuotationController extends Controller
                 // no_sq_wo TIDAK ikut disalin — nomor identitas WO harus unik
                 // per baris, bukan diwariskan dari WO sumber (bug ditemukan
                 // 2026-09-27: revisi bikin no_sq_wo dobel antara SQ lama & baru).
-                $wd['no_sq_wo'] = $this->generateNoSqWo();
+                // DocumentNumber::insertGetId menimpa no_sq_wo dengan nomor baru.
                 $wd['created_at'] = now();
                 $wd['updated_at'] = now();
-                $newWoId = DB::table('sq_work_orders')->insertGetId($wd);
+                $newWoId = DocumentNumber::insertGetId('sq_work_orders', 'no_sq_wo', 'SQWO', $wd);
 
                 $boqMap = []; // id_sq_boq lama → baru (dipakai BOQ FWO)
                 foreach (DB::table('sq_boq')->where('id_sq_wo', $wo->id_sq_wo)->get() as $b) {
@@ -587,10 +545,10 @@ class SalesQuotationController extends Controller
                     $fd = (array) $f;
                     unset($fd['id_sq_fwo']);
                     $fd['id_sq_wo'] = $newWoId;
-                    $fd['no_sq_fwo'] = $this->generateNoSqFwo(); // nomor identitas harus unik, tidak diwariskan
+                    // no_sq_fwo: nomor identitas harus unik, tidak diwariskan (ditimpa DocumentNumber::insertGetId)
                     $fd['created_at'] = now();
                     $fd['updated_at'] = now();
-                    $newFwoId = DB::table('sq_fieldworks')->insertGetId($fd);
+                    $newFwoId = DocumentNumber::insertGetId('sq_fieldworks', 'no_sq_fwo', 'SQFWO', $fd);
 
                     foreach (DB::table('sq_fieldwork_boq')->where('id_sq_fwo', $f->id_sq_fwo)->get() as $fb) {
                         // BOQ WO sumbernya sudah tersalin di atas; lewati bila tidak ditemukan (data yatim)

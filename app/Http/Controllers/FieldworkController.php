@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
+use App\Support\DocumentNumber;
 use App\Traits\HasAuditHistory;
 use Spatie\LaravelPdf\Facades\Pdf;
 
@@ -246,7 +247,7 @@ class FieldworkController extends Controller
             return response()->json(['message' => 'Waktu kedatangan tidak boleh lebih besar dari tanggal selesai FWO (' . $fwoSelesaiCheck . ')'], 422);
         }
 
-        $id = DB::table('fieldworks')->insertGetId([
+        $id = DocumentNumber::insertGetId('fieldworks', 'no_fwo', 'FWO', [
             'id_wo'                       => $validated['id_wo'],
             'judul_pekerjaan'             => $validated['judul_pekerjaan'],
             'id_site_pelanggan_pekerjaan' => $validated['id_site_pelanggan_pekerjaan'],
@@ -257,7 +258,6 @@ class FieldworkController extends Controller
             'waktu_kedatangan'            => $validated['waktu_kedatangan'] ?? null,
             'status'                      => $validated['status'] ?? 'planned',
             'keterangan'                  => $validated['keterangan'] ?? null,
-            'no_fwo'                      => $this->generateNoFwo(),
             'created_at'                  => now(),
             'updated_at'                  => now(),
         ]);
@@ -666,12 +666,11 @@ class FieldworkController extends Controller
             }
         }
 
-        $no_fwo = $this->generateNoFwo();
+        $no_fwo = null;
 
-        DB::transaction(function () use ($source, $no_fwo, $validated, $budgetsToCopy, &$newId) {
-            $newId = DB::table('fieldworks')->insertGetId([
+        DB::transaction(function () use ($source, &$no_fwo, $validated, $budgetsToCopy, &$newId) {
+            $newId = DocumentNumber::insertGetId('fieldworks', 'no_fwo', 'FWO', [
                 'id_wo'                       => $source->id_wo,
-                'no_fwo'                      => $no_fwo,
                 'judul_pekerjaan'             => $validated['judul_pekerjaan'],
                 'id_site_pelanggan_pekerjaan' => $source->id_site_pelanggan_pekerjaan,
                 'id_pic_pelanggan_pekerjaan'  => $source->id_pic_pelanggan_pekerjaan,
@@ -682,7 +681,7 @@ class FieldworkController extends Controller
                 'keterangan'                  => $validated['keterangan'] ?? null,
                 'created_at'                  => now(),
                 'updated_at'                  => now(),
-            ]);
+            ], $no_fwo);
 
             if (!empty($validated['personels'])) {
                 DB::table('fieldwork_personels')->insert(
@@ -765,31 +764,6 @@ class FieldworkController extends Controller
             'no_fwo'  => $no_fwo,
             'id_fwo'  => $newId,
         ]);
-    }
-
-    // ── Auto-numbering: FWO.YY.A.0001 → FWO.YY.A.9999 → FWO.YY.B.0001 ────────
-    private function generateNoFwo(): string
-    {
-        $year = now()->format('y'); // "26"
-
-        $latest = DB::table('fieldworks')
-            ->where('no_fwo', 'like', "FWO.{$year}.%")
-            ->orderBy('no_fwo', 'desc')
-            ->value('no_fwo');
-
-        if (!$latest) {
-            return "FWO.{$year}.A.0001";
-        }
-
-        $parts  = explode('.', $latest); // ['FWO', '26', 'A', '0001']
-        $letter = $parts[2] ?? 'A';
-        $number = intval($parts[3] ?? 0);
-
-        if ($number < 9999) {
-            return sprintf('FWO.%s.%s.%04d', $year, $letter, $number + 1);
-        }
-
-        return sprintf('FWO.%s.%s.0001', $year, chr(ord($letter) + 1));
     }
 
     public function generatePdf($id)

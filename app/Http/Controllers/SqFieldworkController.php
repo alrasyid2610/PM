@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Support\DocumentNumber;
 use App\Support\SqLock;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
@@ -76,8 +77,7 @@ class SqFieldworkController extends Controller
 
         $urutan = 1 + (int) DB::table('sq_fieldworks')->where('id_sq_wo', $validated['id_sq_wo'])->max('urutan');
 
-        $id = DB::table('sq_fieldworks')->insertGetId(array_merge($validated, [
-            'no_sq_fwo' => $this->generateNoSqFwo(),
+        $id = DocumentNumber::insertGetId('sq_fieldworks', 'no_sq_fwo', 'SQFWO', array_merge($validated, [
             'urutan' => $urutan,
             'created_at' => now(),
             'updated_at' => now(),
@@ -87,23 +87,6 @@ class SqFieldworkController extends Controller
         saveAudit('sq_fieldworks', $id, 'Create', '', $after, ['sq_work_orders', $validated['id_sq_wo']]);
 
         return response()->json(['success' => true, 'id' => $id]);
-    }
-
-    private function generateNoSqFwo(): string
-    {
-        $prefix = 'SQFWO-' . now()->format('y') . '-';
-
-        // ORDER BY id_sq_fwo (bukan created_at) — pola sama seperti
-        // generateNoSqWo(), menghindari ambiguitas kalau 2 FWO dibuat di
-        // detik yang sama.
-        $latest = DB::table('sq_fieldworks')
-            ->where('no_sq_fwo', 'like', $prefix . '%')
-            ->orderByDesc('id_sq_fwo')
-            ->first();
-
-        $newNumber = $latest ? ((int) substr($latest->no_sq_fwo, -4)) + 1 : 1;
-
-        return $prefix . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
     }
 
     public function show($id)
