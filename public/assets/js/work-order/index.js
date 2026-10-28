@@ -58,6 +58,10 @@ let copyFwoPersonelIdx = 0;
 let currentOutputWoId = null;
 let outputDataMap = {};
 let outputFilePond = null;
+// Output LHU: pilihan sample FWO (dimuat saat saklar LHU aktif; dipilih per modal)
+let outputSampleOpts = null;      // daftar sample yang boleh dipilih, null = belum dimuat
+let outputSampleSel = new Set();  // id_lab_sample (string) yang dipilih
+let outputLhuManual = false;      // true = user sudah mengatur saklar LHU sendiri → tidak ditimpa otomatis dari judul
 
 window.addEventListener("storage", function (e) {
     if (e.key === "fwo_created" && e.newValue) {
@@ -2514,7 +2518,7 @@ function renderOutputTable(outputs) {
                     item.id_output +
                     '">' +
                     "<td " + TD + ' style="width:40px;text-align:center;color:#94a3b8;white-space:nowrap;">' + (idx + 1) + "</td>" +
-                    "<td " + TD + ' style="font-weight:500;">' + escHtml(item.judul_output) + "</td>" +
+                    "<td " + TD + ' style="font-weight:500;">' + escHtml(item.judul_output) + outputLhuBadgeHtml(item) + "</td>" +
                     "<td " + TD + ' style="color:#64748b;">' + (item.judul_dokumen ? escHtml(item.judul_dokumen) : "—") + "</td>" +
                     "<td " + TD + ">" + statusBadge + "</td>" +
                     "<td " + TD + ">" + jenisBadge + "</td>" +
@@ -2613,6 +2617,20 @@ function showOutputForm(data) {
         '<label class="form-label form-label-sm text-muted mb-1">Nomor Dokumen</label>' +
         '<input type="text" id="outputJudulDokumen" class="form-control form-control-sm" placeholder="Nomor Dokumen" maxlength="255" value="' + (isEdit ? escHtml(data.judul_dokumen || '') : '') + '">' +
         '</div>' +
+        // Saklar LHU + panel sample (panel baru tampil saat LHU aktif)
+        '<div class="col-12">' +
+        '<div style="border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;padding:10px 14px;">' +
+        '<div class="d-flex align-items-center gap-2 flex-wrap">' +
+        '<div class="form-check form-switch mb-0 d-flex align-items-center gap-2" style="padding-left:0;">' +
+        '<input class="form-check-input ms-0" type="checkbox" role="switch" id="outputIsLhu" style="cursor:pointer;margin-top:0;" data-no-disable>' +
+        '<label class="form-check-label fw-semibold" for="outputIsLhu" style="font-size:13px;cursor:pointer;">Output ini adalah LHU ' +
+        '<span class="text-muted fw-normal" style="font-size:11px;">(Laporan Hasil Uji)</span></label>' +
+        '</div>' +
+        '<span id="outputLhuHint" class="ms-auto" style="font-size:11px;"></span>' +
+        '</div>' +
+        '<div id="outputLhuSamples" style="display:none;margin-top:10px;"></div>' +
+        '</div>' +
+        '</div>' +
         '<div class="col-md-3">' +
         '<label class="form-label form-label-sm text-muted mb-1">Status</label>' +
         '<select id="outputStatus" class="form-select form-select-sm">' +
@@ -2670,6 +2688,14 @@ function showOutputForm(data) {
     outputFilePond = createFileUploader('#outputAttachments');
     triggerOutputQtyVisibility(isEdit ? (data.jenis_dokumen || '') : '');
 
+    // Status awal saklar LHU & sample terpilih. Edit: pakai nilai tersimpan; dianggap "diatur manual"
+    // hanya bila nilai tersimpan berbeda dari yang akan ditebak otomatis dari judulnya.
+    outputSampleOpts = null;
+    outputSampleSel = new Set(isEdit ? (data.samples || []).map(function (s) { return String(s.id_lab_sample); }) : []);
+    $('#outputIsLhu').prop('checked', !!(isEdit && Number(data.is_lhu)));
+    outputLhuManual = !!(isEdit && (!!Number(data.is_lhu)) !== outputTitleIsLhu(data.judul_output));
+    applyOutputLhuState('');
+
     var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalOutputForm'));
     modal.show();
 }
@@ -2678,6 +2704,193 @@ function triggerOutputQtyVisibility(jenis) {
     $("#outputQtyCopyWrap").toggle(jenis === 'copy' || jenis === 'asli_dan_copy');
     $("#outputQtyAsliWrap").toggle(jenis === 'asli' || jenis === 'asli_dan_copy');
 }
+
+// ── Output LHU: saklar + pemilih sample FWO ────────────────────────────────────
+// LHU = judul mengandung kata "LHU" (tidak peka huruf besar-kecil). Saklar tercentang otomatis dari judul
+// sampai user mengaturnya sendiri. Sample yang boleh dipilih: sample FWO di bawah WO ini yang sudah registrasi lab
+// (satu sample hanya ke satu output) — daftar & aturan di OutputPekerjaanController::sampleOptions().
+function outputTitleIsLhu(judul) {
+    return /\bLHU\b/i.test(judul || '');
+}
+
+// Badge "LHU" + jumlah sample (klik = lihat daftar) di kolom judul tabel Output
+function outputLhuBadgeHtml(item) {
+    if (!Number(item.is_lhu)) return '';
+    var n = (item.samples || []).length;
+    return ' <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:#ecfeff;color:#0e7490;border:1px solid #a5f3fc;vertical-align:middle;">LHU</span>' +
+        '<div style="margin-top:2px;">' + (n
+            ? '<a href="#" class="btn-output-samples" data-id="' + item.id_output + '" style="font-size:11px;color:#0f766e;font-weight:500;text-decoration:none;"><i class="fa-solid fa-vial me-1"></i>' + n + ' sample</a>'
+            : '<span class="text-muted" style="font-size:11px;"><i class="fa-solid fa-vial me-1"></i>Belum ada sample</span>') +
+        '</div>';
+}
+
+// Tampilkan/sembunyikan panel sample sesuai saklar, dan isi catatan kecil di sebelah saklar
+function applyOutputLhuState(catatan) {
+    var on = $('#outputIsLhu').is(':checked');
+    $('#outputLhuSamples').toggle(on);
+
+    var msg = '', warna = '#0f766e';
+    if (on) {
+        if (catatan) msg = '<i class="fa-solid fa-wand-magic-sparkles me-1"></i>' + catatan;
+        if (!outputSampleOpts) loadOutputSamples();
+    } else if (outputSampleSel.size) {
+        msg = '<i class="fa-solid fa-triangle-exclamation me-1"></i>Hubungan ke ' + outputSampleSel.size + ' sample akan dilepas saat disimpan';
+        warna = '#b45309';
+    }
+    $('#outputLhuHint').html(msg).css('color', warna);
+}
+
+function loadOutputSamples() {
+    var $w = $('#outputLhuSamples');
+    $w.html('<div class="text-center text-muted py-3" style="font-size:12px;"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat sample...</div>');
+    $.get(window.route.outputBase + '/' + currentOutputWoId + '/samples').done(function (rows) {
+        outputSampleOpts = rows || [];
+        // Pilihan lama yang sudah tidak memenuhi syarat (mis. status sample berubah) dilepas dan diberitahukan
+        var ok = new Set(outputSampleOpts.map(function (r) { return String(r.id_lab_sample); }));
+        var dilepas = 0;
+        Array.from(outputSampleSel).forEach(function (id) { if (!ok.has(id)) { outputSampleSel.delete(id); dilepas++; } });
+        renderOutputSamples(dilepas);
+    }).fail(function () {
+        $w.html('<div class="text-danger" style="font-size:12px;"><i class="fa-solid fa-circle-exclamation me-1"></i>Gagal memuat sample. <a href="#" id="outputSampleRetry">Coba lagi</a></div>');
+    });
+}
+
+function renderOutputSamples(dilepas) {
+    var $w = $('#outputLhuSamples');
+    var opts = outputSampleOpts || [];
+    var editId = $('#outputEditId').val() || '';
+
+    if (!opts.length) {
+        $w.html('<div style="font-size:12px;color:#64748b;background:#fff;border:1px dashed #cbd5e1;border-radius:8px;padding:12px 14px;">' +
+            '<i class="fa-solid fa-circle-info me-1" style="color:#0e7490;"></i>Belum ada sample FWO yang sudah registrasi lab di WO ini. ' +
+            'Registrasikan dulu sample-nya di tab <b>Lab Sample Reg</b>, lalu buka lagi form ini.</div>');
+        return;
+    }
+
+    var groups = {}, order = [];
+    opts.forEach(function (r) {
+        var k = r.no_fwo || '—';
+        if (!groups[k]) { groups[k] = []; order.push(k); }
+        groups[k].push(r);
+    });
+
+    var list = order.map(function (k) {
+        var rows = groups[k].map(function (r) {
+            var id = String(r.id_lab_sample);
+            var lain = r.id_output_terhubung && String(r.id_output_terhubung) !== String(editId);
+            var cari = [r.no_sample, r.no_reg_lab, r.jenis_sample, r.titik_lokasi, k].join(' ').toLowerCase();
+            return '<label class="output-sample-row d-flex align-items-center gap-2 px-3 py-2 mb-0" data-search="' + escHtml(cari) + '" data-lain="' + (lain ? 1 : 0) + '" ' +
+                'style="border-top:1px solid #f1f5f9;' + (lain ? 'opacity:.55;cursor:not-allowed;' : 'cursor:pointer;') + '">' +
+                '<input type="checkbox" class="form-check-input output-sample-cb mt-0" value="' + id + '"' + (outputSampleSel.has(id) ? ' checked' : '') + (lain ? ' disabled' : '') + ' data-no-disable>' +
+                '<span class="fw-semibold" style="font-size:12.5px;">' + escHtml(r.no_sample || '—') + '</span>' +
+                '<span class="text-muted" style="font-size:11px;">Reg ' + escHtml(r.no_reg_lab || '') + '</span>' +
+                (r.jenis_sample ? '<span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;text-transform:uppercase;">' + escHtml(r.jenis_sample) + '</span>' : '') +
+                (r.titik_lokasi ? '<span class="text-muted text-truncate" style="font-size:11px;max-width:240px;"><i class="fa-solid fa-location-dot me-1"></i>' + escHtml(r.titik_lokasi) + '</span>' : '') +
+                (lain ? '<span class="ms-auto" style="font-size:10.5px;color:#b45309;white-space:nowrap;"><i class="fa-solid fa-link me-1"></i>Dipakai: ' + escHtml(r.judul_terhubung || 'output lain') + '</span>' : '') +
+                '</label>';
+        }).join('');
+        return '<div class="output-sample-group">' +
+            '<div class="px-3 py-1" style="background:#f1f5f9;font-size:11px;font-weight:600;color:#475569;position:sticky;top:0;z-index:1;">' +
+            '<i class="fa-solid fa-helmet-safety me-1" style="color:#0e7490;"></i>' + escHtml(k) +
+            ' <span class="fw-normal text-muted">· ' + groups[k].length + ' sample</span></div>' + rows + '</div>';
+    }).join('');
+
+    $w.html(
+        '<div class="d-flex align-items-center gap-2 flex-wrap mb-2">' +
+            '<span class="fw-semibold" style="font-size:12px;"><i class="fa-solid fa-vial me-1" style="color:#0f766e;"></i>Sample yang dicakup LHU ini</span>' +
+            '<span id="outputSampleCount" class="badge rounded-pill" style="background:#ccfbf1;color:#0f766e;font-weight:600;"></span>' +
+            '<div class="ms-auto d-flex align-items-center gap-3 flex-wrap">' +
+                '<div class="input-group input-group-sm" style="max-width:240px;">' +
+                    '<span class="input-group-text" style="background:#fff;border-color:#e2e8f0;"><i class="fa-solid fa-magnifying-glass text-muted" style="font-size:11px;"></i></span>' +
+                    '<input type="text" id="outputSampleSearch" class="form-control" placeholder="Cari no. sample, titik, FWO..." style="border-color:#e2e8f0;font-size:12px;" data-no-disable>' +
+                '</div>' +
+                '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="outputSampleAll" data-no-disable>' +
+                    '<label class="form-check-label" for="outputSampleAll" style="font-size:12px;">Pilih Semua (Tampil)</label></div>' +
+            '</div>' +
+        '</div>' +
+        (dilepas ? '<div class="mb-2" style="font-size:11.5px;color:#b45309;"><i class="fa-solid fa-triangle-exclamation me-1"></i>' + dilepas + ' sample yang sebelumnya terhubung sudah tidak memenuhi syarat dan dilepas.</div>' : '') +
+        '<div id="outputSampleList" style="max-height:260px;overflow:auto;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">' + list + '</div>' +
+        '<div class="text-muted mt-1" style="font-size:11px;">Hanya sample FWO yang sudah registrasi lab. Satu sample hanya bisa dihubungkan ke satu LHU.</div>'
+    );
+    refreshOutputSampleUi();
+}
+
+// Hitung ulang penghitung "N dipilih" dan status "Pilih Semua (Tampil)"
+function refreshOutputSampleUi() {
+    $('#outputSampleCount').text(outputSampleSel.size + ' dipilih');
+    var $vis = $('#outputSampleList .output-sample-row:visible').filter(function () { return $(this).data('lain') != 1; });
+    var semua = $vis.length > 0 && $vis.find('.output-sample-cb:checked').length === $vis.length;
+    $('#outputSampleAll').prop('checked', semua);
+}
+
+$(document).on('change', '#outputJudulOutput', function () {
+    if (outputLhuManual) return;
+    var lhu = outputTitleIsLhu($(this).val());
+    var $cb = $('#outputIsLhu');
+    if ($cb.is(':checked') === lhu) return;
+    $cb.prop('checked', lhu);
+    applyOutputLhuState(lhu ? 'Otomatis aktif karena judul mengandung "LHU"' : '');
+});
+
+$(document).on('change', '#outputIsLhu', function () {
+    outputLhuManual = true; // user mengatur sendiri → judul tidak lagi menimpa
+    applyOutputLhuState('');
+});
+
+$(document).on('change', '.output-sample-cb', function () {
+    var id = String($(this).val());
+    if ($(this).is(':checked')) outputSampleSel.add(id); else outputSampleSel.delete(id);
+    refreshOutputSampleUi();
+});
+
+$(document).on('input', '#outputSampleSearch', function () {
+    var q = $(this).val().toLowerCase().trim();
+    $('#outputSampleList .output-sample-row').each(function () {
+        $(this).toggle(!q || String($(this).data('search')).includes(q));
+    });
+    $('#outputSampleList .output-sample-group').each(function () {
+        $(this).toggle($(this).find('.output-sample-row:visible').length > 0);
+    });
+    refreshOutputSampleUi();
+});
+
+$(document).on('change', '#outputSampleAll', function () {
+    var on = $(this).is(':checked');
+    $('#outputSampleList .output-sample-row:visible').filter(function () { return $(this).data('lain') != 1; }).each(function () {
+        var $cb = $(this).find('.output-sample-cb');
+        $cb.prop('checked', on);
+        if (on) outputSampleSel.add(String($cb.val())); else outputSampleSel.delete(String($cb.val()));
+    });
+    refreshOutputSampleUi();
+});
+
+$(document).on('click', '#outputSampleRetry', function (e) {
+    e.preventDefault();
+    loadOutputSamples();
+});
+
+// Daftar sample pada satu LHU (klik "N sample" di tabel Output)
+$(document).on('click', '.btn-output-samples', function (e) {
+    e.preventDefault();
+    var item = outputDataMap[$(this).data('id')];
+    if (!item) return;
+    var rows = (item.samples || []).map(function (s, i) {
+        return '<tr><td style="text-align:center;color:#94a3b8;">' + (i + 1) + '</td>' +
+            '<td class="fw-semibold">' + escHtml(s.no_sample || '—') + '</td>' +
+            '<td>' + escHtml(s.no_reg_lab || '—') + '</td>' +
+            '<td>' + escHtml(s.no_fwo || '—') + '</td>' +
+            '<td style="text-transform:uppercase;">' + escHtml(s.jenis_sample || '—') + '</td>' +
+            '<td>' + escHtml(s.titik_lokasi || '—') + '</td></tr>';
+    }).join('');
+    Swal.fire({
+        title: 'Sample pada ' + escHtml(item.judul_output),
+        html: '<div class="table-responsive" style="max-height:60vh;text-align:left;"><table class="table table-sm table-hover mb-0" style="font-size:12.5px;">' +
+            '<thead style="background:#f8fafc;"><tr><th style="width:36px;">No</th><th>No. Sample</th><th>No. Reg Lab</th><th>FWO</th><th>Jenis</th><th>Titik</th></tr></thead>' +
+            '<tbody>' + rows + '</tbody></table></div>',
+        width: 780,
+        confirmButtonText: 'Tutup',
+    });
+});
 
 // ── Event handlers ─────────────────────────────────────────────────────────────
 $(document).ready(function () {
@@ -2854,6 +3067,11 @@ $(document).ready(function () {
         fd.append("link_drive", $("#outputLinkDrive").val().trim());
         fd.append("tanggal_mulai", $("#outputTanggalMulai").val() || '');
         fd.append("tanggal_selesai", $("#outputTanggalSelesai").val() || '');
+        var lhuOn = $("#outputIsLhu").is(":checked");
+        fd.append("is_lhu", lhuOn ? 1 : 0);
+        if (lhuOn) {
+            outputSampleSel.forEach(function (id) { fd.append("sample_ids[]", id); });
+        }
         if (!isEdit) {
             fd.append("id_wo", currentOutputWoId);
         }

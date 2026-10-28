@@ -950,6 +950,7 @@ Route::prefix('work-orders')->name('work-orders.')->group(function () {
 });
 
 Route::prefix('output-pekerjaan')->name('output-pekerjaan.')->group(function () {
+    Route::get('/{id_wo}/samples', [OutputPekerjaanController::class, 'sampleOptions'])->name('samples')->whereNumber('id_wo');
     Route::post('/',              [OutputPekerjaanController::class, 'store'])->name('store');
     Route::post('/{id}',         [OutputPekerjaanController::class, 'update'])->name('update');
     Route::post('/{id}/status',  [OutputPekerjaanController::class, 'updateStatus'])->name('updateStatus');
