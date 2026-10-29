@@ -203,6 +203,11 @@ function loadSqWoList(idSq, done) {
     });
 }
 
+// Salin SQ WO — membuka halaman Clone SQ WO (bukan modal), memakai halaman Clone SQ dalam mode 1 WO
+$(document).on('click', '.btn-copy-sq-wo', function () {
+    window.location.href = '/sq-work-orders/' + $(this).data('sq-wo-id') + '/clone';
+});
+
 // Baris KPI di atas tab — sama dengan renderSoSummary() di Sales Order (Total WO,
 // Total FWO, Total QTY, Total Nilai + breakdown BOQ/Other/Sampling), tanpa kartu
 // progress karena SQ tidak punya realisasi.
@@ -308,6 +313,11 @@ function renderSqWoTable(wos) {
                     class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;" title="Buka detail SQ WO">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i>
                 </a>
+                ${window.sqCloneWoAllowed ? `
+                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 ms-1 btn-copy-sq-wo"
+                    style="font-size:11px;" title="Salin WO ini" data-sq-wo-id="${wo.id_sq_wo}">
+                    <i class="fa-solid fa-copy"></i>
+                </button>` : ''}
             </td>
         </tr>`;
     }

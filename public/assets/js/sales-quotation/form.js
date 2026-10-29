@@ -26,6 +26,8 @@ function renderForm(res) {
     const isFinal = res.status === 'final';
     const isWin   = res.status === 'win';
     const isLose  = res.status === 'lose';
+    // Tombol "Salin WO" di tab Work Order: WO hasil salin masuk ke SQ ini, jadi hanya saat Draft
+    window.sqCloneWoAllowed = !isDeleted && isDraft && can('sq-work-orders', 'can_create');
 
     const pelangganTagParams = res.id_pelanggan
         ? '?open=' + res.id_pelanggan + (res.id_site_pelanggan ? '&tab=tabBrsSite&site=' + res.id_site_pelanggan : '')
@@ -122,6 +124,11 @@ function renderForm(res) {
                 label: "Revisi SQ",
                 icon: "fa-solid fa-code-branch",
                 attrs: `onclick="reviseSq(${res.id_sq})"`,
+            }] : []),
+            ...(!isDeleted && can('sales-quotations', 'can_create') ? [{
+                label: "Clone SQ",
+                icon: "fa-solid fa-copy",
+                attrs: `onclick="window.location.href='/sales-quotations/${res.id_sq}/clone'"`,
             }] : []),
             ...(!isDeleted && isWin && !res.id_so_terbit && can('sales-quotations', 'can_create') && can('sales-orders', 'can_create') ? [{
                 label: "Terbitkan SO",

@@ -16,6 +16,7 @@ use App\Http\Controllers\SalesQuotationController;
 use App\Http\Controllers\SqWorkOrderController;
 use App\Http\Controllers\SqBoqController;
 use App\Http\Controllers\SqConvertController;
+use App\Http\Controllers\SqCloneController;
 use App\Http\Controllers\SqCompareController;
 use App\Http\Controllers\SqBoqTambahanController;
 use App\Http\Controllers\SqWoBudgetController;
@@ -803,6 +804,10 @@ Route::prefix('sales-quotations')->name('sales-quotations.')->group(function () 
     Route::post('/{id}/lose', [SalesQuotationController::class, 'lose'])->name('lose')->whereNumber('id');
     Route::post('/{id}/void', [SalesQuotationController::class, 'void'])->name('void')->whereNumber('id');
     Route::post('/{id}/revise', [SalesQuotationController::class, 'revise'])->name('revise')->whereNumber('id');
+    // Clone SQ jadi SQ baru (halaman penuh, cara Clone SO)
+    Route::get('/{id}/clone', [SqCloneController::class, 'clonePage'])->name('clone-page')->whereNumber('id');
+    Route::get('/{id}/clone-data', [SqCloneController::class, 'cloneData'])->name('clone-data')->whereNumber('id');
+    Route::post('/{id}/clone', [SqCloneController::class, 'clonePost'])->name('clone')->whereNumber('id');
     Route::get('/{id}/compare-options', [SqCompareController::class, 'options'])->name('compare-options')->whereNumber('id');
     Route::get('/{id}/compare/{other}', [SqCompareController::class, 'compare'])->name('compare')->whereNumber(['id', 'other']);
     Route::get('/{id}/compare/{other}/pdf', [SqCompareController::class, 'pdf'])->name('compare-pdf')->whereNumber(['id', 'other']);
@@ -820,6 +825,10 @@ Route::prefix('sq-work-orders')->name('sq-work-orders.')->group(function () {
     Route::put('/{id}', [SqWorkOrderController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}', [SqWorkOrderController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/history', [SqWorkOrderController::class, 'history'])->name('history')->whereNumber('id');
+    // Clone SQ WO (salin 1 WO ke SQ-nya sendiri, memakai halaman Clone SQ mode "WO saja")
+    Route::get('/{id}/clone', [SqCloneController::class, 'woClonePage'])->name('clone-page')->whereNumber('id');
+    Route::get('/{id}/clone-data', [SqCloneController::class, 'woCloneData'])->name('clone-data')->whereNumber('id');
+    Route::post('/{id}/clone', [SqCloneController::class, 'woClonePost'])->name('clone')->whereNumber('id');
 });
 
 Route::prefix('sq-boq')->name('sq-boq.')->group(function () {
