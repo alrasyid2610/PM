@@ -51,6 +51,35 @@
         .env-badge--staging span {
             background: linear-gradient(135deg, #f59e0b, #b45309);
         }
+
+        /* Tombol "kembali ke atas" memakai style inline (display via JS) dan z-index di atas modal,
+           jadi menimpa tombol Simpan di footer modal pada layar kecil — sembunyikan selama modal terbuka. */
+        body.modal-open #btnBackToTop {
+            display: none !important;
+        }
+
+        /* HP: pita diagonal diganti label kecil di tengah atas, supaya tidak menutupi
+           ikon menu (kiri atas) dan judul modal. Hanya tampil di local/staging. */
+        @media (max-width: 767.98px) {
+            .env-badge {
+                left: 50%;
+                width: auto;
+                height: auto;
+                transform: translateX(-50%);
+                overflow: visible;
+            }
+
+            .env-badge span {
+                position: static;
+                width: auto;
+                transform: none;
+                font-size: 10px;
+                letter-spacing: 1px;
+                padding: 1px 10px;
+                border-radius: 0 0 6px 6px;
+                box-shadow: none;
+            }
+        }
     </style>
     @if(in_array(app()->environment(), ['local', 'staging']))
         <div id="env-badge" class="env-badge env-badge--{{ app()->environment() }}">

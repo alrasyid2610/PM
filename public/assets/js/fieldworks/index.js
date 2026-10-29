@@ -418,9 +418,9 @@ function renderBudgetList(plans, isLocked) {
 
         const collapseId = `budgetCollapse_${p.id_budget}`;
         return `<div class="mb-3 border rounded">
-            <div class="d-flex justify-content-between align-items-center px-3 py-2"
+            <div class="plan-card-head px-3 py-2"
                 style="background:#f8fafc;border-bottom:1px solid #e2e8f0;border-radius:calc(0.375rem - 1px) calc(0.375rem - 1px) 0 0;">
-                <div class="d-flex align-items-center flex-wrap gap-1">
+                <div class="d-flex align-items-center flex-wrap gap-1 plan-card-info">
                     <span class="fw-bold" style="font-size:13px;">${escHtml(p.label)}</span>
                     ${statusBadge}
                     ${(p.tanggal_mulai || p.tanggal_selesai) ? `<span class="text-muted ms-1" style="font-size:11px;">
@@ -428,10 +428,12 @@ function renderBudgetList(plans, isLocked) {
                     </span>` : ''}
                     ${p.keterangan ? `<span class="text-muted ms-1" style="font-size:11px;">· ${escHtml(p.keterangan)}</span>` : ''}
                 </div>
-                <div class="d-flex align-items-center gap-3">
-                    <span style="font-size:12px;">Budget: <b style="color:#1d4ed8;" data-pct-val="${p.total_budget}">${fmtRp(p.total_budget)}</b></span>
-                    <span style="font-size:12px;">Actual: <b>${fmtRp(p.total_actual)}</b></span>
-                    <span style="font-size:12px;">Selisih: <b style="color:${selisihColor};">${fmtRp(selisih)}</b></span>
+                <div class="d-flex align-items-center gap-3 plan-card-right">
+                    <div class="d-flex align-items-center gap-3 plan-card-stats">
+                        <span style="font-size:12px;">Budget: <b style="color:#1d4ed8;" data-pct-val="${p.total_budget}">${fmtRp(p.total_budget)}</b></span>
+                        <span style="font-size:12px;">Actual: <b>${fmtRp(p.total_actual)}</b></span>
+                        <span style="font-size:12px;">Selisih: <b style="color:${selisihColor};">${fmtRp(selisih)}</b></span>
+                    </div>
                     ${p.dokumen_realisasi ? renderFilePreviewButton([p.dokumen_realisasi], { title: 'Dokumen Realisasi (ditandatangani)' }) : ''}
                     ${!planLocked && p.items.some(i => (i.actuals || []).length > 0) && can('fwo-budget-verify', 'can_update') ? `
                     <button type="button" class="btn btn-sm btn-plan-verify btn-bulk-verify"
@@ -439,7 +441,7 @@ function renderBudgetList(plans, isLocked) {
                         data-no-disable>
                         <i class="fa-solid fa-check-double me-1"></i>Verifikasi
                     </button>` : ''}
-                    <div class="dropdown" data-no-disable>
+                    <div class="dropdown plan-card-more" data-no-disable>
                         <button type="button" class="btn btn-sm btn-plan-icon"
                             data-bs-toggle="dropdown" aria-expanded="false"
                             data-no-disable>
@@ -497,7 +499,7 @@ function renderBudgetList(plans, isLocked) {
             </div>
             <div id="${collapseId}">
                 <div class="table-responsive">
-                    <table class="pm-table">
+                    <table class="pm-table budget-table">
                         <thead>
                             <tr>
                                 <th style="width:36px;">No</th>
@@ -526,7 +528,7 @@ function renderBudgetList(plans, isLocked) {
     const selLabel     = grandSelisih >= 0 ? 'Surplus' : 'Defisit';
 
     const summary = `
-    <div class="d-flex align-items-center gap-4 px-3 py-2 mb-3 rounded"
+    <div class="d-flex align-items-center gap-4 px-3 py-2 mb-3 rounded plan-summary"
         style="background:#f8fafc;border:1px solid #e2e8f0;font-size:12px;">
         <span style="color:#64748b;font-weight:500;">Ringkasan ${plans.length} Plan:</span>
         <span>Total Budget: <b style="color:#1d4ed8;" data-pct-val="${grandBudget}">${fmtRp(grandBudget)}</b></span>
@@ -2096,17 +2098,17 @@ function renderBulkBoqList(boqItems) {
                 </button>
                 <div class="bulk-boq-items-detail mt-1" style="display:none;"></div>
             </td>
-            <td ${TD} style="padding:8px 12px;color:#475569;white-space:nowrap;">${item.qty_boq ?? '—'}${satuan}</td>
-            <td ${TD} style="padding:8px 12px;white-space:nowrap;">
+            <td ${TD} data-label="Qty Kontrak" style="padding:8px 12px;color:#475569;white-space:nowrap;">${item.qty_boq ?? '—'}${satuan}</td>
+            <td ${TD} data-label="Sisa" style="padding:8px 12px;white-space:nowrap;">
                 <span style="color:${sisaColor};font-weight:600;">${item.remaining_qty ?? '—'}${satuan}</span>
             </td>
-            <td ${TD} style="padding:8px 10px;width:110px;">
+            <td ${TD} data-label="Qty FWO" style="padding:8px 10px;width:110px;">
                 <input type="number" class="form-control form-control-sm bulk-boq-qty"
                     data-boq-id="${item.id}"
                     data-max="${item.remaining_qty ?? ''}"
                     min="0" placeholder="0" value="${escHtml(String(existingQty))}">
             </td>
-            <td ${TD} style="padding:8px 10px;">
+            <td ${TD} data-label="Keterangan" style="padding:8px 10px;">
                 <input type="text" class="form-control form-control-sm bulk-boq-ket"
                     placeholder="opsional" value="${escHtml(existingKet)}">
             </td>
@@ -2128,7 +2130,7 @@ function renderBulkBoqList(boqItems) {
         : '';
 
     return `<div class="table-responsive">
-        <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+        <table class="table table-sm table-hover mb-0 bulk-boq-table" style="font-size:13px;">
             <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
                 <tr>
                     <th ${TH} style="width:40px;text-align:center;">#</th>
@@ -2590,7 +2592,7 @@ function renderSampleList(boqs, isLocked) {
             }).join('');
 
         const addBtn = !isLocked ? `
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 sample-card-add">
                 ${total > 0 ? `
                 <button type="button" class="btn btn-sm py-0 px-2 btn-sample-bulk-fill"
                     data-id-fwo-boq="${boq.id_fwo_boq}"
@@ -2629,16 +2631,16 @@ function renderSampleList(boqs, isLocked) {
         const isOpen = sampleOpenPanels.has(collapseId);
         return `
         <div class="mb-3 border rounded" style="background:#fff;">
-            <div class="d-flex justify-content-between align-items-center px-3 py-2"
+            <div class="sample-card-head px-3 py-2"
                 style="background:#f8fafc;border-bottom:1px solid #e2e8f0;border-radius:calc(0.375rem - 1px) calc(0.375rem - 1px) 0 0;">
-                <div>
+                <div class="sample-card-info">
                     <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
                         <span class="text-muted sample-progress-text" style="font-size:11px;">Target: ${boq.qty || 0} &nbsp;·&nbsp; ${diambil}/${total} diambil &nbsp;·&nbsp; ${dikirim} dikirim${ttText}</span>
                         ${sisa > 0 && !isLocked ? `<span style="font-size:11px;color:#b45309;background:#fef3c7;border:1px solid #fde68a;border-radius:4px;padding:1px 6px;">${sisa} slot belum dibuat</span>` : ''}
                     </div>
                     <div style="font-size:13px;font-weight:600;color:#1e293b;">${escHtml(boq.nama_boq)}</div>
                 </div>
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2 sample-card-actions">
                     ${addBtn}
                     <button type="button" class="btn btn-sm btn-plan-icon btn-sample-collapse"
                         data-target="#${collapseId}" title="Sembunyikan / Tampilkan">
@@ -2653,7 +2655,7 @@ function renderSampleList(boqs, isLocked) {
                     </div>
                 </div>
                 <div class="table-responsive">
-                    <table class="pm-table">
+                    <table class="pm-table sample-table">
                         <thead>
                             <tr>
                                 <th style="width:36px;">#</th>

@@ -2920,3 +2920,307 @@ body.perm-no-create [data-perm="can_create"] {
 
 /* KPI row detail WO: isi kartu rata ke atas (bukan di tengah vertikal) */
 #boqSummaryCard .pm-kpi-card { align-items: flex-start; }
+
+/* =====================
+   MOBILE — target sentuh & area aksi (sejak 2026-10-29, dari audit mobile FWO)
+   Kelas bersama, berlaku untuk semua modul. Sengaja di AKHIR file: aturan dasar
+   .pm-tab-header / .pm-tab-actions ditulis di bagian bawah file dan akan mengalahkan
+   aturan mobile lama yang ada di blok @media sebelumnya (mis. margin-left .pm-tab-actions).
+   ===================== */
+@media (max-width: 767.98px) {
+    /* Action bar atas: tinggi sentuh >= 40px (sebelumnya 29-36px) */
+    .detail-action-bar .btn,
+    .detail-action-bar .btn-action-edit,
+    .detail-action-bar .btn-action-danger,
+    .detail-action-bar .btn-action-save,
+    .detail-action-bar .btn-action-secondary {
+        min-height: 40px;
+    }
+    .detail-action-bar .btn-action-secondary { min-width: 40px; }
+    .detail-action-bar .btn-action-more { width: 40px; height: 40px; }
+
+    /* Badge dokumen/pelanggan di action bar adalah link — beri tinggi sentuh (sebelumnya 23px) */
+    .detail-action-bar .pm-badge,
+    .detail-header .pm-badge {
+        min-height: 32px;
+    }
+
+    /* Baris tab: navigasi tab dapat satu baris penuh, tombol aksi tab ("+ Tambah ...")
+       turun ke baris sendiri — sebelumnya berebut ruang sehingga label tab menyusut. */
+    .pm-tab-header {
+        flex-wrap: wrap;
+        overflow: visible;
+        padding: 0 8px;
+    }
+    .pm-tab-header .pm-tab-nav {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+    .pm-tab-header .pm-tab-actions {
+        flex: 0 0 100%;
+        margin-left: 0;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    /* jarak lewat isi wadah (bukan padding wadah) supaya baris aksi kosong tidak meninggalkan celah.
+       Tombol biasanya terbungkus <div class="d-flex gap-2">, jadi jarak dipasang di anak langsung
+       dan tinggi sentuh di tombolnya. */
+    .pm-tab-header .pm-tab-actions > * {
+        margin: 6px 0 8px;
+        flex-wrap: wrap;
+    }
+    .pm-tab-header .pm-tab-actions .btn,
+    .pm-tab-header .pm-tab-actions button,
+    .pm-tab-header .pm-tab-actions a {
+        min-height: 40px;
+    }
+
+    /* Tombol tutup (X) modal: sebelumnya 22x22px */
+    .modal .modal-header .btn-close {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        background-size: 14px auto;
+        background-position: center;
+        flex-shrink: 0;
+    }
+
+    /* Tombol footer modal */
+    .modal-footer .btn-action-secondary,
+    .modal-footer .btn-action-save,
+    .modal-footer .btn {
+        min-height: 40px;
+    }
+}
+
+/* =====================
+   TAB SAMPLE FWO — header kartu BOQ & tabel sample (sejak 2026-10-29)
+   Dipakai di renderSampleList() (fieldworks/index.js). Di desktop tampilan sama seperti sebelumnya
+   (kelas menggantikan utility Bootstrap d-flex justify-content-between align-items-center).
+   ===================== */
+.sample-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+@media (max-width: 767.98px) {
+    /* Header (sebelumnya judul terbungkus 5-6 baris karena berebut ruang dengan 3 tombol):
+       baris 1 = judul/progres + tombol buka-tutup di kanan atas, baris 2 = tombol aksi selebar penuh.
+       .sample-card-actions di-"lebur" (display: contents) supaya isinya jadi item grid header.
+       !important karena kelas d-flex Bootstrap di elemen itu juga !important. */
+    .sample-card-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: 8px;
+        row-gap: 8px;
+        align-items: start;
+    }
+    .sample-card-head > .sample-card-actions {
+        display: contents !important;
+    }
+    .sample-card-info {
+        grid-column: 1;
+        grid-row: 1;
+        min-width: 0;
+    }
+    .sample-card-head .btn-sample-collapse {
+        grid-column: 2;
+        grid-row: 1;
+        align-self: start;
+        min-width: 40px;
+    }
+    .sample-card-add {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        min-width: 0;
+    }
+    .sample-card-add > .btn {
+        flex: 0 0 auto;
+    }
+    .sample-card-add > .dropdown {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .sample-card-add > .dropdown > .btn {
+        width: 100%;
+    }
+    .sample-card-add .dropdown-toggle::after {
+        display: none; /* tanda panah dilepas supaya label muat di HP kecil (360px) */
+    }
+    .sample-card-head .btn {
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+
+    /* Tabel sample lebar (±1.100px) digeser ke samping; kolom Aksi (Edit/Hapus) menempel di kanan
+       supaya selalu terjangkau tanpa menggeser jauh. */
+    .sample-table th:last-child,
+    .sample-table td:last-child {
+        position: sticky;
+        right: 0;
+        z-index: 1;
+        width: 100px !important;
+        background: #fff;
+        box-shadow: -6px 0 6px -6px rgba(15, 23, 42, 0.18);
+    }
+    .sample-table th:last-child {
+        background: #f8fafc;
+    }
+    .sample-table td:last-child button.btn {
+        min-width: 40px;
+        min-height: 40px;
+    }
+}
+
+/* =====================
+   TAB BUDGET FWO — header Budget Plan, tabel budget, modal Kelola BOQ (sejak 2026-10-29)
+   Dipakai di renderBudgetList() & renderBulkBoqList() (fieldworks/index.js).
+   Desktop sama seperti sebelumnya (kelas menggantikan utility Bootstrap d-flex justify-content-between align-items-center).
+   ===================== */
+.plan-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+@media (max-width: 767.98px) {
+    /* Header plan: baris 1 = judul/status/tanggal + menu ⋮ + buka-tutup, baris 2 = Budget/Actual/Selisih
+       (3 kolom, label di atas angka), baris 3 = Verifikasi/dokumen. Sebelumnya ringkasan, ⋮, dan buka-tutup
+       terdorong ke luar layar kanan sehingga menu ⋮ tidak terjangkau. */
+    .plan-card-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        column-gap: 8px;
+        row-gap: 8px;
+        align-items: start;
+    }
+    .plan-card-head > .plan-card-right {
+        display: contents !important;
+    }
+    .plan-card-info {
+        grid-column: 1;
+        grid-row: 1;
+        min-width: 0;
+    }
+    .plan-card-more {
+        grid-column: 2;
+        grid-row: 1;
+    }
+    .plan-card-head .btn-budget-collapse {
+        grid-column: 3;
+        grid-row: 1;
+    }
+    .plan-card-head .plan-card-stats {
+        display: grid !important;
+        grid-column: 1 / -1;
+        grid-row: 2;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px !important;
+    }
+    .plan-card-head .plan-card-stats > span {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        word-break: break-word;
+    }
+    .plan-card-head .btn-bulk-verify {
+        grid-column: 1 / -1;
+        grid-row: 3;
+    }
+    .plan-card-head .btn-plan-icon,
+    .plan-card-head .btn-bulk-verify {
+        min-width: 40px;
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Ringkasan total semua plan: judul penuh, lalu Total Budget/Realisasi/Surplus 3 kolom (sebelumnya terpotong kanan) */
+    .plan-summary {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px 8px !important;
+    }
+    .plan-summary > span:first-child {
+        grid-column: 1 / -1;
+    }
+    .plan-summary > span:not(:first-child) {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        word-break: break-word;
+    }
+
+    /* Tabel budget: kolom tombol "Catat Pengeluaran (+)" menempel di kanan, tombolnya 40px */
+    .budget-table th:last-child,
+    .budget-table td:last-child {
+        position: sticky;
+        right: 0;
+        z-index: 1;
+        background: #fff;
+        box-shadow: -6px 0 6px -6px rgba(15, 23, 42, 0.18);
+    }
+    .budget-table th:last-child {
+        background: #f8fafc;
+    }
+    .budget-table td:last-child button.btn {
+        min-width: 40px;
+        min-height: 40px;
+    }
+
+    /* Modal Kelola BOQ: baris tabel jadi kartu bertumpuk — kolom Qty FWO & Keterangan (yang diisi user)
+       sebelumnya di luar layar kanan. Judul/labelnya dari atribut data-label di tiap <td>. */
+    .bulk-boq-table thead {
+        display: none;
+    }
+    .bulk-boq-table,
+    .bulk-boq-table tbody {
+        display: block;
+    }
+    .bulk-boq-table tbody tr {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr);
+        gap: 6px 10px;
+        padding: 10px 4px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .bulk-boq-table tbody td {
+        display: block;
+        padding: 0 !important;
+        border: 0;
+        width: auto !important;
+        min-width: 0;
+    }
+    .bulk-boq-table tbody td:nth-child(1) { grid-column: 1; grid-row: 1; text-align: left !important; }
+    .bulk-boq-table tbody td:nth-child(2) { grid-column: 2 / 4; grid-row: 1; }
+    .bulk-boq-table tbody td:nth-child(3) { grid-column: 2; grid-row: 2; }
+    .bulk-boq-table tbody td:nth-child(4) { grid-column: 3; grid-row: 2; }
+    .bulk-boq-table tbody td:nth-child(5) { grid-column: 2; grid-row: 3; }
+    .bulk-boq-table tbody td:nth-child(6) { grid-column: 3; grid-row: 3; }
+    .bulk-boq-table tbody td[colspan] {
+        grid-column: 1 / -1 !important;
+        grid-row: auto !important;
+    }
+    .bulk-boq-table tbody td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: .4px;
+        text-transform: uppercase;
+        color: #64748b;
+        margin-bottom: 2px;
+    }
+    .bulk-boq-table .form-control {
+        min-height: 40px;
+    }
+    .bulk-boq-table .btn-bulk-eye {
+        min-width: 32px;
+        min-height: 32px;
+    }
+}

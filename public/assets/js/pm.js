@@ -6,6 +6,11 @@ function escHtml(str) {
         .replace(/"/g, '&quot;');
 }
 
+// Breakpoint HP — sama dengan @media (max-width: 767.98px) di main.css.
+function pmIsMobile() {
+    return window.matchMedia('(max-width: 767.98px)').matches;
+}
+
 $(document).ready(function () {
     if (
         document.getElementById("advanceSearchForm") &&
@@ -81,6 +86,9 @@ $(window).on('load', function () {
     }
 
     function tick() {
+        // HP: action bar (judul, badge, tombol) tinggi ±250px — kalau menempel makan >40% layar,
+        // jadi dibiarkan ikut menggulir; hanya baris tab yang menempel (lihat blok di bawah).
+        if (pmIsMobile()) { if (isFixed) removeFixed(); return; }
         if (!wrap) { measure(); return; }
         if (naturalTop === null) { measure(); return; }
         var scrollY = window.pageYOffset;
@@ -104,6 +112,7 @@ $(window).on('load', function () {
     window.addEventListener('resize', function () {
         if (isFixed && wrap) wrap.style.left = getMainLeft() + 'px';
         if (!isFixed) { naturalTop = null; measure(); }
+        onScroll(); // putar layar / lewat breakpoint HP: lepas atau pasang sticky sesuai lebar
     });
 
     // Re-anchor saat form baru di-render ke #detailContent
@@ -140,6 +149,7 @@ $(window).on('load', function () {
     }
 
     function getActionBarHeight() {
+        if (pmIsMobile()) return 0; // HP: action bar tidak menempel, baris tab menempel di paling atas
         var wrap = document.querySelector('.detail-action-sticky-wrap');
         return wrap ? wrap.offsetHeight : 0;
     }
@@ -214,6 +224,7 @@ $(window).on('load', function () {
     window.addEventListener('resize', function () {
         if (isFixed && tabHeader) tabHeader.style.left = getMainLeft() + 'px';
         if (!isFixed) { naturalTop = null; measure(); }
+        onScroll();
     });
 
     new MutationObserver(function (mutations) {
