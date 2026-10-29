@@ -57,12 +57,13 @@ class NotificationRoles
     {
         if (!$idSq) return [];
         $sq = DB::table('sales_quotations')->where('id_sq', $idSq)
-            ->first(['pic_input', 'pic_marketing_internal', 'pic_marketing_eksternal', 'diajukan_oleh']);
+            ->first(['pic_input', 'pic_order', 'pic_marketing_internal', 'pic_marketing_eksternal', 'diajukan_oleh']);
         if (!$sq) return [];
 
         return [
             'pengaju'             => self::ids($sq->diajukan_oleh),
             'pic_input'           => self::ids($sq->pic_input),
+            'pic_order'           => self::ids($sq->pic_order),
             'marketing_internal'  => self::ids($sq->pic_marketing_internal),
             'marketing_eksternal' => self::ids($sq->pic_marketing_eksternal),
         ];

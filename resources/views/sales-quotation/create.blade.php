@@ -132,19 +132,25 @@
         <div class="col-12">
             <x-section-card icon="fa-users" color="icon-green" title="PIC Internal" subtitle="Penanggung jawab dari Pramatek">
                 <div class="row g-3">
-                    <div class="col-md-4 col-12">
+                    <div class="col-md-3 col-12">
                         <label class="form-label required">PIC Input</label>
                         <select name="pic_input" id="pic_input" class="form-select" required>
                             <option value="">Pilih PIC Input</option>
                         </select>
                     </div>
-                    <div class="col-md-4 col-12">
+                    <div class="col-md-3 col-12">
+                        <label class="form-label required">PIC Order</label>
+                        <select name="pic_order" id="pic_order" class="form-select" required>
+                            <option value="">Pilih PIC Order</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 col-12">
                         <label class="form-label required">Marketing Internal</label>
                         <select name="pic_marketing_internal" id="pic_marketing_internal" class="form-select" required>
                             <option value="">Pilih Marketing Internal</option>
                         </select>
                     </div>
-                    <div class="col-md-4 col-12">
+                    <div class="col-md-3 col-12">
                         <label class="form-label">Marketing Eksternal</label>
                         <select name="pic_marketing_eksternal" id="pic_marketing_eksternal" class="form-select">
                             <option value="">Pilih Marketing Eksternal</option>
@@ -385,6 +391,7 @@
     function initPicInternal() {
         const selects = [
             { id: '#pic_input', placeholder: 'Pilih PIC Input' },
+            { id: '#pic_order', placeholder: 'Pilih PIC Order' },
             { id: '#pic_marketing_internal', placeholder: 'Pilih Marketing Internal' },
             { id: '#pic_marketing_eksternal', placeholder: 'Pilih Marketing Eksternal' },
         ];
@@ -420,6 +427,7 @@
             ['select[name="id_site_pelanggan_payment"]', 'Site (Data Pembayaran)'],
             ['select[name="id_pic_pelanggan_payment"]', 'PIC (Data Pembayaran)'],
             ['select[name="pic_input"]', 'PIC Input'],
+            ['select[name="pic_order"]', 'PIC Order'],
             ['select[name="pic_marketing_internal"]', 'Marketing Internal'],
         ];
 

@@ -28,6 +28,7 @@ trait HasOrderPartyFields
             'id_site_pelanggan_payment' => 'required|integer',
             'id_pic_pelanggan_payment' => 'required|integer',
             'pic_input' => 'required|integer',
+            'pic_order' => 'required|integer',
             'pic_marketing_internal' => 'required|integer',
             'pic_marketing_eksternal' => 'nullable|integer',
             'id_office' => 'nullable|integer',
@@ -47,6 +48,7 @@ trait HasOrderPartyFields
             'id_site_pelanggan_payment.required' => 'Site pada Data Pembayaran wajib dipilih.',
             'id_pic_pelanggan_payment.required' => 'PIC pada Data Pembayaran wajib dipilih.',
             'pic_input.required' => 'PIC Input wajib dipilih.',
+            'pic_order.required' => 'PIC Order wajib dipilih.',
             'pic_marketing_internal.required' => 'Marketing Internal wajib dipilih.',
         ];
     }
@@ -68,6 +70,7 @@ trait HasOrderPartyFields
             'id_site_pelanggan_payment' => $request->id_site_pelanggan_payment,
             'id_pic_pelanggan_payment' => $request->id_pic_pelanggan_payment,
             'pic_input' => $request->pic_input,
+            'pic_order' => $request->pic_order,
             'pic_marketing_internal' => $request->pic_marketing_internal,
             'pic_marketing_eksternal' => $request->pic_marketing_eksternal,
             'id_office' => $request->id_office,

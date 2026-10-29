@@ -173,10 +173,11 @@ trait HasAuditHistory
             'id_pic_pelanggan_delivery'   => ['business_relation_contacts', 'id_contact', 'nama_pic'],
             'id_pic_pelanggan_payment'    => ['business_relation_contacts', 'id_contact', 'nama_pic'],
             'pic_input'                   => ['users', 'id', 'name'],
+            'pic_order'                   => ['users', 'id', 'name'],
             'pic_marketing_internal'      => ['users', 'id', 'name'],
             'pic_marketing_eksternal'     => ['users', 'id', 'name'],
             'id_office'                   => ['office', 'id_office', 'name'],
-            'id_sq_induk'                 => ['sales_quotations', 'id_sq', 'no_sq'],
+            'id_sq_induk'                => ['sales_quotations', 'id_sq', 'no_sq'],
         ],
         'sales_orders' => [
             'id_pelanggan'                => ['business_relations', 'id_br', 'nama'],

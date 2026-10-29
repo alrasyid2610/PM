@@ -294,13 +294,16 @@ function renderForm(res) {
         { icon: 'fa-users', color: 'icon-green', title: 'PIC Internal', subtitle: 'Penanggung jawab dari Pramatek' },
         `<div class="row g-3 form-1">
             ${formGroup.select('pic_input', 'PIC Input', res.pic_input, [], {
-                mode: 'ajax', url: 'users/select2', placeholder: 'Pilih Data', label: res.pic_input_name, className: 'col-md-4', required: true,
+                mode: 'ajax', url: 'users/select2', placeholder: 'Pilih Data', label: res.pic_input_name, className: 'col-md-3', required: true,
+            })}
+            ${formGroup.select('pic_order', 'PIC Order', res.pic_order, [], {
+                mode: 'ajax', url: 'users/select2', placeholder: 'Pilih Data', label: res.pic_order_name, className: 'col-md-3', required: true,
             })}
             ${formGroup.select('pic_marketing_internal', 'Marketing Internal', res.marketing_internal_id, [], {
-                mode: 'ajax', url: 'users/select2', placeholder: 'Pilih Data', label: res.marketing_internal_name, className: 'col-md-4', required: true,
+                mode: 'ajax', url: 'users/select2', placeholder: 'Pilih Data', label: res.marketing_internal_name, className: 'col-md-3', required: true,
             })}
             ${formGroup.select('pic_marketing_eksternal', 'Marketing Eksternal', res.marketing_eksternal_id, [], {
-                mode: 'ajax', url: 'users/select2', placeholder: 'Pilih Data', label: res.marketing_eksternal_name, className: 'col-md-4',
+                mode: 'ajax', url: 'users/select2', placeholder: 'Pilih Data', label: res.marketing_eksternal_name, className: 'col-md-3',
             })}
         </div>`,
     )}

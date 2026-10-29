@@ -861,6 +861,10 @@ function openConvertSqModal(idSq) {
             ajax: { url: '/users/select2', dataType: 'json', delay: 200, data: function (q) { return { q: q.term }; }, processResults: function (d) { return { results: d }; }, cache: true },
             escapeMarkup: function (m) { return m; },
         });
+        // Default PIC Order = PIC Order di SQ (SQ lama bisa kosong), tetap bisa diganti user
+        if (p.pic_order) {
+            $('#convertPicOrder').append(new Option(p.pic_order_nama || ('User #' + p.pic_order), p.pic_order, true, true)).trigger('change');
+        }
         $('#btnConvertSqSubmit').prop('disabled', false);
     }).fail(function () {
         $('#convertSqBody').html('<div class="text-danger text-center py-4">Gagal memuat data SQ.</div>');

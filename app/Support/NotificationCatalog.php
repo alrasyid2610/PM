@@ -28,7 +28,7 @@ class NotificationCatalog
     private const ROLES_SO  = ['actor', 'pic_input', 'pic_order', 'marketing_internal', 'marketing_eksternal'];
     private const ROLES_WO  = ['actor', 'wo_pic', 'pic_input', 'pic_order', 'marketing_internal', 'marketing_eksternal'];
     private const ROLES_FWO = ['actor', 'fwo_penyelia', 'fwo_personel', 'wo_pic', 'pic_input', 'pic_order', 'marketing_internal', 'marketing_eksternal'];
-    private const ROLES_SQ  = ['actor', 'pengaju', 'pic_input', 'marketing_internal', 'marketing_eksternal']; // SQ tidak punya PIC Order
+    private const ROLES_SQ  = ['actor', 'pengaju', 'pic_input', 'pic_order', 'marketing_internal', 'marketing_eksternal'];
 
     public static function all(): array
     {

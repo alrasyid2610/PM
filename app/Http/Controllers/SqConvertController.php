@@ -84,6 +84,8 @@ class SqConvertController extends Controller
             'judul_order' => $sq->judul_order,
             'rencana_mulai' => $sq->rencana_mulai,
             'pic_marketing_eksternal' => $sq->pic_marketing_eksternal,
+            'pic_order' => $sq->pic_order,
+            'pic_order_nama' => $sq->pic_order ? DB::table('users')->where('id', $sq->pic_order)->value('name') : null,
             'status' => $sq->status,
             'missing' => $missing,
             'sudah_convert' => $so ? ['id_so' => $so->id_so, 'no_so' => $so->no_so] : null,

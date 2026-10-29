@@ -118,6 +118,7 @@ class SalesQuotationController extends Controller
             ->leftJoin('business_relation_sites as site_pay', 'sq.id_site_pelanggan_payment', '=', 'site_pay.id_site')
             ->leftJoin('business_relation_contacts as brc_pay', 'brc_pay.id_contact', '=', 'sq.id_pic_pelanggan_payment')
             ->leftJoin('users as pic_i', 'pic_i.id', '=', 'sq.pic_input')
+            ->leftJoin('users as pic_o', 'pic_o.id', '=', 'sq.pic_order')
             ->leftJoin('users as marketing_internal', 'marketing_internal.id', '=', 'sq.pic_marketing_internal')
             ->leftJoin('users as marketing_eksternal', 'marketing_eksternal.id', '=', 'sq.pic_marketing_eksternal')
             ->leftJoin('office as o', 'o.id_office', '=', 'sq.id_office')
@@ -142,6 +143,7 @@ class SalesQuotationController extends Controller
                 'site_pay.nama_lokasi as pelanggan_site_pay',
                 'brc_pay.nama_pic as pic_pelanggan_pay',
                 'pic_i.name as pic_input_name',
+                'pic_o.name as pic_order_name',
                 'marketing_internal.name as marketing_internal_name',
                 'marketing_internal.id as marketing_internal_id',
                 'marketing_eksternal.name as marketing_eksternal_name',
