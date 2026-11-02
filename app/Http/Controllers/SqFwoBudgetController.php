@@ -25,7 +25,8 @@ class SqFwoBudgetController extends Controller
     {
         $idSq = DB::table('sq_fieldworks as f')->join('sq_work_orders as w', 'w.id_sq_wo', '=', 'f.id_sq_wo')
             ->where('f.id_sq_fwo', $id_sq_fwo)->value('w.id_sq');
-        return response()->json(\App\Support\BudgetBasis::forSq($idSq ? (int) $idSq : null));
+        return response()->json(\App\Support\BudgetBasis::forSq($idSq ? (int) $idSq : null)
+            + ['bisa_tandai' => \App\Support\BudgetTanpaRealisasi::boleh('sq-fwo', (int) $id_sq_fwo)]);
     }
 
     public function listByFwo($id_sq_fwo)
@@ -35,7 +36,10 @@ class SqFwoBudgetController extends Controller
             ->orderBy('b.created_at')
             ->get(['b.id_sq_budget', 'b.label', 'b.keterangan', 'b.hari_mulai', 'b.hari_selesai']);
 
+        // Boleh menandai "Tanpa realisasi" (PIC Order SQ ini, atau Aksi Khusus pengganti)
+        $bisaTandai = !\App\Support\SqLock::byFwo($id_sq_fwo) && \App\Support\BudgetTanpaRealisasi::boleh('sq-fwo', (int) $id_sq_fwo);
         foreach ($budgets as $budget) {
+            $budget->bisa_tandai = $bisaTandai;
             $items = DB::table('sq_fwo_budget_items as bi')
                 ->join('budget_accounts as ba', 'ba.id_account', '=', 'bi.id_account')
                 ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'bi.id_satuan')
@@ -45,6 +49,8 @@ class SqFwoBudgetController extends Controller
                     'bi.id_sq_budget_item', 'bi.id_account', 'ba.nama as nama_account',
                     'ba.kode as kode_account', 'bp.nama as nama_category',
                     'bi.nominal_budget', 'bi.qty', 'bi.hari', 'bi.harga_satuan', 'bi.id_satuan', 'sat.nama as satuan', 'bi.keterangan', 'bi.is_cash_advance',
+                    'bi.tanpa_realisasi', 'bi.qty_tanpa_realisasi', 'bi.nominal_tanpa_realisasi', 'bi.alasan_tanpa_realisasi', 'bi.ditandai_at',
+                    DB::raw('(SELECT u.name FROM users u WHERE u.id = bi.ditandai_oleh) as ditandai_oleh_nama'),
                 ]);
 
             $budget->items = $items;
@@ -58,7 +64,7 @@ class SqFwoBudgetController extends Controller
      * Snapshot plan budget untuk audit log: baris plan + satu field per item budget
      * ("Item • {akun}" => nominal) supaya History hanya menampilkan item yang berubah.
      */
-    private function budgetJson($id): string
+    public function budgetJson($id): string
     {
         $plan = DB::table('sq_fwo_budgets')->where('id_sq_budget', $id)->first();
         if (!$plan) return '';
@@ -70,7 +76,7 @@ class SqFwoBudgetController extends Controller
             ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'bi.id_satuan')
             ->where('bi.id_sq_budget', $id)
             ->orderBy('bi.id_sq_budget_item')
-            ->get(['a.nama', 'bi.nominal_budget', 'bi.qty', 'bi.hari', 'bi.harga_satuan', 'sat.nama as satuan', 'bi.keterangan', 'bi.is_cash_advance']);
+            ->get(['a.nama', 'bi.nominal_budget', 'bi.qty', 'bi.hari', 'bi.harga_satuan', 'sat.nama as satuan', 'bi.keterangan', 'bi.is_cash_advance', 'bi.qty_tanpa_realisasi', 'bi.alasan_tanpa_realisasi']);
 
         foreach ($items as $i) {
             $kunci = 'Item • ' . ($i->nama ?? '?');
@@ -80,6 +86,7 @@ class SqFwoBudgetController extends Controller
             $plan[$kunci] = 'Rp ' . number_format($i->nominal_budget, 0, ',', '.')
                 . (($rinci = \App\Support\BudgetItemInput::label($i->qty, $i->satuan, $i->harga_satuan, $i->hari)) ? ' (' . $rinci . ')' : '')
                 . ($i->is_cash_advance ? ' [Cash Advance]' : '')
+                . \App\Support\BudgetTanpaRealisasi::teks($i)
                 . ($i->keterangan ? ' — ' . $i->keterangan : '');
         }
 
@@ -117,12 +124,14 @@ class SqFwoBudgetController extends Controller
             ]);
 
             foreach ($request->items as $item) {
+                $fields = \App\Support\BudgetItemInput::fields($item);
                 DB::table('sq_fwo_budget_items')->insert([
                     'id_sq_budget' => $id,
                     'id_account' => $item['id_account'],
-                    ...\App\Support\BudgetItemInput::fields($item),
+                    ...$fields,
                     'keterangan' => $item['keterangan'] ?? null,
                     'is_cash_advance' => $item['is_cash_advance'] ?? 0,
+                    ...\App\Support\BudgetTanpaRealisasi::kolom('sq-fwo', (int) $request->id_sq_fwo, $item, $fields, null),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -146,7 +155,7 @@ class SqFwoBudgetController extends Controller
             ->join('budget_accounts as ba', 'ba.id_account', '=', 'bi.id_account')
             ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'bi.id_satuan')
             ->where('bi.id_sq_budget', $id)
-            ->get(['bi.id_sq_budget_item', 'bi.id_account', 'ba.nama as nama_account', 'bi.nominal_budget', 'bi.qty', 'bi.hari', 'bi.harga_satuan', 'bi.id_satuan', 'sat.nama as satuan', 'bi.keterangan', 'bi.is_cash_advance']);
+            ->get(['bi.id_sq_budget_item', 'bi.id_account', 'ba.nama as nama_account', 'bi.nominal_budget', 'bi.qty', 'bi.hari', 'bi.harga_satuan', 'bi.id_satuan', 'sat.nama as satuan', 'bi.keterangan', 'bi.is_cash_advance', 'bi.tanpa_realisasi', 'bi.qty_tanpa_realisasi', 'bi.nominal_tanpa_realisasi', 'bi.alasan_tanpa_realisasi']);
 
         return response()->json($budget);
     }
@@ -174,7 +183,7 @@ class SqFwoBudgetController extends Controller
 
         $before = $this->budgetJson($id);
 
-        DB::transaction(function () use ($request, $id) {
+        DB::transaction(function () use ($request, $id, $budget) {
             DB::table('sq_fwo_budgets')->where('id_sq_budget', $id)->update([
                 'label' => $request->label,
                 'keterangan' => $request->keterangan,
@@ -191,21 +200,25 @@ class SqFwoBudgetController extends Controller
                 ->delete();
 
             foreach ($request->items as $item) {
+                $fields = \App\Support\BudgetItemInput::fields($item);
                 if (!empty($item['id_sq_budget_item'])) {
+                    $lama = DB::table('sq_fwo_budget_items')->where('id_sq_budget_item', $item['id_sq_budget_item'])->first();
                     DB::table('sq_fwo_budget_items')->where('id_sq_budget_item', $item['id_sq_budget_item'])->update([
                         'id_account' => $item['id_account'],
-                        ...\App\Support\BudgetItemInput::fields($item),
+                        ...$fields,
                         'keterangan' => $item['keterangan'] ?? null,
                         'is_cash_advance' => $item['is_cash_advance'] ?? 0,
+                        ...\App\Support\BudgetTanpaRealisasi::kolom('sq-fwo', (int) $budget->id_sq_fwo, $item, $fields, $lama),
                         'updated_at' => now(),
                     ]);
                 } else {
                     DB::table('sq_fwo_budget_items')->insert([
                         'id_sq_budget' => $id,
                         'id_account' => $item['id_account'],
-                        ...\App\Support\BudgetItemInput::fields($item),
+                        ...$fields,
                         'keterangan' => $item['keterangan'] ?? null,
                         'is_cash_advance' => $item['is_cash_advance'] ?? 0,
+                        ...\App\Support\BudgetTanpaRealisasi::kolom('sq-fwo', (int) $budget->id_sq_fwo, $item, $fields, null),
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);

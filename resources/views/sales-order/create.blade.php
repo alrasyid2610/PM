@@ -496,7 +496,7 @@
     function initPicInternal() {
         const selects = [
             { id: "#pic_input",               placeholder: "Pilih PIC Input"           },
-            { id: "#pic_order",               placeholder: "Pilih PIC Order"           },
+            { id: "#pic_order",               placeholder: "Pilih PIC Order", peran: "pic_order" }, // hanya user Grup/Departemen PIC
             { id: "#pic_marketing_internal",  placeholder: "Pilih Marketing Internal"  },
             { id: "#pic_marketing_eksternal", placeholder: "Pilih Marketing Eksternal" },
         ];
@@ -510,7 +510,7 @@
                     url: "{{ route('users.select2') }}",
                     dataType: 'json',
                     delay: 200,
-                    data: function (params) { return { q: params.term || '' }; },
+                    data: function (params) { return { q: params.term || '', peran: item.peran || '' }; },
                     processResults: function (data) { return { results: data }; },
                     cache: true,
                 },

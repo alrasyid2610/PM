@@ -98,6 +98,11 @@ function renderForm(res) {
                 icon: "fa-solid fa-file-pdf",
                 attrs: `onclick="window.open('/sales-orders/${res.id_so}/print','_blank')"`,
             },
+            {
+                label: "Executive Summary (Internal)",
+                icon: "fa-solid fa-chart-pie",
+                attrs: `onclick="window.open('/sales-orders/${res.id_so}/executive-summary','_blank')"`,
+            },
             ...(can('sales-orders', 'can_create') ? [{
                 label: "Clone SO",
                 icon: "fa-solid fa-copy",
@@ -526,7 +531,7 @@ function renderForm(res) {
                         [],
                         {
                             mode: "ajax",
-                            url: "users/select2",
+                            url: "users/select2?peran=pic_order", // hanya user Grup/Departemen PIC
                             placeholder: "Pilih Data",
                             label: res.pic_ordername,
                             className: "col-md-3",

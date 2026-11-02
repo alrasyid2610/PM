@@ -410,7 +410,7 @@ class WorkOrderController extends Controller
             ->where(fn ($q) => $q->whereNull('status')->orWhere('status', '!=', 'tidak_terlaksana'))
             ->count();
         if ($sampleBelumReg > 0) {
-            $alasan[] = "{$sampleBelumReg} sample belum diregistrasi di Lab Sample Reg";
+            $alasan[] = "{$sampleBelumReg} sample belum diregistrasi (menu Lab Sample Reg)";
         }
 
         // Semua Budget Plan WO harus completed (tanpa Budget Plan boleh)

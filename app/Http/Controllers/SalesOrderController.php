@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DataScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
@@ -242,6 +243,19 @@ class SalesOrderController extends Controller
             return [$rupiah, $pct];
         }
         return [0, null];
+    }
+
+    /**
+     * Angka kartu "Nilai Budget" di KPI detail SO: Budget WO & Budget FWO (estimasi + realisasi) seluruh WO milik SO,
+     * dan `nilai` = Total Nilai SO sebagai dasar persentase. Lihat App\Support\BudgetSummary.
+     */
+    public function budgetSummary($id)
+    {
+        if (!DB::table('sales_orders')->where('id_so', $id)->whereNull('deleted_at')->exists()) {
+            return response()->json(['message' => 'Sales Order tidak ditemukan'], 404);
+        }
+
+        return response()->json(\App\Support\BudgetSummary::forSo((int) $id));
     }
 
     public function show($id)
@@ -598,6 +612,7 @@ class SalesOrderController extends Controller
         $search = $request->q;
 
         $data = DB::table('sales_orders')
+            ->tap(fn ($q) => DataScope::so($q))
             ->whereNull('deleted_at')
             ->where('no_so', 'like', "%{$search}%")
             ->limit(10)
@@ -621,6 +636,7 @@ class SalesOrderController extends Controller
         $isSearching = !empty($filters);
 
         $query = DB::table('sales_orders as s')
+            ->tap(fn ($q) => DataScope::so($q, 's'))
             ->leftJoin('business_relations as br', 's.id_pelanggan', '=', 'br.id_br')
             ->leftJoin('business_relation_sites as brs', 's.id_site_pelanggan', '=', 'brs.id_site')
             ->when(!$isSearching, fn($q) => $q->whereNull('s.deleted_at'))
@@ -1739,6 +1755,12 @@ class SalesOrderController extends Controller
                                 'harga_satuan'    => $sourceItem->harga_satuan,
                                 'keterangan'      => $sourceItem->keterangan,
                                 'is_cash_advance' => $sourceItem->is_cash_advance,
+                                'tanpa_realisasi'   => $sourceItem->tanpa_realisasi,
+                                'alasan_tanpa_realisasi' => $sourceItem->alasan_tanpa_realisasi,
+                                'ditandai_oleh'     => $sourceItem->ditandai_oleh,
+                                'ditandai_at'       => $sourceItem->ditandai_at,
+                                'qty_tanpa_realisasi' => $sourceItem->qty_tanpa_realisasi,
+                                'nominal_tanpa_realisasi' => $sourceItem->nominal_tanpa_realisasi,
                                 'created_at'      => now(),
                                 'updated_at'      => now(),
                             ]);
@@ -2028,6 +2050,12 @@ class SalesOrderController extends Controller
                                     'harga_satuan'    => $sourceItem->harga_satuan,
                                     'keterangan'      => $sourceItem->keterangan,
                                     'is_cash_advance' => $sourceItem->is_cash_advance,
+                                    'tanpa_realisasi'   => $sourceItem->tanpa_realisasi,
+                                    'alasan_tanpa_realisasi' => $sourceItem->alasan_tanpa_realisasi,
+                                    'ditandai_oleh'     => $sourceItem->ditandai_oleh,
+                                    'ditandai_at'       => $sourceItem->ditandai_at,
+                                    'qty_tanpa_realisasi' => $sourceItem->qty_tanpa_realisasi,
+                                    'nominal_tanpa_realisasi' => $sourceItem->nominal_tanpa_realisasi,
                                     'created_at'      => now(),
                                     'updated_at'      => now(),
                                 ]);

@@ -62,6 +62,16 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="col-md-4">
+                    <label class="form-label">Atasan</label>
+                    <select name="id_atasan" class="form-select">
+                        <option value="">-- Tanpa Atasan --</option>
+                        @foreach(\Illuminate\Support\Facades\DB::table('users')->where('is_active', 1)->orderBy('name')->get(['id', 'name']) as $u)
+                            <option value="{{ $u->id }}">{{ $u->name }}</option>
+                        @endforeach
+                    </select>
+                    <small class="text-muted">Atasan melihat SO/SQ milik bawahannya.</small>
+                </div>
                 <div class="col-md-5">
                     <label class="form-label">Grup / Departemen</label>
                     <select name="menu_group_id" class="form-select">
@@ -87,6 +97,7 @@
         $('select[name="is_active"]').select2({ placeholder: 'Pilih Status', width: '100%' });
         $('select[name="status_kepegawaian"]').select2({ placeholder: '-- Pilih --', allowClear: true, width: '100%' });
         $('select[name="menu_group_id"]').select2({ placeholder: '-- Tanpa Grup --', allowClear: true, width: '100%' });
+        $('select[name="id_atasan"]').select2({ placeholder: '-- Tanpa Atasan --', allowClear: true, width: '100%' });
     });
 
     submitCreateForm({

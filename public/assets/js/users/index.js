@@ -11,6 +11,19 @@ $(document).ready(function () {
                 placeholder: '-- Tanpa Grup --',
                 allowClear: true,
             });
+            $('select[name="id_atasan"]', '#detailContent').select2({
+                width: '100%',
+                dropdownParent: $('#detailContent'),
+                placeholder: '-- Tanpa Atasan --',
+                allowClear: true,
+                ajax: {
+                    url: '/users/select2',
+                    dataType: 'json',
+                    delay: 250,
+                    data: params => ({ q: params.term }),
+                    processResults: data => ({ results: data }),
+                },
+            });
         },
         onSave: function (id) {
             submitUserForm(id);

@@ -449,7 +449,7 @@ $(document).on('click', '#sqFwoBudgetModal-btn-save', function () {
         const biId = $(this).find('.bi-id').val();
         const isCa = $(this).find('.bi-ca').is(':checked') ? 1 : 0;
         if (!idAccount) { valid = false; return false; }
-        items.push({ id_sq_budget_item: biId || null, id_account: idAccount, nominal_budget: nominal, qty: $(this).find('.bi-qty').val() || 1, hari: $(this).find('.bi-hari').val() || 1, id_satuan: $(this).find('.bi-unit').val() || null, harga_satuan: parseInt(($(this).find('.bi-nominal').val() || '').replace(/,/g, ''), 10) || 0, keterangan: ket, is_cash_advance: isCa });
+        items.push({ id_sq_budget_item: biId || null, id_account: idAccount, nominal_budget: nominal, qty: $(this).find('.bi-qty').val() || 1, hari: $(this).find('.bi-hari').val() || 1, id_satuan: $(this).find('.bi-unit').val() || null, harga_satuan: parseInt(($(this).find('.bi-nominal').val() || '').replace(/,/g, ''), 10) || 0, keterangan: ket, is_cash_advance: isCa, ...BudgetSections.tanpaCollect($(this)) });
     });
     if (!valid) { Notify.warning('Semua baris harus memilih Account.'); return; }
     if (!items.length) { Notify.warning('Minimal 1 item anggaran.'); return; }

@@ -508,7 +508,7 @@ class FieldworkController extends Controller
             if ($totalKurang > 0)        $alasan[] = "{$totalKurang} titik belum dibuat sample";
             if ($belumDikirim->isNotEmpty()) $alasan[] = "{$belumDikirim->count()} sample belum registrasi lab: " . $daftar($belumDikirim->map($nomor));
             if ($belumLengkap)           $alasan[] = count($belumLengkap) . " sample belum lengkap isiannya: " . $daftar($belumLengkap);
-            if ($belumReg->isNotEmpty()) $alasan[] = "{$belumReg->count()} sample belum diregistrasi di Lab Sample Reg: " . $daftar($belumReg->map($nomor));
+            if ($belumReg->isNotEmpty()) $alasan[] = "{$belumReg->count()} sample belum diregistrasi (menu Lab Sample Reg): " . $daftar($belumReg->map($nomor));
             if ($alasanKurang)           $alasan[] = count($alasanKurang) . " sample Tidak Terlaksana belum lengkap: " . $daftar($alasanKurang);
             if ($budgetBelumSelesai > 0) $alasan[] = "{$budgetBelumSelesai} Budget Plan belum diselesaikan";
             if ($belumAdaLink)           $alasan[] = "Link Dokumentasi belum diisi (isi di tab Informasi)";
@@ -748,6 +748,15 @@ class FieldworkController extends Controller
                         'harga_satuan'    => ((int) $item['nominal_budget'] === (int) $item['source']->nominal_budget) ? $item['source']->harga_satuan : (int) $item['nominal_budget'],
                         'keterangan'      => $item['keterangan'],
                         'is_cash_advance' => $item['source']->is_cash_advance,
+                        // "Tanpa realisasi" ikut tersalin hanya bila nominal tidak diubah (qty/harga tetap utuh)
+                        ...((int) $item['nominal_budget'] === (int) $item['source']->nominal_budget ? [
+                            'tanpa_realisasi'         => $item['source']->tanpa_realisasi,
+                            'qty_tanpa_realisasi'     => $item['source']->qty_tanpa_realisasi,
+                            'nominal_tanpa_realisasi' => $item['source']->nominal_tanpa_realisasi,
+                            'alasan_tanpa_realisasi'  => $item['source']->alasan_tanpa_realisasi,
+                            'ditandai_oleh'           => $item['source']->ditandai_oleh,
+                            'ditandai_at'             => $item['source']->ditandai_at,
+                        ] : []),
                         'created_at'      => now(),
                         'updated_at'      => now(),
                     ]);

@@ -60,6 +60,15 @@ return [
         ],
     ],
     [
+        // Proses lab (transaksi). Lab Sample Reg dulu tab di detail Work Order; dipisah jadi menu sendiri 2026-10-31.
+        'group'   => 'Lab',
+        'icon'    => 'fa-vial',
+        'type'    => 'submenu',
+        'items'   => [
+            ['slug' => 'lab-sample-regs', 'label' => 'Lab Sample Reg', 'icon' => 'fa-vial'],
+        ],
+    ],
+    [
         'group'   => 'Business Relation',
         'icon'    => 'fa-handshake',
         'type'    => 'submenu',
@@ -142,6 +151,9 @@ return [
             ['slug' => 'wo-budget-close',       'label' => 'Selesaikan Plan Budget WO', 'icon' => 'fa-box-archive'],
             ['slug' => 'fwo-budget-close',      'label' => 'Selesaikan Plan Budget FWO','icon' => 'fa-box-archive'],
             ['slug' => 'sq-approve',            'label' => 'Setujui/Tolak SQ (Approval)', 'icon' => 'fa-circle-check'],
+            ['slug' => 'so-lihat-semua',        'label' => 'Lihat Semua SO (tanpa batas PIC)', 'icon' => 'fa-eye'],
+            ['slug' => 'sq-lihat-semua',        'label' => 'Lihat Semua SQ (tanpa batas PIC)', 'icon' => 'fa-eye'],
+            ['slug' => 'budget-tanpa-realisasi-semua', 'label' => 'Tandai "Tanpa Realisasi" Budget — semua SQ/SO (pengganti PIC Order)', 'icon' => 'fa-ban'],
         ],
     ],
     [

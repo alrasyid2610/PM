@@ -194,7 +194,7 @@ function fillSoForm(so) {
 
     // PIC Input = user yang sedang login (bukan dari SO sumber), tetap bisa diubah
     initUserSelect('#so_pic_input', window.cloneRoute.authUser.id, window.cloneRoute.authUser.name);
-    initUserSelect('#so_pic_order', so.pic_order, so.nama_pic_order);
+    initUserSelect('#so_pic_order', so.pic_order, so.nama_pic_order, 'pic_order');
     initUserSelect('#so_pic_marketing_internal', so.pic_marketing_internal, so.nama_marketing_internal);
     initUserSelect('#so_pic_marketing_eksternal', so.pic_marketing_eksternal, so.nama_marketing_eksternal);
 }
@@ -285,13 +285,14 @@ function initPicSelect(sel, companyIdsFn, siteIdsFn, initialId, initialText) {
     if (initialId) $el.append(new Option(initialText || ('#' + initialId), initialId, true, true)).trigger('change');
 }
 
-function initUserSelect(sel, initialId, initialText) {
+// peran: 'pic_order' → hanya user Grup/Departemen PIC (lihat UserController::select2)
+function initUserSelect(sel, initialId, initialText, peran) {
     const $el = $(sel);
     $el.select2({
         width: '100%', allowClear: true, placeholder: 'Pilih User', minimumInputLength: 0,
         ajax: {
             url: window.cloneRoute.select2User, dataType: 'json', delay: 200,
-            data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }), cache: true,
+            data: (p) => ({ q: p.term, peran: peran || '' }), processResults: (d) => ({ results: d }), cache: true,
         },
         escapeMarkup: (m) => m,
     });

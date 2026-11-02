@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DataScope;
 use Illuminate\Http\Request;
 use App\Support\DocumentNumber;
 use App\Support\SqLock;
@@ -169,6 +170,7 @@ class SqWorkOrderController extends Controller
         $query = DB::table('sq_work_orders as w')
             ->leftJoin('sales_quotations as sq', 'sq.id_sq', '=', 'w.id_sq')
             ->leftJoin('business_relations as br', 'br.id_br', '=', 'w.id_pelanggan_pekerjaan')
+            ->tap(fn ($q) => DataScope::sq($q, 'sq'))
             ->when($isSearching, function ($q) use ($filters) {
                 foreach ($filters as $f) {
                     $like = '%' . $f['q'] . '%';
@@ -200,6 +202,50 @@ class SqWorkOrderController extends Controller
      * Daftar ringkas SQ WO milik 1 SQ (dipakai tab "Work Order" di halaman
      * Sales Quotation) — pola sama dengan WorkOrderController::bySo().
      */
+    /**
+     * Angka untuk baris KPI di detail SQ WO (Total BOQ, Total FWO, Total Nilai, Nilai Budget) — 1 request.
+     * Sama dengan KPI detail WO asli, tanpa Output & tanpa Realisasi (SQ tidak punya keduanya).
+     * Nilai BOQ = qty × harga − discount item; Other/Sampling = qty × harga (rumus sama dengan bySq()).
+     */
+    public function summary($id)
+    {
+        if (!DB::table('sq_work_orders')->where('id_sq_wo', $id)->exists()) {
+            return response()->json(['message' => 'SQ Work Order tidak ditemukan'], 404);
+        }
+
+        $boq = DB::table('sq_boq')->where('id_sq_wo', $id)
+            ->selectRaw('COUNT(*) as jumlah, COALESCE(SUM(GREATEST(0, CAST(qty * harga AS SIGNED) - CAST(discount AS SIGNED))), 0) as nilai')
+            ->first();
+
+        $tambahan = DB::table('sq_boq_tambahan')->where('id_sq_wo', $id)
+            ->selectRaw('jenis, COALESCE(SUM(COALESCE(qty, 0) * COALESCE(harga, 0)), 0) as nilai')
+            ->groupBy('jenis')->pluck('nilai', 'jenis');
+
+        $fwoIds = DB::table('sq_fieldworks')->where('id_sq_wo', $id)->pluck('id_sq_fwo');
+
+        $budgetWo = (int) DB::table('sq_wo_budget_items as bi')
+            ->join('sq_wo_budgets as b', 'b.id_sq_budget', '=', 'bi.id_sq_budget')
+            ->where('b.id_sq_wo', $id)->sum('bi.nominal_budget');
+        $budgetFwo = $fwoIds->isEmpty() ? 0 : (int) DB::table('sq_fwo_budget_items as bi')
+            ->join('sq_fwo_budgets as b', 'b.id_sq_budget', '=', 'bi.id_sq_budget')
+            ->whereIn('b.id_sq_fwo', $fwoIds)->sum('bi.nominal_budget');
+
+        $nilaiBoq = (int) $boq->nilai;
+        $nilaiOther = (int) ($tambahan['lainnya'] ?? 0);
+        $nilaiSampling = (int) ($tambahan['sampling'] ?? 0);
+
+        return response()->json([
+            'total_boq'      => (int) $boq->jumlah,
+            'total_fwo'      => $fwoIds->count(),
+            'nilai_boq'      => $nilaiBoq,
+            'nilai_other'    => $nilaiOther,
+            'nilai_sampling' => $nilaiSampling,
+            'nilai'          => $nilaiBoq + $nilaiOther + $nilaiSampling,
+            'budget_fwo'     => $budgetFwo,
+            'budget_wo'      => $budgetWo,
+        ]);
+    }
+
     public function bySq($id_sq)
     {
         $wos = DB::table('sq_work_orders as w')

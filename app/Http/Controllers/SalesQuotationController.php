@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DataScope;
 use Illuminate\Http\Request;
 use App\Support\DocumentNumber;
 use App\Support\SqLock;
@@ -103,6 +104,19 @@ class SalesQuotationController extends Controller
             'message' => 'Sales Quotation berhasil dibuat',
             'id_sq' => $id,
         ]);
+    }
+
+    /**
+     * Angka kartu "Nilai Budget" di KPI detail SQ: estimasi Budget WO & Budget FWO seluruh SQ WO milik SQ (tanpa
+     * realisasi), dan `nilai` = Total Nilai SQ sebagai dasar persentase. Lihat App\Support\BudgetSummary.
+     */
+    public function budgetSummary($id)
+    {
+        if (!DB::table('sales_quotations')->where('id_sq', $id)->whereNull('deleted_at')->exists()) {
+            return response()->json(['message' => 'Sales Quotation tidak ditemukan'], 404);
+        }
+
+        return response()->json(\App\Support\BudgetSummary::forSq((int) $id));
     }
 
     public function show($id)
@@ -643,6 +657,7 @@ class SalesQuotationController extends Controller
         $search = $request->q;
 
         $data = DB::table('sales_quotations')
+            ->tap(fn ($q) => DataScope::sq($q))
             ->whereNull('deleted_at')
             ->where('is_latest', true)
             ->where('no_sq', 'like', "%{$search}%")
@@ -661,6 +676,7 @@ class SalesQuotationController extends Controller
         $isSearching = !empty($filters);
 
         $query = DB::table('sales_quotations as s')
+            ->tap(fn ($q) => DataScope::sq($q, 's'))
             ->leftJoin('business_relations as br', 's.id_pelanggan', '=', 'br.id_br')
             ->when(!$isSearching, fn($q) => $q->whereNull('s.deleted_at')->where('s.is_latest', true))
             ->when($isSearching, function ($q) use ($filters) {

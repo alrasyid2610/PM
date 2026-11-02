@@ -46,6 +46,11 @@ function renderForm(res) {
         noWrap: true,
     })}
 
+    <!-- KPI ROW (Total BOQ, Total FWO, Total Nilai, Nilai Budget) — diisi loadSqWoSummary() -->
+    <div class="detail-kpi-section">
+        <div class="pm-kpi-row" id="sqWoSummaryCard"></div>
+    </div>
+
     <div class="pm-tab-card">
         <div class="pm-tab-header">
             <ul class="pm-tab-nav" id="sqWoDetailTabs" role="tablist">

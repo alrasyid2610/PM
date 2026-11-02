@@ -61,6 +61,11 @@ class FwoBudgetActualController extends Controller
             'attachments.*'   => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:153600',
         ]);
 
+        // Item yang seluruh qty-nya "Tanpa realisasi" tidak diisi realisasi
+        if (DB::table('fwo_budget_items')->where('id_budget_item', $request->id_budget_item)->whereRaw(\App\Support\BudgetTanpaRealisasi::PENUH_SQL)->exists()) {
+            return response()->json(['success' => false, 'message' => 'Seluruh qty item ini ditandai "Tanpa realisasi", tidak dapat diberi realisasi. Kurangi Qty Tanpa Realisasi di Edit Plan bila perlu.'], 422);
+        }
+
         $files = [];
         if ($request->hasFile('attachments')) {
             $uploaded = uploadAttachment($request->file('attachments'), 'fwo-budget-actuals');

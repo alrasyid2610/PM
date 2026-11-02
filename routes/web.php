@@ -17,6 +17,8 @@ use App\Http\Controllers\SqWorkOrderController;
 use App\Http\Controllers\SqBoqController;
 use App\Http\Controllers\SqConvertController;
 use App\Http\Controllers\SqCloneController;
+use App\Http\Controllers\SoExecutiveSummaryController;
+use App\Http\Controllers\LabSampleRegController;
 use App\Http\Controllers\SqCompareController;
 use App\Http\Controllers\SqBoqTambahanController;
 use App\Http\Controllers\SqWoBudgetController;
@@ -773,6 +775,7 @@ Route::prefix('sales-quotations')->name('sales-quotations.')->group(function () 
 
     Route::get('/', [SalesQuotationController::class, 'index'])->name('index');
     Route::get('/data', [SalesQuotationController::class, 'data'])->name('data');
+    Route::get('/{id}/budget-summary', [SalesQuotationController::class, 'budgetSummary'])->name('budget-summary')->whereNumber('id');
 
     Route::get('/create', [SalesQuotationController::class, 'create'])->name('create');
     Route::post('/', [SalesQuotationController::class, 'store'])->name('store');
@@ -821,6 +824,7 @@ Route::prefix('sq-work-orders')->name('sq-work-orders.')->group(function () {
     Route::get('/create', [SqWorkOrderController::class, 'create'])->name('create');
     Route::post('/', [SqWorkOrderController::class, 'store'])->name('store');
     Route::get('/{id_sq}/list', [SqWorkOrderController::class, 'bySq'])->name('list')->whereNumber('id_sq');
+    Route::get('/{id}/summary', [SqWorkOrderController::class, 'summary'])->name('summary')->whereNumber('id');
     Route::get('/{id}', [SqWorkOrderController::class, 'show'])->name('show')->whereNumber('id');
     Route::put('/{id}', [SqWorkOrderController::class, 'update'])->name('update')->whereNumber('id');
     Route::delete('/{id}', [SqWorkOrderController::class, 'destroy'])->name('destroy')->whereNumber('id');
@@ -884,6 +888,7 @@ Route::prefix('sales-orders')->name('sales-orders.')->group(function () {
 
     Route::get('/', [SalesOrderController::class, 'index'])->name('index');
     Route::get('/data', [SalesOrderController::class, 'data'])->name('data');
+    Route::get('/{id}/budget-summary', [SalesOrderController::class, 'budgetSummary'])->name('budget-summary')->whereNumber('id');
 
     Route::get('/create', [SalesOrderController::class, 'create'])->name('create');
     Route::post('/', [SalesOrderController::class, 'store'])->name('store');
@@ -908,6 +913,11 @@ Route::prefix('sales-orders')->name('sales-orders.')->group(function () {
 
     Route::get('/{id}/dokumen', [SalesOrderController::class, 'dokumenPdf'])
         ->name('dokumen')
+        ->whereNumber('id');
+
+    // Executive Summary internal (pendapatan vs biaya estimasi & realisasi) — padanan Executive Summary SQ
+    Route::get('/{id}/executive-summary', [SoExecutiveSummaryController::class, 'pdf'])
+        ->name('executive-summary')
         ->whereNumber('id');
 
     Route::get('/{id}/clone', [SalesOrderController::class, 'clonePage'])
@@ -950,6 +960,8 @@ Route::prefix('work-orders')->name('work-orders.')->group(function () {
     Route::delete('/{id}', [WorkOrderController::class, 'destroy'])->name('destroy');
     Route::get('/{id}/history', [WorkOrderController::class, 'history'])->name('history')->whereNumber('id');
     Route::get('/{id}/boq-progress', [WorkOrderController::class, 'boqProgress'])->name('boq-progress')->whereNumber('id');
+    // Tab read-only "Lab Sample Reg" di detail WO (pendaftaran dikelola di menu Lab Sample Reg)
+    Route::get('/{id}/lab-regs', [LabSampleRegController::class, 'woRegs'])->name('lab-regs')->whereNumber('id');
     // Clone WO (halaman penuh, memakai ulang UI Clone SO dalam mode "wo only")
     Route::get('/{id}/clone', [WorkOrderController::class, 'clonePage'])->name('clone-page')->whereNumber('id');
     Route::get('/{id}/clone-data', [WorkOrderController::class, 'cloneData'])->name('clone-data')->whereNumber('id');
@@ -1080,12 +1092,19 @@ Route::prefix('termin')->name('termin.')->group(function () {
     Route::delete('/{id}',            [TerminController::class, 'destroy'])->name('destroy')->whereNumber('id');
 });
 
+// Menu Lab Sample Reg (grup Lab) — pendaftaran sample ke lab per WO. Operasi sample tetap di /wo-samples/*.
+Route::prefix('lab-sample-regs')->name('lab-sample-regs.')->group(function () {
+    Route::get('/', [LabSampleRegController::class, 'index'])->name('index');
+    Route::get('/wo-options', [LabSampleRegController::class, 'woOptions'])->name('wo-options');
+    Route::get('/riwayat', [LabSampleRegController::class, 'riwayat'])->name('riwayat');
+    Route::get('/{id}/print', [LabSampleRegController::class, 'print'])->name('print')->whereNumber('id');
+});
+
 Route::prefix('wo-samples')->name('wo-samples.')->group(function () {
     Route::get('/sampling-points/{id_site}',    [WoSampleController::class, 'samplingPointsBySite'])->name('sampling-points')->whereNumber('id_site');
     Route::get('/by-wo/{id_wo}',                [WoSampleController::class, 'boqByWo'])->name('by-wo')->whereNumber('id_wo');
     Route::get('/by-wo/{id_wo}/available-fwo-samples', [WoSampleController::class, 'availableFwoSamples'])->name('available-fwo-samples')->whereNumber('id_wo');
     Route::post('/by-wo/{id_wo}/pull-from-fwo', [WoSampleController::class, 'pullFromFwo'])->name('pull-from-fwo')->whereNumber('id_wo');
-    Route::post('/by-wo/{id_wo}/store-without-boq', [WoSampleController::class, 'storeWithoutBoq'])->name('store-without-boq')->whereNumber('id_wo');
     Route::post('/by-wo/{id_wo}/boq/{id_boq}/generate',  [WoSampleController::class, 'generateSlots'])->name('generate')->whereNumber(['id_wo', 'id_boq']);
     Route::post('/by-wo/{id_wo}/boq/{id_boq}/add-one',   [WoSampleController::class, 'addOne'])->name('add-one')->whereNumber(['id_wo', 'id_boq']);
     Route::post('/by-wo/{id_wo}/boq/{id_boq}/bulk-fill', [WoSampleController::class, 'bulkFill'])->name('bulk-fill')->whereNumber(['id_wo', 'id_boq']);

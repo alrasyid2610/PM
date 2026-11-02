@@ -392,7 +392,15 @@ function renderSoSummary(wos) {
                 totalBoqQty + " qty",
             ) +
             totalNilaiCard +
+            BudgetValueCard.shell("soBudgetValueCard") +
             progressCard,
+    );
+
+    // Kartu "Nilai Budget" (Budget FWO & WO: estimasi, realisasi, persentase terhadap Total Nilai SO) — async
+    BudgetValueCard.load(
+        "soBudgetValueCard",
+        "/sales-orders/" + currentSoId + "/budget-summary",
+        { dokumen: "SO", realisasi: true },
     );
 }
 

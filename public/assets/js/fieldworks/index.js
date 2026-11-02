@@ -332,6 +332,7 @@ function budgetPlanFullyVerified(plan) {
     const items = (plan && plan.items) || [];
     if (!items.length) return false;
     return items.every(function (item) {
+        if (BudgetSections.tanpaPenuh(item)) return true; // seluruh qty "Tanpa realisasi" tidak menghalangi Selesaikan Plan
         const acts = item.actuals || [];
         if (!acts.length) return false;
         const adaMenunggu  = acts.some(function (a) { return !a.status_verifikasi || a.status_verifikasi === 'menunggu'; });
@@ -342,7 +343,8 @@ function budgetPlanFullyVerified(plan) {
 
 function renderBudgetList(plans, isLocked) {
     const cards = plans.map(function (p) {
-        const selisih     = p.total_budget - p.total_actual;
+        const tanpaNominal = BudgetSections.tanpaTotal(p.items);
+        const selisih     = (p.total_budget - tanpaNominal) - p.total_actual;
         const selisihColor = selisih >= 0 ? '#15803d' : '#dc2626';
         const planLocked  = isLocked || p.status === 'completed';
         const statusBadge = p.status === 'completed'
@@ -351,7 +353,8 @@ function renderBudgetList(plans, isLocked) {
 
         const itemRows = p.items.map(function (item, itemIdx) {
             const actualTotal = item.nominal_actual || 0;
-            const sel         = item.nominal_budget - actualTotal;
+            const tanpa       = BudgetSections.tanpaPenuh(item); // seluruh qty tanpa realisasi
+            const sel         = item.nominal_budget - (item.nominal_tanpa_realisasi || 0) - actualTotal;
             const struks      = item.actuals || [];
             const struksHtml  = struks.map(function (a) {
                 const fileLinks = renderFilePreviewButton(a.attachments, { title: item.nama_account + ' — Realisasi' });
@@ -397,15 +400,15 @@ function renderBudgetList(plans, isLocked) {
             return `<tr>
                 <td style="width:36px;text-align:center;color:#94a3b8;font-size:11px;">${itemIdx + 1}</td>
                 <td>${categoryCell}</td>
-                <td><span class="fw-semibold">${escHtml(item.nama_account)}</span>${caBadge}</td>
+                <td><span class="fw-semibold">${escHtml(item.nama_account)}</span>${caBadge}${BudgetSections.tanpaBadge(item)}</td>
                 <td style="color:#1d4ed8;font-weight:600;" data-pct-val="${item.nominal_budget}">${fmtRp(item.nominal_budget)}${BudgetSections.detail(item)}</td>
                 <td>
-                    ${struksHtml || '<span class="text-muted" style="font-size:11px;">Belum ada realisasi</span>'}
+                    ${tanpa ? '<span class="text-muted" style="font-size:11px;">Tidak perlu realisasi</span>' : (struksHtml || '<span class="text-muted" style="font-size:11px;">Belum ada realisasi</span>')}
                 </td>
-                <td style="color:${selisihColor};font-weight:600;">${fmtRp(actualTotal)}</td>
-                <td style="color:${sel >= 0 ? '#15803d' : '#dc2626'};font-weight:600;">${fmtRp(sel)}</td>
+                <td style="color:${selisihColor};font-weight:600;">${tanpa ? '—' : fmtRp(actualTotal)}</td>
+                <td style="color:${sel >= 0 ? '#15803d' : '#dc2626'};font-weight:600;">${tanpa ? '—' : fmtRp(sel)}</td>
                 <td class="text-center">
-                    ${!planLocked ? `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-actual-add"
+                    ${!planLocked && !tanpa ? `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-actual-add"
                         data-id-budget-item="${item.id_budget_item}" data-id-fwo="${p.id_fwo || ''}"
                         data-nominal-budget="${item.nominal_budget}"
                         data-account-name="${escHtml(item.kode_account + ' – ' + item.nama_account)}"
@@ -523,7 +526,8 @@ function renderBudgetList(plans, isLocked) {
 
     const grandBudget  = plans.reduce(function (s, p) { return s + (p.total_budget || 0); }, 0);
     const grandActual  = plans.reduce(function (s, p) { return s + (p.total_actual || 0); }, 0);
-    const grandSelisih = grandBudget - grandActual;
+    const grandTanpa   = plans.reduce(function (s, p) { return s + BudgetSections.tanpaTotal(p.items); }, 0); // bagian tanpa realisasi tidak ikut surplus
+    const grandSelisih = (grandBudget - grandTanpa) - grandActual;
     const selColor     = grandSelisih >= 0 ? '#15803d' : '#dc2626';
     const selLabel     = grandSelisih >= 0 ? 'Surplus' : 'Defisit';
 
@@ -575,6 +579,7 @@ function buildBudgetItemRow(item) {
                 value="${item ? escHtml(item.keterangan || '') : ''}"
                 placeholder="Opsional" data-no-disable>
         </td>
+        ${BudgetSections.tanpaCells(item)}
         <td class="text-center">
             <div class="form-check d-flex justify-content-center mb-0">
                 <input type="checkbox" class="form-check-input bi-ca" data-no-disable
@@ -749,7 +754,7 @@ $(document).off('click.budget', '#budgetModal-btn-save').on('click.budget', '#bu
         const isCa      = $(this).find('.bi-ca').is(':checked') ? 1 : 0;
         if (!idAccount) { valid = false; return false; }
         if (nominal <= 0) { zeroNominal = true; return false; }
-        items.push({ id_budget_item: biId || null, id_account: idAccount, nominal_budget: nominal, qty: $(this).find('.bi-qty').val() || 1, hari: $(this).find('.bi-hari').val() || 1, id_satuan: $(this).find('.bi-unit').val() || null, harga_satuan: parseInt(($(this).find('.bi-nominal').val() || '').replace(/,/g, ''), 10) || 0, keterangan: ket, is_cash_advance: isCa });
+        items.push({ id_budget_item: biId || null, id_account: idAccount, nominal_budget: nominal, qty: $(this).find('.bi-qty').val() || 1, hari: $(this).find('.bi-hari').val() || 1, id_satuan: $(this).find('.bi-unit').val() || null, harga_satuan: parseInt(($(this).find('.bi-nominal').val() || '').replace(/,/g, ''), 10) || 0, keterangan: ket, is_cash_advance: isCa, ...BudgetSections.tanpaCollect($(this)) });
     });
 
     if (!valid) return Swal.fire('Perhatian', 'Semua baris harus memilih Account.', 'warning');

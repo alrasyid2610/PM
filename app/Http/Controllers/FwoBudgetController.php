@@ -19,7 +19,8 @@ class FwoBudgetController extends Controller
     {
         $idSo = DB::table('fieldworks as f')->join('work_orders as w', 'w.id_wo', '=', 'f.id_wo')
             ->where('f.id_fwo', $id_fwo)->value('w.id_so');
-        return response()->json(\App\Support\BudgetBasis::forSo($idSo ? (int) $idSo : null));
+        return response()->json(\App\Support\BudgetBasis::forSo($idSo ? (int) $idSo : null)
+            + ['bisa_tandai' => \App\Support\BudgetTanpaRealisasi::boleh('fwo', (int) $id_fwo)]);
     }
 
     public function listByFwo($id_fwo)
@@ -45,6 +46,8 @@ class FwoBudgetController extends Controller
                     'bi.nominal_budget', 'bi.qty', 'bi.hari', 'bi.harga_satuan', 'bi.id_satuan', 'sat.nama as satuan',
                     'bi.keterangan',
                     'bi.is_cash_advance',
+                    'bi.tanpa_realisasi', 'bi.qty_tanpa_realisasi', 'bi.nominal_tanpa_realisasi', 'bi.alasan_tanpa_realisasi', 'bi.ditandai_at',
+                    DB::raw('(SELECT u.name FROM users u WHERE u.id = bi.ditandai_oleh) as ditandai_oleh_nama'),
                 ]);
 
             foreach ($items as $item) {
@@ -67,6 +70,8 @@ class FwoBudgetController extends Controller
         return response()->json([
             'data'       => $budgets,
             'fwo_status' => $fwo->status ?? null,
+            // Boleh menandai "Tanpa realisasi" (PIC Order SO FWO ini, atau Aksi Khusus pengganti)
+            'bisa_tandai' => \App\Support\BudgetTanpaRealisasi::boleh('fwo', (int) $id_fwo),
         ]);
     }
 
@@ -80,7 +85,7 @@ class FwoBudgetController extends Controller
      * Snapshot plan budget untuk audit log: baris plan + satu field per item budget
      * ("Item • {akun}" => nominal) supaya History hanya menampilkan item yang berubah.
      */
-    private function budgetJson($id): string
+    public function budgetJson($id): string
     {
         $plan = DB::table('fwo_budgets')->where('id_budget', $id)->first();
         if (!$plan) return '';
@@ -92,7 +97,7 @@ class FwoBudgetController extends Controller
             ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'bi.id_satuan')
             ->where('bi.id_budget', $id)
             ->orderBy('bi.id_budget_item')
-            ->get(['a.nama', 'bi.nominal_budget', 'bi.qty', 'bi.hari', 'bi.harga_satuan', 'sat.nama as satuan', 'bi.keterangan', 'bi.is_cash_advance']);
+            ->get(['a.nama', 'bi.nominal_budget', 'bi.qty', 'bi.hari', 'bi.harga_satuan', 'sat.nama as satuan', 'bi.keterangan', 'bi.is_cash_advance', 'bi.qty_tanpa_realisasi', 'bi.alasan_tanpa_realisasi']);
 
         foreach ($items as $i) {
             $kunci = 'Item • ' . ($i->nama ?? '?');
@@ -102,6 +107,7 @@ class FwoBudgetController extends Controller
             $plan[$kunci] = 'Rp ' . number_format($i->nominal_budget, 0, ',', '.')
                 . (($rinci = \App\Support\BudgetItemInput::label($i->qty, $i->satuan, $i->harga_satuan, $i->hari)) ? ' (' . $rinci . ')' : '')
                 . ($i->is_cash_advance ? ' [Cash Advance]' : '')
+                . \App\Support\BudgetTanpaRealisasi::teks($i)
                 . ($i->keterangan ? ' — ' . $i->keterangan : '');
         }
 
@@ -149,12 +155,14 @@ class FwoBudgetController extends Controller
             ]);
 
             foreach ($request->items as $item) {
+                $fields = \App\Support\BudgetItemInput::fields($item);
                 DB::table('fwo_budget_items')->insert([
                     'id_budget'       => $id,
                     'id_account'      => $item['id_account'],
-                    ...\App\Support\BudgetItemInput::fields($item),
+                    ...$fields,
                     'keterangan'      => $item['keterangan'] ?? null,
                     'is_cash_advance' => $item['is_cash_advance'] ?? 0,
+                    ...\App\Support\BudgetTanpaRealisasi::kolom('fwo', (int) $request->id_fwo, $item, $fields, null),
                     'created_at'      => now(),
                     'updated_at'      => now(),
                 ]);
@@ -196,7 +204,7 @@ class FwoBudgetController extends Controller
                 'bi.id_account',
                 'ba.nama as nama_account',
                 'bi.nominal_budget', 'bi.qty', 'bi.hari', 'bi.harga_satuan', 'bi.id_satuan', 'sat.nama as satuan',
-                'bi.keterangan', 'bi.is_cash_advance',
+                'bi.keterangan', 'bi.is_cash_advance', 'bi.tanpa_realisasi', 'bi.qty_tanpa_realisasi', 'bi.nominal_tanpa_realisasi', 'bi.alasan_tanpa_realisasi',
             ]);
 
         return response()->json($budget);
@@ -238,7 +246,7 @@ class FwoBudgetController extends Controller
 
         $before = $this->budgetJson($id);
 
-        DB::transaction(function () use ($request, $id) {
+        DB::transaction(function () use ($request, $id, $budget) {
             DB::table('fwo_budgets')->where('id_budget', $id)->update([
                 'label'           => $request->label,
                 'keterangan'      => $request->keterangan,
@@ -264,21 +272,25 @@ class FwoBudgetController extends Controller
             }
 
             foreach ($request->items as $item) {
+                $fields = \App\Support\BudgetItemInput::fields($item);
                 if (!empty($item['id_budget_item'])) {
+                    $lama = DB::table('fwo_budget_items')->where('id_budget_item', $item['id_budget_item'])->first();
                     DB::table('fwo_budget_items')->where('id_budget_item', $item['id_budget_item'])->update([
                         'id_account'      => $item['id_account'],
-                        ...\App\Support\BudgetItemInput::fields($item),
+                        ...$fields,
                         'keterangan'      => $item['keterangan'] ?? null,
                         'is_cash_advance' => $item['is_cash_advance'] ?? 0,
+                        ...\App\Support\BudgetTanpaRealisasi::kolom('fwo', (int) $budget->id_fwo, $item, $fields, $lama),
                         'updated_at'      => now(),
                     ]);
                 } else {
                     DB::table('fwo_budget_items')->insert([
                         'id_budget'       => $id,
                         'id_account'      => $item['id_account'],
-                        ...\App\Support\BudgetItemInput::fields($item),
+                        ...$fields,
                         'keterangan'      => $item['keterangan'] ?? null,
                         'is_cash_advance' => $item['is_cash_advance'] ?? 0,
+                        ...\App\Support\BudgetTanpaRealisasi::kolom('fwo', (int) $budget->id_fwo, $item, $fields, null),
                         'created_at'      => now(),
                         'updated_at'      => now(),
                     ]);
@@ -307,7 +319,8 @@ class FwoBudgetController extends Controller
         // Blocking: plan hanya bisa diselesaikan kalau SEMUA item sudah diverifikasi —
         // tiap item wajib punya minimal 1 realisasi berstatus "disetujui" dan tidak boleh
         // ada realisasi yang masih "menunggu". Item tanpa realisasi / hanya "ditolak" → blocking.
-        $items = DB::table('fwo_budget_items')->where('id_budget', $id)->get(['id_budget_item', 'nominal_budget']);
+        // Item yang SELURUH qty-nya "Tanpa realisasi" dilewati; item sebagian tetap wajib, pembanding surplus = bagian yang direalisasikan
+        $items = DB::table('fwo_budget_items')->where('id_budget', $id)->whereRaw('NOT (' . \App\Support\BudgetTanpaRealisasi::PENUH_SQL . ')')->get(['id_budget_item', 'nominal_budget', 'nominal_tanpa_realisasi']);
         $belumBeres = 0;
         foreach ($items as $item) {
             $statuses = DB::table('fwo_budget_actuals')
@@ -327,7 +340,7 @@ class FwoBudgetController extends Controller
         }
 
         // Hitung surplus — hanya realisasi yang disetujui yang dihitung sebagai pengeluaran
-        $totalBudget = $items->sum('nominal_budget');
+        $totalBudget = $items->sum('nominal_budget') - $items->sum('nominal_tanpa_realisasi');
         $totalActual = 0;
         foreach ($items as $item) {
             $totalActual += DB::table('fwo_budget_actuals')

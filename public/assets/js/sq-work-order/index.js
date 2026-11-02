@@ -49,7 +49,16 @@ $(document).ready(function () {
             currentSqWoData = res;
             initFpDate('#detailContent');
             initSqWoPicField();
+            loadSqWoSummary(res.id_sq_wo);
         },
+    });
+
+    // Klik kartu KPI → pindah ke tab terkait (pola sama dengan KPI detail WO)
+    $(document).on('click', '.kpi-tab-link', function () {
+        const target = $(this).data('tab-target');
+        if (!target) return;
+        const $btn = $('#sqWoDetailTabs button[data-bs-target="' + target + '"]');
+        if ($btn.length) $btn.trigger('click');
     });
 
     $(document).on('click', '.btn-delete-record', function () {
@@ -91,6 +100,97 @@ $(document).ready(function () {
     });
 });
 
+// ── Baris KPI (di atas tab) ──────────────────────────────────────────────────
+// Meniru renderBoqSummary() di work-order/index.js: Total BOQ, Total FWO (jumlah saja — SQ tidak punya status
+// selesai), Total Nilai (+ rincian BOQ/Other/Sampling), dan Nilai Budget (FWO & WO). Tanpa kartu Output dan
+// tanpa kolom Realisasi, karena SQ tidak punya keduanya. Data 1 request: GET /sq-work-orders/{id}/summary.
+let sqWoSummaryTimer = null;
+
+// Dipanggil tiap data tab (BOQ/Other/Sampling/Budget/FWO) selesai dimuat ulang, supaya angka KPI ikut berubah
+function refreshSqWoSummary() {
+    clearTimeout(sqWoSummaryTimer);
+    sqWoSummaryTimer = setTimeout(function () { if (currentSqWoId) loadSqWoSummary(currentSqWoId); }, 300);
+}
+
+function loadSqWoSummary(idSqWo) {
+    $.get('/sq-work-orders/' + idSqWo + '/summary', function (r) {
+        if (idSqWo !== currentSqWoId) return; // detail sudah berganti sebelum request selesai
+        renderSqWoSummary(r);
+    });
+}
+
+function renderSqWoSummary(r) {
+    const fmt = (n) => 'Rp ' + Number(n || 0).toLocaleString('en-US');
+    const pct = (n) => (r.nilai ? (n / r.nilai * 100).toLocaleString('id-ID', { maximumFractionDigits: 2 }) + '%' : '—');
+
+    const kpiCard = (icon, iconBg, label, value, tabTarget) => `
+        <div class="pm-kpi-card kpi-tab-link" data-tab-target="${tabTarget}" style="cursor:pointer;">
+            <div class="pm-kpi-icon" style="background:${iconBg};"><i class="fa-solid ${icon}"></i></div>
+            <div>
+                <div class="pm-kpi-label">${label}</div>
+                <div class="pm-kpi-value">${value}</div>
+            </div>
+        </div>`;
+
+    const categories = [
+        { label: 'BOQ',          value: r.nilai_boq,      bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+        { label: 'BOQ Other',    value: r.nilai_other,    bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
+        { label: 'BOQ Sampling', value: r.nilai_sampling, bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+    ];
+    const badgesHtml = categories.filter((c) => c.value > 0)
+        .map((c) => `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:${c.bg};color:${c.color};border:1px solid ${c.border};white-space:nowrap;">${c.label}: ${fmt(c.value)}</span>`)
+        .join('');
+
+    const totalNilaiCard = `
+        <div class="pm-kpi-card kpi-tab-link" data-tab-target="#tabBoq" style="flex-direction:column;align-items:flex-start;gap:8px;min-width:220px;cursor:pointer;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div class="pm-kpi-icon" style="background:#7c3aed;flex-shrink:0;"><i class="fa-solid fa-sack-dollar"></i></div>
+                <div>
+                    <div class="pm-kpi-label">Total Nilai</div>
+                    <div class="pm-kpi-value">${r.nilai > 0 ? fmt(r.nilai) : '—'}</div>
+                </div>
+            </div>
+            ${badgesHtml ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${badgesHtml}</div>` : ''}
+        </div>`;
+
+    const cell = 'padding:4px 10px;font-size:12px;white-space:nowrap;border-bottom:1px solid #e5e7eb;';
+    const head = 'padding:4px 10px;font-size:10.5px;font-weight:600;color:#64748b;text-transform:uppercase;background:#f1f5f9;border-bottom:1px solid #e2e8f0;white-space:nowrap;text-align:left;';
+    const row = (label, v, bg) => `<tr style="background:${bg};">
+        <td style="${cell}">${label}</td>
+        <td style="${cell}">${fmt(v)}</td>
+        <td style="${cell}"><b>${pct(v)}</b></td>
+    </tr>`;
+
+    const budgetCard = `
+        <div class="pm-kpi-card kpi-tab-link" data-tab-target="#tabBudget"
+            style="flex:2 1 420px;flex-direction:column;align-items:stretch;gap:6px;min-width:380px;cursor:pointer;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div class="pm-kpi-icon" style="background:#0f766e;flex-shrink:0;"><i class="fa-solid fa-wallet"></i></div>
+                <div>
+                    <div class="pm-kpi-label">Nilai Budget</div>
+                    <div class="pm-kpi-value">${fmt(r.budget_fwo + r.budget_wo)}</div>
+                </div>
+                <div class="text-muted ms-auto" style="font-size:10.5px;">% terhadap Total Nilai WO ${fmt(r.nilai)}</div>
+            </div>
+            <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead><tr><th style="${head}">Kategori</th><th style="${head}">Estimasi</th><th style="${head}">Persentase</th></tr></thead>
+                    <tbody>
+                        ${row('Budget FWO', r.budget_fwo, '#ffffff')}
+                        ${row('Budget WO', r.budget_wo, '#f8fafc')}
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+
+    $('#sqWoSummaryCard').html(
+        kpiCard('fa-layer-group', '#0891b2', 'Total BOQ', r.total_boq + ' item', '#tabBoq') +
+        kpiCard('fa-hard-hat', 'var(--primary-700,#18386b)', 'Total FWO', r.total_fwo + ' FWO', '#tabFwo') +
+        totalNilaiCard +
+        budgetCard
+    );
+}
+
 // ── Tab BOQ ──────────────────────────────────────────────────────────────────
 // Tab-nya sendiri cuma ringkasan read-only (pola sama tab BOQ di WO asli,
 // yang menampilkan progress table, bukan editor langsung). Kelola BOQ
@@ -108,6 +208,7 @@ function loadSqWoBoq(idSqWo, afterCb) {
     $.get(window.sqWoRoute.boqShow + idSqWo, function (sections) {
         sqWoBoqCache = sections || [];
         renderSqWoBoqSummary(sqWoBoqCache);
+        refreshSqWoSummary();
         if (afterCb) afterCb();
     }).fail(function () {
         $('#sqWoBoqSummary').html('<div class="text-center text-danger py-3">Gagal memuat BOQ.</div>');
@@ -868,6 +969,7 @@ function loadSqWoTambahan(idSqWo) {
         sqWoTambahanCache = res;
         $('#sqWoBoqOtherTable').html(renderSqWoTambahanTable(res.lainnya || [], 'lainnya'));
         $('#sqWoBoqSamplingTable').html(renderSqWoTambahanTable(res.sampling || [], 'sampling'));
+        refreshSqWoSummary();
     }).fail(function () {
         $('#sqWoBoqOtherTable, #sqWoBoqSamplingTable').html('<div class="text-center text-danger py-4">Gagal memuat data.</div>');
     });
@@ -1019,6 +1121,7 @@ function loadSqWoBudget(idSqWo) {
     $.get(window.sqWoRoute.budgetList + idSqWo + '/list', function (plans) {
         renderSqWoBudgetList(plans || []);
         BudgetSections.applyPct($('#sqWoBudgetContent'), `/sq-wo-budgets/${idSqWo}/basis`);
+        refreshSqWoSummary();
     }).fail(function () {
         $('#sqWoBudgetContent').html('<div class="text-center text-danger py-3">Gagal memuat Budget.</div>');
     });
@@ -1042,7 +1145,7 @@ function renderSqWoBudgetList(plans) {
             return `<tr>
                 <td style="width:36px;text-align:center;color:#94a3b8;font-size:11px;">${idx + 1}</td>
                 <td>${categoryCell}</td>
-                <td><span class="fw-semibold">${escHtml(item.nama_account)}</span>${caBadge}</td>
+                <td><span class="fw-semibold">${escHtml(item.nama_account)}</span>${caBadge}${BudgetSections.tanpaBadge(item)}</td>
                 <td style="color:#1d4ed8;font-weight:600;" data-pct-val="${item.nominal_budget}">${formatRupiahSqWo(item.nominal_budget)}${BudgetSections.detail(item)}</td>
                 <td>${escHtml(item.keterangan || '—')}</td>
             </tr>`;
@@ -1185,13 +1288,14 @@ function buildSqWoBudgetItemRow(item) {
         <td>
             <input type="text" class="form-control form-control-sm bi-keterangan" value="${item ? escHtml(item.keterangan || '') : ''}" placeholder="Opsional" data-no-disable>
         </td>
+        ${BudgetSections.tanpaCells(item)}
         <td class="text-center">
             <div class="form-check d-flex justify-content-center mb-0">
                 <input type="checkbox" class="form-check-input bi-ca" data-no-disable ${item && item.is_cash_advance ? 'checked' : ''} title="Cash Advance" style="width:18px;height:18px;cursor:pointer;">
             </div>
         </td>
         <td class="text-center">
-            <button type="button" class="btn btn-sm btn-outline-danger btn-sq-wo-budget-remove-row" data-no-disable><i class="fa-solid fa-trash"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 btn-sq-wo-budget-remove-row" data-no-disable title="Hapus baris" style="font-size:11px;"><i class="fa-solid fa-trash" style="color:#dc2626;"></i></button>
         </td>
     </tr>`;
 }
@@ -1252,7 +1356,7 @@ $(document).on('click', '#sqWoBudgetModal-btn-save', function () {
         const biId = $(this).find('.bi-id').val();
         const isCa = $(this).find('.bi-ca').is(':checked') ? 1 : 0;
         if (!idAccount) { valid = false; return false; }
-        items.push({ id_sq_budget_item: biId || null, id_account: idAccount, nominal_budget: nominal, qty: $(this).find('.bi-qty').val() || 1, hari: $(this).find('.bi-hari').val() || 1, id_satuan: $(this).find('.bi-unit').val() || null, harga_satuan: parseInt(($(this).find('.bi-nominal').val() || '').replace(/,/g, ''), 10) || 0, keterangan: ket, is_cash_advance: isCa });
+        items.push({ id_sq_budget_item: biId || null, id_account: idAccount, nominal_budget: nominal, qty: $(this).find('.bi-qty').val() || 1, hari: $(this).find('.bi-hari').val() || 1, id_satuan: $(this).find('.bi-unit').val() || null, harga_satuan: parseInt(($(this).find('.bi-nominal').val() || '').replace(/,/g, ''), 10) || 0, keterangan: ket, is_cash_advance: isCa, ...BudgetSections.tanpaCollect($(this)) });
     });
     if (!valid) { Notify.warning('Semua baris harus memilih Account.'); return; }
     if (!items.length) { Notify.warning('Minimal 1 item anggaran.'); return; }
@@ -1307,6 +1411,7 @@ function loadSqWoFwoList(idSqWo, done) {
     $.get('/sq-fieldworks/' + idSqWo + '/list', function (fwos) {
         sqWoFwoCache = fwos || [];
         renderSqWoFwoSummary(sqWoFwoCache);
+        refreshSqWoSummary();
         if (done) done();
     }).fail(function () {
         $('#sqWoFwoSummary').html('<div class="text-center text-danger py-4">Gagal memuat data FWO.</div>');

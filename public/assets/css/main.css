@@ -3224,3 +3224,14 @@ body.perm-no-create [data-perm="can_create"] {
         min-height: 32px;
     }
 }
+
+/* Budget Plan: kolom Hari & Qty — angka tidak boleh terpotong. Panah naik-turun bawaan input angka dimatikan
+   (memakan lebar sel); nilai tetap bisa diketik. Kolom diberi lebar minimum yang cukup untuk desimal (mis. 12,5). */
+.bi-sec-table thead th:nth-child(2) { min-width: 96px; }
+.bi-sec-table thead th:nth-child(3) { min-width: 104px; }
+.bi-sec-table input.bi-hari,
+.bi-sec-table input.bi-qty { text-align: center; -moz-appearance: textfield; appearance: textfield; padding-left: 6px; padding-right: 6px; }
+.bi-sec-table input.bi-hari::-webkit-outer-spin-button,
+.bi-sec-table input.bi-hari::-webkit-inner-spin-button,
+.bi-sec-table input.bi-qty::-webkit-outer-spin-button,
+.bi-sec-table input.bi-qty::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }

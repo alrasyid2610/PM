@@ -16,10 +16,14 @@ function loadDetailEngine(options) {
             afterRender(res);
         }
         $("#global-loader").fadeOut(300);
-    }).fail(function () {
+    }).fail(function (xhr) {
         $("#global-loader").fadeOut(300);
         $(container).html('');
-        Notify.error('Data tidak ditemukan atau sudah dihapus');
+        if (xhr && xhr.status === 403) {
+            Notify.error((xhr.responseJSON && xhr.responseJSON.message) || 'Anda tidak memiliki akses ke data ini');
+        } else {
+            Notify.error('Data tidak ditemukan atau sudah dihapus');
+        }
         window.history.replaceState(null, '', window.location.pathname);
         $('button[data-bs-target="#tab-data"]').trigger('click');
     });

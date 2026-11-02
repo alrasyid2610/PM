@@ -304,7 +304,7 @@ function renderForm(res) {
                 mode: 'ajax', url: 'users/select2', placeholder: 'Pilih Data', label: res.pic_input_name, className: 'col-md-3', required: true,
             })}
             ${formGroup.select('pic_order', 'PIC Order', res.pic_order, [], {
-                mode: 'ajax', url: 'users/select2', placeholder: 'Pilih Data', label: res.pic_order_name, className: 'col-md-3', required: true,
+                mode: 'ajax', url: 'users/select2?peran=pic_order', placeholder: 'Pilih Data', label: res.pic_order_name, className: 'col-md-3', required: true, // hanya user Grup/Departemen PIC
             })}
             ${formGroup.select('pic_marketing_internal', 'Marketing Internal', res.marketing_internal_id, [], {
                 mode: 'ajax', url: 'users/select2', placeholder: 'Pilih Data', label: res.marketing_internal_name, className: 'col-md-3', required: true,

@@ -47,8 +47,8 @@ class CheckMenuPermission
         'boq'                        => 'work-orders',
         'wo-budgets'                 => 'work-orders',
         'wo-budget-actuals'          => 'work-orders',
-        'wo-samples'                 => 'work-orders',
-        'wo-boq-other'               => 'work-orders',
+        'wo-samples'                 => 'lab-sample-regs', // sejak 2026-10-31: Lab Sample Reg = menu sendiri, bukan tab WO
+        'wo-boq-other'              => 'work-orders',
         'wo-boq-sampling'            => 'work-orders',
         'wo-output-other'            => 'work-orders',
         'output-judul'               => 'work-orders',
@@ -89,7 +89,6 @@ class CheckMenuPermission
         'wo-output-other'   => 'wo-tab-output-other',
         'wo-budgets'        => 'wo-tab-budget',
         'wo-budget-actuals' => 'wo-tab-budget',
-        'wo-samples'        => 'wo-tab-lab-sample-reg',
         // SO — tab Output Other
         'so-output-other'   => 'so-tab-output-other',
         // FWO — tab BOQ Other, BOQ Sampling, Budget, Sample

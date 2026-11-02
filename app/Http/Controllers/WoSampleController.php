@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Support\DocumentNumber;
 use App\Traits\HasAuditHistory;
 
 /**
@@ -98,7 +99,8 @@ class WoSampleController extends Controller
             return $existing->id_wo_lab_sample_reg;
         }
 
-        return DB::table('wo_lab_sample_regs')->insertGetId([
+        // Nomor dokumen pendaftaran (LSR.YY.HURUF.NNNN) — dicetak di Form Registrasi Sample
+        return DocumentNumber::insertGetId('wo_lab_sample_regs', 'no_registrasi', 'LSR', [
             'id_wo'                 => $id_wo,
             'tanggal_registrasi'      => $validated['tanggal_registrasi'],
             'id_personnel_penerima' => $validated['id_personnel_penerima'] ?? null,
@@ -146,19 +148,45 @@ class WoSampleController extends Controller
         return response()->json($results);
     }
 
-    public function boqByWo($id_wo)
+    /**
+     * Data halaman Lab Sample Reg untuk 1 WO. Query `?fwo={id_fwo}` mempersempit cakupan ke 1 FWO milik WO ini
+     * (user mencari/memilih FWO): hanya registrasi & sample FWO itu yang ditampilkan, BOQ WO-langsung (jalur b) disembunyikan.
+     */
+    public function boqByWo(Request $request, $id_wo)
     {
         $wo = DB::table('work_orders')->where('id_wo', $id_wo)->first(['status', 'id_site_pelanggan_pekerjaan']);
         if (!$wo) return response()->json(['message' => 'WO tidak ditemukan'], 404);
 
         $hasFwo = DB::table('fieldworks')->where('id_wo', $id_wo)->whereNull('deleted_at')->exists();
 
+        // Cakupan FWO — hanya dipakai bila FWO-nya benar milik WO ini
+        $fwoScope = $request->query('fwo')
+            ? DB::table('fieldworks')->where('id_fwo', (int) $request->query('fwo'))->where('id_wo', $id_wo)->whereNull('deleted_at')
+                ->first(['id_fwo', 'no_fwo', 'judul_pekerjaan'])
+            : null;
+
+        // Jumlah sample FWO yang siap didaftarkan (Dikirim, belum diregistrasi) — ditampilkan di tombol registrasi
+        $siapFwo = DB::table('lab_samples as ls')
+            ->join('fieldworks as f', 'f.id_fwo', '=', 'ls.id_fwo')
+            ->where('f.id_wo', $id_wo)->whereNull('f.deleted_at')
+            ->when($fwoScope, fn ($q) => $q->where('ls.id_fwo', $fwoScope->id_fwo))
+            ->whereNull('ls.id_wo_lab_sample_reg')->where('ls.status', 'dikirim')
+            ->count();
+
         $response = [
+            'wo'        => LabSampleRegController::woInfo((int) $id_wo),
+            'fwo'       => $fwoScope,
+            'siap_fwo'  => $siapFwo,
             'wo_status' => $wo->status,
             'id_site'   => $wo->id_site_pelanggan_pekerjaan,
             'has_fwo'   => $hasFwo,
-            'regs'      => $this->regGroupsByWo($id_wo), // sample yang sudah diregistrasi — selalu ditampilkan kalau ada
+            'regs'      => $this->regGroupsByWo($id_wo, $fwoScope->id_fwo ?? null), // sample yang sudah diregistrasi — selalu ditampilkan kalau ada
         ];
+
+        if ($fwoScope) {
+            $response['boqs'] = []; // jalur (b) = BOQ WO tanpa FWO, tidak relevan untuk 1 FWO
+            return response()->json($response);
+        }
 
         // BOQ item yang belum PERNAH dipakai di FWO manapun tetap bisa dibuatkan
         // sample langsung (jalur b) — gating-nya per BOQ item, bukan per WO,
@@ -211,7 +239,7 @@ class WoSampleController extends Controller
      * registrasi (1 wo_lab_sample_regs = 1 grup). Dipakai untuk WO manapun
      * (baik jalur FWO maupun WO-langsung).
      */
-    private function regGroupsByWo($id_wo): array
+    public function regGroupsByWo($id_wo, $idFwo = null): array
     {
         $fwoBoqNames = DB::table('fieldwork_boq as fb')
             ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
@@ -243,11 +271,12 @@ class WoSampleController extends Controller
             ->leftJoin('personnel as p', 'p.id_personnel', '=', 'r.id_personnel_penerima')
             ->where('r.id_wo', $id_wo)
             ->orderByDesc('r.id_wo_lab_sample_reg')
-            ->get(['r.id_wo_lab_sample_reg', 'r.tanggal_registrasi', 'r.keterangan', 'p.nama as nama_personnel']);
+            ->get(['r.id_wo_lab_sample_reg', 'r.no_registrasi', 'r.tanggal_registrasi', 'r.keterangan', 'p.nama as nama_personnel']);
 
         foreach ($regs as $reg) {
             $samples = DB::table('lab_samples')
                 ->where('id_wo_lab_sample_reg', $reg->id_wo_lab_sample_reg)
+                ->when($idFwo, fn ($q) => $q->where('id_fwo', $idFwo))
                 ->orderBy('no_urut')
                 ->get();
 
@@ -261,6 +290,11 @@ class WoSampleController extends Controller
             $reg->samples = $samples;
         }
 
+        // Cakupan 1 FWO: buang pendaftaran yang tidak memuat sample FWO itu
+        if ($idFwo) {
+            $regs = $regs->filter(fn ($r) => $r->samples->isNotEmpty())->values();
+        }
+
         return $regs->all();
     }
 
@@ -268,10 +302,13 @@ class WoSampleController extends Controller
      * List sample yang belum "diterima" lab (belum punya id_wo_lab_sample_reg)
      * untuk WO ini — baik yang berasal dari FWO maupun dari BOQ WO-langsung.
      */
-    public function availableFwoSamples($id_wo)
+    public function availableFwoSamples(Request $request, $id_wo)
     {
+        $fwoScope = $request->query('fwo') ? (int) $request->query('fwo') : null; // ?fwo= → hanya 1 FWO
+
         $fwoIds = DB::table('fieldworks')
             ->where('id_wo', $id_wo)
+            ->when($fwoScope, fn ($q) => $q->where('id_fwo', $fwoScope))
             ->whereNull('deleted_at')
             ->pluck('id_fwo');
 
@@ -283,12 +320,15 @@ class WoSampleController extends Controller
             ->join('fieldworks as fw', 'fw.id_fwo', '=', 'fb.id_fwo')
             ->leftJoin('testing_points as tp', 'tp.id_testing_point', '=', 'b.id_testing_point')
             ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_kelompok_matriks_samples as tkms', 'tms.id_testing_kelompok_matriks_sample', '=', 'tkms.id_testing_kelompok_matriks_sample')
             ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->whereIn('fb.id_fwo', $fwoIds)
             ->whereNull('fb.deleted_at')
             ->select([
                 'fb.id_fwo_boq',
-                DB::raw("CONCAT('FWO ', fw.no_fwo, ' — ', COALESCE(TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))), b.item_produk_alternate)) as label"),
+                DB::raw("CONCAT(fw.no_fwo, ' — ', COALESCE(TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))), b.item_produk_alternate)) as label"),
+                'fw.no_fwo', DB::raw("COALESCE(TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))), b.item_produk_alternate) as nama_boq"),
+                'tkms.judul_indonesia as kelompok_matriks',
             ])
             ->orderBy('fw.no_fwo')
             ->get();
@@ -301,22 +341,28 @@ class WoSampleController extends Controller
                 // otomatis juga mengecualikan Tidak Terlaksana & yang belum diambil
                 ->where('status', 'dikirim')
                 ->orderBy('no_urut')
-                ->get(['id_lab_sample', 'no_sample', 'jenis_sample', 'titik_lokasi', 'status']);
+                ->get(['id_lab_sample', 'no_sample', 'jenis_sample', 'titik_lokasi', 'status', 'tanggal_pengambilan', 'kondisi_sample']);
 
             if ($samples->isEmpty()) continue;
-            $groups[] = ['label' => $boq->label, 'samples' => $samples];
+            $groups[] = ['label' => $boq->label, 'no_fwo' => $boq->no_fwo, 'nama_boq' => $boq->nama_boq, 'kelompok_matriks' => $boq->kelompok_matriks, 'samples' => $samples];
         }
+
+        // Cakupan 1 FWO: BOQ WO-langsung (jalur b) tidak ikut
+        if ($fwoScope) return response()->json(['data' => $groups]);
 
         // Pool dari BOQ WO-langsung (jalur b — sample yang sudah dibuat tapi belum diregistrasi)
         $directBoqs = DB::table('boq as b')
             ->leftJoin('testing_points as tp', 'tp.id_testing_point', '=', 'b.id_testing_point')
             ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_kelompok_matriks_samples as tkms', 'tms.id_testing_kelompok_matriks_sample', '=', 'tkms.id_testing_kelompok_matriks_sample')
             ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->where('b.id_wo', $id_wo)
             ->whereNull('b.deleted_at')
             ->select([
                 'b.id_boq',
                 DB::raw("CONCAT('BOQ WO — ', COALESCE(TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))), b.item_produk_alternate)) as label"),
+                DB::raw("COALESCE(TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))), b.item_produk_alternate) as nama_boq"),
+                'tkms.judul_indonesia as kelompok_matriks',
             ])
             ->get();
 
@@ -327,10 +373,10 @@ class WoSampleController extends Controller
                 ->whereNull('id_wo_lab_sample_reg')
                 ->where('status', 'dikirim')
                 ->orderBy('no_urut')
-                ->get(['id_lab_sample', 'no_sample', 'jenis_sample', 'titik_lokasi', 'status']);
+                ->get(['id_lab_sample', 'no_sample', 'jenis_sample', 'titik_lokasi', 'status', 'tanggal_pengambilan', 'kondisi_sample']);
 
             if ($samples->isEmpty()) continue;
-            $groups[] = ['label' => $boq->label, 'samples' => $samples];
+            $groups[] = ['label' => $boq->label, 'no_fwo' => null, 'nama_boq' => $boq->nama_boq, 'kelompok_matriks' => $boq->kelompok_matriks, 'samples' => $samples];
         }
 
         return response()->json(['data' => $groups]);
@@ -412,67 +458,11 @@ class WoSampleController extends Controller
             return response()->json(['success' => false, 'message' => 'Terjadi kesalahan server'], 500);
         }
 
-        return response()->json(['success' => true, 'id_wo_lab_sample_reg' => $idReg]);
-    }
-
-    /**
-     * Registrasi sample ad-hoc yang tidak berasal dari BOQ manapun (WO maupun
-     * FWO) — mis. sample dibawa langsung oleh pelanggan tanpa proses sampling
-     * lapangan. Create + register jadi 1 langkah sekaligus, karena tidak ada
-     * tahap "sudah diambil tapi belum diregistrasi" untuk kasus ini.
-     */
-    public function storeWithoutBoq(Request $request, $id_wo)
-    {
-        if ($this->woIsCompleted($id_wo)) {
-            return response()->json(['success' => false, 'message' => 'WO sudah selesai.'], 403);
-        }
-
-        $validated = $request->validate([
-            'jenis_sample'          => 'nullable|in:env,we,mp,product',
-            'titik_lokasi'          => 'nullable|string|max:255',
-            'tanggal_pengambilan'   => 'nullable|date',
-            'kondisi_sample'        => 'nullable|in:baik,rusak,tidak_lengkap',
-            'keterangan_sample'     => 'nullable|string',
-            'tanggal_registrasi'      => 'required|date',
-            'id_personnel_penerima' => 'nullable|integer',
-            'keterangan'            => 'nullable|string',
+        return response()->json([
+            'success' => true,
+            'id_wo_lab_sample_reg' => $idReg,
+            'no_registrasi' => DB::table('wo_lab_sample_regs')->where('id_wo_lab_sample_reg', $idReg)->value('no_registrasi'),
         ]);
-
-        DB::beginTransaction();
-        try {
-            $idReg = $this->findOrCreateRegHeader($id_wo, $validated);
-
-            $maxUrut = (int) (DB::table('lab_samples')->where('id_wo', $id_wo)->whereNull('id_boq')->max('no_urut') ?? 0);
-
-            $idSample = DB::table('lab_samples')->insertGetId([
-                'id_fwo'               => null,
-                'id_fwo_boq'           => null,
-                'id_wo'                => $id_wo,
-                'id_boq'               => null,
-                'id_wo_lab_sample_reg' => $idReg,
-                'no_urut'              => $maxUrut + 1,
-                'jenis_sample'         => $validated['jenis_sample'] ?? null,
-                'no_sample'            => $this->nextNoSample(),
-                'no_reg_lab'           => $this->nextNoRegLab(),
-                'tanggal_pengambilan'  => $validated['tanggal_pengambilan'] ?? null,
-                'titik_lokasi'         => $validated['titik_lokasi'] ?? null,
-                'kondisi_sample'       => $validated['kondisi_sample'] ?? null,
-                'keterangan'           => $validated['keterangan_sample'] ?? null,
-                'status'               => 'belum_diambil',
-                'status_lab'           => 'diterima',
-                'created_at'           => now(),
-                'updated_at'           => now(),
-            ]);
-
-            saveAudit('lab_samples', $idSample, 'Create', '', $this->sampleJson($idSample), $this->parentWo($id_wo));
-
-            DB::commit();
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan server'], 500);
-        }
-
-        return response()->json(['success' => true, 'id_lab_sample' => $idSample]);
     }
 
     public function show($id)

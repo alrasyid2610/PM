@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DataScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +44,13 @@ class UserController extends Controller
             ->make(true);
     }
 
+    /** Nama Grup / Departemen (`menu_groups.name`) user yang boleh dipilih sebagai PIC Order di SO & SQ. */
+    private const GRUP_PIC_ORDER = 'PIC';
+
+    /**
+     * Daftar user untuk Select2. `?peran=pic_order` (PIC Order SO/SQ) membatasi hasil ke user yang Grup /
+     * Departemen-nya "PIC" — user tanpa grup atau berbeda grup tidak muncul. Tanpa parameter: semua user aktif.
+     */
     public function select2(Request $request)
     {
         $search = $request->q;
@@ -50,6 +58,10 @@ class UserController extends Controller
         $data = DB::table('users')
             ->where('is_active', 1)
             ->where('name', 'like', "%{$search}%")
+            ->when($request->input('peran') === 'pic_order', fn($q) => $q->whereIn(
+                'menu_group_id',
+                DB::table('menu_groups')->whereRaw('LOWER(name) = ?', [mb_strtolower(self::GRUP_PIC_ORDER)])->select('id')
+            ))
             ->select('id', 'name')
             ->orderBy('name')
             ->limit(20)
@@ -74,6 +86,7 @@ class UserController extends Controller
             'no_hp'         => 'nullable|string|max:30',
             'is_active'     => 'required|in:0,1',
             'menu_group_id' => 'nullable|integer|exists:menu_groups,id',
+            'id_atasan'     => 'nullable|integer|exists:users,id',
             'status_kepegawaian' => StatusKepegawaian::rule(),
         ]);
 
@@ -88,6 +101,7 @@ class UserController extends Controller
                 'is_active'     => $request->is_active,
                 'status_kepegawaian' => $request->filled('status_kepegawaian') ? $request->status_kepegawaian : null,
                 'menu_group_id' => $request->filled('menu_group_id') ? $request->menu_group_id : null,
+                'id_atasan'     => $request->filled('id_atasan') ? $request->id_atasan : null,
                 'created_at'    => now(),
                 'updated_at'    => now(),
             ]);
@@ -105,7 +119,7 @@ class UserController extends Controller
 
     public function show($id)
     {
-        $kolom = ['id', 'name', 'email', 'no_hp', 'is_active', 'menu_group_id', 'status_kepegawaian'];
+        $kolom = ['id', 'name', 'email', 'no_hp', 'is_active', 'menu_group_id', 'id_atasan', 'status_kepegawaian'];
         if (Schema::hasColumn('users', 'last_login_at')) array_push($kolom, 'last_login_at', 'last_login_ip');
 
         $user = DB::table('users')
@@ -116,6 +130,8 @@ class UserController extends Controller
         if (!$user) {
             return response()->json(['success' => false, 'message' => 'User tidak ditemukan'], 404);
         }
+
+        $user->nama_atasan = $user->id_atasan ? DB::table('users')->where('id', $user->id_atasan)->value('name') : null;
 
         $permRows = DB::table('user_menu_permissions')
             ->where('user_id', $id)
@@ -143,6 +159,7 @@ class UserController extends Controller
             'no_hp'         => 'nullable|string|max:30',
             'is_active'     => 'required|in:0,1',
             'menu_group_id' => 'nullable|integer|exists:menu_groups,id',
+            'id_atasan'     => 'nullable|integer|exists:users,id',
             'permissions'   => 'nullable|string',
             'status_kepegawaian' => StatusKepegawaian::rule(),
         ]);
@@ -157,6 +174,15 @@ class UserController extends Controller
 
             $before = (array) DB::table('users')->where('id', $id)->first();
 
+            // Atasan: bukan diri sendiri & bukan bawahan sendiri (cegah siklus hierarki)
+            if ($request->filled('id_atasan')) {
+                $atasan = (int) $request->id_atasan;
+                if ($atasan === (int) $id || in_array($atasan, DataScope::userIds((int) $id), true)) {
+                    DB::rollBack();
+                    return response()->json(['success' => false, 'message' => 'Atasan tidak boleh diri sendiri atau bawahan sendiri'], 422);
+                }
+            }
+
             $updateData = [
                 'name'          => $request->name,
                 'email'         => $request->email,
@@ -164,6 +190,7 @@ class UserController extends Controller
                 'is_active'     => $request->is_active,
                 'status_kepegawaian' => $request->filled('status_kepegawaian') ? $request->status_kepegawaian : null,
                 'menu_group_id' => $request->filled('menu_group_id') ? $request->menu_group_id : null,
+                'id_atasan'     => $request->filled('id_atasan') ? $request->id_atasan : null,
                 'updated_at'    => now(),
             ];
 

@@ -196,6 +196,14 @@ async function renderForm(res) {
                             ${renderGroupSelect(res.menu_group_id)}
                         </select>
                     </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Atasan</label>
+                        <select name="id_atasan" class="form-select disabled" disabled>
+                            <option value="">-- Tanpa Atasan --</option>
+                            ${res.id_atasan ? `<option value="${res.id_atasan}" selected>${$('<div>').text(res.nama_atasan || '').html()}</option>` : ''}
+                        </select>
+                        <small class="text-muted">Atasan melihat SO/SQ milik bawahannya.</small>
+                    </div>
                     ${formGroup.text("password", "Password Baru", "", false, { className: "col-md-5" })}
                     <div class="col-md-12" data-no-disable>
                         <small class="text-muted">

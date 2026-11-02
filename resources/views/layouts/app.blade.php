@@ -263,6 +263,7 @@
     <script src="{{ asset('assets/js/core/permissionEngine.js') }}"></script>
     <script src="{{ asset('assets/js/core/filePreview.js') }}"></script>
     <script src="{{ asset('assets/js/core/budgetSections.js') }}?v={{ @filemtime(public_path('assets/js/core/budgetSections.js')) }}"></script>
+    <script src="{{ asset('assets/js/core/budgetValueCard.js') }}?v={{ @filemtime(public_path('assets/js/core/budgetValueCard.js')) }}"></script>
     <script src="{{ asset('assets/js/core/modalGuard.js') }}?v={{ @filemtime(public_path('assets/js/core/modalGuard.js')) }}"></script>
     <script src="{{ asset('assets/js/core/judulOutput.js') }}?v={{ @filemtime(public_path('assets/js/core/judulOutput.js')) }}"></script>
     <script src="{{ asset('assets/js/core/notifications.js') }}"></script>

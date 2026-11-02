@@ -32,7 +32,7 @@ class AppServiceProvider extends ServiceProvider
         'boq'                        => 'work-orders',
         'wo-budgets'                 => 'work-orders',
         'wo-budget-actuals'          => 'work-orders',
-        'wo-samples'                 => 'work-orders',
+        'wo-samples'                 => 'lab-sample-regs',
     ];
 
     /**

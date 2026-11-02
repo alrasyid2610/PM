@@ -98,8 +98,10 @@ window.BudgetSections = (function () {
     }
 
     function headerHtml(cat, idx) {
+        // 11 kolom tabel: 10 pertama (Account … Cash Advance) dipakai judul + "+ Item"; kolom ke-11 (kolom hapus)
+        // berisi tombol hapus kategori, jadi sejajar tegak lurus dengan tombol hapus baris item di bawahnya.
         return '<tr class="bi-cat-header" data-cat="' + esc(cat.id_kategori) + '">' +
-            '<td colspan="8" style="background:#f0fdf4;border-top:2px solid #bbf7d0;cursor:pointer;padding:6px 10px;">' +
+            '<td colspan="10" style="background:#f0fdf4;border-top:2px solid #bbf7d0;cursor:pointer;padding:6px 10px;">' +
             '<div class="d-flex align-items-center gap-2 flex-wrap">' +
             '<i class="fa-solid fa-chevron-down bi-cat-chevron" style="font-size:10px;color:#0f766e;transition:transform .2s;"></i>' +
             '<span class="fw-semibold bi-cat-title" style="color:#0f766e;font-size:13px;" data-nama="' + esc(cat.nama) + '">' + letter(idx) + '. ' + esc(cat.nama) + '</span>' +
@@ -108,9 +110,11 @@ window.BudgetSections = (function () {
             '<span class="ms-auto fw-semibold bi-cat-sub" style="font-size:12px;color:#0f766e;"></span>' +
             '<button type="button" class="pm-btn-pill pm-btn-pill--teal btn-bi-cat-add" data-no-disable>' +
             '<i class="fa-solid fa-plus" style="font-size:10px;"></i> Item</button>' +
+            '</div></td>' +
+            '<td class="text-center" style="background:#f0fdf4;border-top:2px solid #bbf7d0;cursor:pointer;padding:6px 10px;">' +
             '<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 btn-bi-cat-remove" data-no-disable title="Hapus kategori ini" style="font-size:11px;">' +
             '<i class="fa-solid fa-trash" style="color:#dc2626;"></i></button>' +
-            '</div></td></tr>';
+            '</td></tr>';
     }
 
     // Isi ulang section. items = item budget yang sudah ada (edit) atau [] (tambah).
@@ -221,6 +225,7 @@ window.BudgetSections = (function () {
         $(cfg.body).find('.bi-hari[data-auto="1"]').each(function () {
             if (String($(this).val()) !== String(dh)) $(this).val(dh);
         });
+        applyTanpaState(cfg);
         var basis = basisOf(cfg).nilai;
         var $headers = $(cfg.body).children('.bi-cat-header');
         var grand = 0;
@@ -235,7 +240,7 @@ window.BudgetSections = (function () {
         });
         $(cfg.body).children('.bi-cat-placeholder').remove();
         if (!$headers.length) {
-            $(cfg.body).append('<tr class="bi-cat-placeholder"><td colspan="8" class="text-center text-muted py-4" style="font-size:12px;">' +
+            $(cfg.body).append('<tr class="bi-cat-placeholder"><td colspan="11" class="text-center text-muted py-4" style="font-size:12px;">' +
                 'Belum ada item. Klik <b>+ Kategori</b> untuk menambahkan kategori anggaran, lalu <b>+ Item</b> di dalamnya.</td></tr>');
         }
         $headers.each(function (idx) {
@@ -349,6 +354,7 @@ window.BudgetSections = (function () {
             var cfg = cfgOf(this);
             if (cfg && cfg.onChange) cfg.onChange();
         })
+        .off('input.biTanpa', '.bi-qty-tanpa').on('input.biTanpa', '.bi-qty-tanpa', function () { var cfg = cfgOf(this); if (cfg) applyTanpaState(cfg); })
         .off('click.biSec', '.btn-bi-cat-add').on('click.biSec', '.btn-bi-cat-add', function (e) {
             e.stopPropagation();
             var cfg = cfgOf(this);
@@ -409,5 +415,64 @@ window.BudgetSections = (function () {
             (item.satuan ? ' ' + esc(item.satuan) : '') + ' × Rp ' + Number(item.harga_satuan || item.nominal_budget || 0).toLocaleString('id-ID') + '</small>';
     }
 
-    return { daysFromDates: daysFromDates, daysFromNumbers: daysFromNumbers, detail: detail, rowTotal: nominalOf, applyPct: applyPct, fmtPct: fmtPct, fetchBasis: fetchBasis, loadBasis: loadBasis, load: load, fill: fill, initSelects: initSelects, refresh: refresh, addRow: addRow };
+    // ── "Tanpa realisasi" per-qty pada item Budget Plan (WO, FWO, SQ WO, SQ FWO) ──
+    // Item tetap 1 baris (mis. qty 4); `qty_tanpa_realisasi` (mis. 2 unit milik sendiri) tidak perlu realisasi,
+    // sisanya yang direalisasikan. Diisi di modal Plan (2 kolom: Qty Tanpa Realisasi + Alasan) — hanya PIC Order SQ/SO
+    // terkait (atau Aksi Khusus pengganti) yang bisa mengisi; server menentukan lewat `bisa_tandai` di respons /basis,
+    // dan tetap memvalidasi saat simpan (BudgetTanpaRealisasi::kolom).
+    function qtyFmt(n) { return Number(n || 0).toLocaleString('id-ID', { maximumFractionDigits: 2 }); }
+
+    // Total nilai bagian "tanpa realisasi" di satu plan (dikeluarkan dari pembanding realisasi)
+    function tanpaTotal(items) {
+        return (items || []).reduce(function (s, i) { return s + Number(i.nominal_tanpa_realisasi || 0); }, 0);
+    }
+
+    // Seluruh qty item tanpa realisasi → item tidak bisa diberi realisasi
+    function tanpaPenuh(item) {
+        var qt = Number(item.qty_tanpa_realisasi || 0);
+        return qt > 0 && qt >= Number(item.qty || 1);
+    }
+
+    // Badge di kartu plan: "Tanpa realisasi 2 dari 4" + alasan
+    function tanpaBadge(item) {
+        var qt = Number(item.qty_tanpa_realisasi || 0);
+        if (!(qt > 0)) return '';
+        var tip = (item.alasan_tanpa_realisasi || '') +
+            (item.ditandai_oleh_nama ? ' — ' + item.ditandai_oleh_nama : '') +
+            (item.ditandai_at ? ' (' + String(item.ditandai_at).substring(0, 16).replace('T', ' ') + ')' : '');
+        return '<span class="badge ms-1" title="' + esc(tip) + '" style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:500;border:1px solid #fde68a;">' +
+            '<i class="fa-solid fa-ban me-1"></i>Tanpa realisasi ' + qtyFmt(qt) + ' dari ' + qtyFmt(item.qty || 1) + '</span>' +
+            (item.alasan_tanpa_realisasi ? '<small class="d-block text-muted" style="font-size:10.5px;">' + esc(item.alasan_tanpa_realisasi) + '</small>' : '');
+    }
+
+    // Dua <td> kolom modal (disisipkan setelah kolom Keterangan) + dua <th> headernya
+    function tanpaCells(item) {
+        var qt = item && Number(item.qty_tanpa_realisasi || 0) > 0 ? Number(item.qty_tanpa_realisasi) : '';
+        return '<td style="width:100px;"><input type="number" step="any" min="0" class="form-control form-control-sm bi-qty-tanpa" ' +
+            'value="' + qt + '" placeholder="0" data-no-disable title="Jumlah unit yang tidak perlu realisasi (mis. milik sendiri)"></td>' +
+            '<td style="min-width:160px;"><input type="text" maxlength="255" class="form-control form-control-sm bi-alasan-tanpa" ' +
+            'value="' + esc(item ? item.alasan_tanpa_realisasi || '' : '') + '" placeholder="Alasan (wajib bila diisi)" data-no-disable></td>';
+    }
+    var tanpaTh = '<th style="width:100px;">Qty Tanpa Realisasi</th><th style="min-width:160px;">Alasan Tanpa Realisasi</th>';
+
+    // Nilai kolom dari satu baris modal → dikirim ke server bersama item
+    function tanpaCollect($tr) {
+        var q = parseFloat(String($tr.find('.bi-qty-tanpa').val() || '').replace(',', '.'));
+        return {
+            qty_tanpa_realisasi: isFinite(q) && q > 0 ? q : 0,
+            alasan_tanpa_realisasi: ($tr.find('.bi-alasan-tanpa').val() || '').trim(),
+        };
+    }
+
+    // Kolom hanya bisa diisi PIC Order; Alasan aktif hanya bila Qty Tanpa Realisasi > 0
+    function applyTanpaState(cfg) {
+        var bisa = !!basisOf(cfg).bisa_tandai;
+        $(cfg.body).children(cfg.rowSel).each(function () {
+            var $q = $(this).find('.bi-qty-tanpa'), $a = $(this).find('.bi-alasan-tanpa');
+            var ada = parseFloat(String($q.val() || '').replace(',', '.')) > 0;
+            $q.prop('disabled', !bisa).attr('title', bisa ? 'Jumlah unit yang tidak perlu realisasi (mis. milik sendiri)' : 'Hanya PIC Order yang dapat mengisi');
+            $a.prop('disabled', !bisa || !ada);
+        });
+    }
+    return { tanpaTotal: tanpaTotal, tanpaPenuh: tanpaPenuh, tanpaBadge: tanpaBadge, tanpaCells: tanpaCells, tanpaTh: tanpaTh, tanpaCollect: tanpaCollect, daysFromDates: daysFromDates, daysFromNumbers: daysFromNumbers, detail: detail, rowTotal: nominalOf, applyPct: applyPct, fmtPct: fmtPct, fetchBasis: fetchBasis, loadBasis: loadBasis, load: load, fill: fill, initSelects: initSelects, refresh: refresh, addRow: addRow };
 })();

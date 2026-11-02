@@ -129,7 +129,7 @@ function fillSqForm(sq) {
 
     // PIC Input = user yang sedang login (bukan dari SQ sumber), tetap bisa diubah
     initUserSelect('#sq_pic_input', window.cloneRoute.authUser.id, window.cloneRoute.authUser.name);
-    initUserSelect('#sq_pic_order', sq.pic_order, sq.nama_pic_order);
+    initUserSelect('#sq_pic_order', sq.pic_order, sq.nama_pic_order, undefined, 'pic_order');
     initUserSelect('#sq_pic_marketing_internal', sq.pic_marketing_internal, sq.nama_marketing_internal);
     initUserSelect('#sq_pic_marketing_eksternal', sq.pic_marketing_eksternal, sq.nama_marketing_eksternal);
 }
@@ -176,11 +176,12 @@ function initPicSelect(sel, companyIdsFn, siteIdsFn, initialId, initialText) {
     if (initialId) $el.append(new Option(initialText || ('#' + initialId), initialId, true, true)).trigger('change');
 }
 
-function initUserSelect(sel, initialId, initialText, dropdownParent) {
+// peran: 'pic_order' → hanya user Grup/Departemen PIC (lihat UserController::select2)
+function initUserSelect(sel, initialId, initialText, dropdownParent, peran) {
     const $el = $(sel);
     const opts = {
         width: '100%', allowClear: true, placeholder: 'Pilih User', minimumInputLength: 0,
-        ajax: { url: window.cloneRoute.select2User, dataType: 'json', delay: 200, data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }), cache: true },
+        ajax: { url: window.cloneRoute.select2User, dataType: 'json', delay: 200, data: (p) => ({ q: p.term, peran: peran || '' }), processResults: (d) => ({ results: d }), cache: true },
         escapeMarkup: (m) => m,
     };
     if (dropdownParent) opts.dropdownParent = dropdownParent;

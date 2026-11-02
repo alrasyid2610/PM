@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DataScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -72,6 +73,7 @@ class DashboardController extends Controller
     private function kpiSoOutstanding(): array
     {
         $n = DB::table('sales_orders')
+            ->tap(fn ($q) => DataScope::so($q))
             ->whereNull('deleted_at')
             ->whereNotIn('status', ['completed', 'cancel'])
             ->count();
@@ -181,6 +183,7 @@ class DashboardController extends Controller
                 ->map(fn ($r) => (object) array_merge((array) $r, ['nilai' => 0]));
         } else {
             $sos = DB::table('sales_orders as so')
+                ->tap(fn ($q) => DataScope::so($q, 'so'))
                 ->join('business_relations as br', 'br.id_br', '=', 'so.id_pelanggan')
                 ->leftJoin('entitas as ent', 'ent.id_entitas', '=', 'br.id_entitas')
                 ->leftJoin('business_relation_sites as s', 's.id_site', '=', 'so.id_site_pelanggan')
@@ -301,6 +304,7 @@ class DashboardController extends Controller
     private function sqFinalQuery()
     {
         return DB::table('sales_quotations')
+            ->tap(fn ($q) => DataScope::sq($q))
             ->whereNull('deleted_at')
             ->where('is_latest', true)
             ->where('status', 'final');
@@ -309,6 +313,7 @@ class DashboardController extends Controller
     private function sqWinBelumSoQuery()
     {
         return DB::table('sales_quotations as sq')
+            ->tap(fn ($q) => DataScope::sq($q, 'sq'))
             ->whereNull('sq.deleted_at')
             ->where('sq.is_latest', true)
             ->where('sq.status', 'win')
@@ -327,6 +332,7 @@ class DashboardController extends Controller
     private function sqPendingQuery()
     {
         return DB::table('sales_quotations as sq')
+            ->tap(fn ($q) => DataScope::sq($q, 'sq'))
             ->whereNull('sq.deleted_at')
             ->where('sq.is_latest', true)
             ->where('sq.status', 'pending');
@@ -359,6 +365,7 @@ class DashboardController extends Controller
     private function chartSqPerStatus(): array
     {
         $counts = DB::table('sales_quotations')
+            ->tap(fn ($q) => DataScope::sq($q))
             ->whereNull('deleted_at')
             ->where('is_latest', true)
             ->selectRaw('status, COUNT(*) as total')
@@ -392,6 +399,7 @@ class DashboardController extends Controller
         $year = (int) ($request->year ?: now()->year);
 
         $data = DB::table('sales_orders')
+            ->tap(fn ($q) => DataScope::so($q))
             ->whereNull('deleted_at')
             ->whereNotNull('tanggal_so')
             ->whereYear('tanggal_so', $year)
@@ -411,6 +419,7 @@ class DashboardController extends Controller
     private function soYears()
     {
         return DB::table('sales_orders')
+            ->tap(fn ($q) => DataScope::so($q))
             ->whereNull('deleted_at')
             ->whereNotNull('tanggal_so')
             ->selectRaw('YEAR(tanggal_so) as y')
@@ -435,6 +444,7 @@ class DashboardController extends Controller
         $mode = in_array($request->mode, ['kotor', 'semua'], true) ? $request->mode : 'bersih';
 
         $sos = DB::table('sales_orders')
+            ->tap(fn ($q) => DataScope::so($q))
             ->whereNull('deleted_at')
             ->where('status', '!=', 'cancel')
             ->whereNotNull('tanggal_so')
@@ -604,6 +614,7 @@ class DashboardController extends Controller
         } elseif ($type === 'so') {
             // Status SO yang benar: on-progress | completed | cancel (sebelumnya salah memakai 'selesai')
             $rows = DB::table('sales_orders as s')
+                ->tap(fn ($q) => DataScope::so($q, 's'))
                 ->leftJoin('business_relations as br', 'br.id_br', '=', 's.id_pelanggan')
                 ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 's.id_pic_pelanggan')
                 ->whereNull('s.deleted_at')

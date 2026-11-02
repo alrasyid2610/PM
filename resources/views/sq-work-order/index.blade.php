@@ -245,6 +245,7 @@
 <th style="min-width:150px;">Harga Satuan (Rp)</th>
 <th style="min-width:150px;">Total (Rp)</th>
                                 <th style="min-width:160px;">Keterangan</th>
+                                <th style="width:100px;">Qty Tanpa Realisasi</th><th style="min-width:160px;">Alasan Tanpa Realisasi</th>
                                 <th style="width:100px;text-align:center;">Cash Advance</th>
                                 <th style="width:50px;"></th>
                             </tr>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DataScope;
 use Illuminate\Http\Request;
 use App\Support\DocumentNumber;
 use App\Support\SqLock;
@@ -193,6 +194,7 @@ class SqFieldworkController extends Controller
         $query = DB::table('sq_fieldworks as f')
             ->leftJoin('sq_work_orders as w', 'w.id_sq_wo', '=', 'f.id_sq_wo')
             ->leftJoin('sales_quotations as sq', 'sq.id_sq', '=', 'w.id_sq')
+            ->tap(fn ($q) => DataScope::sq($q, 'sq'))
             ->when($isSearching, function ($q) use ($filters) {
                 foreach ($filters as $f) {
                     $like = '%' . $f['q'] . '%';

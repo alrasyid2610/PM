@@ -280,7 +280,7 @@ function renderSqFwoBudgetList(plans) {
             return `<tr>
                 <td style="width:36px;text-align:center;color:#94a3b8;font-size:11px;">${idx + 1}</td>
                 <td>${categoryCell}</td>
-                <td><span class="fw-semibold">${escHtml(item.nama_account)}</span>${caBadge}</td>
+                <td><span class="fw-semibold">${escHtml(item.nama_account)}</span>${caBadge}${BudgetSections.tanpaBadge(item)}</td>
                 <td style="color:#1d4ed8;font-weight:600;" data-pct-val="${item.nominal_budget}">${formatRupiahSqFwo(item.nominal_budget)}${BudgetSections.detail(item)}</td>
                 <td>${escHtml(item.keterangan || '—')}</td>
             </tr>`;
@@ -353,13 +353,14 @@ function buildSqFwoBudgetItemRow(item) {
         <td>
             <input type="text" class="form-control form-control-sm bi-keterangan" value="${item ? escHtml(item.keterangan || '') : ''}" placeholder="Opsional" data-no-disable>
         </td>
+        ${BudgetSections.tanpaCells(item)}
         <td class="text-center">
             <div class="form-check d-flex justify-content-center mb-0">
                 <input type="checkbox" class="form-check-input bi-ca" data-no-disable ${item && item.is_cash_advance ? 'checked' : ''} title="Cash Advance" style="width:18px;height:18px;cursor:pointer;">
             </div>
         </td>
         <td class="text-center">
-            <button type="button" class="btn btn-sm btn-outline-danger btn-sq-fwo-budget-remove-row" data-no-disable><i class="fa-solid fa-trash"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 btn-sq-fwo-budget-remove-row" data-no-disable title="Hapus baris" style="font-size:11px;"><i class="fa-solid fa-trash" style="color:#dc2626;"></i></button>
         </td>
     </tr>`;
 }

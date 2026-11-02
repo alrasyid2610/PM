@@ -194,7 +194,7 @@ let sqWoCache = [];
 function loadSqWoList(idSq, done) {
     $.get('/sq-work-orders/' + idSq + '/list', function (wos) {
         sqWoCache = wos || [];
-        renderSqSummary(sqWoCache);
+        renderSqSummary(sqWoCache, idSq);
         renderSqWoView();
         if (done) done();
     }).fail(function () {
@@ -211,7 +211,7 @@ $(document).on('click', '.btn-copy-sq-wo', function () {
 // Baris KPI di atas tab — sama dengan renderSoSummary() di Sales Order (Total WO,
 // Total FWO, Total QTY, Total Nilai + breakdown BOQ/Other/Sampling), tanpa kartu
 // progress karena SQ tidak punya realisasi.
-function renderSqSummary(wos) {
+function renderSqSummary(wos, idSq) {
     const sum = (key) => wos.reduce((s, w) => s + (Number(w[key]) || 0), 0);
     const totalBoq      = sum('total_boq');
     const totalOther    = sum('total_boq_other');
@@ -252,8 +252,12 @@ function renderSqSummary(wos) {
         kpiCard('fa-briefcase', 'var(--primary-500,#1a5fbe)', 'Total WO', wos.length + ' WO') +
         kpiCard('fa-hard-hat', 'var(--primary-700,#18386b)', 'Total FWO', sum('fwo_count') + ' FWO') +
         kpiCard('fa-layer-group', '#0891b2', 'Total QTY', sum('boq_qty') + ' qty') +
-        totalNilaiCard
+        totalNilaiCard +
+        BudgetValueCard.shell('sqBudgetValueCard')
     );
+
+    // Kartu "Nilai Budget" (Budget FWO & WO: estimasi + persentase terhadap Total Nilai SQ; tanpa realisasi) — async
+    BudgetValueCard.load('sqBudgetValueCard', '/sales-quotations/' + idSq + '/budget-summary', { dokumen: 'SQ', realisasi: false });
 }
 
 function renderSqWoView() {
@@ -868,7 +872,7 @@ function openConvertSqModal(idSq) {
         }
         $('#convertPicOrder').select2({
             width: '100%', dropdownParent: $('#modalConvertSq'), allowClear: true, placeholder: 'Pilih User', minimumInputLength: 0,
-            ajax: { url: '/users/select2', dataType: 'json', delay: 200, data: function (q) { return { q: q.term }; }, processResults: function (d) { return { results: d }; }, cache: true },
+            ajax: { url: '/users/select2', dataType: 'json', delay: 200, data: function (q) { return { q: q.term, peran: 'pic_order' }; }, processResults: function (d) { return { results: d }; }, cache: true },
             escapeMarkup: function (m) { return m; },
         });
         // Default PIC Order = PIC Order di SQ (SQ lama bisa kosong), tetap bisa diganti user
