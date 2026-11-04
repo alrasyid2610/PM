@@ -2152,6 +2152,10 @@ tr.shown td.dt-control i {
     transition: transform 0.2s ease;
 }
 
+/* SweetAlert (konfirmasi/notif) selalu di atas modal bertumpuk — modal kedua dinaikkan manual
+   (mis. showStackedModal di sq-work-order: 1060 + 20 per tumpukan), z-index bawaan Swal 1060 jadi tertutup. */
+.swal2-container { z-index: 3000 !important; }
+
 /* Global Loader */
 #global-loader {
     position: fixed;
