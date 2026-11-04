@@ -79,6 +79,11 @@
                             placeholder="Opsional" data-no-disable>
                         <small class="text-muted">Dipakai sebagai nilai awal saat account ini dipilih di baris Budget Item — tetap bisa diubah manual.</small>
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Unit Default</label>
+                        <select class="form-select form-select-sm" id="accountModal-satuan-default" data-no-disable></select>
+                        <small class="text-muted">Terisi otomatis di kolom Unit saat account ini dipilih di Budget Plan — tetap bisa diubah manual.</small>
+                    </div>
                     <div class="col-md-12">
                         <label class="form-label">Keterangan</label>
                         <textarea class="form-control form-control-sm" id="accountModal-keterangan"

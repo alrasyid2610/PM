@@ -4,6 +4,11 @@ $(document).ready(function () {
     page = new CrudPageController({
         primaryKey: "id_testing_matriks_sample",
         renderForm: renderForm,
+        afterLoad: function (res) {
+            const url = window.route.update + res.id_testing_matriks_sample + '/points';
+            TestingPointTable.bind('Ms', () => url, false);
+            TestingPointTable.loadCount('Ms', url);
+        },
         initSelect: function () {
             $("#detail_kelompok").select2({
                 width: "100%",

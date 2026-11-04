@@ -4,6 +4,12 @@ $(document).ready(function () {
     page = new CrudPageController({
         primaryKey: "id_testing_kelompok_matriks_sample",
         renderForm: renderParameterForm,
+        afterLoad: function (res) {
+            loadKmMatriksCount(res.id_testing_kelompok_matriks_sample);
+            const url = window.route.update + res.id_testing_kelompok_matriks_sample + '/points';
+            TestingPointTable.bind('Km', () => url, true);
+            TestingPointTable.loadCount('Km', url);
+        },
         initSelect: function () {
             $("#detail_kelompok").select2({
                 width: "100%",

@@ -410,6 +410,8 @@ Route::prefix('testing-kelompok-matriks-samples')
         Route::get('/select2', [TestingKelompokMatriksSampleController::class, 'select2'])->name('select2');
 
         Route::get('/{id}', [TestingKelompokMatriksSampleController::class, 'show'])->name('show')->whereNumber('id');
+        Route::get('/{id}/points', [TestingKelompokMatriksSampleController::class, 'points'])->name('points')->whereNumber('id');
+        Route::get('/{id}/matriks', [TestingKelompokMatriksSampleController::class, 'matriks'])->name('matriks')->whereNumber('id');
         Route::put('/{id}', [TestingKelompokMatriksSampleController::class, 'update'])->name('update')->whereNumber('id');
         Route::delete('/{id}', [TestingKelompokMatriksSampleController::class, 'destroy'])->name('destroy')->whereNumber('id');
         Route::get(
@@ -454,6 +456,7 @@ Route::prefix('testing-standards')
 
         Route::get('/create', [TestingStandardController::class, 'create'])->name('create');
         Route::get('/{id}', [TestingStandardController::class, 'show'])->name('show')->whereNumber('id');
+        Route::get('/{id}/points', [TestingStandardController::class, 'points'])->name('points')->whereNumber('id');
 
 
         Route::put('/{id}', [TestingStandardController::class, 'update'])->name('update');
@@ -505,6 +508,7 @@ Route::prefix('testing-matriks-samples')
 
         Route::get('/{id}', [TestingMatriksSampleController::class, 'detail'])->name('detail');
         Route::get('/{id}/detail', [TestingMatriksSampleController::class, 'detail'])->name('detail');
+        Route::get('/{id}/points', [TestingMatriksSampleController::class, 'points'])->name('points')->whereNumber('id');
         Route::put('/{id}', [TestingMatriksSampleController::class, 'update'])->name('update');
         Route::delete('/{id}', [TestingMatriksSampleController::class, 'destroy'])->name('destroy');
         Route::get('/{id}/history', [TestingMatriksSampleController::class, 'history'])->name('history')->whereNumber('id');

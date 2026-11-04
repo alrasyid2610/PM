@@ -10,6 +10,9 @@ $(document).ready(function () {
                 dropdownParent: $("#detailContent"),
             });
         },
+        afterLoad: function (res) {
+            loadStdPointCount(res.id_testing_standard);
+        },
         useAttachment: true,
     });
 

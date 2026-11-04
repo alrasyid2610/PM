@@ -50,6 +50,10 @@ function fmtRp(n) {
     return 'Rp ' + Number(n).toLocaleString('id-ID');
 }
 
+function fmtUnit(nama) {
+    return nama ? escHtml(nama) : '<span class="text-muted">—</span>';
+}
+
 function renderAccountTable(parents) {
     if (!parents.length) {
         return `<div class="text-center text-muted py-5">
@@ -79,6 +83,7 @@ function renderAccountTable(parents) {
                 </td>
                 <td><code style="font-size:11px;color:#64748b;">${escHtml(c.kode)}</code></td>
                 <td style="font-size:12.5px;color:#475569;white-space:nowrap;">${fmtRp(c.nilai_default)}</td>
+                <td style="font-size:12.5px;color:#475569;">${fmtUnit(c.satuan_default)}</td>
                 <td>${cStatus}</td>
                 <td class="text-center" style="white-space:nowrap;">
                     <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-account-edit"
@@ -95,7 +100,7 @@ function renderAccountTable(parents) {
 
         const emptyRow = !hasChildren
             ? `<tr class="account-child-row" data-parent="${p.id_account}">
-                 <td colspan="6" style="padding-left:40px;color:#94a3b8;font-size:12px;font-style:italic;border-bottom:none;">
+                 <td colspan="7" style="padding-left:40px;color:#94a3b8;font-size:12px;font-style:italic;border-bottom:none;">
                      Belum ada sub kategori
                  </td>
                </tr>`
@@ -119,6 +124,7 @@ function renderAccountTable(parents) {
             </td>
             <td><code style="font-size:11px;background:#dcfce7;color:#166534;padding:2px 6px;border-radius:4px;">${escHtml(p.kode)}</code></td>
             <td style="font-size:12.5px;color:#166534;font-weight:600;white-space:nowrap;">${fmtRp(p.nilai_default)}</td>
+            <td style="font-size:12.5px;color:#166534;">${fmtUnit(p.satuan_default)}</td>
             <td>${statusBadge}</td>
             <td class="text-center account-actions-cell" style="white-space:nowrap;">
                 ${can('budget-accounts', 'can_create') ? `<button type="button" class="btn btn-sm py-0 px-2 me-1 btn-add-item"
@@ -147,6 +153,7 @@ function renderAccountTable(parents) {
                     <th>NAMA</th>
                     <th style="width:140px;">KODE</th>
                     <th style="width:140px;">NILAI DEFAULT</th>
+                    <th style="width:120px;">UNIT DEFAULT</th>
                     <th style="width:100px;">STATUS</th>
                     <th style="min-width:200px;text-align:center;">AKSI</th>
                 </tr>
@@ -182,6 +189,16 @@ function openAccountModal({ id, idParent, parentNama, isEdit, data }) {
     const nilaiDefault   = isEdit && data ? (data.nilai_default || '') : '';
     if (nilaiDefaultEl._cleave) nilaiDefaultEl._cleave.setRawValue(nilaiDefault);
     else $(nilaiDefaultEl).val(nilaiDefault);
+
+    // Unit Default (master Satuan)
+    const $sat = $('#accountModal-satuan-default');
+    if ($sat.hasClass('select2-hidden-accessible')) $sat.select2('destroy');
+    $sat.empty();
+    if (isEdit && data && data.id_satuan_default) $sat.append(new Option(data.satuan_default || '', data.id_satuan_default, true, true));
+    $sat.select2({
+        dropdownParent: $('#accountModal'), placeholder: 'Opsional', allowClear: true, width: '100%',
+        ajax: { url: '/satuan/select2', dataType: 'json', delay: 200, data: p => ({ q: p.term }), processResults: d => ({ results: d }), cache: true },
+    });
 
     bootstrap.Modal.getOrCreateInstance(document.getElementById('accountModal')).show();
     setTimeout(function () { $('#accountModal-nama').focus(); }, 300);
@@ -284,6 +301,7 @@ function initEvents() {
             kode,
             id_parent:  idParent || '',
             nilai_default: rawNumVal(document.getElementById('accountModal-nilai-default')) ?? '',
+            id_satuan_default: $('#accountModal-satuan-default').val() || '',
             keterangan: $('#accountModal-keterangan').val(),
             is_aktif:   $('#accountModal-is_aktif').val() || '1',
         };

@@ -23,7 +23,7 @@ class BudgetAccountController extends Controller
         $children = DB::table('budget_accounts')
             ->whereNull('deleted_at')->whereNotNull('id_parent')
             ->orderBy('nama')
-            ->get(['id_account as id', 'id_parent', 'nama as text', 'kode', 'nilai_default', 'is_aktif'])
+            ->get(['id_account as id', 'id_parent', 'nama as text', 'kode', 'nilai_default', 'id_satuan_default', DB::raw('(SELECT s.nama FROM satuan s WHERE s.id_satuan = budget_accounts.id_satuan_default) as satuan_default'), 'is_aktif'])
             ->groupBy('id_parent');
 
         return response()->json($parents->map(fn($p) => [
@@ -34,6 +34,8 @@ class BudgetAccountController extends Controller
                 'text'          => $c->text,
                 'kode'          => $c->kode,
                 'nilai_default' => $c->nilai_default,
+                'id_satuan_default' => $c->id_satuan_default,
+                'satuan_default' => $c->satuan_default,
                 'is_aktif'      => (int) $c->is_aktif,
             ])->values(),
         ])->values());
@@ -67,7 +69,7 @@ class BudgetAccountController extends Controller
                           ->orWhere('kode', 'like', "%{$q}%");
                 }))
                 ->orderBy('nama')
-                ->get(['id_account as id', 'nama as text', 'kode', 'nilai_default']);
+                ->get(['id_account as id', 'nama as text', 'kode', 'nilai_default', 'id_satuan_default', DB::raw('(SELECT s.nama FROM satuan s WHERE s.id_satuan = budget_accounts.id_satuan_default) as satuan_default')]);
 
             if ($children->isNotEmpty()) {
                 $results[] = [
@@ -88,7 +90,7 @@ class BudgetAccountController extends Controller
                           ->orWhere('kode', 'like', "%{$q}%");
                 })
                 ->orderBy('nama')
-                ->get(['id_account as id', 'nama as text', 'kode', 'nilai_default']);
+                ->get(['id_account as id', 'nama as text', 'kode', 'nilai_default', 'id_satuan_default', DB::raw('(SELECT s.nama FROM satuan s WHERE s.id_satuan = budget_accounts.id_satuan_default) as satuan_default')]);
 
             if ($orphans->isNotEmpty()) {
                 $results[] = [
@@ -107,6 +109,7 @@ class BudgetAccountController extends Controller
             ->whereNull('deleted_at')
             ->whereNull('id_parent')
             ->orderBy('nama')
+            ->select('budget_accounts.*', DB::raw('(SELECT s.nama FROM satuan s WHERE s.id_satuan = budget_accounts.id_satuan_default) as satuan_default'))
             ->get();
 
         $result = $parents->map(function ($parent) {
@@ -114,6 +117,7 @@ class BudgetAccountController extends Controller
                 ->whereNull('deleted_at')
                 ->where('id_parent', $parent->id_account)
                 ->orderBy('nama')
+                ->select('budget_accounts.*', DB::raw('(SELECT s.nama FROM satuan s WHERE s.id_satuan = budget_accounts.id_satuan_default) as satuan_default'))
                 ->get();
             return $parent;
         });
@@ -123,7 +127,7 @@ class BudgetAccountController extends Controller
 
     public function show(int $id)
     {
-        $row = DB::table('budget_accounts')->where('id_account', $id)->first();
+        $row = DB::table('budget_accounts')->where('id_account', $id)->select('budget_accounts.*', DB::raw('(SELECT s.nama FROM satuan s WHERE s.id_satuan = budget_accounts.id_satuan_default) as satuan_default'))->first();
         if (!$row) return response()->json(['message' => 'Data tidak ditemukan'], 404);
 
         if ($row->id_parent) {
@@ -141,6 +145,7 @@ class BudgetAccountController extends Controller
             'kode'          => 'required|string|max:50',
             'id_parent'     => 'nullable|integer',
             'nilai_default' => 'nullable|integer|min:0',
+            'id_satuan_default' => 'nullable|integer',
         ]);
 
         $exists = DB::table('budget_accounts')
@@ -170,6 +175,7 @@ class BudgetAccountController extends Controller
             'nama'          => $request->nama,
             'kode'          => strtoupper($request->kode),
             'nilai_default' => $request->filled('nilai_default') ? (int) $request->nilai_default : null,
+            'id_satuan_default' => $request->filled('id_satuan_default') ? (int) $request->id_satuan_default : null,
             'keterangan'    => $request->keterangan,
             'is_aktif'      => 1,
             'created_at'    => now(),
@@ -186,6 +192,7 @@ class BudgetAccountController extends Controller
             'kode'          => 'required|string|max:50',
             'id_parent'     => 'nullable|integer',
             'nilai_default' => 'nullable|integer|min:0',
+            'id_satuan_default' => 'nullable|integer',
         ]);
 
         // Validasi: parent tidak boleh punya id_parent sendiri
@@ -216,6 +223,7 @@ class BudgetAccountController extends Controller
             'nama'          => $request->nama,
             'kode'          => strtoupper($request->kode),
             'nilai_default' => $request->filled('nilai_default') ? (int) $request->nilai_default : null,
+            'id_satuan_default' => $request->filled('id_satuan_default') ? (int) $request->id_satuan_default : null,
             'keterangan'    => $request->keterangan,
             'is_aktif'      => $request->boolean('is_aktif', true) ? 1 : 0,
             'updated_at'    => now(),

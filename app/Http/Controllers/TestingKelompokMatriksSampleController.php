@@ -83,6 +83,54 @@ class TestingKelompokMatriksSampleController extends Controller
         ]);
     }
 
+    /** Daftar Matriks Sample milik 1 Kelompok (tab "Matriks Sample" di detail) — paging & search sisi klien. */
+    public function matriks($id)
+    {
+        $rows = DB::table('testing_matriks_samples as tms')
+            ->where('tms.id_testing_kelompok_matriks_sample', $id)
+            ->whereNull('tms.deleted_at')
+            ->select([
+                'tms.id_testing_matriks_sample',
+                'tms.kode',
+                'tms.judul_indonesia',
+                'tms.judul_inggris',
+                'tms.keterangan',
+                DB::raw('(SELECT COUNT(*) FROM testing_points tp WHERE tp.id_testing_matriks_sample = tms.id_testing_matriks_sample AND tp.deleted_at IS NULL) as jumlah_point'),
+            ])
+            ->orderBy('tms.kode')
+            ->get();
+
+        return response()->json(['data' => $rows]);
+    }
+
+    /** Daftar Testing Point dari semua Matriks Sample di 1 Kelompok (tab "Testing Point" di detail). */
+    public function points($id)
+    {
+        $rows = DB::table('testing_points as tp')
+            ->join('testing_matriks_samples as tms', 'tms.id_testing_matriks_sample', '=', 'tp.id_testing_matriks_sample')
+            ->leftJoin('testing_standards as ts', 'ts.id_testing_standard', '=', 'tp.id_testing_standard')
+            ->where('tms.id_testing_kelompok_matriks_sample', $id)
+            ->whereNull('tms.deleted_at')
+            ->whereNull('tp.deleted_at')
+            ->select([
+                'tp.id_testing_point',
+                'tp.nama',
+                'tp.nomor_halaman',
+                'tp.is_aktif',
+                'ts.nomor as standard_nomor',
+                'ts.judul as standard_judul',
+                'tms.kode as matriks_kode',
+                'tms.judul_indonesia as matriks_judul',
+                DB::raw('(SELECT COUNT(*) FROM testing_items ti WHERE ti.id_testing_point = tp.id_testing_point) as jumlah_item'),
+            ])
+            ->orderBy('tms.kode')
+            ->orderBy('ts.nomor')
+            ->orderBy('tp.nama')
+            ->get();
+
+        return response()->json(['data' => $rows]);
+    }
+
     public function show($id)
     {
         $data = DB::table('testing_kelompok_matriks_samples')

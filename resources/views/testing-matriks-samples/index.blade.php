@@ -37,6 +37,7 @@
     }
 </script>
 
+<script src="{{ asset('assets/js/core/testingPointTable.js') }}?v={{ @filemtime(public_path('assets/js/core/testingPointTable.js')) }}"></script>
 <script src="{{ asset('assets/js/testing-matriks-samples/form.js') }}"></script>
 <script src="{{ asset('assets/js/testing-matriks-samples/index.js') }}"></script>
 

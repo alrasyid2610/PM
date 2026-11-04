@@ -39,5 +39,6 @@
 </script>
 
 <script src="{{ asset('assets/js/testing-kelompok-matriks-samples/index.js') }}"></script>
+<script src="{{ asset('assets/js/core/testingPointTable.js') }}?v={{ @filemtime(public_path('assets/js/core/testingPointTable.js')) }}"></script>
 <script src="{{ asset('assets/js/testing-kelompok-matriks-samples/form.js') }}"></script>
 @endsection

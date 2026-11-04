@@ -175,7 +175,7 @@ window.BudgetSections = (function () {
             var data = [{ id: '', text: '' }];
             (cat ? cat.children : []).forEach(function (ch) {
                 if (ch.is_aktif || String(ch.id) === String(curId)) {
-                    data.push({ id: ch.id, text: ch.text, nilai_default: ch.nilai_default });
+                    data.push({ id: ch.id, text: ch.text, nilai_default: ch.nilai_default, id_satuan_default: ch.id_satuan_default, satuan_default: ch.satuan_default });
                 }
             });
             if (curId && !data.some(function (d) { return String(d.id) === String(curId); })) {
@@ -389,6 +389,26 @@ window.BudgetSections = (function () {
             toggle($(this));
         });
 
+    // Unit Default Budget Account: memilih Account mengisi kolom Unit baris itu bila Unit masih kosong ATAU nilainya
+    // hasil auto-fill sebelumnya (bukan pilihan user). Ganti ke Account tanpa Unit Default mengosongkan Unit hanya bila
+    // masih hasil auto-fill. Unit yang dipilih user sendiri tidak pernah ditimpa. Satu handler untuk keempat modal Plan.
+    $(document)
+        .off('select2:select.biUnitDef', '.bi-account').on('select2:select.biUnitDef', '.bi-account', function (e) {
+            var $unit = $(this).closest('tr').find('.bi-unit');
+            if (!$unit.length) return;
+            var d = e.params.data || {};
+            var auto = $unit.data('auto-unit') === true;
+            if (d.id_satuan_default && (!$unit.val() || auto)) {
+                $unit.empty().append(new Option(d.satuan_default || '', d.id_satuan_default, true, true)).trigger('change');
+                $unit.data('auto-unit', true);
+            } else if (!d.id_satuan_default && auto) {
+                $unit.val(null).trigger('change');
+                $unit.data('auto-unit', false);
+            }
+        })
+        .off('select2:select.biUnitDef select2:clear.biUnitDef', '.bi-unit').on('select2:select.biUnitDef select2:clear.biUnitDef', '.bi-unit', function () {
+            $(this).data('auto-unit', false); // dipilih/dikosongkan user → bukan auto-fill lagi
+        });
     // Kartu plan (daftar): isi persentase di setiap elemen [data-pct-val] di dalam $scope.
     // <td> diisi di dalam sel; elemen lain diberi catatan tepat di sampingnya.
     function applyPct($scope, url) {

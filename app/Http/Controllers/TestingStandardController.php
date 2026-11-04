@@ -77,6 +77,29 @@ class TestingStandardController extends Controller
     }
 
 
+    /** Daftar Testing Point milik 1 Standard (tab "Testing Point" di detail) — paging & search sisi klien. */
+    public function points($id)
+    {
+        $rows = DB::table('testing_points as tp')
+            ->leftJoin('testing_matriks_samples as tms', 'tms.id_testing_matriks_sample', '=', 'tp.id_testing_matriks_sample')
+            ->where('tp.id_testing_standard', $id)
+            ->whereNull('tp.deleted_at')
+            ->select([
+                'tp.id_testing_point',
+                'tp.nama',
+                'tp.nomor_halaman',
+                'tp.is_aktif',
+                'tms.kode as matriks_kode',
+                'tms.judul_indonesia as matriks_judul',
+                DB::raw('(SELECT COUNT(*) FROM testing_items ti WHERE ti.id_testing_point = tp.id_testing_point) as jumlah_item'),
+            ])
+            ->orderBy('tms.kode')
+            ->orderBy('tp.nama')
+            ->get();
+
+        return response()->json(['data' => $rows]);
+    }
+
     public function select2(Request $request)
     {
         $search = $request->q;

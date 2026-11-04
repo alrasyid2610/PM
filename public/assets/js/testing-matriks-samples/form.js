@@ -24,6 +24,7 @@ function renderForm(res) {
                         Informasi
                     </button>
                 </li>
+                ${TestingPointTable.tabButton('Ms')}
             </ul>
             <div class="pm-tab-actions">
                 <div id="msTabActionsInfo" class="d-flex align-items-center gap-2"></div>
@@ -52,6 +53,8 @@ function renderForm(res) {
 
                     </div>
                 </div>
+
+                ${TestingPointTable.tabPane('Ms', false)}
 
             </div>
         </div>
