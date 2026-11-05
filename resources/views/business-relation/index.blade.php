@@ -41,6 +41,7 @@
         jumlah_site: 'Jumlah Site',
     };
 </script>
+<script src="{{ asset('assets/vendor/leaflet/leaflet.min.js') }}"></script>
 <script src="{{ asset('assets/js/business-relations/index.js') }}"></script>
 <script src="{{ asset('assets/js/business-relations/form.js') }}"></script>
 @endsection
@@ -49,6 +50,7 @@
 
 @section('style')
 
+    <link rel="stylesheet" href="{{ asset('assets/vendor/leaflet/leaflet.min.css') }}">
     <style>
         .summary-card {
             position: relative;

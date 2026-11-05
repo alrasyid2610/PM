@@ -13,6 +13,21 @@ function renderSamplingTab(jenis, idSite) {
 
     return `
     <div class="card card-body" id="${tabId}-wrap" data-id-site="${idSite}" data-jenis="${jenis}">
+        <div class="sp-map-section mb-3">
+            <button type="button" class="sp-map-toggle collapsed" aria-controls="${tabId}-map-collapse"
+                aria-expanded="false" data-jenis="${jenis}" data-no-disable>
+                <i class="fa-solid fa-map-location-dot" style="color:#dc2626;"></i>
+                <span class="fw-semibold">Peta Titik Sampling ${labelJenis}</span>
+                <span class="pm-badge pm-badge--blue d-none" id="${tabId}-map-count" style="font-size:10px;"></span>
+                <i class="fa-solid fa-chevron-down sp-map-chevron ms-auto"></i>
+            </button>
+            <div class="collapse" id="${tabId}-map-collapse">
+                <div class="sp-map-body">
+                    <div class="sp-map" id="${tabId}-map"></div>
+                    <div class="sp-map-note text-muted" id="${tabId}-map-note"></div>
+                </div>
+            </div>
+        </div>
         <div class="mb-3">
             <div class="pm-search">
                 <span class="pm-search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
@@ -228,6 +243,121 @@ function spCoordCellWithDms(lat, lng) {
         <div class="text-muted" style="font-size:10px;white-space:nowrap;">${coordToDms(lat, lng)}</div>`;
 }
 
+// ─── PETA TITIK SAMPLING (Leaflet + OpenStreetMap) ────────────────────────
+// Section collapse di atas tabel Sampling ENV/WE. Peta dibuat saat section pertama kali dibuka (Leaflet butuh
+// container yang terlihat), pin diperbarui tiap data titik dimuat ulang (tambah/ubah/hapus). Pin = divIcon CSS
+// (vendor Leaflet di project tidak menyertakan gambar marker). Klik pin → zoom ke titik + popup.
+const spMapState = { env: null, we: null };   // { map, layer, rows }
+const SP_PIN_COLOR = { env: '#0e7490', we: '#b45309' };
+
+function spMapRows(jenis) {
+    const rows = (spMapState[jenis] && spMapState[jenis].rows) || [];
+    return rows.filter(r => r.latitude !== null && r.latitude !== '' && r.longitude !== null && r.longitude !== ''
+        && isFinite(parseFloat(r.latitude)) && isFinite(parseFloat(r.longitude)));
+}
+
+function spMapRender(jenis) {
+    const st = spMapState[jenis];
+    if (!st || !st.map) return;
+    const map = st.map;
+    st.layer.clearLayers();
+    st.markers = {};
+
+    const pts = spMapRows(jenis);
+    const color = SP_PIN_COLOR[jenis];
+    const bounds = [];
+    pts.forEach(function (r) {
+        const lat = parseFloat(r.latitude), lng = parseFloat(r.longitude);
+        const aktif = Number(r.is_aktif) === 1;
+        const icon = L.divIcon({
+            className: 'sp-pin-wrap',
+            html: `<span class="sp-pin${aktif ? '' : ' sp-pin--off'}" style="--sp-pin:${aktif ? color : '#94a3b8'};"><i class="fa-solid fa-location-dot"></i></span>`,
+            iconSize: [30, 36], iconAnchor: [15, 34], popupAnchor: [0, -30],
+        });
+        const popup = `<div style="font-size:12px;min-width:150px;">
+            <div class="fw-semibold">${escHtml(r.kode)}</div>
+            <div>${escHtml(r.nama)}</div>
+            ${r.keterangan ? `<div class="text-muted">${escHtml(r.keterangan)}</div>` : ''}
+            <div class="text-muted mt-1" style="font-size:11px;">${lat.toFixed(6)}, ${lng.toFixed(6)}</div>
+            <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" style="font-size:11px;">Buka di Google Maps</a>
+        </div>`;
+        const m = L.marker([lat, lng], { icon, title: `${r.kode} — ${r.nama}` }).bindPopup(popup);
+        // klik pin → zoom ke titik itu (popup terbuka otomatis oleh Leaflet)
+        m.on('click', function () { map.flyTo([lat, lng], Math.max(map.getZoom(), 17), { duration: 0.6 }); });
+        m.addTo(st.layer);
+        st.markers[r.id_sp] = m;
+        bounds.push([lat, lng]);
+    });
+
+    const total = (st.rows || []).length;
+    $(`#sp-${jenis}-map-count`).text(`${pts.length} titik`).toggleClass('d-none', pts.length === 0);
+    $(`#sp-${jenis}-map-note`).text(pts.length === 0
+        ? 'Belum ada titik sampling yang memiliki koordinat.'
+        : (total > pts.length ? `${total - pts.length} titik lain belum memiliki koordinat sehingga tidak tampil di peta.` : ''));
+
+    map.invalidateSize();
+    if (st.pendingFocus) { const id = st.pendingFocus; st.pendingFocus = null; spMapFocus(jenis, id); return; }
+    if (bounds.length === 1) map.setView(bounds[0], 16);
+    else if (bounds.length > 1) map.fitBounds(bounds, { padding: [30, 30], maxZoom: 17 });
+    else map.setView([-2.5, 118], 4);   // tanpa titik: tampilan Indonesia
+}
+
+// Klik baris tabel → section peta dibuka (bila tertutup), peta zoom ke titik itu + popup terbuka, halaman
+// digulir ke peta. Baris tanpa koordinat tidak melakukan apa-apa.
+function spMapFocus(jenis, idSp) {
+    const st = spMapState[jenis];
+    const collapseEl = document.getElementById(`sp-${jenis}-map-collapse`);
+    if (!st || !collapseEl) return;
+    if (!collapseEl.classList.contains('show')) {
+        st.pendingFocus = idSp;   // dipakai spMapRender setelah section selesai terbuka
+        bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false }).show();
+        return;
+    }
+    if (!spMapEnsure(jenis)) return;
+    if (!st.markers || !st.markers[idSp]) { spMapRender(jenis); }
+    const mk = st.markers && st.markers[idSp];
+    if (!mk) return;
+    document.getElementById(`sp-${jenis}-map`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    st.map.invalidateSize();
+    st.map.flyTo(mk.getLatLng(), 18, { duration: 0.8 });
+    st.map.once('moveend', function () { mk.openPopup(); });
+}
+
+// Buat peta bila belum ada (atau container lama sudah diganti karena workspace Site dirender ulang)
+function spMapEnsure(jenis) {
+    if (typeof L === 'undefined') return false;
+    const el = document.getElementById(`sp-${jenis}-map`);
+    if (!el) return false;
+    let st = spMapState[jenis];
+    if (st && st.map && st.map.getContainer() !== el) { st.map.remove(); st.map = null; }
+    if (!st) st = spMapState[jenis] = { map: null, layer: null, rows: [] };
+    if (!st.map) {
+        const map = L.map(el, { scrollWheelZoom: false, zoomControl: true }).setView([-2.5, 118], 4);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
+        }).addTo(map);
+        st.map = map;
+        st.layer = L.layerGroup().addTo(map);
+        // scroll roda mouse hanya men-zoom peta setelah peta diklik (supaya tidak mengganggu scroll halaman)
+        map.on('click focus', function () { map.scrollWheelZoom.enable(); });
+        map.on('mouseout', function () { map.scrollWheelZoom.disable(); });
+    }
+    return true;
+}
+
+function spMapSetRows(jenis, rows) {
+    if (!spMapState[jenis]) spMapState[jenis] = { map: null, layer: null, rows: [] };
+    spMapState[jenis].rows = rows || [];
+    // hanya digambar ulang bila section peta sedang terbuka; kalau tertutup, digambar saat dibuka
+    const open = $(`#sp-${jenis}-map-collapse`).hasClass('show');
+    if (open && spMapEnsure(jenis)) spMapRender(jenis);
+    else {
+        const n = spMapRows(jenis).length;
+        $(`#sp-${jenis}-map-count`).text(`${n} titik`).toggleClass('d-none', n === 0);
+    }
+}
+
 function loadSamplingData(jenis, idSite) {
     const tabId    = `sp-${jenis}`;
     const $wrap    = $(`#${tabId}-table-wrap`);
@@ -244,6 +374,7 @@ function loadSamplingData(jenis, idSite) {
         .done(function (res) {
             const rows      = res.data || [];
             const labelJenis = jenis === 'env' ? 'ENV' : 'WE';
+            spMapSetRows(jenis, rows);   // perbarui pin di section peta
 
             if (rows.length === 0) {
                 $wrap.html(`<div class="text-center text-muted py-4" style="font-size:13px;">
@@ -255,7 +386,8 @@ function loadSamplingData(jenis, idSite) {
 
             const rowsHtml = rows.map(function (r, idx) {
                 const searchVal = [r.kode, r.nama, r.keterangan].filter(Boolean).join(' ').toLowerCase();
-                return `<tr data-search="${escHtml(searchVal)}">
+                const hasCoord = r.latitude && r.longitude;
+                return `<tr data-search="${escHtml(searchVal)}" data-id-sp="${r.id_sp}"${hasCoord ? ' class="sp-row-click" title="Klik untuk zoom di peta"' : ''}>
                     <td style="color:#94a3b8;text-align:center;">${idx + 1}</td>
                     <td class="fw-semibold">${escHtml(r.kode)}</td>
                     <td>${escHtml(r.nama)}${r.keterangan ? `<br><small class="text-muted">${escHtml(r.keterangan)}</small>` : ''}</td>
@@ -306,6 +438,36 @@ function initSamplingTabEvents() {
         const $bar = $(`#brTabActions${jenis === 'env' ? 'Env' : 'We'}`);
         $bar.find('.btn-sp-add').attr('data-id-site', idSite);
         $bar.removeClass('d-none').addClass('d-flex');
+    });
+
+    // Toggle section peta: TIDAK pakai data-bs-toggle="collapse" karena layout memuat Bootstrap dua kali
+    // (bootstrap.min.js + app.js) sehingga atribut deklaratif memicu toggle ganda (klik kedua tidak menutup).
+    $panel.on('click', '.sp-map-toggle', function () {
+        const el = document.getElementById(this.getAttribute('aria-controls'));
+        if (el) bootstrap.Collapse.getOrCreateInstance(el, { toggle: false }).toggle();
+    });
+
+    // Sinkronkan status tombol (panah/aria) dengan status collapse
+    $panel.on('show.bs.collapse hide.bs.collapse', '#sp-env-map-collapse, #sp-we-map-collapse', function (e) {
+        if (e.target !== this) return;
+        const open = e.type === 'show';
+        $(`.sp-map-toggle[aria-controls="${this.id}"]`).toggleClass('collapsed', !open).attr('aria-expanded', open);
+    });
+
+    // Section peta dibuka → buat peta (jika belum) dan gambar pin
+    $panel.on('shown.bs.collapse', '#sp-env-map-collapse, #sp-we-map-collapse', function (e) {
+        if (e.target !== this) return;
+        const jenis = this.id === 'sp-env-map-collapse' ? 'env' : 'we';
+        if (spMapEnsure(jenis)) spMapRender(jenis);
+    });
+
+    // Klik baris tabel → zoom peta ke titik itu (abaikan klik pada tombol Edit/Hapus & link koordinat)
+    $panel.on('click', '#sp-env-table-wrap tr.sp-row-click, #sp-we-table-wrap tr.sp-row-click', function (e) {
+        if ($(e.target).closest('a, button, .btn').length) return;
+        const jenis = $(this).closest('[data-jenis]').data('jenis');
+        $(this).closest('tbody').find('tr.sp-row-active').removeClass('sp-row-active');
+        $(this).addClass('sp-row-active');
+        spMapFocus(jenis, $(this).data('id-sp'));
     });
 
     // Tombol Tambah (di tab-actions area)
