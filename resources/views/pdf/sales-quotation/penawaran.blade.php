@@ -70,7 +70,16 @@
         </thead>
         <tbody>
             <tr>
-                <td colspan="6" class="lokasi">Lokasi Pekerjaan : {{ $lokasi !== '' ? $lokasi : '-' }}</td>
+                <td colspan="6" class="lokasi">
+                    @forelse ($lokasi as $i => $l)
+                        <div @if ($i > 0) style="margin-top:4px;" @endif>
+                            @if ($i === 0)Lokasi Pekerjaan : @endif{{ $l->nama !== '' ? $l->nama : '-' }}
+                            @if ($l->alamat !== '')<br>{!! nl2br(e($l->alamat)) !!}@endif
+                        </div>
+                    @empty
+                        Lokasi Pekerjaan : -
+                    @endforelse
+                </td>
             </tr>
 
             @if ($bagianI->isNotEmpty())

@@ -849,12 +849,14 @@ class SalesQuotationController extends Controller
             ->where('w.id_sq', $id)
             ->orderBy('w.urutan')
             ->orderBy('w.id_sq_wo')
-            ->select(['w.id_sq_wo', 'brs.kota_kabupaten as kota_site', 'brs.nama_lokasi as nama_site'])
+            ->select(['w.id_sq_wo', 'brs.id_site', 'brs.nama_lokasi as nama_site', 'brs.alamat_lengkap as alamat_site'])
             ->get();
         $woIds = $wos->pluck('id_sq_wo');
 
-        // Lokasi Pekerjaan = kota dari Site pekerjaan WO (unik)
-        $lokasi = $wos->pluck('kota_site')->filter()->unique()->values()->implode(', ');
+        // Lokasi Pekerjaan = nama Site pekerjaan WO + Alamat Lengkap site itu (unik per site; beberapa WO bisa beda site)
+        $lokasi = $wos->filter(fn ($w) => $w->id_site)->unique('id_site')
+            ->map(fn ($w) => (object) ['nama' => trim((string) $w->nama_site), 'alamat' => trim((string) $w->alamat_site)])
+            ->values();
 
         $boq = $woIds->isNotEmpty()
             ? DB::table('sq_boq as b')

@@ -117,13 +117,9 @@
                 <td class="label">PIC Project</td>
                 <td class="colon">:</td>
                 <td class="value">
-                    @php $no = 1; @endphp
-                    @foreach($personels as $p)
-                        @if($p->role === 'PIC Project')
-                            {{ $no++ }}. {{ $p->name }}<br>
-                        @endif
-                    @endforeach
-                    @if($personels->where('role', 'PIC Project')->isEmpty()) - @endif
+                    {{-- Sama dengan tanda tangan di bawah: Penyelia FWO (fieldworks.id_penyelia). Fallback ke personel ber-role "PIC Project" untuk FWO lama yang belum punya Penyelia. --}}
+                    @php $picLama = $personels->where('role', 'PIC Project')->pluck('name')->filter()->implode(', '); @endphp
+                    {{ $fwo->nama_penyelia ?: ($picLama !== '' ? $picLama : '-') }}
                 </td>
             </tr>
         </table>
