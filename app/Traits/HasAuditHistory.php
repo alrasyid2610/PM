@@ -22,6 +22,7 @@ trait HasAuditHistory
         'fieldwork_boq'     => 'BOQ',
         'fwo_boq_tambahan'  => 'BOQ Other',
         'fieldwork_personels' => 'Personel',
+        'fieldwork_kendaraan' => 'Kendaraan',
         'fieldwork_attachments' => 'Lampiran',
         'fwo_budgets'       => 'Budget — Plan',
         'fwo_budget_actuals' => 'Budget — Realisasi',

@@ -144,6 +144,7 @@
         fwoComplete:      "{{ url('fieldworks') }}/",
         fwoAttachments:   "{{ url('fieldworks') }}/",
         personnelSelect2: "{{ route('personnel.select2') }}",
+        kendaraanSelect2: "{{ route('kendaraan.select2') }}",
     }
 </script>
 

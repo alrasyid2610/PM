@@ -2308,6 +2308,7 @@ $(document).ready(function () {
             keterangan: $("#copyFwoKeterangan").val() || null,
             id_penyelia: $("#copyFwoPenyelia").val() || null,
             personels,
+            kendaraan: ($("#copyFwoKendaraan").val() || []).map((v) => parseInt(v)),
             sections,
             budgets,
         };
@@ -2730,8 +2731,31 @@ function fillCopyFwoModal(fwo, boqs, budgets) {
         <button type="button" id="btnAddCopyPersonel" class="btn btn-outline-primary btn-sm">
             <i class="fa-solid fa-plus me-1"></i> Tambah Personel
         </button>
+        <label class="form-label fw-semibold mt-3">Kendaraan</label>
+        <select id="copyFwoKendaraan" class="form-select" multiple></select>
         <div style="height:220px;"></div>
     `);
+
+    $("#copyFwoKendaraan").select2({
+        width: "100%",
+        dropdownParent: $("#modalCopyFwo"),
+        placeholder: "Ketik nama / no. polisi kendaraan...",
+        allowClear: true,
+        ajax: {
+            url: "/kendaraan/select2",
+            dataType: "json",
+            delay: 200,
+            data: (p) => ({ q: p.term }),
+            processResults: (d) => ({ results: d }),
+            cache: true,
+        },
+    });
+    // Kendaraan FWO sumber ikut terisi (boleh diubah sebelum simpan)
+    (fwo.kendaraan || []).forEach(function (k) {
+        const label = k.nama + " (" + k.no_polisi + ") — " + (k.kepemilikan === "sewa" ? "Sewa" : "Milik Sendiri");
+        $("#copyFwoKendaraan").append(new Option(label, k.id_kendaraan, true, true));
+    });
+    $("#copyFwoKendaraan").trigger("change");
 
     initFpDate("#modalCopyFwoBody");
     initNumericMask(document.getElementById("copyFwoBudgetContainer"));

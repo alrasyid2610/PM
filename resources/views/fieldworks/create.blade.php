@@ -127,6 +127,13 @@
             </x-section-card>
         </div>
 
+        <!-- SECTION: KENDARAAN -->
+        <div class="col-12">
+            <x-section-card icon="fa-truck-pickup" color="icon-navy" title="Kendaraan" subtitle="Kendaraan yang dipakai pada fieldwork ini (boleh lebih dari satu, opsional)">
+                <select id="kendaraanSelect" name="kendaraan[]" class="form-select" multiple></select>
+            </x-section-card>
+        </div>
+
         <x-form-actions :back-route="request('embed') ? null : route('fieldworks.index')" submit-label="Simpan Fieldwork" />
 
     </form>
@@ -430,6 +437,21 @@
     });
 
     syncPersonelEmpty();
+
+    // ── Kendaraan (multi-select, ajax) ───────────────────────────────────────
+    $('#kendaraanSelect').select2({
+        width: '100%',
+        placeholder: 'Ketik nama / no. polisi kendaraan...',
+        allowClear: true,
+        ajax: {
+            url: "{{ route('kendaraan.select2') }}",
+            dataType: 'json',
+            delay: 200,
+            data: p => ({ q: p.term }),
+            processResults: d => ({ results: d }),
+            cache: true,
+        },
+    });
 
     // ── Validasi tanggal ─────────────────────────────────────────────────────
     $('#fieldworkForm').on('submit', function (e) {

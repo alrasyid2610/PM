@@ -347,6 +347,17 @@ function renderFwoForm(res) {
                             </div>
                         </div>
                     </div>
+
+                    <div class="card card-body mt-3">
+                        <div class="fw-semibold mb-2" style="font-size:13px;color:#374151;">
+                            <i class="fa-solid fa-truck-pickup me-1" style="color:#1a3a6e;"></i> Kendaraan
+                        </div>
+                        <div id="fwoKendaraanContent">
+                            <div class="text-center text-muted py-3">
+                                <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- TAB: FIELDWORK BOQ -->
@@ -1030,6 +1041,56 @@ function renderPersonelView(personels) {
                     <th ${TH} style="width:40px;text-align:center;">No</th>
                     <th ${TH}>Nama</th>
                     <th ${TH} style="min-width:100px;">Role</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </div>`;
+}
+
+// ── Kendaraan view (tab Personel) ──────────────────────────────────────────────
+const KENDARAAN_JENIS_LABEL = { mobil: "Mobil", pickup: "Pickup", minibus: "Minibus", truk: "Truk", motor: "Motor", lainnya: "Lainnya" };
+
+function renderKendaraanView(list) {
+    if (!list || list.length === 0) {
+        return `<div class="text-center text-muted py-3">
+            <i class="fa-solid fa-truck-pickup fa-2x d-block mb-2 opacity-25"></i>
+            Belum ada kendaraan
+        </div>`;
+    }
+
+    const TH =
+        'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';
+    const TD = 'style="padding:8px 12px;vertical-align:middle;"';
+
+    const rows = list
+        .map(function (k, i) {
+            const sewa = k.kepemilikan === "sewa";
+            const badge = sewa
+                ? `<span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;background:#fef3c7;color:#92400e;">Sewa</span>`
+                : `<span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;background:#dbeafe;color:#1d4ed8;">Milik Sendiri</span>`;
+            const vendor = sewa && k.nama_vendor
+                ? `<div class="text-muted" style="font-size:11px;">${escHtml(k.nama_vendor)}</div>`
+                : "";
+            return `<tr>
+            <td ${TD} style="padding:8px 12px;color:#94a3b8;text-align:center;font-size:12px;">${i + 1}</td>
+            <td ${TD} style="padding:8px 12px;color:#1e293b;font-weight:500;">${escHtml(k.nama)}</td>
+            <td ${TD}>${escHtml(k.no_polisi)}</td>
+            <td ${TD}>${escHtml(KENDARAAN_JENIS_LABEL[k.jenis] || k.jenis || "—")}</td>
+            <td ${TD}>${badge}${vendor}</td>
+        </tr>`;
+        })
+        .join("");
+
+    return `<div class="table-responsive">
+        <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+            <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+                <tr>
+                    <th ${TH} style="width:40px;text-align:center;">No</th>
+                    <th ${TH}>Kendaraan</th>
+                    <th ${TH}>No. Polisi</th>
+                    <th ${TH}>Jenis</th>
+                    <th ${TH}>Kepemilikan</th>
                 </tr>
             </thead>
             <tbody>${rows}</tbody>

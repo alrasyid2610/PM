@@ -92,7 +92,11 @@
                     @php $no = 1; @endphp
                     @foreach($personels as $p)
                         @if($p->role !== 'PIC Project')
-                            {{ $no++ }}. {{ $p->name }}{{ $p->role ? ' (' . $p->role . ')' : '' }}<br>
+                            @php
+                                // Leader: "Nama (No. HP, email) (Leader)"; email dari akun login personel (kalau ada)
+                                $kontak = $p->role === 'Leader' ? collect([$p->no_hp, $p->email])->filter()->implode(', ') : '';
+                            @endphp
+                            {{ $no++ }}. {{ $p->name }}{{ $kontak !== '' ? ' (' . $kontak . ')' : '' }}{{ $p->role ? ' (' . $p->role . ')' : '' }}<br>
                         @endif
                     @endforeach
                     @if($personels->where('role', '!=', 'PIC Project')->isEmpty()) - @endif
@@ -101,7 +105,13 @@
             <tr>
                 <td class="label">Kendaraan</td>
                 <td class="colon">:</td>
-                <td class="value">-</td>
+                <td class="value">
+                    @forelse(($kendaraan ?? collect()) as $i => $k)
+                        {{ $i + 1 }}. {{ $k->nama }} ({{ $k->no_polisi }}){{ $k->kepemilikan === 'sewa' ? ' — Sewa' . ($k->nama_vendor ? ', ' . $k->nama_vendor : '') : '' }}<br>
+                    @empty
+                        -
+                    @endforelse
+                </td>
             </tr>
             <tr>
                 <td class="label">PIC Project</td>

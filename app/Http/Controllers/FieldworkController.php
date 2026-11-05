@@ -164,7 +164,45 @@ class FieldworkController extends Controller
             ->select(['fp.id_fwo_personel', 'fp.id_personnel', 'p.nama as user_name', 'fp.role'])
             ->get();
 
+        $data->kendaraan = $this->kendaraanRows($id);
+
         return response()->json($data);
+    }
+
+    /** Kendaraan yang ditugaskan di 1 FWO (master `kendaraan` lewat pivot `fieldwork_kendaraan`). */
+    private function kendaraanRows($idFwo)
+    {
+        return DB::table('fieldwork_kendaraan as fk')
+            ->join('kendaraan as k', 'k.id_kendaraan', '=', 'fk.id_kendaraan')
+            ->where('fk.id_fwo', $idFwo)
+            ->orderBy('fk.id_fwo_kendaraan')
+            ->get(['k.id_kendaraan', 'k.nama', 'k.no_polisi', 'k.jenis', 'k.kepemilikan', 'k.nama_vendor']);
+    }
+
+    /** Ganti seluruh daftar kendaraan 1 FWO. Id duplikat / tidak ada di master dibuang. */
+    private function syncKendaraan($idFwo, array $ids): void
+    {
+        $ids = DB::table('kendaraan')->whereNull('deleted_at')->whereIn('id_kendaraan', array_unique($ids))->pluck('id_kendaraan')->all();
+
+        DB::table('fieldwork_kendaraan')->where('id_fwo', $idFwo)->delete();
+        if ($ids) {
+            DB::table('fieldwork_kendaraan')->insert(array_map(fn ($k) => [
+                'id_fwo'       => $idFwo,
+                'id_kendaraan' => $k,
+                'created_at'   => now(),
+                'updated_at'   => now(),
+            ], $ids));
+        }
+    }
+
+    /** Snapshot kendaraan FWO untuk riwayat: satu field "Kendaraan • Nama (No. Polisi)" => kepemilikan. */
+    private function kendaraanSnapshot($idFwo): array
+    {
+        $hasil = [];
+        foreach ($this->kendaraanRows($idFwo) as $r) {
+            $hasil['Kendaraan • ' . $r->nama . ' (' . $r->no_polisi . ')'] = \App\Support\KendaraanOptions::KEPEMILIKAN[$r->kepemilikan] ?? $r->kepemilikan;
+        }
+        return $hasil;
     }
 
     public function updatePersonels(Request $request, $id)
@@ -173,7 +211,20 @@ class FieldworkController extends Controller
             'personels'                 => 'nullable|array',
             'personels.*.id_personnel'  => 'required|integer',
             'personels.*.role'          => 'nullable|string|max:500',
+            'kendaraan'                 => 'nullable|array',
+            'kendaraan.*'               => 'integer',
         ]);
+
+        // Kendaraan ikut disimpan lewat endpoint yang sama (satu tombol Simpan di tab Personel & Kendaraan).
+        // Hanya diproses kalau kuncinya dikirim, supaya klien lama tidak mengosongkan kendaraan.
+        if ($request->has('kendaraan')) {
+            $kBefore = $this->kendaraanSnapshot($id);
+            $this->syncKendaraan($id, $validated['kendaraan'] ?? []);
+            $kAfter = $this->kendaraanSnapshot($id);
+            if ($kBefore !== $kAfter) {
+                saveAudit('fieldwork_kendaraan', $id, 'Update', json_encode([$kBefore]), json_encode([$kAfter]), ['fieldworks', $id]);
+            }
+        }
 
         $before = $this->personelSnapshot($id);
         DB::table('fieldwork_personels')->where('id_fwo', $id)->delete();
@@ -214,6 +265,8 @@ class FieldworkController extends Controller
             'personels'                   => 'nullable|array',
             'personels.*.id_personnel'    => 'required|integer',
             'personels.*.role'            => 'nullable|string|max:500',
+            'kendaraan'                   => 'nullable|array',
+            'kendaraan.*'                 => 'integer',
         ]);
 
         $wo = DB::table('work_orders')->where('id_wo', $validated['id_wo'])->first();
@@ -272,6 +325,10 @@ class FieldworkController extends Controller
                     'updated_at'   => now(),
                 ], $validated['personels'])
             );
+        }
+
+        if (!empty($validated['kendaraan'])) {
+            $this->syncKendaraan($id, $validated['kendaraan']);
         }
 
         $after = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
@@ -566,6 +623,8 @@ class FieldworkController extends Controller
             'personels'                => 'nullable|array',
             'personels.*.id_personnel' => 'required|integer',
             'personels.*.role'         => 'nullable|string|max:500',
+            'kendaraan'                => 'nullable|array',
+            'kendaraan.*'              => 'integer',
             'sections'              => 'nullable|array',
             'sections.*.id_boq'     => 'required|integer',
             'sections.*.qty'        => 'nullable|integer|min:1',
@@ -695,6 +754,10 @@ class FieldworkController extends Controller
                 );
             }
 
+            if (!empty($validated['kendaraan'])) {
+                $this->syncKendaraan($newId, $validated['kendaraan']);
+            }
+
             foreach ($validated['sections'] ?? [] as $sec) {
                 $boq = DB::table('boq')->where('id_boq', $sec['id_boq'])->whereNull('deleted_at')->first();
                 if (!$boq) continue;
@@ -809,11 +872,14 @@ class FieldworkController extends Controller
 
         $personels = DB::table('fieldwork_personels as fp')
             ->join('personnel as p', 'fp.id_personnel', '=', 'p.id_personnel')
+            ->leftJoin('users as u', 'u.id', '=', 'p.id_user')
             ->where('fp.id_fwo', $id)
-            ->select(['p.nama as name', 'fp.role'])
+            ->select(['p.nama as name', 'fp.role', 'p.no_hp', 'u.email'])
             ->get();
 
-        $fieldwork_boq = DB::table('fieldwork_boq as fwb')
+        $kendaraan = $this->kendaraanRows($id);
+
+        $fieldwork_boq =DB::table('fieldwork_boq as fwb')
             ->leftJoin('fieldwork_boq_items as fwbi', 'fwbi.id_fwo_boq', '=', 'fwb.id_fwo_boq')
             ->leftJoin('boq', 'boq.id_boq', '=', 'fwb.id_boq')
             ->leftJoin('testing_points as tp', 'tp.id_testing_point', '=', 'boq.id_testing_point')
@@ -861,7 +927,7 @@ class FieldworkController extends Controller
             ];
         })->values();
 
-        return Pdf::view('pdf.fwo.index', compact('fwo', 'personels', 'boqGroups'))
+        return Pdf::view('pdf.fwo.index', compact('fwo', 'personels', 'kendaraan', 'boqGroups'))
             ->headerView('pdf.layouts.sections.header')
             ->footerView('pdf.layouts.sections.footer')
             ->margins(top: 30, right: 0, bottom: 20, left: 0)

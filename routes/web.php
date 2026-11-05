@@ -70,6 +70,7 @@ use App\Http\Controllers\WoBudgetActualController;
 use App\Http\Controllers\LabSampleController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PersonnelController;
+use App\Http\Controllers\KendaraanController;
 use App\Http\Controllers\DocumentationController;
 use Spatie\LaravelPdf\Facades\Pdf;
 
@@ -266,6 +267,20 @@ Route::prefix('personnel')->name('personnel.')->group(function () {
     Route::get('/{id}/history', [PersonnelController::class, 'history'])->name('history')->whereNumber('id');
     Route::post('/{id}/account', [PersonnelController::class, 'createAccount'])->name('create-account')->whereNumber('id');
     Route::delete('/{id}/account', [PersonnelController::class, 'revokeAccount'])->name('revoke-account')->whereNumber('id');
+});
+
+Route::prefix('kendaraan')->name('kendaraan.')->group(function () {
+    Route::get('/select2', [KendaraanController::class, 'select2'])->name('select2');
+    Route::get('/', [KendaraanController::class, 'index'])->name('index');
+    Route::get('/data', [KendaraanController::class, 'data'])->name('data');
+    Route::get('/create', [KendaraanController::class, 'create'])->name('create');
+    Route::post('/', [KendaraanController::class, 'store'])->name('store');
+    Route::post('/delete-attachment', [KendaraanController::class, 'deleteAttachment'])->name('delete-attachment');
+    Route::get('/{id}', [KendaraanController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [KendaraanController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [KendaraanController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/detail', [KendaraanController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::get('/{id}/history', [KendaraanController::class, 'history'])->name('history')->whereNumber('id');
 });
 
 Route::prefix('documentations')->name('documentations.')->group(function () {

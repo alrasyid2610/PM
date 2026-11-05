@@ -874,16 +874,17 @@ class SalesQuotationController extends Controller
                 ->get()
             : collect();
 
-        // Parameter per Testing Point = daftar parameter dari Testing Items (options)
-        $parameterByTp = $boq->isNotEmpty()
-            ? DB::table('testing_items as ti')
-                ->join('testing_parameters as p', 'p.id_testing_parameter', '=', 'ti.id_testing_parameter')
-                ->whereIn('ti.id_testing_point', $boq->pluck('id_testing_point')->filter()->unique())
+        // Parameter per baris BOQ = Testing Item yang DIPILIH di BOQ SQ (sq_boq_items), label sama dengan
+        // tab BOQ (testing_items.judul_indonesia, mis. "Sulfur Dioksida (24 Jam)") — bukan semua item master Testing Point.
+        $parameterByBoq = $boq->isNotEmpty()
+            ? DB::table('sq_boq_items as bi')
+                ->join('testing_items as ti', 'ti.id_testing_item', '=', 'bi.id_testing_item')
+                ->whereIn('bi.id_sq_boq', $boq->pluck('id_sq_boq'))
                 ->orderBy('ti.id_testing_item')
-                ->select(['ti.id_testing_point', 'p.judul_indonesia'])
+                ->select(['bi.id_sq_boq', 'ti.judul_indonesia'])
                 ->get()
-                ->groupBy('id_testing_point')
-                ->map(fn ($g) => $g->pluck('judul_indonesia')->filter()->unique()->implode(', '))
+                ->groupBy('id_sq_boq')
+                ->map(fn ($g) => $g->pluck('judul_indonesia')->filter()->implode(', '))
             : collect();
 
         $tambahan = $woIds->isNotEmpty()
@@ -897,7 +898,7 @@ class SalesQuotationController extends Controller
             : collect();
 
         // Baris section I (BOQ lab). Harga unit = nilai bersih per unit (setelah discount item).
-        $bagianI = $boq->map(function ($r) use ($parameterByTp) {
+        $bagianI = $boq->map(function ($r) use ($parameterByBoq) {
             $gross = (int) $r->qty * (int) $r->harga;
             $total = max(0, $gross - (int) $r->discount);
             // Baris 1 (bold) = Matriks Sample; baris 2 = nomor Testing Standard + nama Testing Point
@@ -906,7 +907,7 @@ class SalesQuotationController extends Controller
             return (object) [
                 'nama'      => $namaBold,
                 'regulasi'  => $namaSub ?: null,
-                'parameter' => $parameterByTp->get($r->id_testing_point) ?: null,
+                'parameter' => $parameterByBoq->get($r->id_sq_boq) ?: null,
                 'qty'       => (int) $r->qty,
                 'satuan'    => $r->satuan ?: 'Titik',
                 'harga'     => (int) $r->qty > 0 ? (int) round($total / (int) $r->qty) : 0,

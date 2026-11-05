@@ -6,6 +6,8 @@ let fwoBoqSnapshot        = null;
 let addedBoqIds           = new Set();
 let selectedBoq           = null;
 let currentPersonelData   = [];
+let currentKendaraanData  = [];
+let kendaraanViewHtml     = null;
 let personelViewHtml      = null;
 let personelEditIdx       = 0;
 let fwoBoqDirectMode      = false;
@@ -1663,6 +1665,8 @@ $(document).ready(function () {
                     : [];
             } catch (e) { fwoAttachmentData = []; }
             $('#fwoPersonelContent').html(renderPersonelView(currentPersonelData));
+            currentKendaraanData = res.kendaraan || [];
+            $('#fwoKendaraanContent').html(renderKendaraanView(currentKendaraanData));
             $('#fwoAttachmentContent').html(renderFwoAttachmentView(fwoAttachmentData));
             loadFwoBoqList(res.id_fwo);
             initFpDate('#detailContent');
@@ -1688,11 +1692,13 @@ $(document).ready(function () {
             container: '#detailContent',
             onEditStart: function () {
                 enterPersonelEditMode();
+                enterKendaraanEditMode();
                 enterFwoBoqEditMode();
                 enterFwoAttachmentEditMode();
             },
             onEditCancel: function () {
                 exitPersonelEditMode();
+                exitKendaraanEditMode();
                 exitFwoBoqEditMode();
                 exitFwoAttachmentEditMode();
             },
@@ -1834,6 +1840,49 @@ function collectPersonelRows() {
     return rows;
 }
 
+// ── Kendaraan edit mode (tab Personel) — 1 FWO boleh banyak kendaraan ──────────
+function enterKendaraanEditMode() {
+    kendaraanViewHtml = $('#fwoKendaraanContent').html();
+
+    $('#fwoKendaraanContent').html(`
+        <label class="form-label form-label-sm text-muted mb-1">Pilih kendaraan (boleh lebih dari satu)</label>
+        <select id="kendaraanEditSelect" class="form-select" multiple></select>
+        <div class="text-muted mt-1" style="font-size:11px;">Hanya kendaraan berstatus Aktif yang bisa dipilih. Kelola di menu Kendaraan.</div>
+    `);
+
+    const $sel = $('#kendaraanEditSelect');
+    $sel.select2({
+        width: '100%',
+        placeholder: 'Ketik nama / no. polisi kendaraan...',
+        allowClear: true,
+        ajax: {
+            url: window.route.kendaraanSelect2,
+            dataType: 'json',
+            delay: 200,
+            data: p => ({ q: p.term }),
+            processResults: d => ({ results: d }),
+            cache: true,
+        },
+    });
+
+    // Pre-load kendaraan yang sudah ditugaskan
+    currentKendaraanData.forEach(function (k) {
+        const label = k.nama + ' (' + k.no_polisi + ') — ' + (k.kepemilikan === 'sewa' ? 'Sewa' : 'Milik Sendiri');
+        $sel.append(new Option(label, k.id_kendaraan, true, true));
+    });
+    $sel.trigger('change');
+}
+
+function exitKendaraanEditMode() {
+    if ($('#kendaraanEditSelect').data('select2')) $('#kendaraanEditSelect').select2('destroy');
+    kendaraanViewHtml !== null && $('#fwoKendaraanContent').html(kendaraanViewHtml);
+    kendaraanViewHtml = null;
+}
+
+function collectKendaraanIds() {
+    return ($('#kendaraanEditSelect').val() || []).map(function (v) { return parseInt(v); });
+}
+
 // ── Load & render view mode ────────────────────────────────────────────────────
 function loadFwoBoqList(id_fwo) {
     $('#fwoBoqContent').html(
@@ -1897,6 +1946,7 @@ function exitFwoBoqEditMode() {
 function saveAll(id_fwo) {
     const formData    = $('#detailForm').serialize();
     const personels   = collectPersonelRows();
+    const kendaraan   = collectKendaraanIds();
     const boqSections = collectFwoBoqSections();
 
     for (const sec of boqSections) {
@@ -1943,7 +1993,7 @@ function saveAll(id_fwo) {
                     method:      'PUT',
                     contentType: 'application/json',
                     headers:     { 'X-CSRF-TOKEN': window.route.csrf },
-                    data:        JSON.stringify({ personels }),
+                    data:        JSON.stringify({ personels, kendaraan }),
                     success: function () {
                         $.ajax({
                             url:         window.route.fwoBoqUpdate + id_fwo,
