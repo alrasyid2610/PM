@@ -309,15 +309,14 @@ class WorkOrderController extends Controller
                 DB::raw("CASE WHEN wo.deleted_at IS NOT NULL THEN 'deleted' ELSE wo.status END as status"),
                 'wo.no_wo',
                 's.no_so',
-                's.judul_order',
                 'wo.id_pelanggan_pekerjaan',
                 'wo.id_site_pelanggan_pekerjaan',
                 'br.nama as Pelanggan',
                 'brs.nama_lokasi as Site Pelanggan',
+                's.judul_order',
                 's.tanggal_so',
                 'wo.tanggal_mulai',
                 'wo.tanggal_selesai',
-                'wo.keterangan',
                 's.created_at',
             ]);
 

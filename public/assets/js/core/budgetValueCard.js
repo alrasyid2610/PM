@@ -6,6 +6,7 @@ window.BudgetValueCard = (function () {
 
     // Kartu kosong (dipasang bersama kartu KPI lain, diisi setelah data datang)
     function shell(id) {
+        if (!canLihatNilai()) return ''; // Aksi Khusus "sembunyikan-nilai" (mis. Tim Sampling): kartu tidak dirender
         return '<div class="pm-kpi-card" id="' + id + '" style="flex:2 1 420px;flex-direction:column;align-items:stretch;gap:6px;min-width:380px;">' +
             '<div style="display:flex;align-items:center;gap:8px;">' +
             '<div class="pm-kpi-icon" style="background:#0f766e;flex-shrink:0;"><i class="fa-solid fa-wallet"></i></div>' +
@@ -56,6 +57,7 @@ window.BudgetValueCard = (function () {
 
     // Muat data lalu isi kartu; kegagalan hanya mengosongkan kartu ini, tidak mengganggu KPI lain
     function load(id, url, opts) {
+        if (!canLihatNilai()) return;
         $.get(url).done(function (r) { fill(id, r, opts); }).fail(function () {
             $('#' + id).find('.text-muted').first().html('<span class="text-danger"><i class="fa-solid fa-circle-exclamation me-1"></i>Gagal memuat nilai budget</span>');
         });

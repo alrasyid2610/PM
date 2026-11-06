@@ -52,6 +52,11 @@
                 </div>
 
                 <div id="modalItemsWrap" class="d-none">
+                    {{-- Paket Testing Point (opsional): memilih paket mencentang item-item paket itu --}}
+                    <div id="modalPaketWrap" class="mb-3 d-none">
+                        <label class="form-label fw-semibold">Paket <span class="text-muted fw-normal small">(opsional — mencentang item sesuai paket)</span></label>
+                        <select id="modalPaketSelect" style="width:100%"></select>
+                    </div>
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="fw-semibold small text-muted">
                             <i class="fa-solid fa-list-check me-1"></i> Pilih item yang akan dimasukkan:
@@ -133,6 +138,7 @@
 </script>
 
 <script src="{{ asset('assets/js/boq/form.js') }}"></script>
+<script src="{{ asset('assets/js/core/paketPicker.js') }}?v={{ @filemtime(public_path('assets/js/core/paketPicker.js')) }}"></script>
 <script src="{{ asset('assets/js/boq/index.js') }}"></script>
 <script>
 function loadModalItems(pointId, preCheckedIds = null) {
@@ -174,6 +180,19 @@ function loadModalItems(pointId, preCheckedIds = null) {
         $("#modalItemsWrap").removeClass("d-none");
         $("#modalItemsList").on("change", ".item-check", updateConfirmBtn);
         updateConfirmBtn();
+
+        // Dropdown Paket (opsional): memilih paket → hanya item paket itu yang tercentang
+        PaketPicker.load({
+            pointId: pointId,
+            $wrap: $("#modalPaketWrap"), $select: $("#modalPaketSelect"), $modal: $("#modalAddSection"),
+            stillCurrent: () => String($("#selectTestingPoint").val()) === String(pointId),
+            apply: function (idSet) {
+                $("#modalItemsList .item-check").each(function () {
+                    $(this).prop("checked", idSet.has(String(($(this).data("item") || {}).id_testing_item)));
+                });
+                updateConfirmBtn();
+            },
+        });
     }).fail(function () {
         $("#modalLoading").addClass("d-none");
         $("#modalEmpty").removeClass("d-none");
@@ -181,6 +200,7 @@ function loadModalItems(pointId, preCheckedIds = null) {
 }
 
 function resetModalItems() {
+    PaketPicker.reset($("#modalPaketWrap"), $("#modalPaketSelect"));
     $("#modalLoading, #modalEmpty, #modalItemsWrap, #modalSearchEmpty").addClass("d-none");
     $("#modalItemsList").empty();
     $("#modalItemSearch").val("");

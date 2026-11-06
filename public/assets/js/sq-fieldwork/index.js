@@ -8,6 +8,8 @@ window.datatableHeaderLabels = Object.assign({}, window.datatableHeaderLabels, {
     no_sq_fwo: 'No FWO',
     no_sq_wo: 'No WO',
     no_sq: 'No SQ',
+    pelanggan: 'Pelanggan',
+    site_pekerjaan: 'Site Pekerjaan',
     judul_pekerjaan: 'Judul Pekerjaan',
     hari_ke: 'Hari Ke-',
     durasi_hari: 'Durasi',

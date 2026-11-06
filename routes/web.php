@@ -54,6 +54,7 @@ use App\Http\Controllers\TestingKelompokMatriksSampleController;
 use App\Http\Controllers\TestingStandardController;
 use App\Http\Controllers\TestingMatriksSampleController;
 use App\Http\Controllers\TestingPointController;
+use App\Http\Controllers\TestingPointPaketController;
 use App\Http\Controllers\WilayahController;
 use App\Http\Controllers\TerminController;
 use App\Http\Controllers\WoSampleController;
@@ -495,6 +496,12 @@ Route::prefix('testing-points')
         Route::post('/', [TestingPointController::class, 'store'])->name('store');
         Route::post('/{id}/duplicate', [TestingPointController::class, 'duplicate'])->name('duplicate');
 
+        // Paket Testing Point (subset item) — CRUD di tab "Paket" detail Testing Point
+        Route::get('/{id}/paket', [TestingPointPaketController::class, 'index'])->name('paket.index')->whereNumber('id');
+        Route::post('/{id}/paket', [TestingPointPaketController::class, 'store'])->name('paket.store')->whereNumber('id');
+        Route::put('/{id}/paket/{paket}', [TestingPointPaketController::class, 'update'])->name('paket.update')->whereNumber(['id', 'paket']);
+        Route::delete('/{id}/paket/{paket}', [TestingPointPaketController::class, 'destroy'])->name('paket.destroy')->whereNumber(['id', 'paket']);
+
         Route::get('/', [TestingPointController::class, 'index'])->name('index');
         Route::get('/data', [TestingPointController::class, 'data'])->name('data');
 
@@ -536,6 +543,9 @@ Route::prefix('testing-items')
 
         Route::get('/by-point/{id}', [TestingItemController::class, 'byPoint'])
             ->name('testing-items.byPoint');
+        // Paket Testing Point untuk dropdown di modal Tambah Item BOQ (terbuka seperti by-point)
+        Route::get('/paket-by-point/{id}', [TestingPointPaketController::class, 'byPoint'])
+            ->name('testing-items.paketByPoint')->whereNumber('id');
         Route::get('/', [TestingItemController::class, 'index'])->name('index');
         Route::get('/data', [TestingItemController::class, 'data'])->name('data');
 

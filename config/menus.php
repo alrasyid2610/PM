@@ -155,6 +155,7 @@ return [
             ['slug' => 'so-lihat-semua',        'label' => 'Lihat Semua SO (tanpa batas PIC)', 'icon' => 'fa-eye'],
             ['slug' => 'sq-lihat-semua',        'label' => 'Lihat Semua SQ (tanpa batas PIC)', 'icon' => 'fa-eye'],
             ['slug' => 'budget-tanpa-realisasi-semua', 'label' => 'Tandai "Tanpa Realisasi" Budget — semua SQ/SO (pengganti PIC Order)', 'icon' => 'fa-ban'],
+            ['slug' => 'sembunyikan-nilai',     'label' => 'Sembunyikan Nilai (Total Nilai & Nilai Budget) di SQ/SQ WO/SO/WO', 'icon' => 'fa-eye-slash'],
         ],
     ],
     [

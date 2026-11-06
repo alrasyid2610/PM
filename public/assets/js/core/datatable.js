@@ -1,6 +1,15 @@
 // Param state — semua filter disimpan di sini, bukan di-embed ke window.route.data
 window._dtParams = {};
 
+// Renderer kolom teks panjang: dipotong dengan "…" pada lebar maxPx, teks lengkap muncul saat hover (title).
+// Hanya mengubah tampilan ('display'); sort/search/export tetap memakai teks asli.
+// Pakai: judul_order: function (d, t) { return window.dtClip(d, t, 320); }
+window.dtClip = function (data, type, maxPx) {
+    if (type !== 'display' || data === null || data === undefined || data === '') return data;
+    var t = escHtml(String(data));
+    return '<span class="dt-clip" style="max-width:' + (maxPx || 260) + 'px;" title="' + t + '">' + t + '</span>';
+};
+
 function _buildDtUrl() {
     var base = (window.route.data || '').split('?')[0];
     var params = Object.entries(window._dtParams)

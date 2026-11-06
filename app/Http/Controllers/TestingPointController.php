@@ -40,6 +40,18 @@ class TestingPointController extends Controller
                     "CONCAT(tms.kode, '-', ts.nomor, '-', tp.nama) as Kode"
                 ),
                 // 'tp.nama',
+                // Nama-nama paket (tabel testing_point_paket) digabung, dipisah koma
+                DB::raw(
+                    "(SELECT GROUP_CONCAT(pk.nama ORDER BY pk.nama SEPARATOR ', ')
+                        FROM testing_point_paket pk
+                        WHERE pk.id_testing_point = tp.id_testing_point) as paket"
+                ),
+                // "id:nama||id:nama" — dipakai renderer kolom Paket di index (tombol per paket); key ber-prefix id_ tidak jadi kolom
+                DB::raw(
+                    "(SELECT GROUP_CONCAT(CONCAT(pk.id_paket, ':', pk.nama) ORDER BY pk.nama SEPARATOR '||')
+                        FROM testing_point_paket pk
+                        WHERE pk.id_testing_point = tp.id_testing_point) as id_paket_list"
+                ),
                 'tp.nomor_halaman as testing_poin_nomor_halaman',
                 'tp.deskripsi as testing_poin_deskripsi',
                 // 'tp.keterangan as testing_poin_keterangan',
@@ -291,6 +303,8 @@ class TestingPointController extends Controller
             $idsToDelete = array_diff($existingIds, $currentIds);
             if (!empty($idsToDelete)) {
                 DB::table('testing_items')->whereIn('id_testing_item', $idsToDelete)->delete();
+                // Item yang dihapus dari induk ikut lepas dari semua Paket
+                TestingPointPaketController::lepasItem($idsToDelete);
             }
 
             $existing = $request->existing_attachments ?? [];
@@ -432,6 +446,7 @@ class TestingPointController extends Controller
     {
         $before = DB::table('testing_points')->where('id_testing_point', $id)->get()->toJson();
         DB::table('testing_points')->where('id_testing_point', $id)->update(['deleted_at' => now()]);
+        TestingPointPaketController::hapusSemua($id); // Paket ikut dihapus bersama Testing Point-nya
         $after = DB::table('testing_points')->where('id_testing_point', $id)->get()->toJson();
         saveAudit('testing_points', $id, 'delete', $before, $after);
 

@@ -4,9 +4,18 @@ let currentSqWoData = null;
 window.datatableHeaderLabels = Object.assign({}, window.datatableHeaderLabels, {
     no_sq_wo: 'No WO',
     no_sq: 'No SQ',
+    pelanggan: 'Pelanggan',
+    site_pekerjaan: 'Site Pekerjaan',
     judul_pekerjaan: 'Judul Pekerjaan',
     hari_mulai: 'Hari Mulai',
     durasi_hari: 'Durasi',
+});
+
+// Teks panjang dipotong; informasi lengkap muncul saat hover (window.dtClip)
+window.datatableColumnRenderers = Object.assign({}, window.datatableColumnRenderers, {
+    pelanggan: function (d, t) { return window.dtClip(d, t, 240); },
+    site_pekerjaan: function (d, t) { return window.dtClip(d, t, 220); },
+    judul_pekerjaan: function (d, t) { return window.dtClip(d, t, 340); },
 });
 
 // PIC Pekerjaan = user Pramatek (User Management), tidak tergantung Site — sama seperti
@@ -186,8 +195,7 @@ function renderSqWoSummary(r) {
     $('#sqWoSummaryCard').html(
         kpiCard('fa-layer-group', '#0891b2', 'Total BOQ', r.total_boq + ' item', '#tabBoq') +
         kpiCard('fa-hard-hat', 'var(--primary-700,#18386b)', 'Total FWO', r.total_fwo + ' FWO', '#tabFwo') +
-        totalNilaiCard +
-        budgetCard
+        (canLihatNilai() ? totalNilaiCard + budgetCard : '')   // Aksi Khusus "sembunyikan-nilai" (mis. Tim Sampling)
     );
 }
 
@@ -800,6 +808,7 @@ function openSqBoqSectionModal(ctx) {
 }
 
 function resetSqBoqSectionItems() {
+    PaketPicker.reset($('#sqBoqSectionModal-paket-wrap'), $('#sqBoqSectionModal-paket'));
     $('#sqBoqSectionModal-search').val('');
     $('#sqBoqSectionModal-search-empty').addClass('d-none');
     $('#sqBoqSectionModal-items-wrap').addClass('d-none');
@@ -835,6 +844,17 @@ function loadSqBoqSectionItems(ptId, preCheckedIds) {
                 </label>
             </div>`).join(''));
         $('#sqBoqSectionModal-btn-save').prop('disabled', $wrap.find('.sq-boq-modal-item-check:checked').length === 0);
+
+        // Dropdown Paket (opsional): memilih paket → hanya item paket itu yang tercentang
+        PaketPicker.load({
+            pointId: ptId,
+            $wrap: $('#sqBoqSectionModal-paket-wrap'), $select: $('#sqBoqSectionModal-paket'), $modal: $('#sqBoqSectionModal'),
+            stillCurrent: () => String($('#sqBoqSectionModal-point').val()) === String(ptId),
+            apply: function (idSet) {
+                $wrap.find('.sq-boq-modal-item-check').each(function () { $(this).prop('checked', idSet.has(String(this.value))); });
+                $('#sqBoqSectionModal-btn-save').prop('disabled', $wrap.find('.sq-boq-modal-item-check:checked').length === 0);
+            },
+        });
     }).fail(function () {
         $wrap.html('<div class="text-center text-danger py-3">Gagal memuat Testing Item.</div>');
     });

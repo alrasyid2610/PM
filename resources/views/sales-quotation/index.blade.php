@@ -24,6 +24,7 @@
         ['label' => 'No. SQ',          'value' => 'no_sq'],
         ['label' => 'Judul Order',     'value' => 'judul'],
         ['label' => 'Pelanggan',       'value' => 'pelanggan'],
+        ['label' => 'Site',            'value' => 'site'],
         ['label' => 'Status',          'value' => 'status', 'type' => 'select', 'options' => [
             ['label' => 'All',        'value' => 'all'],
             ['label' => 'Draft',      'value' => 'draft'],

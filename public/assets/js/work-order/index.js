@@ -931,8 +931,7 @@ function renderBoqSummary(data) {
         </div>` +
         outputCard +
         outputOtherCard +
-        totalNilaiCard +
-        budgetValueCardShell
+        (canLihatNilai() ? totalNilaiCard + budgetValueCardShell : "")   // Aksi Khusus "sembunyikan-nilai" (mis. Tim Sampling)
     );
 }
 
@@ -971,6 +970,7 @@ function renderBoqView(data, id_wo) {
 // request tambahan ini — begitu kedua total lain didapat, cuma kartu ini
 // yang di-update in-place (bukan render ulang seluruh row).
 function loadBoqValueSummary(id_wo, boqAmount) {
+    if (!canLihatNilai()) return;
     let otherAmount = 0;
     let samplingAmount = 0;
     let pending = 2;
@@ -1025,6 +1025,7 @@ function updateBoqValueCard(boqAmount, otherAmount, samplingAmount) {
 
 // ── Card "Nilai Budget" di row KPI: Budget FWO & Budget WO (Estimasi, Realisasi, Persentase terhadap Total Nilai WO) ──
 function loadWoBudgetValueCard(id_wo) {
+    if (!canLihatNilai()) return;
     $.get("/wo-budgets/" + id_wo + "/summary").done(function (r) {
         const $card = $("#woBudgetValueCard");
         if (!$card.length) return; // detail sudah berganti sebelum request selesai

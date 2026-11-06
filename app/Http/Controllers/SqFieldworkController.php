@@ -194,6 +194,10 @@ class SqFieldworkController extends Controller
         $query = DB::table('sq_fieldworks as f')
             ->leftJoin('sq_work_orders as w', 'w.id_sq_wo', '=', 'f.id_sq_wo')
             ->leftJoin('sales_quotations as sq', 'sq.id_sq', '=', 'w.id_sq')
+            ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'f.id_site_pelanggan_pekerjaan')
+            // Pelanggan = Perusahaan di Data Pemesan SQ (sales_quotations.id_pelanggan)
+            ->leftJoin('business_relations as pel', 'pel.id_br', '=', 'sq.id_pelanggan')
+            ->leftJoin('entitas as ent_pel', 'ent_pel.id_entitas', '=', 'pel.id_entitas')
             ->tap(fn ($q) => DataScope::sq($q, 'sq'))
             ->when($isSearching, function ($q) use ($filters) {
                 foreach ($filters as $f) {
@@ -202,6 +206,8 @@ class SqFieldworkController extends Controller
                         'no_sq_fwo' => $q->where('f.no_sq_fwo', 'like', $like),
                         'no_sq_wo' => $q->where('w.no_sq_wo', 'like', $like),
                         'no_sq' => $q->where('sq.no_sq', 'like', $like),
+                        'pelanggan' => $q->where('pel.nama', 'like', $like),
+                        'site' => $q->where('brs.nama_lokasi', 'like', $like),
                         'judul' => $q->where('f.judul_pekerjaan', 'like', $like),
                         default => null,
                     };
@@ -214,13 +220,20 @@ class SqFieldworkController extends Controller
                 'w.no_sq_wo',
                 'sq.id_sq',
                 'sq.no_sq',
+                'pel.nama as pelanggan',
+                'ent_pel.nama as entitas_pelanggan',
+                'brs.nama_lokasi as site_pekerjaan',
                 'f.judul_pekerjaan',
                 'f.hari_ke',
                 'f.durasi_hari',
                 'f.created_at',
             ]);
 
-        return DataTables::of($query)->addIndexColumn()->make(true);
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->editColumn('pelanggan', fn ($r) => brDisplayName($r->entitas_pelanggan, $r->pelanggan))
+            ->removeColumn('entitas_pelanggan')
+            ->make(true);
     }
 
     /**

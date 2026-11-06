@@ -678,6 +678,7 @@ class SalesQuotationController extends Controller
         $query = DB::table('sales_quotations as s')
             ->tap(fn ($q) => DataScope::sq($q, 's'))
             ->leftJoin('business_relations as br', 's.id_pelanggan', '=', 'br.id_br')
+            ->leftJoin('business_relation_sites as brs', 's.id_site_pelanggan', '=', 'brs.id_site')
             ->when(!$isSearching, fn($q) => $q->whereNull('s.deleted_at')->where('s.is_latest', true))
             ->when($isSearching, function ($q) use ($filters) {
                 foreach ($filters as $f) {
@@ -689,6 +690,7 @@ class SalesQuotationController extends Controller
                         'no_sq' => $q->where('s.no_sq', 'like', $like),
                         'judul' => $q->where('s.judul_order', 'like', $like),
                         'pelanggan' => $q->where('br.nama', 'like', $like),
+                        'site' => $q->where('brs.nama_lokasi', 'like', $like),
                         'status' => match ($term) {
                             'all' => null,
                             'deleted' => $q->whereNotNull('s.deleted_at'),
@@ -704,6 +706,7 @@ class SalesQuotationController extends Controller
                 's.no_sq',
                 's.revisi',
                 'br.nama as Pelanggan',
+                'brs.nama_lokasi as Site',
                 's.judul_order',
                 's.tanggal_sq',
                 's.berlaku_sampai',

@@ -169,7 +169,11 @@ class SqWorkOrderController extends Controller
 
         $query = DB::table('sq_work_orders as w')
             ->leftJoin('sales_quotations as sq', 'sq.id_sq', '=', 'w.id_sq')
-            ->leftJoin('business_relations as br', 'br.id_br', '=', 'w.id_pelanggan_pekerjaan')
+            // Pelanggan = Perusahaan di Data Pemesan SQ (sales_quotations.id_pelanggan). Kolom lama
+            // w.id_pelanggan_pekerjaan tidak diisi form SQ WO (hanya Site), jadi selalu kosong.
+            ->leftJoin('business_relations as br', 'br.id_br', '=', 'sq.id_pelanggan')
+            ->leftJoin('entitas as ent_br', 'ent_br.id_entitas', '=', 'br.id_entitas')
+            ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'w.id_site_pelanggan_pekerjaan')
             ->tap(fn ($q) => DataScope::sq($q, 'sq'))
             ->when($isSearching, function ($q) use ($filters) {
                 foreach ($filters as $f) {
@@ -179,6 +183,7 @@ class SqWorkOrderController extends Controller
                         'no_sq' => $q->where('sq.no_sq', 'like', $like),
                         'judul' => $q->where('w.judul_pekerjaan', 'like', $like),
                         'pelanggan' => $q->where('br.nama', 'like', $like),
+                        'site' => $q->where('brs.nama_lokasi', 'like', $like),
                         default => null,
                     };
                 }
@@ -188,14 +193,20 @@ class SqWorkOrderController extends Controller
                 'w.no_sq_wo',
                 'sq.id_sq',
                 'sq.no_sq',
+                'br.nama as pelanggan',
+                'ent_br.nama as entitas_pelanggan',
+                'brs.nama_lokasi as site_pekerjaan',
                 'w.judul_pekerjaan',
-                'br.nama as Pelanggan',
                 'w.hari_mulai',
                 'w.durasi_hari',
                 'w.created_at',
             ]);
 
-        return DataTables::of($query)->addIndexColumn()->make(true);
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->editColumn('pelanggan', fn ($r) => brDisplayName($r->entitas_pelanggan, $r->pelanggan))
+            ->removeColumn('entitas_pelanggan')
+            ->make(true);
     }
 
     /**

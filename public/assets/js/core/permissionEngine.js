@@ -9,6 +9,14 @@ function can(slug, action) {
 }
 
 /**
+ * Aksi Khusus `sembunyikan-nilai` (mis. grup Tim Sampling): kartu "Total Nilai" & "Nilai Budget" di detail
+ * SQ, SQ WO, SO, dan WO tidak ditampilkan. Default (tidak punya flag) = nilai tampil.
+ */
+function canLihatNilai() {
+    return !can('sembunyikan-nilai', 'can_update');
+}
+
+/**
  * Akses tab detail (grup "Akses Tab"), mis. canTab('wo-tab-boq'). Versi PHP: userCanTab().
  * Tidak punya satu pun tab dari halaman yang sama → semua tab boleh (kompatibel mundur);
  * punya ≥ 1 → hanya tab yang dicentang. Tersimpan di can_update.

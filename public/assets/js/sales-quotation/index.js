@@ -24,6 +24,10 @@ window.datatableColumnRenderers = Object.assign({}, window.datatableColumnRender
     no_sq: function (data, type, row) {
         return escHtml(data) + (row.revisi > 0 ? ' <span class="pm-badge" style="font-size:10px;background:#f5f3ff;color:#6d28d9;">Rev.' + row.revisi + '</span>' : '');
     },
+    // Teks panjang dipotong; informasi lengkap muncul saat hover (window.dtClip)
+    judul_order: function (d, t) { return window.dtClip(d, t, 340); },
+    Pelanggan: function (d, t) { return window.dtClip(d, t, 240); },
+    Site: function (d, t) { return window.dtClip(d, t, 220); },
 });
 
 // PIC yang muncul = union dari Perusahaan yang sudah dipilih di ketiga
@@ -252,7 +256,7 @@ function renderSqSummary(wos, idSq) {
         kpiCard('fa-briefcase', 'var(--primary-500,#1a5fbe)', 'Total WO', wos.length + ' WO') +
         kpiCard('fa-hard-hat', 'var(--primary-700,#18386b)', 'Total FWO', sum('fwo_count') + ' FWO') +
         kpiCard('fa-layer-group', '#0891b2', 'Total QTY', sum('boq_qty') + ' qty') +
-        totalNilaiCard +
+        (canLihatNilai() ? totalNilaiCard : '') +
         BudgetValueCard.shell('sqBudgetValueCard')
     );
 

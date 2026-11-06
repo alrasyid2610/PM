@@ -3263,3 +3263,7 @@ body.perm-no-create [data-perm="can_create"] {
 .bi-sec-table input.bi-hari::-webkit-inner-spin-button,
 .bi-sec-table input.bi-qty::-webkit-outer-spin-button,
 .bi-sec-table input.bi-qty::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+
+/* Sel tabel daftar yang dipotong (ellipsis); teks lengkap muncul saat hover lewat atribut title. Dipakai lewat window.dtClip() di core/datatable.js */
+.dt-clip { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

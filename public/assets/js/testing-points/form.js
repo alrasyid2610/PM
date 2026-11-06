@@ -30,10 +30,18 @@ function renderForm(res) {
                         Testing Items
                     </button>
                 </li>
+                <li role="presentation">
+                    <button class="pm-tab-btn" type="button" role="tab"
+                        data-bs-toggle="tab" data-bs-target="#tabPointPaket">
+                        <i class="fa-solid fa-boxes-stacked me-1" style="color:#b45309;font-size:11px;"></i>
+                        Paket
+                    </button>
+                </li>
             </ul>
             <div class="pm-tab-actions">
                 <div id="pointTabActionsInfo" class="d-flex align-items-center gap-2"></div>
                 <div id="pointTabActionsItems" class="d-flex align-items-center gap-2 d-none"></div>
+                <div id="pointTabActionsPaket" class="d-flex align-items-center gap-2 d-none"></div>
             </div>
         </div>
         <div class="pm-tab-body">
@@ -178,6 +186,18 @@ function renderForm(res) {
                                         </td>
                                     </tr>
                                 </script>
+                            </div>`
+                        )}
+                    </div>
+                </div>
+
+                <!-- TAB: PAKET — subset Testing Item (mis. "parameter 20" dari 50 item); CRUD sendiri lewat modal, tidak ikut tombol Edit/Simpan form -->
+                <div class="tab-pane fade" id="tabPointPaket" role="tabpanel">
+                    <div class="card card-body">
+                        ${formGroup.sectionCard(
+                            { icon: 'fa-boxes-stacked', color: 'icon-amber', title: 'Paket', subtitle: 'Kumpulan item pilihan dari Testing Point ini — dipakai sebagai jalan pintas saat membuat BOQ' },
+                            `<div id="pointPaketWrap" data-id="${res.id_testing_point}" data-no-disable>
+                                <div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data...</div>
                             </div>`
                         )}
                     </div>

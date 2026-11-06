@@ -43,6 +43,58 @@
         </div>
     </div>
 </div>
+
+{{-- Modal: Tambah / Ubah Paket (tab "Paket" detail Testing Point) --}}
+<div class="modal fade" id="modalPaket" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h5 class="modal-title" id="modalPaketTitle"><i class="fa-solid fa-boxes-stacked me-2" style="color:#b45309;"></i> Tambah Paket</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="paketId">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Nama Paket <span class="text-danger">*</span></label>
+                    <input type="text" id="paketNama" class="form-control form-control-sm" maxlength="255" placeholder="cth: parameter 20">
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-semibold small text-muted">
+                        <i class="fa-solid fa-list-check me-1"></i> Pilih item untuk paket ini:
+                        <span id="paketCount" class="pm-badge pm-badge--blue ms-1" style="font-size:10px;">0 dipilih</span>
+                    </span>
+                    <div class="d-flex gap-3">
+                        <a href="#" id="paketCheckAll" class="small text-decoration-none">Pilih Semua</a>
+                        <a href="#" id="paketUncheckAll" class="small text-decoration-none text-secondary">Hapus Semua</a>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <input type="text" id="paketItemSearch" class="form-control form-control-sm" placeholder="Cari item...">
+                </div>
+                <div id="paketItemsList" style="max-height:340px;overflow-y:auto;">
+                    <div class="text-center text-muted py-3"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat item...</div>
+                </div>
+                <div id="paketSearchEmpty" class="text-center text-muted py-3 d-none" style="font-size:13px;">
+                    <i class="fa-solid fa-magnifying-glass me-1 opacity-50"></i> Tidak ada item yang cocok
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                <button type="button" id="btnSavePaket" class="btn btn-primary btn-sm" disabled>
+                    <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Paket
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+
+@section('style')
+<style>
+    #modalPaket .modal-item-row { border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 14px; margin-bottom: 6px; transition: background .1s; }
+    #modalPaket .modal-item-row:hover { background: #f8fafc; }
+    #modalPaket .item-meta-badge, #pointPaketWrap .item-meta-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #f1f5f9; border: 1px solid #e2e8f0; color: #475569; white-space: nowrap; }
+</style>
 @endsection
 
 @section('custom-script')
@@ -63,6 +115,9 @@
         deleteAttachment: "{{ route('testing-points.delete-attachment') }}",
         history: "{{ url('testing-points') }}/",
         csrf: "{{ csrf_token() }}",
+
+        // Paket Testing Point
+        paket:            "{{ url('testing-points') }}/",
 
         // Clone Testing Point
         itemsByPoint:     "{{ url('testing-items/by-point') }}/",

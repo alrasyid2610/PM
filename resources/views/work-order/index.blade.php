@@ -138,6 +138,10 @@
             return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:6px;background:' + s.bg + ';color:' + s.color + ';font-size:11px;font-weight:600;border:1px solid ' + s.border + ';white-space:nowrap;">'
                 + '<i class="fa-solid ' + s.icon + '" style="font-size:10px;"></i> ' + s.label + '</span>';
         },
+        // Teks panjang dipotong; informasi lengkap muncul saat hover (window.dtClip)
+        judul_order: function (d, t) { return window.dtClip(d, t, 340); },
+        Pelanggan: function (d, t) { return window.dtClip(d, t, 240); },
+        'Site Pelanggan': function (d, t) { return window.dtClip(d, t, 220); },
     };
 </script>
 <script src="{{ asset('assets/js/work-order/index.js') }}"></script>

@@ -27,7 +27,7 @@ class CheckMenuPermission
     private const OPEN_LAST_SEGMENTS = ['select2', 'select2byid', 'data', 'pdf'];
 
     // Sub-route supporting dari modul lain
-    private const OPEN_PATH_KEYWORDS = ['by-point', 'by-so', 'wo-progress', 'boq-progress', 'by-fwo'];
+    private const OPEN_PATH_KEYWORDS = ['by-point', 'paket-by-point', 'by-so', 'wo-progress', 'boq-progress', 'by-fwo'];
 
     // Mapping route prefix → menu slug (jika berbeda)
     private const SLUG_MAP = [

@@ -40,6 +40,7 @@
         ['label' => 'No. SQ',           'value' => 'no_sq'],
         ['label' => 'Judul Pekerjaan',  'value' => 'judul'],
         ['label' => 'Pelanggan',        'value' => 'pelanggan'],
+        ['label' => 'Site Pekerjaan',   'value' => 'site'],
     ]"
 />
 
@@ -113,6 +114,11 @@
                     <select id="sqBoqSectionModal-point" style="width:100%"></select>
                 </div>
                 <div id="sqBoqSectionModal-items-wrap" class="d-none">
+                    {{-- Paket Testing Point (opsional): memilih paket mencentang item-item paket itu --}}
+                    <div id="sqBoqSectionModal-paket-wrap" class="mb-3 d-none">
+                        <label class="form-label fw-semibold">Paket <span class="text-muted fw-normal small">(opsional — mencentang item sesuai paket)</span></label>
+                        <select id="sqBoqSectionModal-paket" style="width:100%"></select>
+                    </div>
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="fw-semibold small text-muted">
                             <i class="fa-solid fa-list-check me-1"></i> Pilih item yang akan dimasukkan:
@@ -324,6 +330,7 @@
         csrf: "{{ csrf_token() }}",
     }
 </script>
+<script src="{{ asset('assets/js/core/paketPicker.js') }}?v={{ @filemtime(public_path('assets/js/core/paketPicker.js')) }}"></script>
 <script src="{{ asset('assets/js/sq-work-order/index.js') }}?v={{ @filemtime(public_path('assets/js/sq-work-order/index.js')) }}"></script>
 <script src="{{ asset('assets/js/sq-work-order/form.js') }}?v={{ @filemtime(public_path('assets/js/sq-work-order/form.js')) }}"></script>
 @endsection

@@ -3,9 +3,231 @@ let page;
 // ── Tab switch ────────────────────────────────────────────────────────────────
 $(document).on('shown.bs.tab', '#pointDetailTabs button[data-bs-toggle="tab"]', function (e) {
     const target = $(e.target).data('bs-target');
-    $('#pointTabActionsInfo, #pointTabActionsItems').addClass('d-none');
+    $('#pointTabActionsInfo, #pointTabActionsItems, #pointTabActionsPaket').addClass('d-none');
     if (target === '#tabPointInfo')  $('#pointTabActionsInfo').removeClass('d-none');
     if (target === '#tabPointItems') $('#pointTabActionsItems').removeClass('d-none');
+    if (target === '#tabPointPaket') {
+        $('#pointTabActionsPaket').removeClass('d-none');
+        loadPointPaket();
+    }
+});
+
+// ── Paket Testing Point ──────────────────────────────────────────────────────
+// Subset Testing Item milik 1 Testing Point (mis. "parameter 20" dari 50 item). Hanya referensi ke item induk:
+// judul/nilai/unit/urutan selalu ikut induk. CRUD lewat modal #modalPaket (tidak ikut tombol Edit/Simpan form).
+// Dipakai sebagai jalan pintas di modal Tambah Item BOQ (lihat core/paketPicker.js).
+let pointPaketCache = [];
+let pendingPaketFocus = null;        // id_paket yang diklik dari index → buka tab Paket + expand setelah detail dimuat
+
+// Kolom "Paket" di index: 1 tombol per paket. Klik → buka Testing Point, langsung ke tab Paket dan expand paket itu.
+// <button> dipakai supaya klik tidak ikut memicu klik baris (tableRowHandler mengabaikan klik di dalam button).
+window.datatableColumnRenderers = {
+    paket: function (data, type, row) {
+        if (type !== 'display') return data || '';
+        const list = String(row.id_paket_list || '');
+        if (!list) return '<span class="text-muted">—</span>';
+        return '<div class="d-flex flex-wrap gap-1">' + list.split('||').map(function (x) {
+            const k = x.indexOf(':');
+            return `<button type="button" class="pm-badge pm-badge--blue paket-chip" style="font-size:11px;border:0;cursor:pointer;" data-tp="${row.id_testing_point}" data-paket="${x.slice(0, k)}" title="Lihat detail paket"><i class="fa-solid fa-boxes-stacked me-1"></i>${escHtml(x.slice(k + 1))}</button>`;
+        }).join('') + '</div>';
+    },
+};
+
+$(document).on('click', '.paket-chip', function () {
+    pendingPaketFocus = Number($(this).data('paket'));
+    page.selectedRow.id = $(this).data('tp');
+    page.loadDetail($(this).data('tp'));
+    // pindah ke tab Detail + sorot baris, sama seperti klik baris biasa (tableRowHandler.js)
+    $(this).closest('table').find('tr').removeClass('table-active');
+    $(this).closest('tr').addClass('table-active');
+    document.querySelector('#detail-tab')?.click();
+});
+let pointPaketItems = [];            // semua Testing Item induk (untuk detail paket yang bisa dibuka)
+const pointPaketOpen = new Set();    // id_paket yang sedang dibuka (tetap terbuka setelah render ulang)
+
+function pointPaketUrl(suffix) {
+    return window.route.paket + $('#pointPaketWrap').data('id') + '/paket' + (suffix || '');
+}
+
+function loadPointPaket() {
+    const $wrap = $('#pointPaketWrap');
+    if (!$wrap.length) return;
+    $.when($.get(pointPaketUrl()), $.get(window.route.itemsByPoint + $wrap.data('id')))
+        .done(function (paketRes, itemRes) {
+            pointPaketCache = paketRes[0] || [];
+            pointPaketItems = (itemRes[0] && itemRes[0].data) || [];
+            renderPointPaket();
+        })
+        .fail(function () { $wrap.html('<div class="text-center text-danger py-3">Gagal memuat paket.</div>'); });
+}
+
+function renderPointPaket() {
+    const $wrap = $('#pointPaketWrap');
+    if (!pointPaketCache.length) {
+        $wrap.html(`<div class="text-center text-muted py-4" style="font-size:13px;">
+            <i class="fa-solid fa-boxes-stacked fa-2x d-block mb-2 opacity-25"></i>
+            Belum ada paket. Klik <b>Tambah Paket</b> untuk membuat kumpulan item pilihan.
+        </div>`);
+        return;
+    }
+    const canEdit = can('testing-points', 'can_update');
+    const canDel  = can('testing-points', 'can_delete');
+    const rows = pointPaketCache.map(function (p, i) {
+        const open = pointPaketOpen.has(p.id_paket);
+        return `<tr class="paket-row" data-id="${p.id_paket}" style="cursor:pointer;">
+            <td style="color:#94a3b8;text-align:center;">${i + 1}</td>
+            <td class="fw-semibold"><i class="fa-solid fa-chevron-${open ? 'down' : 'right'} paket-chevron me-2" style="font-size:10px;color:#94a3b8;width:10px;"></i>${escHtml(p.nama)}</td>
+            <td><span class="pm-badge pm-badge--blue" style="font-size:10px;">${p.jumlah_item} item aktif</span></td>
+            <td class="text-center">
+                ${canEdit ? `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-paket-edit" data-id="${p.id_paket}" title="Ubah" style="font-size:11px;" data-no-disable><i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i></button>` : ''}
+                ${canDel ? `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-paket-delete" data-id="${p.id_paket}" data-nama="${escHtml(p.nama)}" title="Hapus" style="font-size:11px;" data-no-disable><i class="fa-solid fa-trash" style="color:#dc2626;"></i></button>` : ''}
+            </td>
+        </tr>
+        <tr class="paket-detail-row${open ? '' : ' d-none'}" data-id="${p.id_paket}"><td></td><td colspan="3">${paketDetailHtml(p)}</td></tr>`;
+    }).join('');
+    $wrap.html(`<div class="table-responsive"><table class="pm-table">
+        <thead><tr>
+            <th style="width:40px;text-align:center;">No</th>
+            <th style="min-width:200px;">Nama Paket</th>
+            <th style="min-width:140px;">Jumlah Item</th>
+            <th style="width:100px;text-align:center;">Aksi</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+    </table></div>`);
+}
+
+// Daftar item di dalam 1 paket (urutan mengikuti induk); item nonaktif diberi badge
+function paketDetailHtml(p) {
+    const ids = new Set((p.item_ids || []).map(String));
+    const items = pointPaketItems.filter(it => ids.has(String(it.id_testing_item)));
+    if (!items.length) return '<div class="text-muted py-2" style="font-size:12px;">Paket ini tidak punya item.</div>';
+    return `<table class="pm-table" style="margin:4px 0;"><thead><tr>
+            <th style="width:40px;text-align:center;">No</th>
+            <th>Judul Indonesia</th>
+            <th>Judul Inggris</th>
+            <th style="width:160px;">Unit · Nilai</th>
+        </tr></thead><tbody>${items.map(function (it, i) {
+            const aktif = Number(it.status) === 1;
+            return `<tr>
+                <td style="color:#94a3b8;text-align:center;">${i + 1}</td>
+                <td>${escHtml(it.judul_indonesia || '—')}${aktif ? '' : ' <span class="pm-badge pm-badge--gray" style="font-size:10px;">Tidak aktif</span>'}</td>
+                <td class="text-muted">${escHtml(it.judul_inggris || '—')}</td>
+                <td><span class="item-meta-badge">${escHtml(it.kode_unit || '—')} · ${escHtml(String(it.nilai ?? '—'))}</span></td>
+            </tr>`;
+        }).join('')}</tbody></table>`;
+}
+
+// Klik baris paket → buka/tutup detail item (klik tombol Ubah/Hapus tidak ikut membuka)
+$(document).on('click', '.paket-row', function (e) {
+    if ($(e.target).closest('button').length) return;
+    const id = Number($(this).data('id'));
+    const open = !pointPaketOpen.has(id);
+    open ? pointPaketOpen.add(id) : pointPaketOpen.delete(id);
+    $(this).find('.paket-chevron').toggleClass('fa-chevron-down', open).toggleClass('fa-chevron-right', !open);
+    $(this).next('.paket-detail-row').toggleClass('d-none', !open);
+});
+
+function updatePaketCount() {
+    const n = $('#paketItemsList .paket-item-check:checked').length;
+    $('#paketCount').text(n + ' dipilih');
+    $('#btnSavePaket').prop('disabled', n === 0);
+}
+
+function openPaketModal(paket) {
+    const idPoint = $('#pointPaketWrap').data('id');
+    $('#paketId').val(paket ? paket.id_paket : '');
+    $('#paketNama').val(paket ? paket.nama : '');
+    $('#paketItemSearch').val('');
+    $('#paketSearchEmpty').addClass('d-none');
+    $('#modalPaketTitle').html(paket
+        ? '<i class="fa-solid fa-pen me-2" style="color:#b45309;"></i> Ubah Paket'
+        : '<i class="fa-solid fa-boxes-stacked me-2" style="color:#b45309;"></i> Tambah Paket');
+    $('#paketItemsList').html('<div class="text-center text-muted py-3"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat item...</div>');
+    $('#paketCount').text('0 dipilih');
+    $('#btnSavePaket').prop('disabled', true);
+    bootstrap.Modal.getOrCreateInstance('#modalPaket').show();
+
+    const pre = new Set((paket ? paket.item_ids : []).map(String));
+    $.get(window.route.itemsByPoint + idPoint).done(function (res) {
+        const items = res.data || [];
+        if (!items.length) {
+            $('#paketItemsList').html('<div class="text-center text-muted py-3"><i class="fa-solid fa-inbox me-1 opacity-50"></i> Testing Point ini belum punya item</div>');
+            return;
+        }
+        $('#paketItemsList').html(items.map(function (it) {
+            const aktif = Number(it.status) === 1;
+            return `<div class="modal-item-row d-flex align-items-center gap-3" data-text="${escHtml(((it.judul_indonesia || '') + ' ' + (it.judul_inggris || '')).toLowerCase())}">
+                <input type="checkbox" class="form-check-input paket-item-check flex-shrink-0 mt-0" id="pkitem_${it.id_testing_item}" value="${it.id_testing_item}" ${pre.has(String(it.id_testing_item)) ? 'checked' : ''}>
+                <label class="d-flex justify-content-between align-items-center w-100 gap-2" for="pkitem_${it.id_testing_item}" style="cursor:pointer;margin:0;">
+                    <div>
+                        <span class="fw-semibold">${escHtml(it.judul_indonesia || '—')}</span>
+                        <span class="text-muted ms-1 small">/ ${escHtml(it.judul_inggris || '—')}</span>
+                        ${aktif ? '' : '<span class="pm-badge pm-badge--gray ms-1" style="font-size:10px;">Tidak aktif</span>'}
+                    </div>
+                    <span class="item-meta-badge flex-shrink-0">${escHtml(it.kode_unit || '—')} · ${escHtml(String(it.nilai ?? '—'))}</span>
+                </label>
+            </div>`;
+        }).join(''));
+        updatePaketCount();
+    }).fail(function () {
+        $('#paketItemsList').html('<div class="text-center text-danger py-3">Gagal memuat Testing Item.</div>');
+    });
+}
+
+$(document).on('click', '.btn-paket-add', function () { openPaketModal(null); });
+$(document).on('click', '.btn-paket-edit', function () {
+    const p = pointPaketCache.find(x => String(x.id_paket) === String($(this).data('id')));
+    if (p) openPaketModal(p);
+});
+$(document).on('change', '.paket-item-check', updatePaketCount);
+$(document).on('click', '#paketCheckAll', function (e) { e.preventDefault(); $('#paketItemsList .modal-item-row:not(.d-none) .paket-item-check').prop('checked', true); updatePaketCount(); });
+$(document).on('click', '#paketUncheckAll', function (e) { e.preventDefault(); $('#paketItemsList .modal-item-row:not(.d-none) .paket-item-check').prop('checked', false); updatePaketCount(); });
+$(document).on('input', '#paketItemSearch', function () {
+    const term = $(this).val().toLowerCase().trim();
+    let visible = 0;
+    $('#paketItemsList .modal-item-row').each(function () {
+        const match = !term || String($(this).data('text')).includes(term);
+        $(this).toggleClass('d-none', !match);
+        if (match) visible++;
+    });
+    $('#paketSearchEmpty').toggleClass('d-none', visible > 0);
+});
+
+$(document).on('click', '#btnSavePaket', function () {
+    const nama = $('#paketNama').val().trim();
+    if (!nama) { Notify.warning('Nama paket wajib diisi.'); $('#paketNama').trigger('focus'); return; }
+    const itemIds = $('#paketItemsList .paket-item-check:checked').map(function () { return Number(this.value); }).get();
+    if (!itemIds.length) { Notify.warning('Pilih minimal 1 Testing Item untuk paket.'); return; }
+
+    const id = $('#paketId').val();
+    const $btn = $(this).prop('disabled', true);
+    $.ajax({
+        url: pointPaketUrl(id ? '/' + id : ''),
+        method: id ? 'PUT' : 'POST',
+        headers: { 'X-CSRF-TOKEN': window.route.csrf },
+        contentType: 'application/json',
+        data: JSON.stringify({ nama: nama, item_ids: itemIds }),
+        success: function () {
+            Notify.success('Paket tersimpan');
+            bootstrap.Modal.getInstance('#modalPaket')?.hide();
+            loadPointPaket();
+        },
+        error: function (xhr) {
+            Notify.error(xhr.responseJSON?.message || 'Gagal menyimpan paket');
+            $btn.prop('disabled', false);
+        },
+    });
+});
+
+$(document).on('click', '.btn-paket-delete', function () {
+    const id = $(this).data('id'), nama = $(this).data('nama');
+    Notify.confirmDelete('Hapus paket "' + nama + '"?', function () {
+        $.ajax({
+            url: pointPaketUrl('/' + id), method: 'DELETE', headers: { 'X-CSRF-TOKEN': window.route.csrf },
+            success: function () { Notify.success('Paket berhasil dihapus'); loadPointPaket(); },
+            error: function (xhr) { Notify.error(xhr.responseJSON?.message || 'Gagal menghapus paket'); },
+        });
+    });
 });
 
 // ── Salin Testing Point ──────────────────────────────────────────────────────
@@ -352,14 +574,32 @@ $(document).ready(function () {
         initDynamicTable: true,
         useAttachment: true,
         afterLoad: function (res) {
+            // Datang dari klik paket di index → pindah ke tab Paket dan expand paket tsb
+            pointPaketOpen.clear();
+            if (pendingPaketFocus) {
+                pointPaketOpen.add(pendingPaketFocus);
+                const focus = pendingPaketFocus;
+                pendingPaketFocus = null;
+                setTimeout(function () {
+                    const $btn = $('#detailContent button[data-bs-target="#tabPointPaket"]');
+                    if ($btn.length) new bootstrap.Tab($btn[0]).show();
+                    setTimeout(function () { $('.paket-row[data-id="' + focus + '"]')[0]?.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 600);
+                }, 0);
+            }
             if (can('testing-points', 'can_create')) {
                 $('#pointTabActionsInfo').html(`
                     <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 btn-clone-testing-point" data-id="${res.id_testing_point}">
                         <i class="fa-solid fa-copy me-1"></i> Salin Testing Point ini
                     </button>
                 `);
+                $('#pointTabActionsPaket').html(`
+                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 btn-paket-add" data-no-disable>
+                        <i class="fa-solid fa-plus me-1"></i> Tambah Paket
+                    </button>
+                `);
             } else {
                 $('#pointTabActionsInfo').html('');
+                $('#pointTabActionsPaket').html('');
             }
         },
         historyConfig: {
