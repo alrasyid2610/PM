@@ -821,6 +821,28 @@ class SalesQuotationController extends Controller
             ->name("Executive-Summary-{$sq->no_sq}.pdf");
     }
 
+    /** Tarif PPN printout penawaran (11%, sesuai contoh user 2026-11-07). Ganti di sini bila tarif berubah. */
+    private const TARIF_PPN = 0.11;
+
+    /**
+     * Gabungkan baris printout yang punya 'key' sama (BOQ sama di beberapa WO satu site) menjadi 1 baris + Freq.
+     * Freq = jumlah baris yang digabung; Total = jumlah total aslinya (tidak berubah);
+     * Harga Unit = Total ÷ (Qty × Freq) (dirata-rata bila harga antar WO beda) supaya Qty × Harga × Freq = Total.
+     * Urutan mengikuti kemunculan pertama.
+     */
+    private static function gabungFreq($rows)
+    {
+        return $rows->groupBy('key')->map(function ($g) {
+            $first = $g->first();
+            $freq  = $g->count();
+            $total = (int) $g->sum('total');
+            $first->freq  = $freq;
+            $first->total = $total;
+            $first->harga = ($first->qty > 0) ? (int) round($total / ($first->qty * $freq)) : 0;
+            return $first;
+        })->values();
+    }
+
     /**
      * Penawaran resmi ke pelanggan (format mengikuti contoh "SQ.26.A.748").
      * Nomor = nomor SQ di sistem. Discount SQ tidak ditampilkan terpisah:
@@ -881,16 +903,21 @@ class SalesQuotationController extends Controller
 
         // Parameter per baris BOQ = Testing Item yang DIPILIH di BOQ SQ (sq_boq_items), label sama dengan
         // tab BOQ (testing_items.judul_indonesia, mis. "Sulfur Dioksida (24 Jam)") — bukan semua item master Testing Point.
-        $parameterByBoq = $boq->isNotEmpty()
+        $itemsByBoq = $boq->isNotEmpty()
             ? DB::table('sq_boq_items as bi')
                 ->join('testing_items as ti', 'ti.id_testing_item', '=', 'bi.id_testing_item')
                 ->whereIn('bi.id_sq_boq', $boq->pluck('id_sq_boq'))
                 ->orderBy('ti.id_testing_item')
-                ->select(['bi.id_sq_boq', 'ti.judul_indonesia'])
+                ->select(['bi.id_sq_boq', 'ti.id_testing_item', 'ti.judul_indonesia'])
                 ->get()
                 ->groupBy('id_sq_boq')
-                ->map(fn ($g) => $g->pluck('judul_indonesia')->filter()->implode(', '))
             : collect();
+        $parameterByBoq = $itemsByBoq->map(fn ($g) => $g->pluck('judul_indonesia')->filter()->implode(', '));
+        // Kunci item (id terurut) — dipakai untuk menentukan BOQ "sama" antar WO
+        $itemKeyByBoq = $itemsByBoq->map(fn ($g) => $g->pluck('id_testing_item')->sort()->implode(','));
+
+        // Site tiap WO — BOQ/biaya tambahan hanya digabung bila site-nya sama (aturan period: 1 site per period)
+        $siteByWo = $wos->pluck('id_site', 'id_sq_wo');
 
         $tambahan = $woIds->isNotEmpty()
             ? DB::table('sq_boq_tambahan as bt')
@@ -903,13 +930,15 @@ class SalesQuotationController extends Controller
             : collect();
 
         // Baris section I (BOQ lab). Harga unit = nilai bersih per unit (setelah discount item).
-        $bagianI = $boq->map(function ($r) use ($parameterByBoq) {
+        $bagianI = $boq->map(function ($r) use ($parameterByBoq, $itemKeyByBoq, $siteByWo) {
             $gross = (int) $r->qty * (int) $r->harga;
             $total = max(0, $gross - (int) $r->discount);
             // Baris 1 (bold) = Matriks Sample; baris 2 = nomor Testing Standard + nama Testing Point
             $namaBold = $r->matriks_judul ?: ($r->item_produk_alternate ?: 'Item BOQ');
             $namaSub  = trim(implode(' ', array_filter([$r->standard_nomor, $r->nama_testing_point])));
             return (object) [
+                // Kunci penggabungan antar WO: site + Testing Point + item terpilih + qty + satuan (harga boleh beda → dirata-rata)
+                'key'       => implode('|', [$siteByWo->get($r->id_sq_wo) ?? 0, $r->id_testing_point ?? 0, $r->item_produk_alternate ?? '', $itemKeyByBoq->get($r->id_sq_boq, ''), (int) $r->qty, $r->satuan]),
                 'nama'      => $namaBold,
                 'regulasi'  => $namaSub ?: null,
                 'parameter' => $parameterByBoq->get($r->id_sq_boq) ?: null,
@@ -917,13 +946,17 @@ class SalesQuotationController extends Controller
                 'satuan'    => $r->satuan ?: 'Titik',
                 'harga'     => (int) $r->qty > 0 ? (int) round($total / (int) $r->qty) : 0,
                 'total'     => $total,
+                'freq'      => 1,
             ];
-        })->values();
+        });
+        $bagianI = self::gabungFreq($bagianI);
 
         // Section II: BOQ Other + BOQ Sampling (sq_boq_tambahan, jenis 'lainnya' & 'sampling')
-        $bagianII = $tambahan->map(function ($r) {
+        $bagianII = $tambahan->map(function ($r) use ($siteByWo) {
             $total = (int) $r->qty * (int) $r->harga;
             return (object) [
+                // Kunci penggabungan antar WO: site + nama item (tanpa beda huruf besar/kecil) + qty + satuan
+                'key'       => implode('|', [$siteByWo->get($r->id_sq_wo) ?? 0, mb_strtolower(trim((string) $r->nama_item)), (int) $r->qty, $r->satuan]),
                 'nama'      => $r->nama_item,
                 'regulasi'  => null,
                 'parameter' => null,
@@ -931,12 +964,27 @@ class SalesQuotationController extends Controller
                 'satuan'    => $r->satuan ?: 'Hari',
                 'harga'     => (int) $r->harga,
                 'total'     => $total,
+                'freq'      => 1,
             ];
-        })->values();
+        });
+        $bagianII = self::gabungFreq($bagianII);
 
         $subtotal    = $bagianI->sum('total') + $bagianII->sum('total');
         $discountSq  = (int) ($sq->discount ?? 0);
         $grandTotal  = max(0, $subtotal - $discountSq);
+
+        // Bila ada poin Keterangan yang memakai Rekening PPN (bank_accounts.is_ppn), total dicetak
+        // Sub Total + PPN + Grand Total (diskon SQ diabaikan). Tanpa rekening PPN: Grand Total seperti biasa.
+        $keteranganRows = SqKeterangan::rows((int) $id);
+        $rekeningPpn    = DB::table('bank_accounts')->whereNull('deleted_at')->where('is_ppn', 1)->pluck('id_bank_account')->all();
+        $pakaiPpn = $keteranganRows->contains(fn ($row) => collect($row->isian)->contains(
+            fn ($i) => $i['tipe'] === 'rekening' && $i['value'] && in_array((int) $i['value'], $rekeningPpn, true)
+        ));
+        $ppn = 0;
+        if ($pakaiPpn) {
+            $ppn        = (int) round($subtotal * self::TARIF_PPN);
+            $grandTotal = $subtotal + $ppn;
+        }
 
         // Nomor & tanggal dicetak di kop tiap halaman
         $noDok   = $sq->no_sq . ($sq->revisi > 0 ? ' Rev. ' . str_pad($sq->revisi, 2, '0', STR_PAD_LEFT) : ' Rev. 00');
@@ -950,8 +998,11 @@ class SalesQuotationController extends Controller
             'totalI'      => $bagianI->sum('total'),
             'totalII'     => $bagianII->sum('total'),
             'grandTotal'  => $grandTotal,
+            'pakaiPpn'    => $pakaiPpn,
+            'subtotal'    => $subtotal,
+            'ppn'         => $ppn,
             // Poin keterangan terstruktur (teks final bila SQ sudah Final, render langsung bila Draft)
-            'keterangan'  => SqKeterangan::rows((int) $id)->pluck('teks'),
+            'keterangan'  => $keteranganRows->pluck('teks'),
         ])
             ->headerView('pdf.layouts.sections.header-penawaran', ['no' => $noDok, 'tanggal' => $tanggal])
             ->footerView('pdf.layouts.sections.footer')

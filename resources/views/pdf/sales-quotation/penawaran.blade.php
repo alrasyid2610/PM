@@ -26,6 +26,9 @@
     /* Judul bagian (I/II) tidak boleh tertinggal sendirian di dasar halaman; Grand Total tidak boleh sendirian di halaman baru */
     .offer tr.section { break-after: avoid; page-break-after: avoid; }
     .offer tr.total { break-before: avoid; page-break-before: avoid; }
+    /* Sub Total + PPN (hanya bila memakai rekening PPN): satu blok dengan Grand Total */
+    .offer tr.subt { break-after: avoid; page-break-after: avoid; }
+    .offer tr.subt td { font-weight: 700; background: #dbe8f5; }
     .offer tr.total td { font-weight: 700; background: #203864; color: #fff; border-color: #203864; }
     .offer .sub { font-size: 10px; color: #334155; display: block; margin-top: 2px; }
     .offer .nm { font-weight: 700; }
@@ -64,13 +67,14 @@
                 <th>Deskripsi Pekerjaan</th>
                 <th style="width:60px;">Jumlah</th>
                 <th style="width:60px;">Unit</th>
+                <th style="width:44px;">Freq</th>
                 <th style="width:100px;">Harga Unit</th>
                 <th style="width:110px;">Total Harga</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td colspan="6" class="lokasi">
+                <td colspan="7" class="lokasi">
                     @forelse ($lokasi as $i => $l)
                         <div @if ($i > 0) style="margin-top:4px;" @endif>
                             @if ($i === 0)Lokasi Pekerjaan : @endif{{ $l->nama !== '' ? $l->nama : '-' }}
@@ -85,7 +89,7 @@
             @if ($bagianI->isNotEmpty())
             <tr class="section">
                 <td class="c">I</td>
-                <td colspan="5">Biaya Pengujian</td>
+                <td colspan="6">Biaya Pengujian</td>
             </tr>
             @foreach ($bagianI as $i => $r)
             <tr>
@@ -97,6 +101,7 @@
                 </td>
                 <td class="c">{{ $r->qty }}</td>
                 <td class="c">{{ $r->satuan }}</td>
+                <td class="c">{{ $r->freq }}</td>
                 <td class="r">{{ $fmt($r->harga) }}</td>
                 <td class="r">{{ $fmt($r->total) }}</td>
             </tr>
@@ -106,7 +111,7 @@
             @if ($bagianII->isNotEmpty())
             <tr class="section">
                 <td class="c">II</td>
-                <td colspan="5">Biaya Sampling</td>
+                <td colspan="6">Biaya Sampling</td>
             </tr>
             @foreach ($bagianII as $i => $r)
             <tr>
@@ -114,14 +119,25 @@
                 <td><span class="nm">{{ $r->nama }}</span></td>
                 <td class="c">{{ $r->qty }}</td>
                 <td class="c">{{ $r->satuan }}</td>
+                <td class="c">{{ $r->freq }}</td>
                 <td class="r">{{ $fmt($r->harga) }}</td>
                 <td class="r">{{ $fmt($r->total) }}</td>
             </tr>
             @endforeach
             @endif
 
+            @if ($pakaiPpn)
+            <tr class="subt">
+                <td colspan="6" style="text-align:right;">Sub Total</td>
+                <td class="r">{{ $fmt($subtotal) }}</td>
+            </tr>
+            <tr class="subt">
+                <td colspan="6" style="text-align:right;">PPN</td>
+                <td class="r">{{ $fmt($ppn) }}</td>
+            </tr>
+            @endif
             <tr class="total">
-                <td colspan="5" style="text-align:right;">Grand Total</td>
+                <td colspan="6" style="text-align:right;">Grand Total</td>
                 <td class="r">{{ $fmt($grandTotal) }}</td>
             </tr>
         </tbody>
