@@ -40,10 +40,11 @@
     .ket ol { margin: 4px 0 0 22px; }
     .ket li { margin-bottom: 2px; }
 
-    .sign { margin-top: 22px; font-size: 11px; width: 100%; border-collapse: collapse; }
-    .sign td { vertical-align: top; }
-    .sign-box { width: 90px; height: 90px; border: 1px dashed #94a3b8; color: #94a3b8; font-size: 9px; text-align: center; line-height: 90px; }
-    .dummy { color: #b45309; font-style: italic; }
+    .sign { margin-top: 22px; font-size: 11px; page-break-inside: avoid; break-inside: avoid; }
+    .sign-inner { display: inline-block; text-align: center; min-width: 150px; }
+    .sign-img { display: block; width: 190px; height: auto; margin: 4px auto 6px; }
+    .sign-nama { font-weight: 700; font-size: 12px; }
+    .sign-jabatan { font-size: 11px; }
 @endsection
 
 @section('content')
@@ -154,18 +155,16 @@
     </div>
     @endif
 
-    <table class="sign">
-        <tr>
-            <td style="width:60%;">
-                Hormat kami,<br>
-                <div class="sign-box" style="margin-top:6px;">QR / TTD</div>
-            </td>
-            <td>
-                <br><br>
-                <div class="dummy">[Nama Penandatangan]</div>
-                <div class="dummy">[Jabatan]</div>
-            </td>
-        </tr>
-    </table>
+    {{-- Tanda tangan di kiri bawah: Hormat kami → kotak QR/TTD → nama (tebal) → jabatan, rata tengah satu blok --}}
+    <div class="sign">
+        <div class="sign-inner">
+            <div>Hormat kami,</div>
+            {{-- Gambar tanda tangan elektronik (dari layanan e-sign, tanpa baris kode) — sementara 1 gambar tetap --}}
+            <img class="sign-img" src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('assets/images/ttd-penawaran.png'))) }}" alt="Tanda tangan">
+            {{-- Nama & jabatan penandatangan: hardcode sementara --}}
+            <div class="sign-nama">Fuad P</div>
+            <div class="sign-jabatan">Business Manager</div>
+        </div>
+    </div>
 </div>
 @endsection
