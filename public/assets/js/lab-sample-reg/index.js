@@ -21,10 +21,29 @@ $(document).ready(function () {
     initLabRegWoSelect();
     initLabRegRiwayat();
 
-    // Deep link: /lab-sample-regs?wo=ID
+    // Deep link: /lab-sample-regs?wo=ID&fwo=ID (FWO wajib). ?wo=ID saja (mis. dari tab di detail WO) → pilih FWO milik WO itu.
     const params = new URLSearchParams(window.location.search);
-    if (params.get('wo')) selectLabRegWo(params.get('wo'), params.get('fwo'));
+    if (params.get('wo') && params.get('fwo')) selectLabRegWo(params.get('wo'), params.get('fwo'));
+    else if (params.get('wo')) pickFwoOfWo(params.get('wo'));
 });
+
+// Datang dengan ?wo= saja: registrasi hanya per FWO → bila WO itu punya 1 FWO langsung dibuka, bila banyak dropdown FWO-nya dibuka
+let labRegWoFilter = null;
+function pickFwoOfWo(idWo) {
+    history.replaceState(null, '', window.location.pathname);
+    $.get(window.labRegRoute.woOptions, { wo: idWo }).done(function (groups) {
+        const fwos = (groups[0] && groups[0].children) || [];
+        if (fwos.length === 1) {
+            selectLabRegWo(fwos[0].id_wo, fwos[0].id_fwo);
+        } else if (fwos.length === 0) {
+            Notify.warning('Work Order ini belum punya FWO, jadi belum ada sample yang bisa diregistrasi.');
+        } else {
+            labRegWoFilter = idWo;
+            $('#labRegWoHint').html(`Menampilkan <b>${fwos.length} FWO</b> milik WO yang Anda buka — pilih salah satu. Ketik untuk mencari FWO lain.`);
+            $('#labRegWoSelect').select2('open');
+        }
+    });
+}
 
 // Query string data sample WO — `?fwo=` mempersempit cakupan ke 1 FWO
 function labRegFwoQuery(idFwo) {
@@ -34,24 +53,25 @@ function labRegFwoQuery(idFwo) {
 function initLabRegWoSelect() {
     $('#labRegWoSelect').select2({
         width: '100%',
-        placeholder: 'Cari no. WO / FWO / SO, judul, atau pelanggan…',
+        placeholder: 'Cari no. FWO (atau no. WO / SO, judul, pelanggan)…',
         allowClear: true,
         minimumInputLength: 0,
         ajax: {
             url: window.labRegRoute.woOptions,
             dataType: 'json',
             delay: 250,
-            data: (p) => ({ q: p.term || '' }),
+            data: (p) => ({ q: p.term || '', wo: labRegWoFilter || '' }),
             processResults: (d) => ({ results: d }),
         },
     });
 
-    // Hasil pencarian bergrup "Work Order" / "Fieldwork Order"; memilih FWO = cakupan hanya FWO itu
+    // Hanya FWO yang bisa dipilih (sejak 2026-11-08); WO induknya menjadi konteks pendaftaran
     $('#labRegWoSelect').on('select2:select', function (e) {
         const d = e.params.data;
-        openLabRegWo(d.id_wo, d.id_fwo || null);
+        labRegWoFilter = null;
+        openLabRegWo(d.id_wo, d.id_fwo);
     });
-    $('#labRegWoSelect').on('select2:clear', closeLabRegWo);
+    $('#labRegWoSelect').on('select2:clear', function () { labRegWoFilter = null; closeLabRegWo(); });
 }
 
 // Deep link / klik dari riwayat: set pilihan select2 lalu buka WO (atau FWO)-nya
@@ -79,13 +99,6 @@ function openLabRegWo(idWo, idFwo) {
     loadWoSampleData(idWo);
 }
 
-// "Lihat seluruh WO" — lepas cakupan FWO tanpa mengganti WO
-$(document).on('click', '.btn-lab-reg-whole-wo', function (e) {
-    e.preventDefault();
-    if (!labRegWoId) return;
-    selectLabRegWo(labRegWoId, null);
-});
-
 function closeLabRegWo() {
     labRegWoId = null;
     labRegFwoId = null;
@@ -107,7 +120,7 @@ function initLabRegRiwayat() {
             { data: 'DT_RowIndex', searchable: false },
             { data: 'no_registrasi', render: (d) => d ? `<span style="font-weight:600;color:#0369a1;">${escHtml(d)}</span>` : '<span class="text-muted">—</span>' },
             { data: 'tanggal_registrasi', searchable: false, render: (d) => fmtDate(d) },
-            { data: 'no_wo', render: (d, t, r) => `<a href="#" class="labreg-open-wo" data-wo="${r.id_wo}" style="font-weight:600;">${escHtml(d || '-')}</a>` },
+            { data: 'no_wo', render: (d, t, r) => `<a href="/work-orders?open=${r.id_wo}" style="font-weight:600;">${escHtml(d || '-')}</a>` },
             { data: 'no_so', render: (d) => d ? escHtml(d) : '<span class="text-muted">—</span>' },
             { data: 'nama_pelanggan', render: (d) => d ? escHtml(d) : '<span class="text-muted">—</span>' },
             { data: 'nama_penerima', render: (d) => d ? escHtml(d) : '<span class="text-muted">—</span>' },
@@ -120,12 +133,6 @@ function initLabRegRiwayat() {
         ],
     });
 }
-
-$(document).on('click', '.labreg-open-wo', function (e) {
-    e.preventDefault();
-    selectLabRegWo($(this).data('wo'));
-    $('html, body').animate({ scrollTop: 0 }, 200);
-});
 
 // Form Registrasi (PDF) — dari riwayat maupun header grup "Sudah Diregistrasi"
 $(document).on('click', '.btn-lab-reg-print', function (e) {
@@ -248,7 +255,6 @@ function renderLabRegWoBanner(wo, isLocked, fwo, siap) {
             ${wo.no_so ? `<a href="/sales-orders?open=${wo.id_so}" class="pm-badge" style="background:#eff6ff;color:#1d4ed8;text-decoration:none;"><i class="fa-solid fa-file-invoice-dollar" style="font-size:10px;"></i> ${escHtml(wo.no_so)}</a>` : ''}
             ${wo.nama_pelanggan_display ? badge('#f1f5f9', '#475569', 'fa-location-dot', escHtml(wo.nama_pelanggan_display) + (wo.nama_site && wo.nama_site !== wo.nama_pelanggan_display ? ' · ' + escHtml(wo.nama_site) : '')) : ''}
             ${status}
-            ${fwo ? '<a href="#" class="btn-lab-reg-whole-wo ms-1" style="font-size:12px;white-space:nowrap;"><i class="fa-solid fa-arrow-up-right-from-square me-1" style="font-size:10px;"></i>Lihat seluruh WO</a>' : ''}
         </div>`);
 }
 
@@ -285,7 +291,7 @@ function initWoSampleStatusSelect2(container) {
         $sel.select2({
             width: 'resolve',
             minimumResultsForSearch: Infinity,
-            dropdownParent: $sel.closest('td'),
+            dropdownParent: $(document.body), dropdownAutoWidth: true, // di body: tidak terpotong overflow tabel/kartu
         });
     });
 }
@@ -307,7 +313,7 @@ function initWoSampleTitikSelect2(container) {
                 width: 'resolve',
                 placeholder: 'Pilih titik…',
                 allowClear: true,
-                dropdownParent: $sel.closest('td'),
+                dropdownParent: $(document.body), dropdownAutoWidth: true, // di body: tidak terpotong overflow tabel/kartu
                 data: _woSpOptions(usedLocations, current),
                 templateResult: function (opt) {
                     if (!opt.id) return opt.text;
@@ -669,23 +675,29 @@ $(document).on('click', '.wo-reg-group-header', function () {
     $(this).find('.wo-reg-group-chevron').toggleClass('fa-chevron-up fa-chevron-down');
 });
 
+// "Diterima Oleh" = user sistem (bukan master Personnel lagi, sejak 2026-11-08); default user yang login, boleh diganti.
+// Nama fungsi/ID elemen (-personnel) dipertahankan agar tidak mengubah banyak tempat.
 function _initWoRegPersonnelSelect2(selector, dropdownParent) {
     const $sel = $(selector);
     if ($sel.data('select2')) $sel.select2('destroy');
     $sel.empty();
     $sel.select2({
         width: '100%',
-        placeholder: 'Pilih personil (opsional)',
-        allowClear: true,
+        placeholder: 'Pilih user penerima',
+        allowClear: false,
         dropdownParent: dropdownParent,
         ajax: {
-            url: '/personnel/select2',
+            url: '/users/select2',
             delay: 200,
             dataType: 'json',
             data: (p) => ({ q: p.term ?? '' }),
             processResults: (d) => ({ results: d }),
         },
     });
+    const me = window.labRegMe;
+    if (me && me.id) {
+        $sel.append(new Option(me.name || ('User #' + me.id), me.id, true, true)).trigger('change');
+    }
 }
 
 $(document).on('click', '.btn-wo-sample-generate', function () {
@@ -743,9 +755,16 @@ $(document).on('click', '#btn-wo-register-direct-selected', function () {
     _openWoRegHeaderModal(ids);
 });
 
+// Tanggal Registrasi = hari ini dari server (readonly, tidak bisa backdate); fallback jam perangkat bila variabel tidak ada
+function labRegToday() {
+    if (window.labRegServerDate) return window.labRegServerDate;
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 function _openWoRegHeaderModal(idLabSampleList) {
     $('#woRegHeaderModal').data('id-lab-sample', idLabSampleList);
-    $('#woRegHeaderModal-tanggal').val('');
+    $('#woRegHeaderModal-tanggal').val(labRegToday());
     $('#woRegHeaderModal-keterangan').val('');
     initFpDate('#woRegHeaderModal');
     _initWoRegPersonnelSelect2('#woRegHeaderModal-personnel', $('#woRegHeaderModal'));
@@ -762,7 +781,7 @@ $(document).on('click', '#woRegHeaderModal-btn-save', function () {
     const payload = {
         _token: window.route.csrf,
         tanggal_registrasi: tanggalDiterima,
-        id_personnel_penerima: $('#woRegHeaderModal-personnel').val() || '',
+        id_user_penerima: $('#woRegHeaderModal-personnel').val() || '',
         keterangan: $('#woRegHeaderModal-keterangan').val().trim(),
         id_lab_sample: idLabSample,
     };
@@ -792,7 +811,7 @@ $(document).on('click', '#woRegHeaderModal-btn-save', function () {
 
 $(document).on('click', '#btn-wo-reg-from-fwo', function () {
     const idWo = $(this).data('wo-id');
-    $('#woRegFromFwoModal-tanggal').val('');
+    $('#woRegFromFwoModal-tanggal').val(labRegToday());
     $('#woRegFromFwoModal-keterangan').val('');
     $('#woRegFromFwoModal-search').val('');
     $('#woRegFromFwoModal-check-all').prop('checked', false);
@@ -988,7 +1007,7 @@ $(document).on('click', '#woRegFromFwoModal-btn-save', function () {
     const payload = {
         _token: window.route.csrf,
         tanggal_registrasi: tanggalDiterima,
-        id_personnel_penerima: $('#woRegFromFwoModal-personnel').val() || '',
+        id_user_penerima: $('#woRegFromFwoModal-personnel').val() || '',
         keterangan: $('#woRegFromFwoModal-keterangan').val().trim(),
         id_lab_sample: idLabSample,
     };

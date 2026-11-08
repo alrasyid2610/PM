@@ -43,84 +43,61 @@ class LabSampleRegController extends Controller
     }
 
     /**
-     * Pencarian untuk kolom "Pilih Work Order" — hasilnya dikelompokkan jelas per jenis:
-     *   - "Work Order": cocok no. WO, judul WO, no. SO, judul order, atau pelanggan
-     *   - "Fieldwork Order": cocok no. FWO atau judul FWO (ditampilkan sebagai FWO, bukan WO induknya)
-     * Memilih WO = seluruh sample WO itu; memilih FWO = cakupan dipersempit ke FWO itu (WO induknya tetap menjadi konteks
-     * pendaftaran, karena 1 pendaftaran = 1 WO). Id hasil: `wo:{id}` atau `fwo:{id}`, plus `id_wo`/`id_fwo`.
+     * Pencarian untuk kolom "Cari FWO" — HANYA Fieldwork Order (sejak 2026-11-08; sebelumnya bisa memilih WO atau FWO).
+     * FWO bisa dicari lewat no./judul FWO, juga no./judul WO induk, no. SO, judul order, atau pelanggan.
+     * `?wo={id}` (tanpa kata kunci) mempersempit daftar ke FWO milik WO itu — dipakai deep link dari tab Lab Sample Reg di detail WO.
+     * 1 pendaftaran tetap = 1 Work Order (WO induk FWO jadi konteksnya). Id hasil `fwo:{id}`, plus `id_wo`/`id_fwo`.
      */
     public function woOptions(Request $request)
     {
         $q = trim((string) $request->query('q', ''));
         $like = '%' . $q . '%';
+        $idWo = (int) $request->query('wo');
 
-        $woRows = DB::table('work_orders as w')
+        $rows = DB::table('fieldworks as f')
+            ->join('work_orders as w', 'w.id_wo', '=', 'f.id_wo')
             ->leftJoin('sales_orders as so', 'so.id_so', '=', 'w.id_so')
             ->leftJoin('business_relations as br', 'br.id_br', '=', 'so.id_pelanggan')
             ->leftJoin('entitas as ent', 'ent.id_entitas', '=', 'br.id_entitas')
-            ->whereNull('w.deleted_at')
-            ->when($q !== '', fn ($query) => $query->where(function ($w) use ($like) {
-                $w->where('w.no_wo', 'like', $like)
+            ->whereNull('f.deleted_at')->whereNull('w.deleted_at')
+            ->when($idWo && $q === '', fn ($query) => $query->where('f.id_wo', $idWo))
+            ->when($q !== '', fn ($query) => $query->where(function ($x) use ($like) {
+                $x->where('f.no_fwo', 'like', $like)
+                    ->orWhere('f.judul_pekerjaan', 'like', $like)
+                    ->orWhere('w.no_wo', 'like', $like)
                     ->orWhere('w.judul_pekerjaan', 'like', $like)
                     ->orWhere('so.no_so', 'like', $like)
                     ->orWhere('so.judul_order', 'like', $like)
                     ->orWhere('br.nama', 'like', $like);
             }))
-            ->orderByDesc('w.id_wo')
-            ->limit(20)
-            ->get(['w.id_wo', 'w.no_wo', 'w.judul_pekerjaan', 'w.status', 'so.no_so', 'br.nama as nama_pelanggan', 'ent.nama as entitas_pelanggan']);
+            ->orderByDesc('f.id_fwo')
+            ->limit(30)
+            ->get(['f.id_fwo', 'f.no_fwo', 'f.judul_pekerjaan as judul_fwo', 'w.id_wo', 'w.no_wo', 'w.status', 'so.no_so', 'br.nama as nama_pelanggan', 'ent.nama as entitas_pelanggan']);
 
-        $groups = [];
-
-        if ($woRows->isNotEmpty()) {
-            $groups[] = [
-                'text' => 'Work Order',
-                'children' => $woRows->map(fn ($r) => [
-                    'id'     => 'wo:' . $r->id_wo,
-                    'id_wo'  => $r->id_wo,
-                    'id_fwo' => null,
-                    'text'   => trim(($r->no_wo ?? '-') . ' — ' . ($r->judul_pekerjaan ?: '-')
-                        . ($r->no_so ? ' · ' . $r->no_so : '')
-                        . ($r->nama_pelanggan ? ' · ' . brDisplayName($r->entitas_pelanggan, $r->nama_pelanggan) : '')
-                        . ($r->status === 'completed' ? ' (selesai)' : '')),
-                ])->values(),
-            ];
+        if ($rows->isEmpty()) {
+            return response()->json([]);
         }
 
-        // FWO hanya dicari bila user mengetik sesuatu (daftar awal cukup berisi WO terbaru)
-        if ($q !== '') {
-            $fwoRows = DB::table('fieldworks as f')
-                ->join('work_orders as w', 'w.id_wo', '=', 'f.id_wo')
-                ->leftJoin('sales_orders as so', 'so.id_so', '=', 'w.id_so')
-                ->leftJoin('business_relations as br', 'br.id_br', '=', 'so.id_pelanggan')
-                ->leftJoin('entitas as ent', 'ent.id_entitas', '=', 'br.id_entitas')
-                ->whereNull('f.deleted_at')->whereNull('w.deleted_at')
-                ->where(fn ($x) => $x->where('f.no_fwo', 'like', $like)->orWhere('f.judul_pekerjaan', 'like', $like))
-                ->orderByDesc('f.id_fwo')
-                ->limit(20)
-                ->get(['f.id_fwo', 'f.no_fwo', 'f.judul_pekerjaan as judul_fwo', 'w.id_wo', 'w.no_wo', 'w.status', 'so.no_so', 'br.nama as nama_pelanggan', 'ent.nama as entitas_pelanggan']);
-
-            if ($fwoRows->isNotEmpty()) {
-                $groups[] = [
-                    'text' => 'Fieldwork Order',
-                    'children' => $fwoRows->map(fn ($r) => [
-                        'id'     => 'fwo:' . $r->id_fwo,
-                        'id_wo'  => $r->id_wo,
-                        'id_fwo' => $r->id_fwo,
-                        'text'   => trim(($r->no_fwo ?? '-') . ' — ' . ($r->judul_fwo ?: '-')
-                            . ' · ' . ($r->no_wo ?? '-')
-                            . ($r->no_so ? ' · ' . $r->no_so : '')
-                            . ($r->nama_pelanggan ? ' · ' . brDisplayName($r->entitas_pelanggan, $r->nama_pelanggan) : '')
-                            . ($r->status === 'completed' ? ' (WO selesai)' : '')),
-                    ])->values(),
-                ];
-            }
-        }
-
-        return response()->json($groups);
+        return response()->json([[
+            'text' => 'Fieldwork Order',
+            'children' => $rows->map(fn ($r) => [
+                'id'     => 'fwo:' . $r->id_fwo,
+                'id_wo'  => $r->id_wo,
+                'id_fwo' => $r->id_fwo,
+                'text'   => trim(($r->no_fwo ?? '-') . ' — ' . ($r->judul_fwo ?: '-')
+                    . ' · ' . ($r->no_wo ?? '-')
+                    . ($r->no_so ? ' · ' . $r->no_so : '')
+                    . ($r->nama_pelanggan ? ' · ' . brDisplayName($r->entitas_pelanggan, $r->nama_pelanggan) : '')
+                    . ($r->status === 'completed' ? ' (WO selesai)' : '')),
+            ])->values(),
+        ]]);
     }
 
-    /** Riwayat semua pendaftaran (DataTable) — tampil di halaman saat belum ada WO yang dipilih. */
+    /**
+     * Riwayat semua pendaftaran (DataTable) — tampil di halaman Lab Sample Reg.
+     * Penerima = user (`id_user_penerima`); pendaftaran lama yang hanya punya personel (`id_personnel_penerima`) tetap tampil
+     * lewat COALESCE, sama seperti Form Registrasi (print()).
+     */
     public function riwayat(Request $request)
     {
         $query = DB::table('wo_lab_sample_regs as r')
@@ -129,10 +106,12 @@ class LabSampleRegController extends Controller
             ->leftJoin('business_relations as br', 'br.id_br', '=', 'so.id_pelanggan')
             ->leftJoin('entitas as ent', 'ent.id_entitas', '=', 'br.id_entitas')
             ->leftJoin('personnel as p', 'p.id_personnel', '=', 'r.id_personnel_penerima')
+            ->leftJoin('users as u', 'u.id', '=', 'r.id_user_penerima')
             ->whereNull('w.deleted_at')
             ->select([
                 'r.id_wo_lab_sample_reg', 'r.id_wo', 'r.no_registrasi', 'r.tanggal_registrasi',
-                'w.no_wo', 'so.no_so', 'p.nama as nama_penerima',
+                'w.no_wo', 'so.no_so',
+                DB::raw('COALESCE(u.name, p.nama) as nama_penerima'),
                 'br.nama as nama_pelanggan', 'ent.nama as entitas_pelanggan',
                 DB::raw('(SELECT COUNT(*) FROM lab_samples ls WHERE ls.id_wo_lab_sample_reg = r.id_wo_lab_sample_reg) as jumlah_sample'),
             ]);
@@ -144,7 +123,7 @@ class LabSampleRegController extends Controller
             ->filterColumn('no_wo', fn ($q, $k) => $q->where('w.no_wo', 'like', "%{$k}%"))
             ->filterColumn('no_so', fn ($q, $k) => $q->where('so.no_so', 'like', "%{$k}%"))
             ->filterColumn('nama_pelanggan', fn ($q, $k) => $q->where('br.nama', 'like', "%{$k}%"))
-            ->filterColumn('nama_penerima', fn ($q, $k) => $q->where('p.nama', 'like', "%{$k}%"))
+            ->filterColumn('nama_penerima', fn ($q, $k) => $q->whereRaw('COALESCE(u.name, p.nama) like ?', ["%{$k}%"]))
             ->orderColumn('tanggal_registrasi', 'r.tanggal_registrasi $1, r.id_wo_lab_sample_reg $1')
             ->order(fn ($q) => $q->orderByDesc('r.tanggal_registrasi')->orderByDesc('r.id_wo_lab_sample_reg'))
             ->make(true);
@@ -166,8 +145,9 @@ class LabSampleRegController extends Controller
     {
         $reg = DB::table('wo_lab_sample_regs as r')
             ->leftJoin('personnel as p', 'p.id_personnel', '=', 'r.id_personnel_penerima')
+            ->leftJoin('users as u', 'u.id', '=', 'r.id_user_penerima')
             ->where('r.id_wo_lab_sample_reg', $id)
-            ->first(['r.*', 'p.nama as nama_penerima']);
+            ->first(['r.*', DB::raw('COALESCE(u.name, p.nama) as nama_penerima')]);
         abort_if(!$reg, 404, 'Pendaftaran tidak ditemukan');
 
         $wo = self::woInfo((int) $reg->id_wo);

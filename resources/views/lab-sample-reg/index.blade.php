@@ -11,11 +11,11 @@
 <section class="section">
     <div class="row g-3">
 
-        {{-- PILIH WO --}}
+        {{-- PILIH FWO --}}
         <div class="col-12">
-            <x-section-card icon="fa-magnifying-glass" color="icon-blue" title="Cari Work Order / FWO" subtitle="Ketik no. WO, FWO, SO, judul, atau pelanggan">
+            <x-section-card icon="fa-magnifying-glass" color="icon-blue" title="Cari Fieldwork Order (FWO)" subtitle="Ketik no. FWO, atau no. WO / SO, judul, pelanggan untuk menemukan FWO-nya">
                 <select id="labRegWoSelect" class="form-select"></select>
-                <div class="form-text">Pilih <b>Work Order</b> untuk melihat semua sample WO itu, atau pilih <b>Fieldwork Order</b> untuk hanya sample FWO itu. Satu pendaftaran = satu Work Order; boleh berisi sample dari beberapa FWO di WO tersebut.</div>
+                <div class="form-text" id="labRegWoHint">Registrasi sample ke lab dilakukan <b>per Fieldwork Order</b> — pilih FWO untuk mendaftarkan sample yang sudah <b>Dikirim</b>.</div>
             </x-section-card>
         </div>
 
@@ -72,6 +72,10 @@
 @section('custom-script')
 <script>
     window.route = { csrf: "{{ csrf_token() }}" };
+    // Tanggal Registrasi selalu hari ini (tidak bisa backdate); diambil dari server supaya tidak bergantung jam perangkat user
+    window.labRegServerDate = "{{ now()->toDateString() }}";
+    // Default "Diterima Oleh" = user yang sedang login
+    window.labRegMe = @json(['id' => auth()->id(), 'name' => auth()->user()?->name]);
     window.labRegRoute = {
         woOptions: "{{ route('lab-sample-regs.wo-options') }}",
         riwayat:   "{{ route('lab-sample-regs.riwayat') }}",

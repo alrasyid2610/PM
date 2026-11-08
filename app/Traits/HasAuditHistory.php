@@ -150,6 +150,7 @@ trait HasAuditHistory
         'verified_by'                => ['users', 'id', 'name'],
         'id_satuan'                  => ['satuan', 'id_satuan', 'nama'],
         'id_personnel_penerima'      => ['personnel', 'id_personnel', 'nama'],
+        'id_user_penerima'           => ['users', 'id', 'name'],
         'id_so'                      => ['sales_orders', 'id_so', 'no_so'],
         'id_pelanggan_pekerjaan'     => ['business_relations', 'id_br', 'nama'],
         'id_site_pelanggan_pekerjaan' => ['business_relation_sites', 'id_site', 'nama_lokasi'],

@@ -151,7 +151,8 @@
                     <div class="row g-2">
                         <div class="col-12">
                             <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Registrasi <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm fp-date" id="woRegHeaderModal-tanggal" placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
+                            <input type="text" class="form-control form-control-sm" id="woRegHeaderModal-tanggal" readonly autocomplete="off" data-no-disable
+                                title="Tanggal registrasi otomatis hari ini (tidak bisa diubah)">
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold" style="font-size:12px;">Diterima Oleh</label>
@@ -187,7 +188,8 @@
                     <div class="row g-2 mb-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold" style="font-size:12px;">Tanggal Registrasi <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm fp-date" id="woRegFromFwoModal-tanggal" placeholder="Pilih tanggal" autocomplete="off" data-no-disable>
+                            <input type="text" class="form-control form-control-sm" id="woRegFromFwoModal-tanggal" readonly autocomplete="off" data-no-disable
+                                title="Tanggal registrasi otomatis hari ini (tidak bisa diubah)">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold" style="font-size:12px;">Diterima Oleh</label>

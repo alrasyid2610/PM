@@ -88,10 +88,11 @@ class WoSampleController extends Controller
             ->where('id_wo', $id_wo)
             ->where('tanggal_registrasi', $validated['tanggal_registrasi']);
 
-        if (!empty($validated['id_personnel_penerima'])) {
-            $query->where('id_personnel_penerima', $validated['id_personnel_penerima']);
+        // Penerima = user sistem (sejak 2026-11-08). Pendaftaran lama (penerima personel) tidak ikut tergabung.
+        if (!empty($validated['id_user_penerima'])) {
+            $query->where('id_user_penerima', $validated['id_user_penerima']);
         } else {
-            $query->whereNull('id_personnel_penerima');
+            $query->whereNull('id_user_penerima');
         }
 
         $existing = $query->orderByDesc('id_wo_lab_sample_reg')->first();
@@ -103,7 +104,7 @@ class WoSampleController extends Controller
         return DocumentNumber::insertGetId('wo_lab_sample_regs', 'no_registrasi', 'LSR', [
             'id_wo'                 => $id_wo,
             'tanggal_registrasi'      => $validated['tanggal_registrasi'],
-            'id_personnel_penerima' => $validated['id_personnel_penerima'] ?? null,
+            'id_user_penerima'      => $validated['id_user_penerima'] ?? null,
             'keterangan'            => $validated['keterangan'] ?? null,
             'created_at'            => now(),
             'updated_at'            => now(),
@@ -269,9 +270,11 @@ class WoSampleController extends Controller
 
         $regs = DB::table('wo_lab_sample_regs as r')
             ->leftJoin('personnel as p', 'p.id_personnel', '=', 'r.id_personnel_penerima')
+            ->leftJoin('users as u', 'u.id', '=', 'r.id_user_penerima')
             ->where('r.id_wo', $id_wo)
             ->orderByDesc('r.id_wo_lab_sample_reg')
-            ->get(['r.id_wo_lab_sample_reg', 'r.no_registrasi', 'r.tanggal_registrasi', 'r.keterangan', 'p.nama as nama_personnel']);
+            // nama penerima: user (baru) atau personel (data lama); alias nama_personnel dipertahankan untuk JS yang sudah ada
+            ->get(['r.id_wo_lab_sample_reg', 'r.no_registrasi', 'r.tanggal_registrasi', 'r.keterangan', DB::raw('COALESCE(u.name, p.nama) as nama_personnel')]);
 
         foreach ($regs as $reg) {
             $samples = DB::table('lab_samples')
@@ -347,38 +350,7 @@ class WoSampleController extends Controller
             $groups[] = ['label' => $boq->label, 'no_fwo' => $boq->no_fwo, 'nama_boq' => $boq->nama_boq, 'kelompok_matriks' => $boq->kelompok_matriks, 'samples' => $samples];
         }
 
-        // Cakupan 1 FWO: BOQ WO-langsung (jalur b) tidak ikut
-        if ($fwoScope) return response()->json(['data' => $groups]);
-
-        // Pool dari BOQ WO-langsung (jalur b — sample yang sudah dibuat tapi belum diregistrasi)
-        $directBoqs = DB::table('boq as b')
-            ->leftJoin('testing_points as tp', 'tp.id_testing_point', '=', 'b.id_testing_point')
-            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
-            ->leftJoin('testing_kelompok_matriks_samples as tkms', 'tms.id_testing_kelompok_matriks_sample', '=', 'tkms.id_testing_kelompok_matriks_sample')
-            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
-            ->where('b.id_wo', $id_wo)
-            ->whereNull('b.deleted_at')
-            ->select([
-                'b.id_boq',
-                DB::raw("CONCAT('BOQ WO — ', COALESCE(TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))), b.item_produk_alternate)) as label"),
-                DB::raw("COALESCE(TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))), b.item_produk_alternate) as nama_boq"),
-                'tkms.judul_indonesia as kelompok_matriks',
-            ])
-            ->get();
-
-        foreach ($directBoqs as $boq) {
-            $samples = DB::table('lab_samples')
-                ->where('id_wo', $id_wo)
-                ->where('id_boq', $boq->id_boq)
-                ->whereNull('id_wo_lab_sample_reg')
-                ->where('status', 'dikirim')
-                ->orderBy('no_urut')
-                ->get(['id_lab_sample', 'no_sample', 'jenis_sample', 'titik_lokasi', 'status', 'tanggal_pengambilan', 'kondisi_sample']);
-
-            if ($samples->isEmpty()) continue;
-            $groups[] = ['label' => $boq->label, 'no_fwo' => null, 'nama_boq' => $boq->nama_boq, 'kelompok_matriks' => $boq->kelompok_matriks, 'samples' => $samples];
-        }
-
+        // Sejak 2026-11-08 registrasi lab HANYA untuk sample asal FWO — pool BOQ WO-langsung (jalur b) tidak lagi ditawarkan.
         return response()->json(['data' => $groups]);
     }
 
@@ -396,18 +368,21 @@ class WoSampleController extends Controller
         $validated = $request->validate([
             'id_lab_sample'          => 'required|array|min:1',
             'id_lab_sample.*'        => 'integer',
-            'tanggal_registrasi'       => 'required|date',
-            'id_personnel_penerima'  => 'nullable|integer',
+            'tanggal_registrasi'       => 'nullable|date',
+            'id_user_penerima'       => 'nullable|integer|exists:users,id',
             'keterangan'             => 'nullable|string',
         ]);
+
+        // Tanggal Registrasi tidak bisa backdate: selalu hari ini versi server (input dari klien diabaikan)
+        $validated['tanggal_registrasi'] = now()->toDateString();
+        // Diterima Oleh: default user yang sedang login bila tidak dipilih
+        $validated['id_user_penerima'] = $validated['id_user_penerima'] ?? auth()->id();
 
         // Pastikan semua sample yang dipilih benar milik WO ini (FWO ATAU BOQ WO-langsung) & belum diregistrasi
         $fwoIds = DB::table('fieldworks')->where('id_wo', $id_wo)->whereNull('deleted_at')->pluck('id_fwo');
         $validCount = DB::table('lab_samples')
             ->whereIn('id_lab_sample', $validated['id_lab_sample'])
-            ->where(function ($q) use ($fwoIds, $id_wo) {
-                $q->whereIn('id_fwo', $fwoIds)->orWhere('id_wo', $id_wo);
-            })
+            ->whereIn('id_fwo', $fwoIds) // hanya sample asal FWO milik WO ini (sample WO-langsung tidak bisa diregistrasi lagi)
             ->whereNull('id_wo_lab_sample_reg')
             ->where(fn ($q) => $q->whereNull('status')->orWhere('status', '!=', 'tidak_terlaksana'))
             ->count();
