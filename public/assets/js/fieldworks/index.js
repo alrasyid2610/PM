@@ -2497,7 +2497,7 @@ function initSampleStatusSelect2(container) {
         $sel.select2({
             width: 'resolve',
             minimumResultsForSearch: Infinity,
-            dropdownParent: $sel.closest('td'),
+            dropdownParent: $(document.body), dropdownAutoWidth: true, // di body: tidak terpotong overflow tabel/kartu
         });
     });
 }
@@ -2520,7 +2520,7 @@ function initSampleTitikSelect2(container) {
                 width: 'resolve',
                 placeholder: 'Pilih titik…',
                 allowClear: true,
-                dropdownParent: $sel.closest('td'),
+                dropdownParent: $(document.body), dropdownAutoWidth: true, // di body: tidak terpotong overflow tabel/kartu
                 data: _spOptions(usedLocations, current),
                 templateResult: function (opt) {
                     if (!opt.id) return opt.text;
