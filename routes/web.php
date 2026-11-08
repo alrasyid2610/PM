@@ -591,6 +591,12 @@ Route::prefix('business-relations')
 
         Route::get('/sites/select2', [BusinessRelationSiteController::class, 'select2'])
             ->name('sites.select2');
+        // Tambah Site ke BR yang sudah ada (tombol "+ Site" di tab Site detail BR)
+        Route::get('/{id}/sites/create', [BusinessRelationController::class, 'createSitePage'])
+            ->name('sites.create-page')->whereNumber('id');
+        Route::post('/{id}/sites', [BusinessRelationController::class, 'storeSite'])
+            ->name('sites.store')->whereNumber('id');
+
         Route::get('/{id}/sites', [BusinessRelationSiteController::class, 'select2'])
             ->name('sites.select2') // ok - select2 ajax
             ->whereNumber('id');  // ok - select2 ajax

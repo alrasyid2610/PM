@@ -1743,6 +1743,29 @@ function renderSiteWorkspace(site) {
     </div>`;
 }
 
+// Penanda "Site dibuka" di header BR: supaya saat berada di sub-tab Sampling ENV/WE/Man Power user tetap tahu
+// sedang di Site mana (BR dengan puluhan site gampang tertukar). Tampil hanya selama workspace Site terbuka.
+function setActiveSiteBadge(site) {
+    const wilayah = [site.kota_kabupaten, site.provinsi].filter(Boolean).join(', ');
+    const pusat = Number(site.is_kantor_pusat) === 1
+        ? `<span class="badge rounded-pill" style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:600;">Kantor Pusat</span>`
+        : '';
+    $('#br-active-site').html(`
+        <span class="d-inline-flex align-items-center gap-2" title="${escHtml(site.nama_lokasi ?? '')}"
+            style="max-width:100%;padding:4px 12px;border-radius:8px;background:#f0f9ff;border:1px solid #bae6fd;font-size:12px;color:#0f172a;">
+            <i class="fa-solid fa-map-location-dot" style="color:#0369a1;"></i>
+            <span class="text-muted" style="white-space:nowrap;">Site dibuka:</span>
+            <b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(site.nama_lokasi ?? '—')}</b>
+            ${pusat}
+            ${wilayah ? `<span class="text-muted" style="white-space:nowrap;">· ${escHtml(wilayah)}</span>` : ''}
+        </span>
+    `).removeClass('d-none').addClass('d-flex');
+}
+
+function clearActiveSiteBadge() {
+    $('#br-active-site').addClass('d-none').removeClass('d-flex').empty();
+}
+
 function openSiteWorkspace(idSite) {
     $('#site-workspace-content').html(`<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data Site...</div>`);
     $('#site-picker-wrap').addClass('d-none');
@@ -1751,6 +1774,7 @@ function openSiteWorkspace(idSite) {
     $.get(`/business-relations/sites/${idSite}/detail`)
         .done(function (site) {
             $('#site-workspace-content').html(renderSiteWorkspace(site));
+            setActiveSiteBadge(site);
 
             // Field Informasi Site dikelola toggle Edit sendiri, bukan ikut form BR
             $('#site-info-wrap').find('input, select, textarea')
@@ -1790,10 +1814,15 @@ function backToSitePickerList() {
     $('#site-picker-wrap').removeClass('d-none');
     $('#site-workspace-content').empty();
     hideAllBrTabActions();
+    clearActiveSiteBadge();
 }
 
 function initSiteTabEvents() {
     const $panel = $('#detailContent');
+
+    // Pindah tab level BR (Informasi/Contact/Product/Site) selalu kembali ke konteks BR → penanda Site dibuka dibersihkan
+    // (tab Site sendiri me-reset ke daftar Site; kalau ?site= ada, openSiteWorkspace() mengisinya lagi setelah data tiba).
+    $panel.on('shown.bs.tab', '#brDetailTabs [data-bs-toggle="tab"]', clearActiveSiteBadge);
 
     $panel.on('shown.bs.tab', '[data-bs-target="#tabBrsSite"]', function () {
         const idBr = $(this).data('id-br');
@@ -1808,6 +1837,11 @@ function initSiteTabEvents() {
             window._siteDirectoryAutoOpened = true;
             openSiteWorkspace(targetSiteId);
         }
+    });
+
+    // + Site → halaman Tambah Site untuk BR ini (BR tidak perlu dipilih lagi)
+    $panel.on('click', '.btn-site-add', function () {
+        window.location.href = '/business-relations/' + $(this).data('id-br') + '/sites/create';
     });
 
     $panel.on('click', '.btn-site-pick', function () {
@@ -1962,6 +1996,8 @@ function renderForm(res) {
                 </span>
                 <span>Dibuat ${escHtml(res.br_created_at ?? '—')} &nbsp;·&nbsp; Diupdate ${escHtml(res.br_updated_at ?? '—')}</span>
             </div>
+            <!-- Site yang sedang dibuka di workspace Site — tetap terlihat di semua sub-tab (Informasi Site, Sampling ENV/WE, Man Power) -->
+            <div id="br-active-site" class="d-none align-items-center" style="margin-top:8px;"></div>
         `,
     })}
 
@@ -2001,6 +2037,14 @@ function renderForm(res) {
                 </li>
             </ul>
             <div class="pm-tab-actions">
+                ${can('business-relations', 'can_create') ? `
+                <!-- + Site: selalu tampil di semua tab (di luar action bar per-tab yang di-hide saat pindah tab) -->
+                <button type="button" class="pm-btn-pill btn-site-add" id="btn-site-add"
+                    data-id-br="${res.id_br}" data-no-disable
+                    style="border-color:#0369a1;color:#0369a1;">
+                    <i class="fa-solid fa-plus" style="font-size:10px;"></i>
+                    <i class="fa-solid fa-map-location-dot" style="font-size:11px;"></i> Site
+                </button>` : ''}
                 <div id="brTabActionsInfo" class="d-flex align-items-center gap-2">
                     <!-- Edit di action bar atas -->
                 </div>

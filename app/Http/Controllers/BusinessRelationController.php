@@ -303,6 +303,95 @@ class BusinessRelationController extends Controller
     }
 
 
+    /** Business Relation + nama berprefix entitas untuk judul halaman "Tambah Site". Null kalau BR tidak ada. */
+    private function brForSitePage($idBr)
+    {
+        $br = DB::table('business_relations as br')
+            ->leftJoin('entitas as ent', 'ent.id_entitas', '=', 'br.id_entitas')
+            ->where('br.id_br', $idBr)
+            ->select(['br.id_br', 'br.nama', 'ent.nama as entitas'])
+            ->first();
+
+        if ($br) {
+            $br->nama_display = brDisplayName($br->entitas, $br->nama);
+        }
+
+        return $br;
+    }
+
+    /** Halaman "Tambah Site" untuk BR yang sedang dibuka (tombol "+ Site" di tab Site detail BR) — BR tidak perlu dipilih lagi. */
+    public function createSitePage($id)
+    {
+        $br = $this->brForSitePage($id);
+        abort_if(!$br, 404, 'Business Relation tidak ditemukan');
+
+        return view('business-relation.create-site', ['br' => $br]);
+    }
+
+    /** Simpan Site baru ke BR yang sudah ada. Data BR tidak disentuh sama sekali. */
+    public function storeSite(Request $request, $id)
+    {
+        $br = DB::table('business_relations')->where('id_br', $id)->first();
+        if (!$br) {
+            return response()->json(['success' => false, 'message' => 'Business Relation tidak ditemukan'], 404);
+        }
+
+        $request->validate([
+            'nama_lokasi'       => 'required|string|max:255',
+            'npwp_cabang'       => 'nullable|string|max:25',
+            'kode_pos'          => 'nullable|string|max:10',
+            'nama_jalan'        => 'nullable|string',
+            'alamat_lengkap'    => 'nullable|string',
+            'keterangan_alamat' => 'nullable|string|max:255',
+            'is_aktif'          => 'nullable|in:0,1',
+        ], [
+            'nama_lokasi.required' => 'Nama Site wajib diisi.',
+        ]);
+
+        // Nama Site harus unik di dalam 1 BR (di antara Site yang belum dihapus)
+        $nama = trim($request->nama_lokasi);
+        $dup = DB::table('business_relation_sites')
+            ->where('id_br', $id)->whereNull('deleted_at')
+            ->whereRaw('LOWER(nama_lokasi) = ?', [mb_strtolower($nama)])
+            ->exists();
+        if ($dup) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Site dengan nama "' . $nama . '" sudah ada di Business Relation ini.',
+            ], 422);
+        }
+
+        $idSite = DB::table('business_relation_sites')->insertGetId([
+            'id_br'             => $id,
+            'nama_lokasi'       => $nama,
+            'is_kantor_pusat'   => $request->boolean('is_kantor_pusat') ? 1 : 0,
+            'alamat_lengkap'    => $request->alamat_lengkap,
+            'provinsi'          => $request->provinsi,
+            'kota_kabupaten'    => $request->kota_kabupaten,
+            'kecamatan'         => $request->kecamatan,
+            'kelurahan'         => $request->kelurahan,
+            'kode_pos'          => $request->kode_pos,
+            'kawasan_bisnis'    => $request->kawasan_bisnis ?: null,
+            'gedung'            => $request->gedung ?: null,
+            'keterangan_alamat' => $request->keterangan_alamat,
+            'nama_jalan'        => $request->nama_jalan,
+            'npwp_cabang'       => $request->npwp_cabang,
+            'is_aktif'          => $request->input('is_aktif', 1),
+            'created_at'        => now(),
+            'updated_at'        => now(),
+        ]);
+
+        $after = DB::table('business_relation_sites')->where('id_site', $idSite)->get()->toJson();
+        saveAudit('business_relation_sites', $idSite, 'Create', '', $after);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Site berhasil ditambahkan',
+            'id_br'   => (int) $id,
+            'id_site' => $idSite,
+        ]);
+    }
+
     public function update(Request $request)
     {
         $request->validate([
