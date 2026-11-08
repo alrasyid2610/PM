@@ -418,7 +418,7 @@ function openSqFwoBudgetModal(data, isClone) {
     $('#sqFwoBudgetItemsBody').empty();
     BudgetSections.loadBasis(SQ_FWO_BUDGET_SECTIONS, `/sq-fwo-budgets/${currentSqFwoId}/basis`);
     const cloneItems = isClone ? (data.items || []).map(it => ({ ...it, id_sq_budget_item: '' })) : null;
-    BudgetSections.fill(SQ_FWO_BUDGET_SECTIONS, isClone ? cloneItems : (isEdit ? (data.items || []) : []), { template: !isClone && !isEdit }).done(function () {
+    BudgetSections.fill(SQ_FWO_BUDGET_SECTIONS, isClone ? cloneItems : (isEdit ? (data.items || []) : []), { template: true }).done(function () {
         BudgetSections.initSelects(SQ_FWO_BUDGET_SECTIONS);
         initNumericMask(document.getElementById('sqFwoBudgetPlanModal'));
         recalcSqFwoBudgetTotal();

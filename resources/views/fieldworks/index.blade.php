@@ -150,5 +150,5 @@
 </script>
 
 <script src="{{ asset('assets/js/fieldworks/form.js') }}"></script>
-<script src="{{ asset('assets/js/fieldworks/index.js') }}"></script>
+<script src="{{ asset('assets/js/fieldworks/index.js') }}?v={{ @filemtime(public_path('assets/js/fieldworks/index.js')) }}"></script>
 @endsection

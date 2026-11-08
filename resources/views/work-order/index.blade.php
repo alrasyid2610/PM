@@ -144,6 +144,6 @@
         'Site Pelanggan': function (d, t) { return window.dtClip(d, t, 220); },
     };
 </script>
-<script src="{{ asset('assets/js/work-order/index.js') }}"></script>
+<script src="{{ asset('assets/js/work-order/index.js') }}?v={{ @filemtime(public_path('assets/js/work-order/index.js')) }}"></script>
 <script src="{{ asset('assets/js/work-order/form.js') }}"></script>
 @endsection

@@ -1,7 +1,7 @@
 // Item Anggaran per kategori di modal Budget Plan (WO, FWO, SQ WO, SQ FWO).
 // Kategori = parent di Budget Account. Tiap kategori jadi satu section
-// (baris header + baris item) yang bisa dilipat. Plan BARU langsung berisi semua kategori aktif (template, urut
-// `budget_accounts.urutan`); user tinggal "+ Item" di tiap section. Kategori yang dihapus bisa ditambahkan lagi lewat
+// (baris header + baris item) yang bisa dilipat. Tambah/Edit/Clone plan langsung berisi semua kategori aktif (template, urut
+// `budget_accounts.urutan`) — item yang ada menempati kategorinya; user tinggal "+ Item" di tiap section. Kategori yang dihapus bisa ditambahkan lagi lewat
 // "+ Kategori" (masuk sesuai urutan master), kategori yang sudah ada tidak bisa dipilih lagi.
 // Baris item tetap `<tr>` buatan masing-masing modul (class baris & kolomnya tidak berubah), hanya diberi
 // atribut data-cat, jadi logika simpan/total di tiap modul tidak perlu berubah.
@@ -119,8 +119,8 @@ window.BudgetSections = (function () {
     }
 
     // Isi ulang section. items = item budget yang sudah ada (edit) atau [] (tambah).
-    // opts.template = true (Tambah Budget Plan baru): semua kategori aktif langsung tampil sebagai section kosong
-    // (urut `urutan` master), user tinggal "+ Item". Edit/Clone tidak memakai template (hanya kategori yang berisi item).
+    // opts.template = true (Tambah/Edit/Clone Budget Plan): semua kategori aktif langsung tampil sebagai section
+    // (urut `urutan` master); item yang sudah ada menempati kategorinya, sisanya section kosong — user tinggal "+ Item".
     function fill(cfg, items, opts) {
         return load().then(function (loaded) {
             var cats = JSON.parse(JSON.stringify(loaded));
@@ -140,24 +140,32 @@ window.BudgetSections = (function () {
             if (needOther) cats.push({ id_kategori: OTHER, nama: 'Lainnya (tanpa kategori)', children: [] });
 
             var $body = $(cfg.body).empty().data('bsCfg', cfg).data('bsCats', cats);
-            // urutan section = urutan kemunculan item (urutan user saat menyusun plan)
-            var seen = [];
-            (items || []).forEach(function (it) {
-                var k = catOf[it.id_account] === undefined ? OTHER : catOf[it.id_account];
-                if (seen.indexOf(k) < 0) seen.push(k);
-            });
-            seen.forEach(function (k) {
-                var cat = cats.filter(function (c) { return String(c.id_kategori) === String(k); })[0];
-                var its = grouped[k];
-                if (!cat || !its) return;
-                $body.append(headerHtml(cat, 0));
-                its.forEach(function (it) {
-                    $body.append(cfg.buildRow(it)).children().last().attr('data-cat', cat.id_kategori);
+            if (opts && opts.template) {
+                // Template: semua kategori aktif (urut `urutan` master) — yang sudah punya item langsung terisi,
+                // sisanya section kosong. Kategori "Lainnya (tanpa kategori)" hanya muncul bila ada item yatim.
+                cats.forEach(function (c) {
+                    if (c.id_kategori === OTHER && !grouped[OTHER]) return;
+                    $body.append(headerHtml(c, 0));
+                    (grouped[c.id_kategori] || []).forEach(function (it) {
+                        $body.append(cfg.buildRow(it)).children().last().attr('data-cat', c.id_kategori);
+                    });
                 });
-            });
-
-            if (opts && opts.template && !(items || []).length) {
-                cats.forEach(function (c) { if (c.id_kategori !== OTHER) $body.append(headerHtml(c, 0)); });
+            } else {
+                // urutan section = urutan kemunculan item (urutan user saat menyusun plan)
+                var seen = [];
+                (items || []).forEach(function (it) {
+                    var k = catOf[it.id_account] === undefined ? OTHER : catOf[it.id_account];
+                    if (seen.indexOf(k) < 0) seen.push(k);
+                });
+                seen.forEach(function (k) {
+                    var cat = cats.filter(function (c) { return String(c.id_kategori) === String(k); })[0];
+                    var its = grouped[k];
+                    if (!cat || !its) return;
+                    $body.append(headerHtml(cat, 0));
+                    its.forEach(function (it) {
+                        $body.append(cfg.buildRow(it)).children().last().attr('data-cat', cat.id_kategori);
+                    });
+                });
             }
 
             ensureToolbar(cfg);

@@ -159,7 +159,7 @@ class FieldworkController extends Controller
         }
 
         $data->nama_pelanggan_display = brDisplayName($data->entitas_pelanggan_pekerjaan, $data->nama_pelanggan_pekerjaan);
-        // Status yang ditampilkan: planned + tanggal mulai tiba = on_progress (kolom status tidak diubah)
+        // Status yang ditampilkan: planned + tanggal mulai tiba = on_progress (kolom `status` tidak diubah)
         $data->status_efektif = fwoStatusEfektif($data->status, $data->tanggal_mulai);
 
         // Ringkasan titik sample yang tidak terlaksana (per alasan) — dipakai badge
@@ -478,8 +478,8 @@ class FieldworkController extends Controller
     }
 
     /**
-     * Mulai FWO secara manual (Planned â†’ On Progress) sebelum tanggal mulai tiba. Hanya mengisi kolom
-     * `status` yang sudah ada (tanpa perubahan struktur DB). Route PUT â†’ cukup izin can_update menu fieldworks.
+     * Mulai FWO secara manual (Planned → On Progress) sebelum tanggal mulai tiba. Hanya mengisi kolom
+     * `status` yang sudah ada (tanpa perubahan struktur DB). Route PUT → cukup izin can_update menu fieldworks.
      */
     public function start($id)
     {
