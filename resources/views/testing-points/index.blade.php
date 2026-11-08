@@ -71,7 +71,7 @@
                 <div class="mb-2">
                     <input type="text" id="paketItemSearch" class="form-control form-control-sm" placeholder="Cari item...">
                 </div>
-                <div id="paketItemsList" style="max-height:340px;overflow-y:auto;">
+                <div id="paketItemsList" style="max-height:calc(100vh - 380px);min-height:220px;overflow-y:auto;">
                     <div class="text-center text-muted py-3"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat item...</div>
                 </div>
                 <div id="paketSearchEmpty" class="text-center text-muted py-3 d-none" style="font-size:13px;">

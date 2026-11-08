@@ -134,7 +134,7 @@
                         <input type="text" id="modalItemSearch" class="form-control form-control-sm"
                             placeholder="Cari item...">
                     </div>
-                    <div id="modalItemsList" style="max-height:320px;overflow-y:auto;"></div>
+                    <div id="modalItemsList" style="max-height:calc(100vh - 400px);min-height:220px;overflow-y:auto;"></div>
                     <div id="modalSearchEmpty" class="text-center text-muted py-3 d-none" style="font-size:13px;">
                         <i class="fa-solid fa-magnifying-glass me-1 opacity-50"></i> Tidak ada item yang cocok
                     </div>
@@ -155,6 +155,8 @@
 
 @section('custom-script')
 <script src="{{ asset('assets/js/core/paketPicker.js') }}?v={{ @filemtime(public_path('assets/js/core/paketPicker.js')) }}"></script>
+<script src="{{ asset('assets/js/core/modalListFit.js') }}?v={{ @filemtime(public_path('assets/js/core/modalListFit.js')) }}"></script>
+<script>$(function () { ModalListFit.watch('#modalAddSection', '#modalItemsList'); });</script>
 <style>
     .boq-section .card-header {
         background: #fff;

@@ -131,7 +131,7 @@
                     <div class="mb-2">
                         <input type="text" id="sqBoqSectionModal-search" class="form-control form-control-sm" placeholder="Cari item...">
                     </div>
-                    <div id="sqBoqSectionModal-items" style="max-height:320px;overflow-y:auto;"></div>
+                    <div id="sqBoqSectionModal-items" style="max-height:calc(100vh - 400px);min-height:220px;overflow-y:auto;"></div>
                     <div id="sqBoqSectionModal-search-empty" class="text-center text-muted py-3 d-none" style="font-size:13px;">
                         <i class="fa-solid fa-magnifying-glass me-1 opacity-50"></i> Tidak ada item yang cocok
                     </div>
@@ -331,6 +331,8 @@
     }
 </script>
 <script src="{{ asset('assets/js/core/paketPicker.js') }}?v={{ @filemtime(public_path('assets/js/core/paketPicker.js')) }}"></script>
+<script src="{{ asset('assets/js/core/modalListFit.js') }}?v={{ @filemtime(public_path('assets/js/core/modalListFit.js')) }}"></script>
+<script>$(function () { ModalListFit.watch('#sqBoqSectionModal', '#sqBoqSectionModal-items'); });</script>
 <script src="{{ asset('assets/js/sq-work-order/index.js') }}?v={{ @filemtime(public_path('assets/js/sq-work-order/index.js')) }}"></script>
 <script src="{{ asset('assets/js/sq-work-order/form.js') }}?v={{ @filemtime(public_path('assets/js/sq-work-order/form.js')) }}"></script>
 @endsection
