@@ -84,6 +84,12 @@
                         <select class="form-select form-select-sm" id="accountModal-satuan-default" data-no-disable></select>
                         <small class="text-muted">Terisi otomatis di kolom Unit saat account ini dipilih di Budget Plan — tetap bisa diubah manual.</small>
                     </div>
+                    <div class="col-md-6" id="accountModal-urutan-wrap">
+                        <label class="form-label">Urutan</label>
+                        <input type="number" min="0" step="1" class="form-control form-control-sm" id="accountModal-urutan"
+                            placeholder="Kosong = di akhir" data-no-disable>
+                        <small class="text-muted">Urutan kategori di modal Tambah Budget Plan (angka kecil tampil lebih dulu).</small>
+                    </div>
                     <div class="col-md-12">
                         <label class="form-label">Keterangan</label>
                         <textarea class="form-control form-control-sm" id="accountModal-keterangan"

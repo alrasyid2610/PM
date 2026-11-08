@@ -1,7 +1,8 @@
 // Item Anggaran per kategori di modal Budget Plan (WO, FWO, SQ WO, SQ FWO).
 // Kategori = parent di Budget Account. Tiap kategori jadi satu section
-// (baris header + baris item) yang bisa dilipat. User menambah kategori sendiri lewat "+ Kategori" (kategori yang
-// sudah ditambahkan tidak bisa dipilih lagi), lalu item lewat tombol "+ Item" di section-nya.
+// (baris header + baris item) yang bisa dilipat. Plan BARU langsung berisi semua kategori aktif (template, urut
+// `budget_accounts.urutan`); user tinggal "+ Item" di tiap section. Kategori yang dihapus bisa ditambahkan lagi lewat
+// "+ Kategori" (masuk sesuai urutan master), kategori yang sudah ada tidak bisa dipilih lagi.
 // Baris item tetap `<tr>` buatan masing-masing modul (class baris & kolomnya tidak berubah), hanya diberi
 // atribut data-cat, jadi logika simpan/total di tiap modul tidak perlu berubah.
 //
@@ -118,7 +119,9 @@ window.BudgetSections = (function () {
     }
 
     // Isi ulang section. items = item budget yang sudah ada (edit) atau [] (tambah).
-    function fill(cfg, items) {
+    // opts.template = true (Tambah Budget Plan baru): semua kategori aktif langsung tampil sebagai section kosong
+    // (urut `urutan` master), user tinggal "+ Item". Edit/Clone tidak memakai template (hanya kategori yang berisi item).
+    function fill(cfg, items, opts) {
         return load().then(function (loaded) {
             var cats = JSON.parse(JSON.stringify(loaded));
             var catOf = {};   // id_account -> key kategori
@@ -152,6 +155,10 @@ window.BudgetSections = (function () {
                     $body.append(cfg.buildRow(it)).children().last().attr('data-cat', cat.id_kategori);
                 });
             });
+
+            if (opts && opts.template && !(items || []).length) {
+                cats.forEach(function (c) { if (c.id_kategori !== OTHER) $body.append(headerHtml(c, 0)); });
+            }
 
             ensureToolbar(cfg);
             $(cfg.modal).data('bsCfgModal', cfg);
@@ -315,8 +322,14 @@ window.BudgetSections = (function () {
         cats.forEach(function (c, i) { if (String(c.id_kategori) === String(key)) idx = i; });
         if (idx < 0 || addedKeys(cfg).indexOf(String(key)) >= 0) return;
 
-        // section baru selalu di paling bawah (urutan = urutan user menambahkan)
-        $(cfg.body).append(headerHtml(cats[idx], 0));
+        // section baru masuk sesuai urutan master: sebelum section pertama yang urutannya lebih besar, kalau tidak ada → paling bawah
+        var $next = $(cfg.body).children('.bi-cat-header').filter(function () {
+            var k = String($(this).attr('data-cat')), pos = -1;
+            cats.forEach(function (c, i) { if (String(c.id_kategori) === k) pos = i; });
+            return pos > idx;
+        }).first();
+        if ($next.length) $next.before(headerHtml(cats[idx], 0));
+        else $(cfg.body).append(headerHtml(cats[idx], 0));
         refresh(cfg);
         addRow(cfg, key);
     }

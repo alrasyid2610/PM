@@ -672,7 +672,7 @@ function openBudgetModal(idFwo, budgetData, isClone) {
     $('#budgetItemsBody').empty();
     BudgetSections.loadBasis(FWO_BUDGET_SECTIONS, `/fwo-budgets/${idFwo}/basis`);
     const cloneItems = isClone ? (budgetData.items || []).map(it => ({ ...it, id_budget_item: '' })) : null;
-    BudgetSections.fill(FWO_BUDGET_SECTIONS, isClone ? cloneItems : (isEdit ? (budgetData.items || []) : [])).done(function () {
+    BudgetSections.fill(FWO_BUDGET_SECTIONS, isClone ? cloneItems : (isEdit ? (budgetData.items || []) : []), { template: !isClone && !isEdit }).done(function () {
         BudgetSections.initSelects(FWO_BUDGET_SECTIONS);
         initNumericMask(document.getElementById('budgetPlanModal'));
         recalcBudgetTotal();

@@ -1343,7 +1343,7 @@ function openSqWoBudgetModal(data, isClone) {
     $('#sqWoBudgetItemsBody').empty();
     BudgetSections.loadBasis(SQ_WO_BUDGET_SECTIONS, `/sq-wo-budgets/${currentSqWoId}/basis`);
     const cloneItems = isClone ? (data.items || []).map(it => ({ ...it, id_sq_budget_item: '' })) : null;
-    BudgetSections.fill(SQ_WO_BUDGET_SECTIONS, isClone ? cloneItems : (isEdit ? (data.items || []) : [])).done(function () {
+    BudgetSections.fill(SQ_WO_BUDGET_SECTIONS, isClone ? cloneItems : (isEdit ? (data.items || []) : []), { template: !isClone && !isEdit }).done(function () {
         BudgetSections.initSelects(SQ_WO_BUDGET_SECTIONS);
         initNumericMask(document.getElementById('sqWoBudgetPlanModal'));
         recalcSqWoBudgetTotal();

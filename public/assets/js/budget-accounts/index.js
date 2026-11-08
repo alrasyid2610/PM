@@ -184,6 +184,9 @@ function openAccountModal({ id, idParent, parentNama, isEdit, data }) {
     $('#accountModal-keterangan').val(isEdit && data ? (data.keterangan || '') : '');
     $('#accountModal-is_aktif').val(isEdit && data ? String(data.is_aktif) : '1');
     $('#accountModal-aktif-wrap').toggle(!!isEdit);
+    // Urutan hanya untuk kategori (bukan sub kategori)
+    $('#accountModal-urutan-wrap').toggle(!isItem);
+    $('#accountModal-urutan').val(!isItem && isEdit && data && data.urutan ? data.urutan : '');
 
     const nilaiDefaultEl = document.getElementById('accountModal-nilai-default');
     const nilaiDefault   = isEdit && data ? (data.nilai_default || '') : '';
@@ -304,6 +307,7 @@ function initEvents() {
             id_satuan_default: $('#accountModal-satuan-default').val() || '',
             keterangan: $('#accountModal-keterangan').val(),
             is_aktif:   $('#accountModal-is_aktif').val() || '1',
+            urutan:     idParent ? '' : ($('#accountModal-urutan').val() || ''),
         };
         if (isEdit) payload._method = 'PUT';
 

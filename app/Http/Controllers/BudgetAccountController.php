@@ -7,17 +7,30 @@ use Illuminate\Support\Facades\DB;
 
 class BudgetAccountController extends Controller
 {
+    /** Kolom `urutan` ada? (migration 2026_11_07_000001) — dijaga supaya halaman tidak error sebelum migrate dijalankan. */
+    private static function adaUrutan(): bool
+    {
+        static $ada = null;
+        return $ada ??= \Illuminate\Support\Facades\Schema::hasColumn('budget_accounts', 'urutan');
+    }
+
+    /** Urutkan kategori (parent): urutan master dulu, lalu nama. */
+    private static function urutKategori($query)
+    {
+        if (self::adaUrutan()) $query->orderBy('urutan');
+        return $query->orderBy('nama');
+    }
+
     /**
-     * Struktur untuk modal Budget Plan per kategori: semua kategori aktif (berurut nama)
+     * Struktur untuk modal Budget Plan per kategori: semua kategori aktif (berurut `urutan`, lalu nama)
      * beserta sub kategorinya. Sub kategori nonaktif ikut dikirim (is_aktif = 0) supaya item lama
      * tetap bisa dipetakan ke kategorinya; yang nonaktif tidak ditawarkan untuk dipilih.
      * Lewat route select2 (segment terbuka) agar tidak butuh izin menu Budget Account.
      */
     private function sections(): \Illuminate\Http\JsonResponse
     {
-        $parents = DB::table('budget_accounts')
-            ->whereNull('deleted_at')->whereNull('id_parent')->where('is_aktif', 1)
-            ->orderBy('nama')
+        $parents = self::urutKategori(DB::table('budget_accounts')
+            ->whereNull('deleted_at')->whereNull('id_parent')->where('is_aktif', 1))
             ->get(['id_account', 'nama']);
 
         $children = DB::table('budget_accounts')
@@ -105,10 +118,9 @@ class BudgetAccountController extends Controller
 
     public function index()
     {
-        $parents = DB::table('budget_accounts')
+        $parents = self::urutKategori(DB::table('budget_accounts')
             ->whereNull('deleted_at')
-            ->whereNull('id_parent')
-            ->orderBy('nama')
+            ->whereNull('id_parent'))
             ->select('budget_accounts.*', DB::raw('(SELECT s.nama FROM satuan s WHERE s.id_satuan = budget_accounts.id_satuan_default) as satuan_default'))
             ->get();
 
@@ -146,6 +158,7 @@ class BudgetAccountController extends Controller
             'id_parent'     => 'nullable|integer',
             'nilai_default' => 'nullable|integer|min:0',
             'id_satuan_default' => 'nullable|integer',
+            'urutan'        => 'nullable|integer|min:0',
         ]);
 
         $exists = DB::table('budget_accounts')
@@ -170,7 +183,7 @@ class BudgetAccountController extends Controller
             }
         }
 
-        $id = DB::table('budget_accounts')->insertGetId([
+        $data = [
             'id_parent'     => $request->id_parent ?: null,
             'nama'          => $request->nama,
             'kode'          => strtoupper($request->kode),
@@ -180,7 +193,14 @@ class BudgetAccountController extends Controller
             'is_aktif'      => 1,
             'created_at'    => now(),
             'updated_at'    => now(),
-        ]);
+        ];
+        // Urutan hanya untuk kategori (parent); kosong → di akhir daftar
+        if (self::adaUrutan() && !$request->id_parent) {
+            $data['urutan'] = $request->filled('urutan')
+                ? (int) $request->urutan
+                : ((int) DB::table('budget_accounts')->whereNull('deleted_at')->whereNull('id_parent')->max('urutan')) + 1;
+        }
+        $id = DB::table('budget_accounts')->insertGetId($data);
 
         return response()->json(['success' => true, 'id' => $id]);
     }
@@ -193,6 +213,7 @@ class BudgetAccountController extends Controller
             'id_parent'     => 'nullable|integer',
             'nilai_default' => 'nullable|integer|min:0',
             'id_satuan_default' => 'nullable|integer',
+            'urutan'        => 'nullable|integer|min:0',
         ]);
 
         // Validasi: parent tidak boleh punya id_parent sendiri
@@ -218,7 +239,7 @@ class BudgetAccountController extends Controller
             }
         }
 
-        DB::table('budget_accounts')->where('id_account', $id)->update([
+        $data = [
             'id_parent'     => $request->id_parent ?: null,
             'nama'          => $request->nama,
             'kode'          => strtoupper($request->kode),
@@ -227,7 +248,12 @@ class BudgetAccountController extends Controller
             'keterangan'    => $request->keterangan,
             'is_aktif'      => $request->boolean('is_aktif', true) ? 1 : 0,
             'updated_at'    => now(),
-        ]);
+        ];
+        // Urutan hanya untuk kategori (parent); diubah hanya bila dikirim
+        if (self::adaUrutan() && !$request->id_parent && $request->filled('urutan')) {
+            $data['urutan'] = (int) $request->urutan;
+        }
+        DB::table('budget_accounts')->where('id_account', $id)->update($data);
 
         return response()->json(['success' => true]);
     }
