@@ -118,6 +118,14 @@
 </div>
 @endsection
 
+@section('style')
+<style>
+    /* Jumlah event per tab */
+    .notif-tab-count { margin-left: 6px; font-size: 10px; font-weight: 600; line-height: 1; padding: 2px 7px; border-radius: 10px; background: #e2e8f0; color: #475569; }
+    .notif-tab-btn.active .notif-tab-count { background: #dbeafe; color: #1d4ed8; }
+</style>
+@endsection
+
 @section('custom-script')
-<script src="{{ asset('assets/js/notification-settings/index.js') }}"></script>
+<script src="{{ asset('assets/js/notification-settings/index.js') }}?v={{ @filemtime(public_path('assets/js/notification-settings/index.js')) }}"></script>
 @endsection

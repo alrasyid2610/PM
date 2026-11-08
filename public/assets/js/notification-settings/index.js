@@ -18,14 +18,66 @@ function recipientLabel(rule) {
     return 'User tertentu';
 }
 
+// Tab per modul (dari `module` di master event) — supaya event tidak campur jadi satu daftar panjang.
+const NOTIF_TABS = [
+    { id: 'sq',      module: 'Sales Quotation', title: 'Sales Quotation', label: 'SQ',      icon: 'fa-file-signature',     color: '#7c3aed' },
+    { id: 'so',      module: 'Sales Order',     title: 'Sales Order',     label: 'SO',      icon: 'fa-file-invoice',       color: '#2563eb' },
+    { id: 'wo',      module: 'Work Order',      title: 'Work Order',      label: 'WO',      icon: 'fa-briefcase',          color: '#0891b2' },
+    { id: 'fwo',     module: 'Fieldwork Order', title: 'Fieldwork Order', label: 'FWO',     icon: 'fa-hard-hat',           color: '#d97706' },
+    { id: 'budget',  module: 'Budget',          title: 'Budget',          label: 'Budget',  icon: 'fa-wallet',             color: '#0f766e' },
+    { id: 'output',  module: 'Output',          title: 'Output',          label: 'Output',  icon: 'fa-file-circle-check',  color: '#16a34a' },
+    { id: 'termin',  module: 'Termin',          title: 'Termin',          label: 'Termin',  icon: 'fa-money-bill-transfer', color: '#be185d' },
+];
+let notifActiveTab = new URLSearchParams(window.location.search).get('tab');
+
+// Tab bawaan + tab "Lainnya" hanya bila ada event dengan modul di luar daftar di atas
+function notifTabsFor(events) {
+    const tabs = NOTIF_TABS.slice();
+    const known = NOTIF_TABS.map((t) => t.module);
+    if (events.some((e) => !known.includes(e.module))) {
+        tabs.push({ id: 'lainnya', module: null, title: 'lainnya', label: 'Lainnya', icon: 'fa-ellipsis', color: '#64748b' });
+    }
+    return tabs;
+}
+
+function notifEventsOfTab(tab) {
+    const known = NOTIF_TABS.map((t) => t.module);
+    return notifEvents.filter((e) => (tab.module ? e.module === tab.module : !known.includes(e.module)));
+}
+
 function renderNotifEvents() {
     const $wrap = $('#notifEventList');
-    if (!notifEvents.length) {
-        $wrap.html('<div class="text-muted">Belum ada event yang ditambahkan. Klik <b>Tambah Event</b> untuk memilih dari daftar master.</div>');
-        return;
-    }
+    const tabs = notifTabsFor(notifEvents);
+    if (!tabs.some((t) => t.id === notifActiveTab)) notifActiveTab = tabs[0].id;
 
-    $wrap.html(notifEvents.map(function (ev) {
+    const nav = tabs.map(function (t) {
+        const n = notifEventsOfTab(t).length;
+        return `<li role="presentation">
+            <button type="button" class="pm-tab-btn notif-tab-btn ${t.id === notifActiveTab ? 'active' : ''}" data-tab="${t.id}">
+                <i class="fa-solid ${t.icon} me-1" style="color:${t.color};font-size:11px;"></i>${t.label}
+                <span class="notif-tab-count">${n}</span>
+            </button>
+        </li>`;
+    }).join('');
+
+    const panes = tabs.map(function (t) {
+        const list = notifEventsOfTab(t);
+        const body = list.length
+            ? list.map(eventCardHtml).join('')
+            : `<div class="text-muted text-center py-4" style="font-size:13px;">
+                   <i class="fa-solid fa-bell-slash fa-2x d-block mb-2 opacity-25"></i>
+                   Belum ada event ${escHtml(t.title)} yang ditambahkan. Klik <b>Tambah Event</b> untuk memilihnya dari daftar master.
+               </div>`;
+        return `<div class="tab-pane fade ${t.id === notifActiveTab ? 'show active' : ''}" data-pane="${t.id}" role="tabpanel">${body}</div>`;
+    }).join('');
+
+    $wrap.html(`<div class="pm-tab-card">
+        <div class="pm-tab-header"><ul class="pm-tab-nav" role="tablist">${nav}</ul></div>
+        <div class="pm-tab-body"><div class="tab-content">${panes}</div></div>
+    </div>`);
+}
+
+function eventCardHtml(ev) {
         const rulesHtml = (ev.rules || []).map(function (r) {
             return `
             <tr>
@@ -84,13 +136,25 @@ function renderNotifEvents() {
                 </button>
             </div>
         </div>`;
-    }).join(''));
 }
 
 $(function () {
     if (!$('#notifEventList').length) return;
 
     loadNotifEvents();
+
+    // Pindah tab (manual, bukan data-bs-toggle — Bootstrap dimuat ganda di layout); tab aktif disimpan di URL (?tab=)
+    $(document).on('click', '.notif-tab-btn', function () {
+        const id = String($(this).data('tab'));
+        notifActiveTab = id;
+        $('.notif-tab-btn').removeClass('active');
+        $(this).addClass('active');
+        $('#notifEventList .tab-pane').removeClass('show active');
+        $('#notifEventList .tab-pane[data-pane="' + id + '"]').addClass('show active');
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', id);
+        history.replaceState(history.state, '', url.toString());
+    });
 
     $('#ruleUsers').select2({
         width: '100%',
@@ -145,6 +209,9 @@ $(function () {
                 });
                 $sel.append($g);
             });
+            // Tab yang sedang dibuka → event pertama modul itu terpilih lebih dulu (tetap bisa ganti ke modul lain)
+            const act = notifTabsFor(notifEvents).find((t) => t.id === notifActiveTab);
+            if (act && act.module && byModule[act.module]) $sel.val(byModule[act.module][0].key);
             $sel.select2({ width: '100%', dropdownParent: $('#eventAddModal') });
             $sel.off('change.desc').on('change.desc', function () {
                 $('#eventAddDesc').text($(this).find('option:selected').attr('data-desc') || '');
