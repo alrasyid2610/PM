@@ -105,6 +105,12 @@ class NotificationCatalog
                 'fields' => ['no_sq', 'judul_order', 'nama_user'],
                 'roles'  => self::ROLES_SQ,
             ],
+            'sq_fwo.created' => [
+                'label' => 'SQ FWO Dibuat', 'module' => 'Sales Quotation',
+                'description' => 'Terpicu begitu SQ Fieldwork (FWO estimasi di dalam SQ Work Order) baru dibuat.',
+                'fields' => ['no_sq_fwo', 'judul_pekerjaan', 'no_sq_wo', 'no_sq', 'nama_user'],
+                'roles'  => self::ROLES_SQ,
+            ],
             'sq.terbit_so' => [
                 'label' => 'SQ Diterbitkan jadi SO', 'module' => 'Sales Quotation',
                 'description' => 'Terpicu begitu SQ (Win) diterbitkan menjadi Sales Order.',

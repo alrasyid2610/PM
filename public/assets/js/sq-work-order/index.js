@@ -1343,7 +1343,7 @@ function openSqWoBudgetModal(data, isClone) {
     $('#sqWoBudgetItemsBody').empty();
     BudgetSections.loadBasis(SQ_WO_BUDGET_SECTIONS, `/sq-wo-budgets/${currentSqWoId}/basis`);
     const cloneItems = isClone ? (data.items || []).map(it => ({ ...it, id_sq_budget_item: '' })) : null;
-    BudgetSections.fill(SQ_WO_BUDGET_SECTIONS, isClone ? cloneItems : (isEdit ? (data.items || []) : []), { template: !isClone && !isEdit }).done(function () {
+    BudgetSections.fill(SQ_WO_BUDGET_SECTIONS, isClone ? cloneItems : (isEdit ? (data.items || []) : []), { template: true }).done(function () {
         BudgetSections.initSelects(SQ_WO_BUDGET_SECTIONS);
         initNumericMask(document.getElementById('sqWoBudgetPlanModal'));
         recalcSqWoBudgetTotal();
@@ -1455,6 +1455,9 @@ function renderSqWoFwoSummary(fwos) {
     const TH = 'style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;padding:8px 12px;color:#64748b;font-weight:600;"';
     const TD = 'style="padding:8px 12px;vertical-align:middle;"';
 
+    // Tombol salin hanya saat SQ masih Draft (form tidak ber-class sq-locked) dan user boleh membuat SQ Fieldwork
+    const canCopyFwo = !$('#detailForm').hasClass('sq-locked') && can('sq-fieldworks', 'can_create');
+
     const rows = fwos.map(function (f, idx) {
         const search = [f.no_sq_fwo, f.judul_pekerjaan, f.keterangan].join(' ').toLowerCase();
         return `<tr class="sq-fwo-data-row" data-search="${escHtml(search)}">
@@ -1474,6 +1477,9 @@ function renderSqWoFwoSummary(fwos) {
                 <a href="/sq-fieldworks?open=${f.id_sq_fwo}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:11px;" title="Buka detail FWO">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i>
                 </a>
+                ${canCopyFwo ? `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 ms-1 btn-copy-sq-fwo" data-fwo-id="${f.id_sq_fwo}" style="font-size:11px;" title="Salin FWO ini" data-no-disable>
+                    <i class="fa-solid fa-copy" style="color:#1a56db;"></i>
+                </button>` : ''}
             </td>
         </tr>`;
     }).join('');
@@ -1533,6 +1539,251 @@ $(document).on('click', '#btnClearSqWoFwoSearch', function () {
 $(document).on('click', '.btn-add-sq-fwo-modal', function () {
     const idSqWo = $(this).data('sq-wo-id');
     openIframeModal('#modalCreateSqFwo', 'iframeCreateSqFwo', 'loaderCreateSqFwo', '/sq-fieldworks/create?id_sq_wo=' + idSqWo + '&embed=1');
+});
+
+// ── Salin SQ Fieldwork (padanan Clone FWO di WO/SO) ───────────────────────────
+// Modal berisi data FWO sumber yang bisa diubah sebelum simpan: jadwal/site/PIC/keterangan, qty tiap BOQ
+// (semua BOQ SQ WO ditampilkan; qty 0/kosong = tidak ikut) dan Budget Plan terpilih (nominal item bisa diedit).
+// Tidak ada yang tersimpan sampai "Buat Salinan" dan validasi server lolos. Kolom "tanpa realisasi" tidak ikut.
+let copySqFwoSourceId = null;
+
+$(document).on('click', '.btn-copy-sq-fwo', function () {
+    const id = $(this).data('fwo-id');
+    copySqFwoSourceId = id;
+    $('#modalCopySqFwoBody').html('<div class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data FWO...</div>');
+    $('#btnConfirmCopySqFwo').prop('disabled', true);
+    bootstrap.Modal.getOrCreateInstance($('#modalCopySqFwo')[0]).show();
+
+    $.when($.get('/sq-fieldworks/' + id), $.get('/sq-fwo-boq/for-copy/' + id), $.get('/sq-fwo-budgets/' + id + '/list'))
+        .done(function (fwoRes, boqRes, budgetRes) {
+            fillCopySqFwoModal(fwoRes[0], boqRes[0] || [], budgetRes[0] || []);
+            $('#btnConfirmCopySqFwo').prop('disabled', false);
+        })
+        .fail(function () {
+            $('#modalCopySqFwoBody').html('<div class="text-center text-danger py-4"><i class="fa-solid fa-circle-exclamation me-1"></i> Gagal memuat data FWO</div>');
+        });
+});
+
+function copySqFwoBoqCard(sec) {
+    const unalloc = sec.unallocated_qty ?? 0;
+    const isFull = unalloc <= 0;
+    const satuan = sec.satuan ? ' ' + escHtml(sec.satuan) : '';
+    const defaultQty = isFull || sec.qty === null ? '' : Math.min(sec.qty || 0, unalloc);
+    const sisa = isFull
+        ? '<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:#dcfce7;color:#166534;">Terpenuhi ✓</span>'
+        : `<span style="font-size:10px;color:#64748b;">Sisa: <strong style="color:#1d4ed8;">${unalloc}${satuan}</strong></span>`;
+    const input = isFull
+        ? '<div style="width:90px;text-align:center;font-size:11px;color:#94a3b8;">—</div>'
+        : `<input type="number" class="form-control form-control-sm text-end copy-sqfwo-boq-qty" data-boq-id="${sec.id_sq_boq}"
+               value="${defaultQty}" min="1" max="${unalloc}" placeholder="qty"
+               oninput="this.classList.toggle('is-invalid', this.value > ${unalloc})" data-no-disable>`;
+    return `<div class="d-flex align-items-center gap-3 p-2"
+            style="background:${isFull ? '#f0fdf4' : '#f8fafc'};border:1px solid ${isFull ? '#bbf7d0' : '#e2e8f0'};border-radius:8px;">
+        <div style="flex:1;min-width:0;">
+            <div class="fw-semibold small">${escHtml(sec.point_name)}</div>
+            <div class="d-flex align-items-center gap-2 mt-1">
+                <span style="font-size:11px;color:#64748b;">Total BOQ: ${sec.boq_qty}${satuan}</span>${sisa}
+            </div>
+            ${isFull ? '<div style="font-size:11px;color:#dc2626;margin-top:4px;"><i class="fa-solid fa-circle-xmark me-1"></i>Qty sudah terpenuhi, tidak bisa ditambahkan</div>' : ''}
+        </div>
+        <div style="width:90px;">${input}</div>
+    </div>`;
+}
+
+function copySqFwoBudgetCard(plan) {
+    const itemRows = (plan.items || []).map(function (it) {
+        const ca = it.is_cash_advance ? '<span class="badge ms-1" style="background:#eff6ff;color:#1d4ed8;font-size:10px;">CA</span>' : '';
+        return `<tr>
+            <td style="font-size:12px;"><span class="fw-semibold">${escHtml(it.nama_account || '-')}</span>${ca}</td>
+            <td style="width:160px;">
+                <input type="text" inputmode="numeric" class="form-control form-control-sm text-end copy-sqfwo-budget-nominal input-num-mask input-num-int"
+                    data-item-id="${it.id_sq_budget_item}" value="${Number(it.nominal_budget || 0).toLocaleString('en-US')}" data-no-disable>
+            </td>
+            <td style="font-size:11px;"><input type="text" class="form-control form-control-sm copy-sqfwo-budget-ket" value="${escHtml(it.keterangan || '')}" placeholder="Opsional" data-no-disable></td>
+        </tr>`;
+    }).join('');
+    return `<div class="copy-sqfwo-budget-card border rounded mb-2" data-budget-id="${plan.id_sq_budget}" data-label="${escHtml(plan.label || '')}" data-keterangan="${escHtml(plan.keterangan || '')}">
+        <div class="d-flex align-items-center gap-2 px-3 py-2" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+            <input type="checkbox" class="form-check-input copy-sqfwo-budget-check mt-0" checked data-no-disable>
+            <span class="fw-bold" style="font-size:13px;">${escHtml(plan.label || '-')}</span>
+            ${plan.keterangan ? `<span class="text-muted" style="font-size:11px;">· ${escHtml(plan.keterangan)}</span>` : ''}
+            <span class="ms-auto" style="font-size:12px;">Total: <b class="copy-sqfwo-budget-total" style="color:#1d4ed8;">Rp 0</b></span>
+            <button type="button" class="btn btn-sm btn-outline-secondary copy-sqfwo-budget-toggle py-0 px-2" title="Tampilkan/sembunyikan detail" data-no-disable>
+                <i class="fa-solid fa-chevron-down" style="font-size:11px;"></i>
+            </button>
+        </div>
+        <div class="copy-sqfwo-budget-body" style="display:none;">
+            <table class="table table-sm mb-0">
+                <thead><tr><th>Account</th><th class="text-end">Nominal</th><th>Keterangan</th></tr></thead>
+                <tbody>${itemRows}</tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
+function recalcCopySqFwoBudgets() {
+    $('#copySqFwoBudgetContainer .copy-sqfwo-budget-card').each(function () {
+        let total = 0;
+        $(this).find('.copy-sqfwo-budget-nominal').each(function () {
+            total += parseInt(($(this).val() || '').replace(/,/g, ''), 10) || 0;
+        });
+        $(this).find('.copy-sqfwo-budget-total').text('Rp ' + total.toLocaleString('id-ID'));
+    });
+}
+
+$(document).on('click', '#copySqFwoBudgetContainer .copy-sqfwo-budget-toggle', function () {
+    $(this).closest('.copy-sqfwo-budget-card').find('.copy-sqfwo-budget-body').slideToggle(150);
+    $(this).find('i').toggleClass('fa-chevron-up fa-chevron-down');
+});
+$(document).on('input', '#copySqFwoBudgetContainer .copy-sqfwo-budget-nominal', recalcCopySqFwoBudgets);
+
+function fillCopySqFwoModal(fwo, boqs, budgets) {
+    const woMulai = parseInt(fwo.wo_hari_mulai, 10) || 1;
+    const woSelesai = woMulai + Math.max(0, (parseInt(fwo.wo_durasi_hari, 10) || 1) - 1);
+
+    $('#modalCopySqFwoBody').html(`
+        <div class="alert alert-light border mb-3 py-2" style="font-size:12px;">
+            <i class="fa-solid fa-copy me-1 text-primary"></i>
+            Menyalin dari: <strong>${escHtml(fwo.no_sq_fwo)}</strong>
+            <span class="text-muted ms-2">· ${escHtml(fwo.no_sq_wo || '')} — ${escHtml(fwo.wo_judul_pekerjaan || '')}</span>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Judul Pekerjaan</label>
+            <input type="text" id="copySqFwoJudul" class="form-control" value="${escHtml(fwo.judul_pekerjaan || '')}" maxlength="500" data-no-disable>
+        </div>
+        <div class="row g-3 mb-3">
+            <div class="col-md-3 col-6">
+                <label class="form-label fw-semibold">Hari Ke- <span class="text-danger">*</span></label>
+                <input type="number" min="1" id="copySqFwoHariKe" class="form-control" value="${fwo.hari_ke || 1}" data-no-disable>
+            </div>
+            <div class="col-md-3 col-6">
+                <label class="form-label fw-semibold">Durasi (hari)</label>
+                <input type="number" min="1" id="copySqFwoDurasi" class="form-control" value="${fwo.durasi_hari || ''}" data-no-disable>
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+                <small class="text-muted">Jadwal WO: hari ke-${woMulai} s/d ke-${woSelesai} — jadwal FWO tidak boleh melewatinya.</small>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Site Pekerjaan <span class="text-danger">*</span></label>
+                <select id="copySqFwoSite" class="form-select" data-no-disable>
+                    ${fwo.id_site_pelanggan_pekerjaan ? `<option value="${fwo.id_site_pelanggan_pekerjaan}" selected>${escHtml(fwo.nama_site_pelanggan_pekerjaan || '#' + fwo.id_site_pelanggan_pekerjaan)}</option>` : '<option value=""></option>'}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">PIC Pekerjaan <span class="text-danger">*</span></label>
+                <select id="copySqFwoPic" class="form-select" data-no-disable>
+                    ${fwo.id_pic_pelanggan_pekerjaan ? `<option value="${fwo.id_pic_pelanggan_pekerjaan}" selected>${escHtml(fwo.nama_pic || '#' + fwo.id_pic_pelanggan_pekerjaan)}</option>` : '<option value=""></option>'}
+                </select>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Keterangan</label>
+            <textarea id="copySqFwoKeterangan" class="form-control" rows="2" data-no-disable>${escHtml(fwo.keterangan || '')}</textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Qty per BOQ Item <span class="text-muted fw-normal" style="font-size:11px;">— kosongkan qty untuk tidak menyertakan BOQ itu.</span></label>
+            ${boqs.length && boqs.every((s) => (s.unallocated_qty ?? 0) <= 0)
+                ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:12px;color:#dc2626;"><i class="fa-solid fa-triangle-exclamation me-1"></i>Semua BOQ item sudah terpenuhi. FWO salinan tidak dapat menyertakan BOQ.</div>'
+                : ''}
+            <div class="d-flex flex-column gap-2">
+                ${boqs.length ? boqs.map(copySqFwoBoqCard).join('') : '<div class="text-muted small py-2">SQ Work Order ini belum punya BOQ.</div>'}
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Budget Plan <span class="text-muted fw-normal" style="font-size:11px;">— centang Plan yang ingin disalin. Hari Mulai/Selesai plan dikosongkan; kolom "tanpa realisasi" tidak ikut.</span></label>
+            <div id="copySqFwoBudgetContainer">
+                ${budgets.length ? budgets.map(copySqFwoBudgetCard).join('') : '<div class="text-muted small py-2">FWO sumber belum punya Budget Plan.</div>'}
+            </div>
+        </div>
+        <div style="height:120px;"></div>
+    `);
+
+    $('#copySqFwoSite').select2({
+        width: '100%', dropdownParent: $('#modalCopySqFwo'), placeholder: 'Pilih Site', allowClear: true, minimumInputLength: 0,
+        ajax: { url: window.sqWoRoute.select2Site, dataType: 'json', delay: 250, data: (p) => ({ q: p.term }), processResults: (d) => ({ results: d }), cache: false },
+    });
+    // PIC di-scope oleh Perusahaan (id_br) pekerjaan — sama seperti halaman Create SQ Fieldwork
+    $('#copySqFwoPic').select2({
+        width: '100%', dropdownParent: $('#modalCopySqFwo'), placeholder: 'Pilih PIC', allowClear: true, minimumInputLength: 0,
+        ajax: { url: window.sqWoRoute.select2Contact, dataType: 'json', delay: 250, data: (p) => ({ q: p.term, id_br: fwo.id_br_pekerjaan || '' }), processResults: (d) => ({ results: d }), cache: false },
+    });
+
+    initNumericMask(document.getElementById('copySqFwoBudgetContainer'));
+    recalcCopySqFwoBudgets();
+}
+
+$(document).on('click', '#btnConfirmCopySqFwo', function () {
+    const hariKe = parseInt($('#copySqFwoHariKe').val(), 10);
+    if (!hariKe || hariKe < 1) { Notify.warning('Hari Ke- wajib diisi (minimal 1)'); return; }
+    if (!$('#copySqFwoSite').val()) { Notify.warning('Site Pekerjaan wajib dipilih'); return; }
+    if (!$('#copySqFwoPic').val()) { Notify.warning('PIC Pekerjaan wajib dipilih'); return; }
+    if ($('#modalCopySqFwoBody .copy-sqfwo-boq-qty.is-invalid').length) { Notify.warning('Ada qty BOQ yang melebihi sisa'); return; }
+
+    const sections = [];
+    $('#modalCopySqFwoBody .copy-sqfwo-boq-qty').each(function () {
+        const qty = parseInt($(this).val(), 10);
+        if (!isNaN(qty) && qty > 0) sections.push({ id_sq_boq: parseInt($(this).data('boq-id'), 10), qty: qty });
+    });
+
+    const budgets = [];
+    let budgetError = null;
+    $('#copySqFwoBudgetContainer .copy-sqfwo-budget-card').each(function () {
+        if (!$(this).find('.copy-sqfwo-budget-check').is(':checked')) return;
+        const items = [];
+        $(this).find('.copy-sqfwo-budget-nominal').each(function () {
+            const nominal = parseInt(($(this).val() || '').replace(/,/g, ''), 10);
+            if (isNaN(nominal) || nominal < 0) budgetError = 'Nominal budget tidak boleh kosong atau negatif';
+            items.push({
+                source_id_budget_item: parseInt($(this).data('item-id'), 10),
+                nominal_budget: isNaN(nominal) ? 0 : nominal,
+                keterangan: $(this).closest('tr').find('.copy-sqfwo-budget-ket').val() || null,
+            });
+        });
+        if (!items.length) budgetError = 'Setiap Plan yang dipilih harus punya minimal 1 item';
+        budgets.push({
+            source_id_budget: parseInt($(this).data('budget-id'), 10),
+            label: $(this).data('label'),
+            keterangan: $(this).data('keterangan') || null,
+            items: items,
+        });
+    });
+    if (budgetError) { Notify.warning(budgetError); return; }
+
+    const payload = {
+        judul_pekerjaan: $('#copySqFwoJudul').val().trim() || null,
+        id_site_pelanggan_pekerjaan: parseInt($('#copySqFwoSite').val(), 10),
+        id_pic_pelanggan_pekerjaan: parseInt($('#copySqFwoPic').val(), 10),
+        hari_ke: hariKe,
+        durasi_hari: parseInt($('#copySqFwoDurasi').val(), 10) || null,
+        keterangan: $('#copySqFwoKeterangan').val() || null,
+        sections: sections,
+        budgets: budgets,
+    };
+
+    const $btn = $(this);
+    $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...');
+    $.ajax({
+        url: '/sq-fieldworks/' + copySqFwoSourceId + '/duplicate',
+        method: 'POST',
+        contentType: 'application/json',
+        headers: { 'X-CSRF-TOKEN': window.route.csrf },
+        data: JSON.stringify(payload),
+        success: function (res) {
+            Notify.success('SQ FWO berhasil disalin: ' + res.no_sq_fwo);
+            bootstrap.Modal.getInstance('#modalCopySqFwo')?.hide();
+            loadSqWoFwoList(currentSqWoId);
+        },
+        error: function (xhr) {
+            const errs = xhr.responseJSON?.errors;
+            Notify.error(errs ? Object.values(errs).flat().join(' ') : (xhr.responseJSON?.message || 'Gagal menyalin SQ FWO'));
+            $btn.prop('disabled', false).html('<i class="fa-solid fa-copy me-1"></i> Buat Salinan');
+        },
+    });
+});
+
+$('#modalCopySqFwo').on('hidden.bs.modal', function () {
+    copySqFwoSourceId = null;
+    $('#btnConfirmCopySqFwo').prop('disabled', true).html('<i class="fa-solid fa-copy me-1"></i> Buat Salinan');
 });
 
 window.addEventListener('storage', function (e) {

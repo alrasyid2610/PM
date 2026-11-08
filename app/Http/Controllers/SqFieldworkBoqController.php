@@ -95,6 +95,47 @@ class SqFieldworkBoqController extends Controller
     }
 
     /**
+     * Data modal "Salin SQ Fieldwork": SEMUA BOQ milik SQ WO dari FWO sumber (bukan hanya yang dialokasikan ke
+     * FWO sumber), masing-masing dengan qty di FWO sumber (null = tidak ada di sumber) dan sisa qty yang belum
+     * dialokasikan ke SQ FWO mana pun (termasuk FWO sumber). Pola sama FieldworkBoqController::forCopy().
+     */
+    public function forCopy($id_sq_fwo)
+    {
+        $fwo = DB::table('sq_fieldworks')->where('id_sq_fwo', $id_sq_fwo)->first();
+        if (!$fwo) return response()->json(['message' => 'SQ Fieldwork tidak ditemukan'], 404);
+
+        $boqs = DB::table('sq_boq as b')
+            ->leftJoin('testing_points as tp', 'b.id_testing_point', '=', 'tp.id_testing_point')
+            ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
+            ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
+            ->leftJoin('satuan as sat', 'sat.id_satuan', '=', 'b.id_satuan')
+            ->where('b.id_sq_wo', $fwo->id_sq_wo)
+            ->orderBy('b.id_sq_boq')
+            ->select([
+                'b.id_sq_boq', 'b.qty',
+                'sat.nama as satuan',
+                DB::raw("TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))) as point_name"),
+            ])
+            ->get();
+
+        $used = DB::table('sq_fieldwork_boq')
+            ->whereIn('id_sq_boq', $boqs->pluck('id_sq_boq'))
+            ->selectRaw('id_sq_boq, SUM(COALESCE(qty, 0)) as used_qty')
+            ->groupBy('id_sq_boq')
+            ->pluck('used_qty', 'id_sq_boq');
+        $sourceQty = DB::table('sq_fieldwork_boq')->where('id_sq_fwo', $id_sq_fwo)->pluck('qty', 'id_sq_boq');
+
+        return response()->json($boqs->map(fn ($b) => [
+            'id_sq_boq'       => $b->id_sq_boq,
+            'point_name'      => $b->point_name ?: "BOQ #{$b->id_sq_boq}",
+            'boq_qty'         => (int) $b->qty,
+            'satuan'          => $b->satuan,
+            'qty'             => $sourceQty->has($b->id_sq_boq) ? $sourceQty->get($b->id_sq_boq) : null,
+            'unallocated_qty' => max(0, (int) $b->qty - (int) ($used[$b->id_sq_boq] ?? 0)),
+        ])->values());
+    }
+
+    /**
      * Daftar BOQ milik SQ WO ini (untuk modal "Kelola BOQ") lengkap dengan
      * sisa qty yang belum dialokasikan ke SQ FWO lain — pola sama
      * BoqController::select2ByWo().

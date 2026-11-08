@@ -87,7 +87,35 @@ class SqFieldworkController extends Controller
         $after = DB::table('sq_fieldworks')->where('id_sq_fwo', $id)->get()->toJson();
         saveAudit('sq_fieldworks', $id, 'Create', '', $after, ['sq_work_orders', $validated['id_sq_wo']]);
 
+        $this->notifyCreated($id);
+
         return response()->json(['success' => true, 'id' => $id]);
+    }
+
+    /**
+     * Picu notifikasi `sq_fwo.created` (tab SQ di Pengaturan Notifikasi). Peran penerima diambil dari SQ induknya
+     * (PIC Input/Order, Marketing, Pengaju) + pelaku aksi. Tidak pernah menggagalkan penyimpanan.
+     */
+    private function notifyCreated($idSqFwo): void
+    {
+        $fwo = DB::table('sq_fieldworks as f')
+            ->join('sq_work_orders as w', 'w.id_sq_wo', '=', 'f.id_sq_wo')
+            ->leftJoin('sales_quotations as sq', 'sq.id_sq', '=', 'w.id_sq')
+            ->where('f.id_sq_fwo', $idSqFwo)
+            ->first(['f.no_sq_fwo', 'f.judul_pekerjaan', 'w.id_sq', 'w.no_sq_wo', 'w.judul_pekerjaan as judul_wo', 'sq.no_sq']);
+        if (!$fwo) return;
+
+        \App\Services\NotificationDispatcher::fire('sq_fwo.created', [
+            'title' => 'SQ FWO baru: {{no_sq_fwo}}',
+            'body'  => '{{judul_pekerjaan}}',
+            'url'   => url('sq-fieldworks?open=' . $idSqFwo),
+        ], [
+            'no_sq_fwo'       => $fwo->no_sq_fwo ?? '',
+            'judul_pekerjaan' => $fwo->judul_pekerjaan ?: ($fwo->judul_wo ?? ''),
+            'no_sq_wo'        => $fwo->no_sq_wo ?? '',
+            'no_sq'           => $fwo->no_sq ?? '',
+            'nama_user'       => auth()->user()?->name,
+        ], \App\Support\NotificationRoles::sq((int) $fwo->id_sq));
     }
 
     public function show($id)
@@ -167,6 +195,178 @@ class SqFieldworkController extends Controller
         saveAudit('sq_fieldworks', $id, 'update', $before, $after, ['sq_work_orders', DB::table('sq_fieldworks')->where('id_sq_fwo', $id)->value('id_sq_wo')]);
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Salin SQ Fieldwork (padanan FieldworkController::duplicate(), tanpa personel/penyelia/kendaraan/tanggal —
+     * SQ FWO tidak punya). Full control: jadwal/site/PIC/keterangan, qty tiap BOQ (0/kosong = tidak ikut), dan Budget Plan
+     * terpilih beserta nominal item bisa diubah sebelum simpan. Semua divalidasi SEBELUM insert; satu transaksi.
+     * FWO baru ditaruh di urutan paling akhir pada SQ WO yang sama. Kolom "tanpa realisasi" TIDAK ikut (rencana baru).
+     */
+    public function duplicate(Request $request, $id)
+    {
+        if ($lock = SqLock::byFwo($id)) return $lock;
+
+        $source = DB::table('sq_fieldworks')->where('id_sq_fwo', $id)->first();
+        if (!$source) return response()->json(['message' => 'SQ Fieldwork tidak ditemukan'], 404);
+
+        $validated = $request->validate([
+            'judul_pekerjaan' => 'nullable|string|max:500',
+            'id_site_pelanggan_pekerjaan' => 'required|integer',
+            'id_pic_pelanggan_pekerjaan' => 'required|integer',
+            'hari_ke' => 'required|integer|min:1',
+            'durasi_hari' => 'nullable|integer|min:1',
+            'keterangan' => 'nullable|string',
+            'sections' => 'nullable|array',
+            'sections.*.id_sq_boq' => 'required|integer',
+            'sections.*.qty' => 'required|integer|min:1',
+            'sections.*.keterangan' => 'nullable|string',
+            'budgets' => 'nullable|array',
+            'budgets.*.source_id_budget' => 'required|integer',
+            'budgets.*.label' => 'required|string|max:255',
+            'budgets.*.keterangan' => 'nullable|string',
+            'budgets.*.items' => 'required|array|min:1',
+            'budgets.*.items.*.source_id_budget_item' => 'required|integer',
+            'budgets.*.items.*.nominal_budget' => 'required|integer|min:0',
+            'budgets.*.items.*.keterangan' => 'nullable|string',
+        ], [
+            'id_site_pelanggan_pekerjaan.required' => 'Site Pekerjaan wajib diisi (dibutuhkan saat Terbitkan SO nanti).',
+            'id_pic_pelanggan_pekerjaan.required' => 'PIC Pekerjaan wajib diisi (dibutuhkan saat Terbitkan SO nanti).',
+        ]);
+
+        // Jadwal FWO baru harus di dalam jadwal SQ WO
+        $wo = DB::table('sq_work_orders')->where('id_sq_wo', $source->id_sq_wo)->first();
+        if ($wo) {
+            $woMulai = (int) $wo->hari_mulai;
+            $woSelesai = $woMulai + max(0, (int) ($wo->durasi_hari ?: 1) - 1);
+            $fwoMulai = (int) $validated['hari_ke'];
+            $fwoSelesai = $fwoMulai + max(0, (int) ($validated['durasi_hari'] ?? 1) - 1);
+            if ($fwoMulai < $woMulai) {
+                return response()->json(['message' => "Hari Ke- FWO tidak boleh sebelum Hari Mulai WO (ke-{$woMulai})"], 422);
+            }
+            if ($fwoSelesai > $woSelesai) {
+                return response()->json(['message' => "Jadwal FWO tidak boleh melewati jadwal WO (sampai hari ke-{$woSelesai})"], 422);
+            }
+        }
+
+        // Qty tiap BOQ: BOQ harus milik SQ WO yang sama, tidak dobel, dan tidak melebihi sisa
+        $sections = $validated['sections'] ?? [];
+        $dobel = collect($sections)->pluck('id_sq_boq')->duplicates();
+        if ($dobel->isNotEmpty()) {
+            return response()->json(['message' => 'BOQ yang sama dipilih lebih dari sekali.'], 422);
+        }
+        foreach ($sections as $sec) {
+            $boq = DB::table('sq_boq')->where('id_sq_boq', $sec['id_sq_boq'])->where('id_sq_wo', $source->id_sq_wo)->first();
+            if (!$boq) {
+                return response()->json(['message' => "BOQ #{$sec['id_sq_boq']} bukan milik SQ Work Order ini."], 422);
+            }
+            $used = (int) DB::table('sq_fieldwork_boq')->where('id_sq_boq', $boq->id_sq_boq)->sum('qty');
+            $sisa = (int) ($boq->qty ?? 0) - $used;
+            if ($sec['qty'] > $sisa) {
+                $ptName = DB::table('testing_points')->where('id_testing_point', $boq->id_testing_point)->value('nama') ?? "BOQ #{$boq->id_sq_boq}";
+                return response()->json(['message' => "Qty untuk \"{$ptName}\" melebihi sisa yang tersedia (sisa: {$sisa})"], 422);
+            }
+        }
+
+        // Budget Plan: harus milik FWO sumber, dan setiap item harus milik Plan itu
+        $budgetsToCopy = [];
+        foreach ($validated['budgets'] ?? [] as $plan) {
+            $sourcePlan = DB::table('sq_fwo_budgets')
+                ->where('id_sq_budget', $plan['source_id_budget'])->where('id_sq_fwo', $source->id_sq_fwo)->first();
+            if (!$sourcePlan) {
+                return response()->json(['message' => "Budget Plan #{$plan['source_id_budget']} tidak ditemukan di FWO ini."], 422);
+            }
+            $items = [];
+            foreach ($plan['items'] as $it) {
+                $sourceItem = DB::table('sq_fwo_budget_items')
+                    ->where('id_sq_budget_item', $it['source_id_budget_item'])->where('id_sq_budget', $sourcePlan->id_sq_budget)->first();
+                if (!$sourceItem) {
+                    return response()->json(['message' => "Item budget #{$it['source_id_budget_item']} tidak termasuk Plan \"{$sourcePlan->label}\"."], 422);
+                }
+                $items[] = [
+                    'source' => $sourceItem,
+                    'nominal_budget' => (int) $it['nominal_budget'],
+                    'keterangan' => $it['keterangan'] ?? $sourceItem->keterangan,
+                ];
+            }
+            $budgetsToCopy[] = ['label' => $plan['label'], 'keterangan' => $plan['keterangan'] ?? null, 'items' => $items];
+        }
+
+        $noFwo = null;
+        $newId = null;
+        DB::transaction(function () use ($source, $validated, $sections, $budgetsToCopy, &$noFwo, &$newId) {
+            $urutan = 1 + (int) DB::table('sq_fieldworks')->where('id_sq_wo', $source->id_sq_wo)->max('urutan');
+
+            $newId = DocumentNumber::insertGetId('sq_fieldworks', 'no_sq_fwo', 'SQFWO', [
+                'id_sq_wo' => $source->id_sq_wo,
+                'urutan' => $urutan,
+                'judul_pekerjaan' => $validated['judul_pekerjaan'] ?? null,
+                'id_site_pelanggan_pekerjaan' => $validated['id_site_pelanggan_pekerjaan'],
+                'id_pic_pelanggan_pekerjaan' => $validated['id_pic_pelanggan_pekerjaan'],
+                'hari_ke' => $validated['hari_ke'],
+                'durasi_hari' => $validated['durasi_hari'] ?? null,
+                'keterangan' => $validated['keterangan'] ?? null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ], $noFwo);
+
+            foreach ($sections as $sec) {
+                $fwoBoqId = DB::table('sq_fieldwork_boq')->insertGetId([
+                    'id_sq_fwo' => $newId,
+                    'id_sq_boq' => $sec['id_sq_boq'],
+                    'qty' => $sec['qty'],
+                    'keterangan' => $sec['keterangan'] ?? null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                // Item uji selalu utuh dari sq_boq_items (sama seperti SqFieldworkBoqController::update)
+                $boqItems = DB::table('sq_boq_items')->where('id_sq_boq', $sec['id_sq_boq'])->get();
+                if ($boqItems->isNotEmpty()) {
+                    DB::table('sq_fieldwork_boq_items')->insert($boqItems->map(fn ($i) => [
+                        'id_sq_fwo_boq' => $fwoBoqId,
+                        'id_testing_item' => $i->id_testing_item,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ])->toArray());
+                }
+            }
+
+            // Budget Plan terpilih: Hari Mulai/Selesai dikosongkan; kolom "tanpa realisasi" tidak ikut (rencana baru)
+            foreach ($budgetsToCopy as $plan) {
+                $newBudgetId = DB::table('sq_fwo_budgets')->insertGetId([
+                    'id_sq_fwo' => $newId,
+                    'label' => $plan['label'],
+                    'keterangan' => $plan['keterangan'],
+                    'hari_mulai' => null,
+                    'hari_selesai' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                foreach ($plan['items'] as $item) {
+                    $sama = (int) $item['nominal_budget'] === (int) $item['source']->nominal_budget;
+                    DB::table('sq_fwo_budget_items')->insert([
+                        'id_sq_budget' => $newBudgetId,
+                        'id_account' => $item['source']->id_account,
+                        'nominal_budget' => $item['nominal_budget'],
+                        // nominal tidak diubah → hari/qty/harga ikut utuh; diubah → hari 1, qty 1, harga = nominal baru
+                        'hari' => $sama ? $item['source']->hari : 1,
+                        'qty' => $sama ? $item['source']->qty : 1,
+                        'id_satuan' => $item['source']->id_satuan,
+                        'harga_satuan' => $sama ? $item['source']->harga_satuan : (int) $item['nominal_budget'],
+                        'keterangan' => $item['keterangan'],
+                        'is_cash_advance' => $item['source']->is_cash_advance,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+        });
+
+        $after = DB::table('sq_fieldworks')->where('id_sq_fwo', $newId)->get()->toJson();
+        saveAudit('sq_fieldworks', $newId, 'Create', '', $after, ['sq_work_orders', $source->id_sq_wo]);
+        $this->notifyCreated($newId);
+
+        return response()->json(['success' => true, 'message' => 'SQ FWO berhasil disalin', 'no_sq_fwo' => $noFwo, 'id' => $newId]);
     }
 
     public function destroy($id)

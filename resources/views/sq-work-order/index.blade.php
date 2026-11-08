@@ -299,6 +299,29 @@
         </div>
     </div>
 </div>
+
+{{-- Modal: Salin SQ Fieldwork (padanan modal Salin FWO di WO; tanpa personel/penyelia/kendaraan/tanggal) --}}
+<div class="modal fade" id="modalCopySqFwo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width:92vw;">
+        <div class="modal-content">
+            <div class="modal-header py-2" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+                <h5 class="modal-title">
+                    <i class="fa-solid fa-copy me-2 text-primary"></i> Salin SQ Fieldwork
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" data-no-disable></button>
+            </div>
+            <div class="modal-body" id="modalCopySqFwoBody">
+                <div class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data FWO...</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" data-no-disable>Batal</button>
+                <button type="button" id="btnConfirmCopySqFwo" class="btn btn-primary btn-sm" disabled data-no-disable>
+                    <i class="fa-solid fa-copy me-1"></i> Buat Salinan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('custom-script')

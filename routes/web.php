@@ -899,12 +899,14 @@ Route::prefix('sq-fieldworks')->name('sq-fieldworks.')->group(function () {
     Route::get('/{id_sq_wo}/list', [SqFieldworkController::class, 'byWo'])->name('list')->whereNumber('id_sq_wo');
     Route::get('/{id}', [SqFieldworkController::class, 'show'])->name('show')->whereNumber('id');
     Route::put('/{id}', [SqFieldworkController::class, 'update'])->name('update')->whereNumber('id');
+    Route::post('/{id}/duplicate', [SqFieldworkController::class, 'duplicate'])->name('duplicate')->whereNumber('id');
     Route::delete('/{id}', [SqFieldworkController::class, 'destroy'])->name('destroy')->whereNumber('id');
     Route::get('/{id}/history', [SqFieldworkController::class, 'history'])->name('history')->whereNumber('id');
 });
 
 Route::prefix('sq-fwo-boq')->name('sq-fwo-boq.')->group(function () {
     Route::get('/by-fwo/{id_sq_fwo}', [SqFieldworkBoqController::class, 'byFwo'])->name('by-fwo')->whereNumber('id_sq_fwo');
+    Route::get('/for-copy/{id_sq_fwo}', [SqFieldworkBoqController::class, 'forCopy'])->name('for-copy')->whereNumber('id_sq_fwo');
     Route::get('/select-by-wo/{id_sq_wo}', [SqFieldworkBoqController::class, 'selectByWo'])->name('select-by-wo')->whereNumber('id_sq_wo');
     Route::get('/section-items/{id_sq_boq}', [SqFieldworkBoqController::class, 'sectionItems'])->name('section-items')->whereNumber('id_sq_boq');
     Route::put('/{id_sq_fwo}', [SqFieldworkBoqController::class, 'update'])->name('update')->whereNumber('id_sq_fwo');
