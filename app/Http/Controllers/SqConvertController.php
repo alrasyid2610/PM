@@ -21,9 +21,10 @@ use Illuminate\Support\Facades\DB;
  * "Hari ke-N" SQ diubah jadi tanggal nyata dari 1 Tanggal Mulai yang diisi
  * user di modal: tanggal WO = mulai + (hari_mulai − 1), selesai = mulai +
  * (durasi − 1). FWO ikut terbawa sejak 2026-09-27 (setelah Fase 3 SQ
- * Fieldwork ada): hari_ke FWO dihitung dari basis hari yang SAMA dengan
- * hari_mulai WO (lihat SqFieldworkController — hari_ke divalidasi terhadap
- * rentang hari WO induknya), jadi tanggalnya dihitung dari $start yang sama.
+ * Fieldwork ada), tetapi **sejak 2026-11-07 tanpa tanggal**: FWO dibuat
+ * "belum dijadwalkan" (tanggal_mulai/tanggal_selesai NULL, begitu juga tanggal
+ * Plan Budget FWO) — tim sampling yang mengisi jadwalnya kemudian di FWO.
+ * `hari_ke`/`durasi_hari` SQ FWO tidak dipakai saat convert.
  * hanya SQ berstatus Win yang boleh diterbitkan (sejak 2026-10-16; sebelumnya Final); status SQ tetap Win setelah SO terbit, penandanya sales_orders.id_sq.
  */
 class SqConvertController extends Controller
@@ -294,9 +295,6 @@ class SqConvertController extends Controller
 
                     // ── FWO + Fieldwork BOQ + Budget FWO ──
                     foreach (DB::table('sq_fieldworks')->where('id_sq_wo', $wo->id_sq_wo)->orderBy('urutan')->orderBy('id_sq_fwo')->get() as $fwo) {
-                        $fwoMulai = $start->copy()->addDays(max(0, (int) $fwo->hari_ke - 1));
-                        $fwoSelesai = $fwoMulai->copy()->addDays(max(0, (int) ($fwo->durasi_hari ?: 1) - 1));
-
                         $idFwo = DocumentNumber::insertGetId('fieldworks', 'no_fwo', 'FWO', [
                             'id_wo' => $idWo,
                             'judul_pekerjaan' => $fwo->judul_pekerjaan ?: ($wo->judul_pekerjaan ?: 'Fieldwork'),
@@ -305,8 +303,9 @@ class SqConvertController extends Controller
                             // seperti fieldworks asli — tidak perlu remap.
                             'id_site_pelanggan_pekerjaan' => $fwo->id_site_pelanggan_pekerjaan,
                             'id_pic_pelanggan_pekerjaan' => $fwo->id_pic_pelanggan_pekerjaan,
-                            'tanggal_mulai' => $fwoMulai->toDateString(),
-                            'tanggal_selesai' => $fwoSelesai->toDateString(),
+                            // Belum dijadwalkan: tanggal diisi tim sampling nanti (bukan dari hari_ke SQ)
+                            'tanggal_mulai' => null,
+                            'tanggal_selesai' => null,
                             'status' => 'planned',
                             'keterangan' => $fwo->keterangan,
                             'created_at' => now(),
@@ -344,8 +343,10 @@ class SqConvertController extends Controller
                                 'id_fwo' => $idFwo,
                                 'label' => $fbp->label,
                                 'keterangan' => $fbp->keterangan,
-                                'tanggal_mulai' => $fbp->hari_mulai ? $start->copy()->addDays($fbp->hari_mulai - 1)->toDateString() : null,
-                                'tanggal_selesai' => $fbp->hari_selesai ? $start->copy()->addDays($fbp->hari_selesai - 1)->toDateString() : null,
+                                // Periode plan harus berada dalam periode FWO — FWO belum dijadwalkan, jadi dikosongkan
+                                // dan diisi bersamaan dengan penjadwalan FWO (sama seperti Clone FWO).
+                                'tanggal_mulai' => null,
+                                'tanggal_selesai' => null,
                                 'status' => 'open',
                                 'created_at' => now(),
                                 'updated_at' => now(),

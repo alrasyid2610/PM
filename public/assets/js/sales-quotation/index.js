@@ -862,7 +862,7 @@ function openConvertSqModal(idSq) {
                     <tbody>${woRows}</tbody>
                 </table></div>
                 <div style="font-size:11px;color:#94a3b8;margin-top:6px;">
-                    Setelah convert: status SQ tetap Win (tertaut ke SO), PIC Pekerjaan tiap WO diisi manual di detail WO (SQ menyimpan kontak pelanggan, WO menyimpan user), FWO dibuat belakangan di SO.
+                    Setelah convert: status SQ tetap Win (tertaut ke SO), PIC Pekerjaan tiap WO diisi manual di detail WO (SQ menyimpan kontak pelanggan, WO menyimpan user), FWO ikut dibuat <b>tanpa tanggal (belum dijadwalkan)</b> — tim sampling mengisi jadwalnya di FWO.
                 </div>
             </div>
         </form>`);
