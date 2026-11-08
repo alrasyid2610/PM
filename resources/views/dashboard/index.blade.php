@@ -182,6 +182,7 @@
         list:    "{{ route('dashboard.list') }}",
         wo:      "{{ url('work-orders') }}",
         fwo:     "{{ url('fieldworks') }}",
+        'fwo-belum-jadwal': "{{ url('fieldworks') }}",
         so:      "{{ url('sales-orders') }}",
         sq:      "{{ url('sales-quotations') }}",
         'sq-approval': "{{ url('sales-quotations') }}",

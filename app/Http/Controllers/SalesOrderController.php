@@ -630,15 +630,35 @@ class SalesOrderController extends Controller
     }
 
 
+    /**
+     * Query dasar daftar SO (join + kolom) — dipakai halaman index (data()) DAN daftar widget dashboard,
+     * supaya kolom keduanya selalu sama. Filter (status/search) ditambahkan oleh pemanggil.
+     */
+    public static function listBaseQuery()
+    {
+        return DB::table('sales_orders as s')
+            ->tap(fn ($q) => DataScope::so($q, 's'))
+            ->leftJoin('business_relations as br', 's.id_pelanggan', '=', 'br.id_br')
+            ->leftJoin('business_relation_sites as brs', 's.id_site_pelanggan', '=', 'brs.id_site')
+            ->select([
+                's.id_so',
+                DB::raw("CASE WHEN s.deleted_at IS NOT NULL THEN 'deleted' ELSE s.status END as status"),
+                's.no_so',
+                'br.nama as Pelanggan',
+                'brs.nama_lokasi as Site Customer',
+                's.judul_order',
+                's.id_pelanggan',
+                's.id_site_pelanggan',
+                's.created_at',
+            ]);
+    }
+
     public function data(Request $request)
     {
         $filters     = $request->input('filters', []);
         $isSearching = !empty($filters);
 
-        $query = DB::table('sales_orders as s')
-            ->tap(fn ($q) => DataScope::so($q, 's'))
-            ->leftJoin('business_relations as br', 's.id_pelanggan', '=', 'br.id_br')
-            ->leftJoin('business_relation_sites as brs', 's.id_site_pelanggan', '=', 'brs.id_site')
+        $query = self::listBaseQuery()
             ->when(!$isSearching, fn($q) => $q->whereNull('s.deleted_at'))
             ->when(!$isSearching, fn($q) => $q->where('s.status', '!=', 'completed'))
             ->when($isSearching, function ($q) use ($filters) {
@@ -659,18 +679,7 @@ class SalesOrderController extends Controller
                         default => null,
                     };
                 }
-            })
-            ->select([
-                's.id_so',
-                DB::raw("CASE WHEN s.deleted_at IS NOT NULL THEN 'deleted' ELSE s.status END as status"),
-                's.no_so',
-                'br.nama as Pelanggan',
-                'brs.nama_lokasi as Site Customer',
-                's.judul_order',
-                's.id_pelanggan',
-                's.id_site_pelanggan',
-                's.created_at',
-            ]);
+            });
 
         return DataTables::of($query)
             ->addIndexColumn()

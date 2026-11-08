@@ -51,13 +51,49 @@ class FieldworkController extends Controller
         ]);
     }
 
+    /**
+     * Query dasar daftar FWO (join + kolom) — dipakai halaman index (data()) DAN daftar widget dashboard,
+     * supaya kolom keduanya selalu sama. Filter (status/search) ditambahkan oleh pemanggil.
+     * Kolom "Hasil" dihitung dari jml_tidak_terlaksana lewat hasilHtml().
+     */
+    public static function listBaseQuery()
+    {
+        return DB::table('fieldworks as fw')
+            ->leftJoin('work_orders as wo', 'fw.id_wo', '=', 'wo.id_wo')
+            ->select([
+                'fw.id_fwo',
+                DB::raw(fwoStatusSql('fw') . ' as status'),
+                'fw.no_fwo',
+                'wo.no_wo',
+                'fw.judul_pekerjaan',
+                'fw.tanggal_mulai',
+                'fw.tanggal_selesai',
+                'fw.waktu_kedatangan',
+                'fw.created_at',
+                // dipakai menghitung kolom "Hasil" lalu dibuang dari output
+                DB::raw("(SELECT COUNT(*) FROM lab_samples ls WHERE ls.id_fwo = fw.id_fwo AND ls.status = 'tidak_terlaksana') as jml_tidak_terlaksana"),
+            ]);
+    }
+
+    /** Isi kolom "Hasil" daftar FWO (index & widget dashboard). */
+    public static function hasilHtml($row): string
+    {
+        if ($row->status === 'deleted') return '';
+        if ((int) $row->jml_tidak_terlaksana > 0) {
+            return '<span class="pm-badge" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;">Tidak Sesuai Rencana</span>';
+        }
+        if ($row->status === 'completed') {
+            return '<span class="pm-badge pm-badge--green">Sesuai Rencana</span>';
+        }
+        return '<span class="text-muted">—</span>';
+    }
+
     public function data(Request $request)
     {
         $filters     = $request->input('filters', []);
         $isSearching = !empty($filters);
 
-        $query = DB::table('fieldworks as fw')
-            ->leftJoin('work_orders as wo', 'fw.id_wo', '=', 'wo.id_wo')
+        $query = self::listBaseQuery()
             ->when(!$isSearching, fn($q) => $q->whereNull('fw.deleted_at'))
             ->when(!$isSearching, fn($q) => $q->where('fw.status', '!=', 'completed'))
             ->when($isSearching, function ($q) use ($filters) {
@@ -79,33 +115,11 @@ class FieldworkController extends Controller
                         default  => null,
                     };
                 }
-            })
-            ->select([
-                'fw.id_fwo',
-                DB::raw(fwoStatusSql('fw') . ' as status'),
-                'fw.no_fwo',
-                'wo.no_wo',
-                'fw.judul_pekerjaan',
-                'fw.tanggal_mulai',
-                'fw.tanggal_selesai',
-                'fw.waktu_kedatangan',
-                'fw.created_at',
-                // dipakai menghitung kolom "Hasil" lalu dibuang dari output
-                DB::raw("(SELECT COUNT(*) FROM lab_samples ls WHERE ls.id_fwo = fw.id_fwo AND ls.status = 'tidak_terlaksana') as jml_tidak_terlaksana"),
-            ]);
+            });
 
         return DataTables::of($query)
             ->addIndexColumn()
-            ->addColumn('hasil', function ($row) {
-                if ($row->status === 'deleted') return '';
-                if ((int) $row->jml_tidak_terlaksana > 0) {
-                    return '<span class="pm-badge" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;">Tidak Sesuai Rencana</span>';
-                }
-                if ($row->status === 'completed') {
-                    return '<span class="pm-badge pm-badge--green">Sesuai Rencana</span>';
-                }
-                return '<span class="text-muted">—</span>';
-            })
+            ->addColumn('hasil', fn ($row) => self::hasilHtml($row))
             ->removeColumn('jml_tidak_terlaksana')
             ->rawColumns(['hasil'])
             ->make(true);

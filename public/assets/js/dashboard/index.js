@@ -23,42 +23,115 @@ $(document).ready(function () {
     });
 });
 
+// Daftar SO / SQ / WO / FWO memakai kolom yang SAMA dengan halaman index modulnya (server: listBaseQuery).
+// no = kolom nomor dokumen (dibuat link ke ?open=), id = kolom id baris untuk link tersebut.
+var DW_INDEX_LISTS = {
+    'so':               { no: 'no_so',  id: 'id_so' },
+    'sq':               { no: 'no_sq',  id: 'id_sq' },
+    'sq-approval':      { no: 'no_sq',  id: 'id_sq' },
+    'wo':               { no: 'no_wo',  id: 'id_wo' },
+    'fwo':              { no: 'no_fwo', id: 'id_fwo' },
+    'fwo-belum-jadwal': { no: 'no_fwo', id: 'id_fwo' },
+};
+
+// Badge status seragam dengan index SO / SQ / WO / FWO
+function dwStatusPill(data) {
+    var map = {
+        // SO
+        'on-progress': { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-spinner',        label: 'On Progress' },
+        // WO
+        onprogress:    { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-spinner',        label: 'On Progress' },
+        // FWO
+        planned:       { bg: '#fffbeb', color: '#92400e', border: '#fde68a', icon: 'fa-hourglass-half', label: 'Planned' },
+        on_progress:   { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-spinner',        label: 'On Progress' },
+        belum_jadwal:  { bg: '#fffbeb', color: '#b45309', border: '#fde68a', icon: 'fa-calendar-xmark', label: 'Belum Dijadwalkan' },
+        // SQ
+        draft:         { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0', icon: 'fa-pen',            label: 'Draft' },
+        pending:       { bg: '#fffbeb', color: '#b45309', border: '#fde68a', icon: 'fa-hourglass-half', label: 'Menunggu Approval' },
+        final:         { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-lock',           label: 'Final' },
+        win:           { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-trophy',         label: 'Win' },
+        lose:          { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: 'fa-thumbs-down',    label: 'Lose' },
+        void:          { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa', icon: 'fa-ban',            label: 'Void' },
+        // umum
+        completed:     { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-circle-check',   label: 'Completed' },
+        cancel:        { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa', icon: 'fa-ban',            label: 'Cancel' },
+        deleted:       { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: 'fa-trash',          label: 'Deleted' },
+    };
+    var s = map[data] || { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0', icon: 'fa-circle', label: data || '-' };
+    return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:6px;background:' + s.bg + ';color:' + s.color + ';font-size:11px;font-weight:600;border:1px solid ' + s.border + ';white-space:nowrap;">'
+        + '<i class="fa-solid ' + s.icon + '" style="font-size:10px;"></i> ' + s.label + '</span>';
+}
+
 function switchTab(type) {
     window.route.data    = window.route.list;
     window._dtParams     = { type: type };
 
-    window.datatableHeaderLabels = {
-        no:         'No.',
-        judul:      'Judul',
-        pelanggan:  'Pelanggan',
-        pic:        type === 'sq-approval' ? 'Diajukan Oleh' : 'PIC',
-        deadline:   type === 'sq' ? 'Berlaku Sampai' : (type === 'sq-approval' ? 'Diajukan Pada' : 'Deadline'),
-        status:     'Status',
-    };
+    var idx = DW_INDEX_LISTS[type];
 
-    window.datatableColumnRenderers = {
-        no: function (data, t, row) {
+    if (idx) {
+        // Label kolom = label index modul (SQ punya label sendiri; lainnya otomatis dari nama kolom)
+        window.datatableHeaderLabels = {
+            no_sq:          'No SQ',
+            revisi:         'Rev',
+            judul_order:    'Judul Order',
+            tanggal_sq:     'Tanggal SQ',
+            berlaku_sampai: 'Berlaku Sampai',
+            diajukan_oleh:  'Diajukan Oleh',
+            diajukan_at:    'Diajukan Pada',
+            hasil:          'Hasil',
+        };
+
+        var clip = function (w) { return function (d, t) { return window.dtClip(d, t, w); }; };
+
+        window.datatableColumnRenderers = {
+            status:           dwStatusPill,
+            judul_order:      clip(340),
+            Pelanggan:        clip(240),
+            'Site Customer':  clip(220),
+            Site:             clip(220),
+            'Site Pelanggan': clip(220),
+        };
+        // Kolom nomor dokumen: link ke detail (SQ + badge revisi seperti index SQ)
+        window.datatableColumnRenderers[idx.no] = function (data, t, row) {
+            if (t !== 'display') return data;
             var base = window.route[type];
-            return '<a href="' + base + '?open=' + row.id_rec + '" class="fw-semibold text-decoration-none" style="color:#1a56db">' + (data ?? '-') + '</a>';
-        },
-        status: function (data) {
-            var map = {
-                'on-progress': '<span class="badge bg-primary">On Progress</span>',
-                'onprogress':  '<span class="badge bg-primary">On Progress</span>',
-                'on_progress': '<span class="badge bg-primary">On Progress</span>',
-                completed:     '<span class="badge bg-success">Completed</span>',
-                cancel:        '<span class="badge bg-danger">Cancel</span>',
-                planned:       '<span class="badge bg-info text-dark">Planned</span>',
-                draft:         '<span class="badge bg-secondary">Draft</span>',
-                final:         '<span class="badge" style="background:#1d4ed8;">Final</span>',
-                pending:       '<span class="badge" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;">Menunggu Approval</span>',
-            };
-            return map[data] ?? ('<span class="badge bg-secondary">' + (data ?? '-') + '</span>');
-        },
-        deadline: function (data) {
-            return data ? data : '<span class="text-muted">-</span>';
-        },
-    };
+            var rev  = row.revisi > 0 ? ' <span class="pm-badge" style="font-size:10px;background:#f5f3ff;color:#6d28d9;">Rev.' + row.revisi + '</span>' : '';
+            return '<a href="' + base + '?open=' + row[idx.id] + '" class="fw-semibold text-decoration-none" style="color:#1a56db">' + escHtml(data ?? '-') + '</a>' + rev;
+        };
+    } else {
+        // Termin: format ringkas lama
+        window.datatableHeaderLabels = {
+            no:         'No.',
+            judul:      'Judul',
+            pelanggan:  'Pelanggan',
+            pic:        'PIC',
+            deadline:   'Deadline',
+            status:     'Status',
+        };
+
+        window.datatableColumnRenderers = {
+            no: function (data, t, row) {
+                var base = window.route[type];
+                return '<a href="' + base + '?open=' + row.id_rec + '" class="fw-semibold text-decoration-none" style="color:#1a56db">' + (data ?? '-') + '</a>';
+            },
+            status: function (data) {
+                var map = {
+                    'on-progress': '<span class="badge bg-primary">On Progress</span>',
+                    'onprogress':  '<span class="badge bg-primary">On Progress</span>',
+                    'on_progress': '<span class="badge bg-primary">On Progress</span>',
+                    completed:     '<span class="badge bg-success">Completed</span>',
+                    cancel:        '<span class="badge bg-danger">Cancel</span>',
+                    planned:       '<span class="badge bg-info text-dark">Planned</span>',
+                    draft:         '<span class="badge bg-secondary">Draft</span>',
+                    final:         '<span class="badge" style="background:#1d4ed8;">Final</span>',
+                };
+                return map[data] ?? ('<span class="badge bg-secondary">' + (data ?? '-') + '</span>');
+            },
+            deadline: function (data) {
+                return data ? data : '<span class="text-muted">-</span>';
+            },
+        };
+    }
 
     $('#global-loader').fadeIn(150);
     initDataTable('#dashboard-list-table', function () {

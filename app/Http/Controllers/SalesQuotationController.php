@@ -670,15 +670,37 @@ class SalesQuotationController extends Controller
         ]));
     }
 
+    /**
+     * Query dasar daftar SQ (join + kolom) — dipakai halaman index (data()) DAN daftar widget dashboard,
+     * supaya kolom keduanya selalu sama. Filter (status/search) ditambahkan oleh pemanggil.
+     */
+    public static function listBaseQuery()
+    {
+        return DB::table('sales_quotations as s')
+            ->tap(fn ($q) => DataScope::sq($q, 's'))
+            ->leftJoin('business_relations as br', 's.id_pelanggan', '=', 'br.id_br')
+            ->leftJoin('business_relation_sites as brs', 's.id_site_pelanggan', '=', 'brs.id_site')
+            ->select([
+                's.id_sq',
+                DB::raw("CASE WHEN s.deleted_at IS NOT NULL THEN 'deleted' ELSE s.status END as status"),
+                's.no_sq',
+                's.revisi',
+                'br.nama as Pelanggan',
+                'brs.nama_lokasi as Site',
+                's.judul_order',
+                's.tanggal_sq',
+                's.berlaku_sampai',
+                's.id_pelanggan',
+                's.created_at',
+            ]);
+    }
+
     public function data(Request $request)
     {
         $filters = $request->input('filters', []);
         $isSearching = !empty($filters);
 
-        $query = DB::table('sales_quotations as s')
-            ->tap(fn ($q) => DataScope::sq($q, 's'))
-            ->leftJoin('business_relations as br', 's.id_pelanggan', '=', 'br.id_br')
-            ->leftJoin('business_relation_sites as brs', 's.id_site_pelanggan', '=', 'brs.id_site')
+        $query = self::listBaseQuery()
             ->when(!$isSearching, fn($q) => $q->whereNull('s.deleted_at')->where('s.is_latest', true))
             ->when($isSearching, function ($q) use ($filters) {
                 foreach ($filters as $f) {
@@ -699,20 +721,7 @@ class SalesQuotationController extends Controller
                         default => null,
                     };
                 }
-            })
-            ->select([
-                's.id_sq',
-                DB::raw("CASE WHEN s.deleted_at IS NOT NULL THEN 'deleted' ELSE s.status END as status"),
-                's.no_sq',
-                's.revisi',
-                'br.nama as Pelanggan',
-                'brs.nama_lokasi as Site',
-                's.judul_order',
-                's.tanggal_sq',
-                's.berlaku_sampai',
-                's.id_pelanggan',
-                's.created_at',
-            ]);
+            });
 
         return DataTables::of($query)->addIndexColumn()->make(true);
     }

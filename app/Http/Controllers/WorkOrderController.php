@@ -273,15 +273,40 @@ class WorkOrderController extends Controller
         );
     }
 
+    /**
+     * Query dasar daftar WO (join + kolom) — dipakai halaman index (data()) DAN daftar widget dashboard,
+     * supaya kolom keduanya selalu sama. Filter (status/search) ditambahkan oleh pemanggil.
+     */
+    public static function listBaseQuery()
+    {
+        return DB::table('work_orders as wo')
+            ->leftJoin('sales_orders as s', 'wo.id_so', '=', 's.id_so')
+            ->leftJoin('business_relations as br', 'wo.id_pelanggan_pekerjaan', '=', 'br.id_br')
+            ->leftJoin('business_relation_sites as brs', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
+            ->select([
+                'wo.id_wo',
+                's.id_so',
+                DB::raw("CASE WHEN wo.deleted_at IS NOT NULL THEN 'deleted' ELSE wo.status END as status"),
+                'wo.no_wo',
+                's.no_so',
+                'wo.id_pelanggan_pekerjaan',
+                'wo.id_site_pelanggan_pekerjaan',
+                'br.nama as Pelanggan',
+                'brs.nama_lokasi as Site Pelanggan',
+                's.judul_order',
+                's.tanggal_so',
+                'wo.tanggal_mulai',
+                'wo.tanggal_selesai',
+                's.created_at',
+            ]);
+    }
+
     public function data(Request $request)
     {
         $filters     = collect($request->input('filters', []))->filter(fn($f) => !empty($f['by']) && !empty($f['q']));
         $isSearching = $filters->isNotEmpty();
 
-        $query = DB::table('work_orders as wo')
-            ->leftJoin('sales_orders as s', 'wo.id_so', '=', 's.id_so')
-            ->leftJoin('business_relations as br', 'wo.id_pelanggan_pekerjaan', '=', 'br.id_br')
-            ->leftJoin('business_relation_sites as brs', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
+        $query = self::listBaseQuery()
             ->when(!$isSearching, fn($q) => $q->whereNull('wo.deleted_at'))
             ->when(!$isSearching && !$request->boolean('show_selesai'), fn($q) => $q->where('wo.status', '!=', 'completed'))
             ->when($isSearching, function ($q) use ($filters) {
@@ -302,23 +327,7 @@ class WorkOrderController extends Controller
                         default => null,
                     };
                 }
-            })
-            ->select([
-                'wo.id_wo',
-                's.id_so',
-                DB::raw("CASE WHEN wo.deleted_at IS NOT NULL THEN 'deleted' ELSE wo.status END as status"),
-                'wo.no_wo',
-                's.no_so',
-                'wo.id_pelanggan_pekerjaan',
-                'wo.id_site_pelanggan_pekerjaan',
-                'br.nama as Pelanggan',
-                'brs.nama_lokasi as Site Pelanggan',
-                's.judul_order',
-                's.tanggal_so',
-                'wo.tanggal_mulai',
-                'wo.tanggal_selesai',
-                's.created_at',
-            ]);
+            });
 
         // dd($query->get());
 

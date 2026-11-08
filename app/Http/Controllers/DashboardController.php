@@ -55,6 +55,7 @@ class DashboardController extends Controller
             'dash-so-outstanding'      => $this->kpiSoOutstanding(),
             'dash-wo-outstanding'      => $this->kpiWoOutstanding(),
             'dash-fwo-outstanding'     => $this->kpiFwoOutstanding(),
+            'dash-fwo-belum-jadwal'    => $this->kpiFwoBelumJadwal(),
             'dash-termin-outstanding'  => $this->kpiTerminOutstanding(),
             'dash-overdue'             => $this->kpiOverdue(),
             'dash-so-per-bulan'        => $this->chartSoPerBulan($request),
@@ -89,6 +90,20 @@ class DashboardController extends Controller
             ->count();
 
         return ['value' => $n, 'sub' => 'WO on progress'];
+    }
+
+    /** FWO belum dijadwalkan: belum selesai dan tanggal mulainya belum diisi (mis. FWO hasil Terbitkan SO). */
+    private function fwoBelumJadwalQuery($base = null)
+    {
+        return ($base ?? DB::table('fieldworks as fw'))
+            ->whereNull('fw.deleted_at')
+            ->whereNull('fw.tanggal_mulai')
+            ->where('fw.status', '!=', 'completed');
+    }
+
+    private function kpiFwoBelumJadwal(): array
+    {
+        return ['value' => $this->fwoBelumJadwalQuery()->count(), 'sub' => 'menunggu jadwal dari tim sampling'];
     }
 
     private function kpiFwoOutstanding(): array
@@ -527,6 +542,15 @@ class DashboardController extends Controller
 
     // ── Tabel ────────────────────────────────────────────────────────────
 
+    /** Tambah kolom "Hasil" (sama dengan index FWO) dan buang kolom bantu jml_tidak_terlaksana. */
+    private function fwoRowsWithHasil($rows)
+    {
+        return $rows->each(function ($r) {
+            $r->hasil = FieldworkController::hasilHtml($r);
+            unset($r->jml_tidak_terlaksana);
+        });
+    }
+
     public function list(Request $request)
     {
         $type = $request->input('type', 'so');
@@ -540,96 +564,63 @@ class DashboardController extends Controller
             return response()->json(['message' => 'Anda tidak memiliki akses ke widget ini'], 403);
         }
 
+        // Daftar SO / SQ / WO / FWO memakai query dasar YANG SAMA dengan halaman index modulnya
+        // (listBaseQuery), jadi kolomnya selalu sama dengan index. Widget hanya menambah filter + urutan.
         if ($type === 'wo') {
-            $rows = DB::table('work_orders as wo')
-                ->leftJoin('sales_orders as s', 's.id_so', '=', 'wo.id_so')
-                ->leftJoin('business_relations as br', 'br.id_br', '=', 'wo.id_pelanggan_pekerjaan')
-                ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'wo.id_pic_pelanggan_pekerjaan')
+            $rows = WorkOrderController::listBaseQuery()
                 ->whereNull('wo.deleted_at')
                 ->where('wo.status', 'onprogress')
-                ->select([
-                    'wo.id_wo as id_rec',
-                    'wo.no_wo as no',
-                    'wo.judul_pekerjaan as judul',
-                    'br.nama as pelanggan',
-                    'brc.nama_pic as pic',
-                    'wo.tanggal_selesai as deadline',
-                    'wo.status',
-                ])
                 ->orderByDesc('wo.created_at')
                 ->get();
 
         } elseif ($type === 'fwo') {
-            $rows = DB::table('fieldworks as fw')
-                ->leftJoin('work_orders as wo', 'wo.id_wo', '=', 'fw.id_wo')
-                ->leftJoin('business_relations as br', 'br.id_br', '=', 'wo.id_pelanggan_pekerjaan')
-                ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'fw.id_pic_pelanggan_pekerjaan')
+            $rows = FieldworkController::listBaseQuery()
                 ->whereNull('fw.deleted_at')
                 ->where('fw.status', '!=', 'completed') // Planned + On Progress
-                ->select([
-                    'fw.id_fwo as id_rec',
-                    'fw.no_fwo as no',
-                    'fw.judul_pekerjaan as judul',
-                    'br.nama as pelanggan',
-                    'brc.nama_pic as pic',
-                    'fw.tanggal_selesai as deadline',
-                    DB::raw(fwoStatusSql('fw') . ' as status'),
-                ])
                 ->orderByDesc('fw.created_at')
                 ->get();
+            $rows = $this->fwoRowsWithHasil($rows);
+
+        } elseif ($type === 'fwo-belum-jadwal') {
+            // FWO tanpa tanggal mulai; yang terlama dibuat di atas. Status ditampilkan sebagai "Belum Dijadwalkan".
+            $rows = $this->fwoBelumJadwalQuery(FieldworkController::listBaseQuery())
+                ->orderBy('fw.created_at')
+                ->get();
+            $rows = $this->fwoRowsWithHasil($rows)->each(fn ($r) => $r->status = 'belum_jadwal');
 
         } elseif ($type === 'sq') {
             // SQ Win terbaru yang belum diterbitkan jadi SO; yang paling dekat masa berlakunya di atas
-            $rows = $this->sqWinBelumSoQuery()
-                ->leftJoin('business_relations as br', 'br.id_br', '=', 'sq.id_pelanggan')
-                ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'sq.id_pic_pelanggan')
-                ->select([
-                    'sq.id_sq as id_rec',
-                    'sq.no_sq as no',
-                    'sq.judul_order as judul',
-                    'br.nama as pelanggan',
-                    'brc.nama_pic as pic',
-                    'sq.berlaku_sampai as deadline',
-                    'sq.status',
-                ])
-                ->orderByRaw('sq.berlaku_sampai IS NULL, sq.berlaku_sampai ASC')
-                ->orderByDesc('sq.created_at')
+            $rows = SalesQuotationController::listBaseQuery()
+                ->whereNull('s.deleted_at')
+                ->where('s.is_latest', true)
+                ->where('s.status', 'win')
+                ->whereNotExists(function ($q) {
+                    $q->select(DB::raw(1))->from('sales_orders as so')
+                        ->whereColumn('so.id_sq', 's.id_sq')->whereNull('so.deleted_at');
+                })
+                ->orderByRaw('s.berlaku_sampai IS NULL, s.berlaku_sampai ASC')
+                ->orderByDesc('s.created_at')
                 ->get();
 
         } elseif ($type === 'sq-approval') {
-            // SQ menunggu approval; yang paling lama menunggu di atas. "pic" = pengaju, "deadline" = waktu pengajuan
-            $rows = $this->sqPendingQuery()
-                ->leftJoin('business_relations as br', 'br.id_br', '=', 'sq.id_pelanggan')
-                ->leftJoin('users as u', 'u.id', '=', 'sq.diajukan_oleh')
-                ->select([
-                    'sq.id_sq as id_rec',
-                    'sq.no_sq as no',
-                    'sq.judul_order as judul',
-                    'br.nama as pelanggan',
-                    'u.name as pic',
-                    DB::raw("DATE_FORMAT(sq.diajukan_at, '%Y-%m-%d %H:%i') as deadline"),
-                    'sq.status',
+            // SQ menunggu approval; yang paling lama menunggu di atas. Kolom index SQ + 2 kolom khusus approval di ujung.
+            $rows = SalesQuotationController::listBaseQuery()
+                ->leftJoin('users as u', 'u.id', '=', 's.diajukan_oleh')
+                ->addSelect([
+                    'u.name as diajukan_oleh',
+                    DB::raw("DATE_FORMAT(s.diajukan_at, '%Y-%m-%d %H:%i') as diajukan_at"),
                 ])
-                ->orderBy('sq.diajukan_at')
+                ->whereNull('s.deleted_at')
+                ->where('s.is_latest', true)
+                ->where('s.status', 'pending')
+                ->orderBy('s.diajukan_at')
                 ->get();
 
         } elseif ($type === 'so') {
             // Status SO yang benar: on-progress | completed | cancel (sebelumnya salah memakai 'selesai')
-            $rows = DB::table('sales_orders as s')
-                ->tap(fn ($q) => DataScope::so($q, 's'))
-                ->leftJoin('business_relations as br', 'br.id_br', '=', 's.id_pelanggan')
-                ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 's.id_pic_pelanggan')
+            $rows = SalesOrderController::listBaseQuery()
                 ->whereNull('s.deleted_at')
                 ->whereNotIn('s.status', ['completed', 'cancel'])
-                ->select([
-                    's.id_so as id_rec',
-                    's.no_so as no',
-                    's.judul_order as judul',
-                    'br.nama as pelanggan',
-                    'brc.nama_pic as pic',
-                    DB::raw('NULL as deadline'),
-                    's.status',
-                ])
                 ->orderByDesc('s.created_at')
                 ->get();
 

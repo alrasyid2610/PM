@@ -46,9 +46,12 @@ return [
     // ── Operasional ──
     ['slug' => 'dash-wo-outstanding',  'label' => 'Outstanding WO',        'kelompok' => 'Operasional', 'type' => 'kpi',   'icon' => 'fa-briefcase',     'color' => '#0284c7', 'bg' => '#e0f2fe', 'tab' => 'wo'],
     ['slug' => 'dash-fwo-outstanding', 'label' => 'Outstanding FWO',       'kelompok' => 'Operasional', 'type' => 'kpi',   'icon' => 'fa-helmet-safety', 'color' => '#0d9488', 'bg' => '#f0fdfa', 'tab' => 'fwo'],
+    // FWO belum dijadwalkan = tanggal_mulai kosong (mis. FWO hasil Terbitkan SO; tim sampling yang mengisi jadwal).
+    ['slug' => 'dash-fwo-belum-jadwal', 'label' => 'FWO Belum Dijadwalkan', 'kelompok' => 'Operasional', 'type' => 'kpi', 'icon' => 'fa-calendar-xmark', 'color' => '#b45309', 'bg' => '#fffbeb', 'tab' => 'fwo-belum-jadwal'],
     ['slug' => 'dash-overdue',         'label' => 'Overdue (WO + FWO)',    'kelompok' => 'Operasional', 'type' => 'kpi',   'icon' => 'fa-flag',          'color' => '#dc2626', 'bg' => '#fef2f2'],
     ['slug' => 'dash-list-wo',         'label' => 'Daftar WO On Progress', 'kelompok' => 'Operasional', 'type' => 'table', 'icon' => 'fa-briefcase',     'key' => 'wo'],
     ['slug' => 'dash-list-fwo',        'label' => 'Daftar FWO Planned',    'kelompok' => 'Operasional', 'type' => 'table', 'icon' => 'fa-helmet-safety', 'key' => 'fwo'],
+    ['slug' => 'dash-list-fwo-belum-jadwal', 'label' => 'Daftar FWO Belum Dijadwalkan', 'kelompok' => 'Operasional', 'type' => 'table', 'icon' => 'fa-calendar-xmark', 'key' => 'fwo-belum-jadwal'],
 
     // ── Finance ──
     ['slug' => 'dash-termin-outstanding', 'label' => 'Outstanding Termin',          'kelompok' => 'Finance', 'type' => 'kpi',   'icon' => 'fa-receipt', 'color' => '#7c3aed', 'bg' => '#f5f3ff', 'tab' => 'termin'],
