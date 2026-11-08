@@ -1026,6 +1026,7 @@ Route::prefix('fieldworks')->name('fieldworks.')->group(function () {
     Route::put('/{id}/personels',  [FieldworkController::class, 'updatePersonels'])->name('updatePersonels')->whereNumber('id');
     Route::post('/{id}/duplicate', [FieldworkController::class, 'duplicate'])->name('duplicate')->whereNumber('id');
     Route::post('/{id}/complete',    [FieldworkController::class, 'complete'])->name('complete')->whereNumber('id');
+    Route::put('/{id}/start',        [FieldworkController::class, 'start'])->name('start')->whereNumber('id');
     Route::post('/{id}/attachments', [FieldworkController::class, 'updateAttachments'])->name('updateAttachments')->whereNumber('id');
     Route::get('/{id}/pdf',          [FieldworkController::class, 'generatePdf'])->name('pdf')->whereNumber('id');
 });

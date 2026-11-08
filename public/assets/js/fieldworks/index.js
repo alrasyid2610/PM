@@ -1228,6 +1228,7 @@ window.datatableColumnRenderers = {
     status: function (data) {
         var map = {
             planned:   { bg: '#fffbeb', color: '#92400e', border: '#fde68a', icon: 'fa-hourglass-half', label: 'Planned' },
+            on_progress: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-spinner', label: 'On Progress' },
             completed: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-circle-check',  label: 'Completed' },
             deleted:   { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: 'fa-trash',         label: 'Deleted' },
         };
@@ -1541,6 +1542,40 @@ $(document).ready(function () {
         addedBoqIds.delete(boqId);
         $(this).closest('.fwo-boq-section').remove();
         checkFwoBoqEmpty();
+    });
+
+    // Mulai FWO (Planned → On Progress, manual sebelum tanggal mulai tiba)
+    $(document).on('click', '#btnStartFwo', function () {
+        const fwoId = $(this).data('fwo-id');
+        const $btn  = $(this);
+        Swal.fire({
+            title: 'Mulai FWO?',
+            html:  'Status akan berubah menjadi <strong>On Progress</strong>.',
+            icon:  'question',
+            showCancelButton:    true,
+            confirmButtonText:   '<i class="fa-solid fa-play me-1"></i> Ya, Mulai',
+            cancelButtonText:    'Batal',
+            confirmButtonColor:  '#1d4ed8',
+            cancelButtonColor:   '#6b7280',
+            reverseButtons:      true,
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+            $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin" style="font-size:10px;"></i> Memproses...');
+            $.ajax({
+                url:     window.route.fwoComplete + fwoId + '/start',
+                method:  'POST',
+                data:    { _method: 'PUT' },
+                headers: { 'X-CSRF-TOKEN': window.route.csrf },
+                success: function () {
+                    Notify.success('FWO dimulai (On Progress)');
+                    page.loadDetail(page.selectedRow.id);
+                },
+                error: function (xhr) {
+                    Notify.error(xhr.responseJSON?.message || 'Gagal memulai FWO');
+                    $btn.prop('disabled', false).html('<i class="fa-solid fa-play me-1"></i> Mulai FWO');
+                },
+            });
+        });
     });
 
     // Selesaikan FWO

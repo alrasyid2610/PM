@@ -1420,6 +1420,10 @@ function renderFwoProgressTable(data, id_wo) {
                 ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;background:#f0fdf4;color:#15803d;font-size:11px;font-weight:600;border:1px solid #bbf7d0;white-space:nowrap;">
                        <i class="fa-solid fa-circle-check" style="font-size:10px;"></i> Completed
                    </span>`
+                : f.status === 'on_progress'
+                ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:600;border:1px solid #bfdbfe;white-space:nowrap;">
+                       <i class="fa-solid fa-spinner" style="font-size:10px;"></i> On Progress
+                   </span>`
                 : `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;background:#fffbeb;color:#b45309;font-size:11px;font-weight:600;border:1px solid #fde68a;white-space:nowrap;">
                        <i class="fa-solid fa-hourglass-half" style="font-size:10px;"></i> Planned
                    </span>`;

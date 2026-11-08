@@ -733,7 +733,7 @@ class WorkOrderController extends Controller
                 'keterangan'      => $f->keterangan,
                 'tanggal_mulai'   => $f->tanggal_mulai,
                 'tanggal_selesai' => $f->tanggal_selesai,
-                'status'          => $f->status,
+                'status'          => fwoStatusEfektif($f->status, $f->tanggal_mulai),
             ])->values(),
             'sections'         => $boqSections->map(fn($s) => [
                 'id_boq'       => $s->id_boq,

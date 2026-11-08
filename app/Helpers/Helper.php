@@ -146,6 +146,28 @@ function fwoBoqEffectiveQtySql(string $fb = 'fb', string $fw = 'fw'): string
         . "(SELECT COUNT(*) FROM lab_samples ls_tt WHERE ls_tt.id_fwo_boq = {$fb}.id_fwo_boq AND ls_tt.status = 'tidak_terlaksana'))";
 }
 
+/**
+ * Status FWO yang ditampilkan (tanpa mengubah kolom `status`):
+ * `planned` yang tanggal mulainya sudah tiba (<= hari ini, zona Asia/Jakarta) tampil `on_progress`.
+ * `on_progress` juga bisa tersimpan di kolom (aksi manual "Mulai FWO"); `completed` tidak pernah berubah.
+ */
+function fwoStatusEfektif(?string $status, $tanggalMulai): string
+{
+    if ($status === 'planned' && $tanggalMulai && substr((string) $tanggalMulai, 0, 10) <= now()->toDateString()) {
+        return 'on_progress';
+    }
+    return (string) $status;
+}
+
+/** Padanan SQL fwoStatusEfektif() (termasuk 'deleted' untuk soft delete) — dipakai kolom Status & filter list FWO. */
+function fwoStatusSql(string $fw = 'fw'): string
+{
+    $hariIni = now()->toDateString(); // dari PHP (bukan CURDATE()) supaya mengikuti zona waktu aplikasi
+    return "CASE WHEN {$fw}.deleted_at IS NOT NULL THEN 'deleted' "
+        . "WHEN {$fw}.status = 'planned' AND {$fw}.tanggal_mulai IS NOT NULL AND DATE({$fw}.tanggal_mulai) <= '{$hariIni}' THEN 'on_progress' "
+        . "ELSE {$fw}.status END";
+}
+
 function uploadAttachment($fieldAttachments, $table)
 {
     $files = [];

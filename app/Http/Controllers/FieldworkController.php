@@ -73,7 +73,8 @@ class FieldworkController extends Controller
                         'status' => match ($term) {
                             'all'     => null,
                             'deleted' => $q->whereNotNull('fw.deleted_at'),
-                            default   => $q->whereNull('fw.deleted_at')->where('fw.status', $term),
+                            // planned / on_progress memakai status efektif (planned yang tanggal mulainya tiba = on_progress)
+                            default   => $q->whereNull('fw.deleted_at')->whereRaw('(' . fwoStatusSql('fw') . ') = ?', [$term]),
                         },
                         default  => null,
                     };
@@ -81,7 +82,7 @@ class FieldworkController extends Controller
             })
             ->select([
                 'fw.id_fwo',
-                DB::raw("CASE WHEN fw.deleted_at IS NOT NULL THEN 'deleted' ELSE fw.status END as status"),
+                DB::raw(fwoStatusSql('fw') . ' as status'),
                 'fw.no_fwo',
                 'wo.no_wo',
                 'fw.judul_pekerjaan',
@@ -144,6 +145,8 @@ class FieldworkController extends Controller
         }
 
         $data->nama_pelanggan_display = brDisplayName($data->entitas_pelanggan_pekerjaan, $data->nama_pelanggan_pekerjaan);
+        // Status yang ditampilkan: planned + tanggal mulai tiba = on_progress (kolom status tidak diubah)
+        $data->status_efektif = fwoStatusEfektif($data->status, $data->tanggal_mulai);
 
         // Ringkasan titik sample yang tidak terlaksana (per alasan) — dipakai badge
         // "Tidak Sesuai Rencana" di action bar & ringkasan di detail FWO.
@@ -458,6 +461,38 @@ class FieldworkController extends Controller
         }
 
         return response()->json(['success' => true, 'message' => 'Attachment berhasil disimpan']);
+    }
+
+    /**
+     * Mulai FWO secara manual (Planned â†’ On Progress) sebelum tanggal mulai tiba. Hanya mengisi kolom
+     * `status` yang sudah ada (tanpa perubahan struktur DB). Route PUT â†’ cukup izin can_update menu fieldworks.
+     */
+    public function start($id)
+    {
+        $fwo = DB::table('fieldworks')->where('id_fwo', $id)->whereNull('deleted_at')->first();
+        if (!$fwo) {
+            return response()->json(['message' => 'FWO tidak ditemukan'], 404);
+        }
+        if ($fwo->status === 'completed') {
+            return response()->json(['message' => 'FWO sudah berstatus Completed'], 422);
+        }
+        if (fwoStatusEfektif($fwo->status, $fwo->tanggal_mulai) === 'on_progress') {
+            return response()->json(['message' => 'FWO sudah berstatus On Progress'], 422);
+        }
+        // WO yang sudah selesai mengunci FWO-nya (sama seperti tombol Edit disembunyikan di UI)
+        if (DB::table('work_orders')->where('id_wo', $fwo->id_wo)->where('status', 'completed')->exists()) {
+            return response()->json(['message' => 'WO sudah selesai, FWO tidak dapat diubah'], 422);
+        }
+
+        $before = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
+        DB::table('fieldworks')->where('id_fwo', $id)->update([
+            'status'     => 'on_progress',
+            'updated_at' => now(),
+        ]);
+        $after = DB::table('fieldworks')->where('id_fwo', $id)->get()->toJson();
+        saveAudit('fieldworks', $id, 'update', $before, $after, $this->parentWo($id));
+
+        return response()->json(['success' => true, 'message' => 'FWO dimulai (On Progress)']);
     }
 
     public function complete($id)

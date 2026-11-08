@@ -28,6 +28,7 @@
         ['label' => 'Status',          'value' => 'status', 'type' => 'select', 'options' => [
             ['label' => 'All',       'value' => 'all'],
             ['label' => 'Planned',   'value' => 'planned'],
+            ['label' => 'On Progress', 'value' => 'on_progress'],
             ['label' => 'Completed', 'value' => 'completed'],
             ['label' => 'Deleted',   'value' => 'deleted'],
         ]],

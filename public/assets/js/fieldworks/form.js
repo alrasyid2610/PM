@@ -2,6 +2,8 @@ function renderFwoForm(res) {
     const isDeleted = !!res.deleted_at;
     const isWoCompleted = res.wo_status === "completed";
     const isCompleted = !isDeleted && (res.status === "completed" || isWoCompleted);
+    // Planned yang tanggal mulainya tiba tampil On Progress (status_efektif dari server; kolom status tidak berubah)
+    const isOnProgress = !isDeleted && !isCompleted && (res.status_efektif || res.status) === "on_progress";
 
     const soBadge = res.id_so
         ? `<a href="/sales-orders?open=${res.id_so}" class="pm-badge" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;text-decoration:none;">
@@ -39,9 +41,13 @@ function renderFwoForm(res) {
           ? `<span class="pm-badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;">
                <i class="fa-solid fa-circle-check" style="font-size:10px;"></i> Completed
            </span>`
-          : `<span class="pm-badge" style="background:#fffbeb;color:#d97706;border:1px solid #fde68a;">
-               <i class="fa-solid fa-circle" style="font-size:8px;"></i> Planned
-           </span>`;
+          : isOnProgress
+            ? `<span class="pm-badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">
+                   <i class="fa-solid fa-spinner" style="font-size:10px;"></i> On Progress
+               </span>`
+            : `<span class="pm-badge" style="background:#fffbeb;color:#d97706;border:1px solid #fde68a;">
+                   <i class="fa-solid fa-circle" style="font-size:8px;"></i> Planned
+               </span>`;
 
     return `
 <form id="detailForm">
@@ -73,12 +79,18 @@ function renderFwoForm(res) {
                    <i class="fa-solid fa-lock" style="font-size:10px; line-height: 14px;"></i>
                    ${isWoCompleted && res.status !== 'completed' ? 'WO sudah selesai, FWO tidak dapat diubah' : 'FWO sudah selesai, data tidak dapat diubah'}
                </span>`
-              : (can('fwo-complete', 'can_update')
-                  ? `<button type="button" id="btnCompleteFwo" data-fwo-id="${res.id_fwo}" data-no-disable
-                    class="btn btn-sm btn-success" style="font-size:12px;">
-                    <i class="fa-solid fa-circle-check me-1"></i> Selesaikan FWO
-                   </button>`
-                  : ''),
+              : ((!isOnProgress && can('fieldworks', 'can_update')
+                    ? `<button type="button" id="btnStartFwo" data-fwo-id="${res.id_fwo}" data-no-disable
+                        class="btn btn-sm btn-primary me-2" style="font-size:12px;">
+                        <i class="fa-solid fa-play me-1"></i> Mulai FWO
+                       </button>`
+                    : '') +
+                  (can('fwo-complete', 'can_update')
+                    ? `<button type="button" id="btnCompleteFwo" data-fwo-id="${res.id_fwo}" data-no-disable
+                        class="btn btn-sm btn-success" style="font-size:12px;">
+                        <i class="fa-solid fa-circle-check me-1"></i> Selesaikan FWO
+                       </button>`
+                    : '')),
         noWrap: true,
     })}
 

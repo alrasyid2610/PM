@@ -93,12 +93,14 @@ class DashboardController extends Controller
 
     private function kpiFwoOutstanding(): array
     {
-        $n = DB::table('fieldworks')
-            ->whereNull('deleted_at')
-            ->where('status', 'planned')
-            ->count();
+        // FWO belum selesai = Planned + On Progress (On Progress = planned yang tanggal mulainya tiba, atau dimulai manual)
+        $aktif = DB::table('fieldworks as fw')
+            ->whereNull('fw.deleted_at')
+            ->where('fw.status', '!=', 'completed');
+        $n          = (clone $aktif)->count();
+        $onProgress = (clone $aktif)->whereRaw('(' . fwoStatusSql('fw') . ") = 'on_progress'")->count();
 
-        return ['value' => $n, 'sub' => 'FWO planned'];
+        return ['value' => $n, 'sub' => 'FWO belum selesai' . ($onProgress ? " ({$onProgress} on progress)" : '')];
     }
 
     private function kpiTerminOutstanding(): array
@@ -563,7 +565,7 @@ class DashboardController extends Controller
                 ->leftJoin('business_relations as br', 'br.id_br', '=', 'wo.id_pelanggan_pekerjaan')
                 ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'fw.id_pic_pelanggan_pekerjaan')
                 ->whereNull('fw.deleted_at')
-                ->where('fw.status', 'planned')
+                ->where('fw.status', '!=', 'completed') // Planned + On Progress
                 ->select([
                     'fw.id_fwo as id_rec',
                     'fw.no_fwo as no',
@@ -571,7 +573,7 @@ class DashboardController extends Controller
                     'br.nama as pelanggan',
                     'brc.nama_pic as pic',
                     'fw.tanggal_selesai as deadline',
-                    'fw.status',
+                    DB::raw(fwoStatusSql('fw') . ' as status'),
                 ])
                 ->orderByDesc('fw.created_at')
                 ->get();
