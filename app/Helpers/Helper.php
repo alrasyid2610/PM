@@ -153,6 +153,10 @@ function fwoBoqEffectiveQtySql(string $fb = 'fb', string $fw = 'fw'): string
  */
 function fwoStatusEfektif(?string $status, $tanggalMulai): string
 {
+    // Belum ada tanggal mulai (dan belum selesai) = Belum Dijadwalkan — sama dengan widget dashboard "FWO Belum Dijadwalkan"
+    if ($status !== 'completed' && !$tanggalMulai) {
+        return 'belum_jadwal';
+    }
     if ($status === 'planned' && $tanggalMulai && substr((string) $tanggalMulai, 0, 10) <= now()->toDateString()) {
         return 'on_progress';
     }
@@ -164,6 +168,7 @@ function fwoStatusSql(string $fw = 'fw'): string
 {
     $hariIni = now()->toDateString(); // dari PHP (bukan CURDATE()) supaya mengikuti zona waktu aplikasi
     return "CASE WHEN {$fw}.deleted_at IS NOT NULL THEN 'deleted' "
+        . "WHEN {$fw}.status <> 'completed' AND {$fw}.tanggal_mulai IS NULL THEN 'belum_jadwal' "
         . "WHEN {$fw}.status = 'planned' AND {$fw}.tanggal_mulai IS NOT NULL AND DATE({$fw}.tanggal_mulai) <= '{$hariIni}' THEN 'on_progress' "
         . "ELSE {$fw}.status END";
 }

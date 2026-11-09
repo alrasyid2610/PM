@@ -4,6 +4,8 @@ function renderFwoForm(res) {
     const isCompleted = !isDeleted && (res.status === "completed" || isWoCompleted);
     // Planned yang tanggal mulainya tiba tampil On Progress (status_efektif dari server; kolom status tidak berubah)
     const isOnProgress = !isDeleted && !isCompleted && (res.status_efektif || res.status) === "on_progress";
+    // Belum ada Tanggal Mulai = Belum Dijadwalkan (sama dengan widget dashboard "FWO Belum Dijadwalkan")
+    const isBelumJadwal = !isDeleted && !isCompleted && res.status_efektif === "belum_jadwal";
 
     const soBadge = res.id_so
         ? `<a href="/sales-orders?open=${res.id_so}" class="pm-badge" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;text-decoration:none;">
@@ -41,6 +43,10 @@ function renderFwoForm(res) {
           ? `<span class="pm-badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;">
                <i class="fa-solid fa-circle-check" style="font-size:10px;"></i> Completed
            </span>`
+          : isBelumJadwal
+            ? `<span class="pm-badge" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;">
+                   <i class="fa-solid fa-calendar-xmark" style="font-size:10px;"></i> Belum Dijadwalkan
+               </span>`
           : isOnProgress
             ? `<span class="pm-badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">
                    <i class="fa-solid fa-spinner" style="font-size:10px;"></i> On Progress
@@ -79,7 +85,7 @@ function renderFwoForm(res) {
                    <i class="fa-solid fa-lock" style="font-size:10px; line-height: 14px;"></i>
                    ${isWoCompleted && res.status !== 'completed' ? 'WO sudah selesai, FWO tidak dapat diubah' : 'FWO sudah selesai, data tidak dapat diubah'}
                </span>`
-              : ((!isOnProgress && can('fieldworks', 'can_update')
+              : ((!isOnProgress && !isBelumJadwal && can('fieldworks', 'can_update')
                     ? `<button type="button" id="btnStartFwo" data-fwo-id="${res.id_fwo}" data-no-disable
                         class="btn btn-sm btn-primary me-2" style="font-size:12px;">
                         <i class="fa-solid fa-play me-1"></i> Mulai FWO

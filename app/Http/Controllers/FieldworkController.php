@@ -60,11 +60,17 @@ class FieldworkController extends Controller
     {
         return DB::table('fieldworks as fw')
             ->leftJoin('work_orders as wo', 'fw.id_wo', '=', 'wo.id_wo')
+            // Pelanggan = Perusahaan pekerjaan WO (sama seperti index WO); Site = Site pekerjaan FWO, cadangan Site WO
+            ->leftJoin('business_relations as br', 'wo.id_pelanggan_pekerjaan', '=', 'br.id_br')
+            ->leftJoin('business_relation_sites as brs', 'fw.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
+            ->leftJoin('business_relation_sites as brs_wo', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs_wo.id_site')
             ->select([
                 'fw.id_fwo',
                 DB::raw(fwoStatusSql('fw') . ' as status'),
                 'fw.no_fwo',
                 'wo.no_wo',
+                'br.nama as Pelanggan',
+                DB::raw('COALESCE(brs.nama_lokasi, brs_wo.nama_lokasi) as `Site Pelanggan`'),
                 'fw.judul_pekerjaan',
                 'fw.tanggal_mulai',
                 'fw.tanggal_selesai',
@@ -106,6 +112,8 @@ class FieldworkController extends Controller
                         'no_fwo' => $q->where('fw.no_fwo', 'like', $like),
                         'no_wo'  => $q->where('wo.no_wo',  'like', $like),
                         'judul'  => $q->where('fw.judul_pekerjaan', 'like', $like),
+                        'pelanggan' => $q->where('br.nama', 'like', $like),
+                        'site'   => $q->where(fn ($x) => $x->where('brs.nama_lokasi', 'like', $like)->orWhere('brs_wo.nama_lokasi', 'like', $like)),
                         'status' => match ($term) {
                             'all'     => null,
                             'deleted' => $q->whereNotNull('fw.deleted_at'),
@@ -490,7 +498,11 @@ class FieldworkController extends Controller
         if ($fwo->status === 'completed') {
             return response()->json(['message' => 'FWO sudah berstatus Completed'], 422);
         }
-        if (fwoStatusEfektif($fwo->status, $fwo->tanggal_mulai) === 'on_progress') {
+        $efektif = fwoStatusEfektif($fwo->status, $fwo->tanggal_mulai);
+        if ($efektif === 'belum_jadwal') {
+            return response()->json(['message' => 'FWO belum dijadwalkan. Isi Tanggal Mulai dulu di tab Informasi.'], 422);
+        }
+        if ($efektif === 'on_progress') {
             return response()->json(['message' => 'FWO sudah berstatus On Progress'], 422);
         }
         // WO yang sudah selesai mengunci FWO-nya (sama seperti tombol Edit disembunyikan di UI)

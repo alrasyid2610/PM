@@ -1225,10 +1225,15 @@ $(document).off('click.budget', '#actualModal-btn-save').on('click.budget', '#ac
 
 // ── Init ───────────────────────────────────────────────────────────────────────
 window.datatableColumnRenderers = {
+    // Teks panjang dipotong "…", teks lengkap saat hover (sama seperti index WO/SO/SQ)
+    judul_pekerjaan: function (d, t) { return window.dtClip(d, t, 340); },
+    Pelanggan: function (d, t) { return window.dtClip(d, t, 240); },
+    'Site Pelanggan': function (d, t) { return window.dtClip(d, t, 220); },
     status: function (data) {
         var map = {
             planned:   { bg: '#fffbeb', color: '#92400e', border: '#fde68a', icon: 'fa-hourglass-half', label: 'Planned' },
             on_progress: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: 'fa-spinner', label: 'On Progress' },
+            belum_jadwal: { bg: '#fffbeb', color: '#b45309', border: '#fde68a', icon: 'fa-calendar-xmark', label: 'Belum Dijadwalkan' },
             completed: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-circle-check',  label: 'Completed' },
             deleted:   { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: 'fa-trash',         label: 'Deleted' },
         };
