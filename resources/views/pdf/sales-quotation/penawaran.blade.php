@@ -40,11 +40,12 @@
     .ket ol { margin: 4px 0 0 22px; }
     .ket li { margin-bottom: 2px; }
 
-    .sign { margin-top: 22px; font-size: 11px; page-break-inside: avoid; break-inside: avoid; }
-    .sign-inner { display: inline-block; text-align: center; min-width: 150px; }
-    .sign-img { display: block; width: 190px; height: auto; margin: 4px auto 6px; }
-    .sign-nama { font-weight: 700; font-size: 12px; }
-    .sign-jabatan { font-size: 11px; }
+    .sign { margin-top: 22px; font-size: 14px; page-break-inside: avoid; break-inside: avoid; }
+    .sign-inner { display: inline-block; text-align: center; min-width: 170px; }
+    .sign-img { display: block; width: 170px; height: auto; margin: 2px auto 6px; }
+    .sign-pt { width: 170px; margin: -2px auto 6px; padding-left: 8px; text-align: left; font-size: 8px; color: #6b7280; }
+    .sign-nama { font-weight: 700; font-size: 14px; }
+    .sign-jabatan { font-size: 13px; }
 @endsection
 
 @section('content')
@@ -161,6 +162,8 @@
             <div>Hormat kami,</div>
             {{-- Gambar tanda tangan elektronik (dari layanan e-sign, tanpa baris kode) — sementara 1 gambar tetap --}}
             <img class="sign-img" src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('assets/images/ttd-penawaran.png'))) }}" alt="Tanda tangan">
+            {{-- Gambar e-sign terpotong di atas tulisan perusahaan → tulisannya ditambahkan sebagai teks di bawah QR --}}
+            <div class="sign-pt">PT Pramatek Andal Analitika</div>
             {{-- Nama & jabatan penandatangan: hardcode sementara --}}
             <div class="sign-nama">Fuad P</div>
             <div class="sign-jabatan">Business Manager</div>

@@ -1014,9 +1014,9 @@ class SalesQuotationController extends Controller
             'keterangan'  => $keteranganRows->pluck('teks'),
         ])
             ->headerView('pdf.layouts.sections.header-penawaran', ['no' => $noDok, 'tanggal' => $tanggal])
-            ->footerView('pdf.layouts.sections.footer')
-            // Footer (gambar kop bawah ± 25 mm + nomor halaman) harus muat di margin bawah, kalau tidak menimpa baris tabel
-            ->margins(top: 38, right: 0, bottom: 35, left: 0)
+            ->footerView('pdf.layouts.sections.footer-penawaran')
+            // Footer teks saja (alamat + kontak ± 12 mm + nomor halaman) harus muat di margin bawah, kalau tidak menimpa baris tabel
+            ->margins(top: 38, right: 0, bottom: 25, left: 0)
             ->format('a4')
             ->name("Penawaran-{$sq->no_sq}.pdf");
     }
