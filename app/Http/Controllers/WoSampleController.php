@@ -347,7 +347,17 @@ class WoSampleController extends Controller
                 ->get(['id_lab_sample', 'no_sample', 'jenis_sample', 'titik_lokasi', 'status', 'tanggal_pengambilan', 'kondisi_sample']);
 
             if ($samples->isEmpty()) continue;
-            $groups[] = ['label' => $boq->label, 'no_fwo' => $boq->no_fwo, 'nama_boq' => $boq->nama_boq, 'kelompok_matriks' => $boq->kelompok_matriks, 'samples' => $samples];
+
+            // Parameter = Testing Item yang dipilih pada BOQ FWO ini (sama untuk semua sample di BOQ yang sama)
+            $parameter = DB::table('fieldwork_boq_items as fbi')
+                ->join('testing_items as ti', 'ti.id_testing_item', '=', 'fbi.id_testing_item')
+                ->where('fbi.id_fwo_boq', $boq->id_fwo_boq)
+                ->orderBy('fbi.id_testing_item')
+                ->pluck('ti.judul_indonesia')
+                ->filter()
+                ->values();
+
+            $groups[] = ['label' => $boq->label, 'no_fwo' => $boq->no_fwo, 'nama_boq' => $boq->nama_boq, 'kelompok_matriks' => $boq->kelompok_matriks, 'parameter' => $parameter, 'samples' => $samples];
         }
 
         // Sejak 2026-11-08 registrasi lab HANYA untuk sample asal FWO — pool BOQ WO-langsung (jalur b) tidak lagi ditawarkan.

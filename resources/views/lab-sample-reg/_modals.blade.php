@@ -174,9 +174,16 @@
         </div>
     </div>
 
+    <style>
+        /* Handle geser lebar kolom tabel modal Registrasi Sample (pola sama dengan .col-resize-handle di Clone SO) */
+        .wo-reg-col-handle { position: absolute; top: 0; right: 0; width: 6px; height: 100%; cursor: col-resize; user-select: none; z-index: 2; }
+        .wo-reg-col-handle:hover, .wo-reg-col-handle.resizing { background: rgba(29, 78, 216, 0.35); }
+    </style>
+
     <!-- MODAL: TARIK SAMPLE DARI FWO -->
     <div class="modal fade" id="woRegFromFwoModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-scrollable modal-xl">
+        {{-- Lebar ±95% layar (maks 1600px) supaya kolom Parameter terbaca --}}
+        <div class="modal-dialog modal-dialog-scrollable modal-xl" style="--bs-modal-width:min(95vw,1600px);max-width:min(95vw,1600px);">
             <div class="modal-content">
                 <div class="modal-header py-2 px-3" style="border-bottom:1px solid #e2e8f0;">
                     <h6 class="modal-title mb-0">

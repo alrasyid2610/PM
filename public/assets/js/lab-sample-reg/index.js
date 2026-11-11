@@ -827,6 +827,7 @@ $(document).on('click', '#btn-wo-reg-from-fwo', function () {
     $.get(`/wo-samples/by-wo/${idWo}/available-fwo-samples${labRegFwoQuery(labRegFwoId)}`)
         .done(function (res) {
             $list.html(renderWoRegFromFwoList(res.data || []));
+            makeRegTableResizable($list.find('table.wo-reg-resizable'));
             initRegFromFwoFilters();
             updateRegFromFwoCount();
         })
@@ -834,6 +835,42 @@ $(document).on('click', '#btn-wo-reg-from-fwo', function () {
             $list.html('<div class="text-center text-danger py-3">Gagal memuat data.</div>');
         });
 });
+
+// Geser lebar kolom (pola sama dengan Clone SO: handle di pinggir kanan header). Layout fixed; lebar tabel = jumlah lebar kolom,
+// jadi memperlebar satu kolom membuat tabel bisa digulir ke samping (bukan kolom lain yang menyempit).
+function makeRegTableResizable($table) {
+    if (!$table.length || $table.data('resizableInit')) return;
+    $table.data('resizableInit', true);
+    const $ths = $table.find('thead th');
+    const syncWidth = () => {
+        let sum = 0;
+        $ths.each(function () { sum += parseFloat(this.style.width) || 0; });
+        $table.css({ 'table-layout': 'fixed', width: sum + 'px', minWidth: '100%' });
+    };
+    $ths.each(function (i) {
+        const $th = $(this);
+        if (i === 0) return; // kolom centang tidak dilebarkan
+        $th.css({ overflow: 'hidden', textOverflow: 'ellipsis' }).append('<span class="wo-reg-col-handle"></span>');
+    });
+    syncWidth();
+
+    $table.on('mousedown', '.wo-reg-col-handle', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const $th = $(this).closest('th');
+        const startX = e.pageX;
+        const startWidth = parseFloat($th[0].style.width) || $th.outerWidth();
+        $(this).addClass('resizing');
+        $(document).on('mousemove.regColResize', function (ev) {
+            $th.css('width', Math.max(60, startWidth + (ev.pageX - startX)) + 'px');
+            syncWidth();
+        });
+        $(document).on('mouseup.regColResize', function () {
+            $table.find('.wo-reg-col-handle').removeClass('resizing');
+            $(document).off('mousemove.regColResize mouseup.regColResize');
+        });
+    });
+}
 
 // Daftar sample siap registrasi — satu tabel datar (bukan daftar per grup) supaya banyak sample tidak perlu digulir panjang.
 // Area tabel punya scroll sendiri dengan header menempel; klik baris = centang.
@@ -855,7 +892,13 @@ function renderWoRegFromFwoList(groups) {
 
     const body = rows.map(function ({ g, s }) {
         const jenisTxt = JENIS_LABEL_WO_SAMPLE[s.jenis_sample] || s.jenis_sample || '';
-        const searchText = [s.no_sample, jenisTxt, s.titik_lokasi, g.no_fwo, g.kelompok_matriks, g.nama_boq, g.label].filter(Boolean).join(' ').toLowerCase();
+        const params = g.parameter || [];
+        const searchText = [s.no_sample, jenisTxt, s.titik_lokasi, g.no_fwo, g.kelompok_matriks, g.nama_boq, g.label, params.join(' ')].filter(Boolean).join(' ').toLowerCase();
+        // Parameter: dipotong 3 baris, klik "Lihat semua" untuk membuka penuh
+        const paramCell = params.length
+            ? `<div class="wo-reg-param" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35;">${params.map(escHtml).join(', ')}</div>`
+              + (params.length > 4 ? `<a href="#" class="wo-reg-param-toggle" data-n="${params.length}" style="font-size:11px;">Lihat semua (${params.length})</a>` : '')
+            : dash;
         return `
         <tr class="wo-reg-from-fwo-row" data-search="${escHtml(searchText)}" data-kelompok="${escHtml(kelKey(g))}" data-fwo="${escHtml(fwoKey(g))}" data-jenis="${escHtml(jenisTxt)}" style="cursor:pointer;">
             <td class="text-center" style="width:36px;">
@@ -864,9 +907,10 @@ function renderWoRegFromFwoList(groups) {
             <td style="font-size:12px;white-space:nowrap;font-weight:600;">${escHtml(s.no_sample || ('Sample #' + s.id_lab_sample))}</td>
             <td style="font-size:12px;white-space:nowrap;">${jenisTxt ? `<span style="font-size:10px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:4px;padding:1px 6px;">${escHtml(jenisTxt)}</span>` : dash}</td>
             <td style="font-size:12px;white-space:nowrap;">${g.no_fwo ? escHtml(g.no_fwo) : '<span class="text-muted">BOQ WO</span>'}</td>
-            <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(g.kelompok_matriks || '')}">${g.kelompok_matriks ? escHtml(g.kelompok_matriks) : dash}</td>
-            <td style="font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(g.nama_boq || '')}">${escHtml(g.nama_boq || '-')}</td>
-            <td style="font-size:12px;">${s.titik_lokasi ? escHtml(s.titik_lokasi) : dash}</td>
+            <td style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(g.kelompok_matriks || '')}">${g.kelompok_matriks ? escHtml(g.kelompok_matriks) : dash}</td>
+            <td style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(g.nama_boq || '')}">${escHtml(g.nama_boq || '-')}</td>
+            <td style="font-size:12px;overflow:hidden;">${paramCell}</td>
+            <td style="font-size:12px;overflow:hidden;">${s.titik_lokasi ? escHtml(s.titik_lokasi) : dash}</td>
             <td style="font-size:12px;white-space:nowrap;">${s.tanggal_pengambilan ? fmtDate(s.tanggal_pengambilan) : dash}</td>
             <td style="font-size:12px;white-space:nowrap;">${s.kondisi_sample ? (KONDISI_LABEL_WO[s.kondisi_sample] || escHtml(s.kondisi_sample)) : dash}</td>
         </tr>`;
@@ -903,19 +947,20 @@ function renderWoRegFromFwoList(groups) {
 
     return `
     ${filters}
-    <div class="table-responsive border rounded" style="max-height:40vh;overflow:auto;">
-        <table class="pm-table mb-0">
+    <div class="table-responsive border rounded" style="max-height:55vh;overflow:auto;">
+        <table class="pm-table mb-0 wo-reg-resizable">
             <thead>
                 <tr>
                     <th style="${th}width:36px;"></th>
-                    <th style="${th}">No. Sample</th>
-                    <th style="${th}">Jenis</th>
-                    <th style="${th}">FWO</th>
-                    <th style="${th}">Kelompok Matriks</th>
-                    <th style="${th}">BOQ</th>
-                    <th style="${th}">Titik Lokasi</th>
-                    <th style="${th}">Tgl Ambil</th>
-                    <th style="${th}">Kondisi</th>
+                    <th style="${th}width:130px;">No. Sample</th>
+                    <th style="${th}width:80px;">Jenis</th>
+                    <th style="${th}width:130px;">FWO</th>
+                    <th style="${th}width:150px;">Kelompok Matriks</th>
+                    <th style="${th}width:240px;">BOQ</th>
+                    <th style="${th}width:440px;">Parameter</th>
+                    <th style="${th}width:210px;">Titik Lokasi</th>
+                    <th style="${th}width:115px;">Tgl Ambil</th>
+                    <th style="${th}width:95px;">Kondisi</th>
                 </tr>
             </thead>
             <tbody>${body}</tbody>
@@ -980,6 +1025,16 @@ $(document).on('shown.bs.modal', '#woRegFromFwoModal', function () {
 $(document).on('input', '#woRegFromFwoModal-search', applyRegFromFwoFilter);
 
 // Klik di mana saja pada baris = centang/uncheck (kecuali klik langsung pada checkbox)
+// "Lihat semua / Ringkas" pada kolom Parameter (tidak ikut mencentang baris)
+$(document).on('click', '#woRegFromFwoModal-list .wo-reg-param-toggle', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const $box = $(this).prev('.wo-reg-param');
+    const open = $box.css('-webkit-line-clamp') === 'none';
+    $box.css({ '-webkit-line-clamp': open ? '3' : 'none', display: open ? '-webkit-box' : 'block' });
+    $(this).text(open ? `Lihat semua (${$(this).data('n')})` : 'Ringkas');
+});
+
 $(document).on('click', '#woRegFromFwoModal-list .wo-reg-from-fwo-row', function (e) {
     if ($(e.target).is('input')) return;
     const $cb = $(this).find('.wo-reg-from-fwo-check');
