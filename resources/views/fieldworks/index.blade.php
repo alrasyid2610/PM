@@ -21,21 +21,7 @@
     title="List Fieldwork"
     :with-history="true"
     :with-selesai-filter="true"
-    :search-fields="[
-        ['label' => 'No. FWO',         'value' => 'no_fwo'],
-        ['label' => 'No. WO',          'value' => 'no_wo'],
-        ['label' => 'Judul Pekerjaan', 'value' => 'judul'],
-        ['label' => 'Pelanggan',       'value' => 'pelanggan'],
-        ['label' => 'Site Pelanggan',  'value' => 'site'],
-        ['label' => 'Status',          'value' => 'status', 'type' => 'select', 'options' => [
-            ['label' => 'All',       'value' => 'all'],
-            ['label' => 'Belum Dijadwalkan', 'value' => 'belum_jadwal'],
-            ['label' => 'Planned',   'value' => 'planned'],
-            ['label' => 'On Progress', 'value' => 'on_progress'],
-            ['label' => 'Completed', 'value' => 'completed'],
-            ['label' => 'Deleted',   'value' => 'deleted'],
-        ]],
-    ]"
+    :search-fields="(new \App\Support\ListFilter\Sets\FieldworkFilters)->forView()"
 />
 
 {{-- Modal: Tambah Fieldwork BOQ Section --}}

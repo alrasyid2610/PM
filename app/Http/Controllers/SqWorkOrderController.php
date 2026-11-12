@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\ListFilter\Sets\SqWorkOrderFilters;
 use App\Support\DataScope;
 use Illuminate\Http\Request;
 use App\Support\DocumentNumber;
@@ -164,8 +165,9 @@ class SqWorkOrderController extends Controller
 
     public function data(Request $request)
     {
-        $filters = collect($request->input('filters', []))->filter(fn($f) => !empty($f['by']) && !empty($f['q']));
-        $isSearching = $filters->isNotEmpty();
+        $set         = new SqWorkOrderFilters();
+        $filters     = $set->normalize($request->input('filters'));
+        $isSearching = !empty($filters);
 
         $query = DB::table('sq_work_orders as w')
             ->leftJoin('sales_quotations as sq', 'sq.id_sq', '=', 'w.id_sq')
@@ -175,19 +177,7 @@ class SqWorkOrderController extends Controller
             ->leftJoin('entitas as ent_br', 'ent_br.id_entitas', '=', 'br.id_entitas')
             ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'w.id_site_pelanggan_pekerjaan')
             ->tap(fn ($q) => DataScope::sq($q, 'sq'))
-            ->when($isSearching, function ($q) use ($filters) {
-                foreach ($filters as $f) {
-                    $like = '%' . $f['q'] . '%';
-                    match ($f['by']) {
-                        'no_sq_wo' => $q->where('w.no_sq_wo', 'like', $like),
-                        'no_sq' => $q->where('sq.no_sq', 'like', $like),
-                        'judul' => $q->where('w.judul_pekerjaan', 'like', $like),
-                        'pelanggan' => $q->where('br.nama', 'like', $like),
-                        'site' => $q->where('brs.nama_lokasi', 'like', $like),
-                        default => null,
-                    };
-                }
-            })
+            ->tap(fn ($q) => $set->apply($q, $filters))
             ->select([
                 'w.id_sq_wo',
                 'w.no_sq_wo',

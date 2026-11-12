@@ -4,18 +4,7 @@
     title="List of Work Orders"
     :with-history="true"
     :with-selesai-filter="true"
-    :search-fields="[
-        ['label' => 'No. WO',          'value' => 'no_wo'],
-        ['label' => 'No. SO',          'value' => 'no_so'],
-        ['label' => 'Judul Pekerjaan', 'value' => 'judul'],
-        ['label' => 'Pelanggan',       'value' => 'pelanggan'],
-        ['label' => 'Status',          'value' => 'status', 'type' => 'select', 'options' => [
-            ['label' => 'All',         'value' => 'all'],
-            ['label' => 'On Progress', 'value' => 'onprogress'],
-            ['label' => 'Completed',   'value' => 'completed'],
-            ['label' => 'Deleted',     'value' => 'deleted'],
-        ]],
-    ]"
+    :search-fields="(new \App\Support\ListFilter\Sets\WorkOrderFilters)->forView()"
 />
 
 {{-- Modal: Create FWO --}}

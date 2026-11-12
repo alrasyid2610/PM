@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\ListFilter\Sets\TerminFilters;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -31,7 +32,8 @@ class TerminController extends Controller
 
     public function data(Request $request)
     {
-        $filters     = $request->input('filters', []);
+        $set         = new TerminFilters();
+        $filters     = $set->normalize($request->input('filters'));
         $isSearching = !empty($filters);
 
         $query = DB::table('termin as t')
@@ -45,22 +47,7 @@ class TerminController extends Controller
                 'tanggal',
             ])
             ->when(!$isSearching, fn($q) => $q->where('t.status', '!=', 'selesai'))
-            ->when($isSearching, function ($q) use ($filters) {
-                foreach ($filters as $f) {
-                    $by   = $f['by'] ?? '';
-                    $term = $f['q']  ?? '';
-                    if (!$by || !$term) continue;
-                    match ($by) {
-                        'no_termin' => $q->where('t.no_termin', 'like', "%{$term}%"),
-                        'nama'      => $q->where('t.nama', 'like', "%{$term}%"),
-                        'status'    => match ($term) {
-                            'all'    => null,
-                            default  => $q->where('t.status', $term),
-                        },
-                        default => null,
-                    };
-                }
-            })
+            ->tap(fn ($q) => $set->apply($q, $filters))
             ->orderBy('id_termin', 'desc')
             ->get()
             ->map(function ($row) {

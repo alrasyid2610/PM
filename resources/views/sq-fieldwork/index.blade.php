@@ -19,14 +19,7 @@
 <x-crud-index
     title="List of SQ Fieldworks"
     :with-history="true"
-    :search-fields="[
-        ['label' => 'No. FWO',          'value' => 'no_sq_fwo'],
-        ['label' => 'No. WO',           'value' => 'no_sq_wo'],
-        ['label' => 'No. SQ',           'value' => 'no_sq'],
-        ['label' => 'Pelanggan',        'value' => 'pelanggan'],
-        ['label' => 'Site Pekerjaan',   'value' => 'site'],
-        ['label' => 'Judul Pekerjaan',  'value' => 'judul'],
-    ]"
+    :search-fields="(new \App\Support\ListFilter\Sets\SqFieldworkFilters)->forView()"
 />
 
 {{-- Modal iframe: Create SQ Fieldwork (pola sama dengan "+ WO" di SQ) --}}

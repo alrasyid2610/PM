@@ -23,18 +23,7 @@
     create-route="sales-orders.create"
     :with-history="true"
     :with-selesai-filter="true"
-    :search-fields="[
-        ['label' => 'No. SO',          'value' => 'no_so'],
-        ['label' => 'Judul Order',     'value' => 'judul'],
-        ['label' => 'Pelanggan',       'value' => 'pelanggan'],
-        ['label' => 'Status',          'value' => 'status', 'type' => 'select', 'options' => [
-            ['label' => 'All',         'value' => 'all'],
-            ['label' => 'On Progress', 'value' => 'on-progress'],
-            ['label' => 'Completed',   'value' => 'completed'],
-            ['label' => 'Cancel',      'value' => 'cancel'],
-            ['label' => 'Deleted',     'value' => 'deleted'],
-        ]],
-    ]"
+    :search-fields="(new \App\Support\ListFilter\Sets\SalesOrderFilters)->forView()"
 />
 
 {{-- Modal iframe: Create Termin --}}

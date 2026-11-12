@@ -35,13 +35,7 @@
 <x-crud-index
     title="List of SQ Work Orders"
     :with-history="true"
-    :search-fields="[
-        ['label' => 'No. WO',           'value' => 'no_sq_wo'],
-        ['label' => 'No. SQ',           'value' => 'no_sq'],
-        ['label' => 'Judul Pekerjaan',  'value' => 'judul'],
-        ['label' => 'Pelanggan',        'value' => 'pelanggan'],
-        ['label' => 'Site Pekerjaan',   'value' => 'site'],
-    ]"
+    :search-fields="(new \App\Support\ListFilter\Sets\SqWorkOrderFilters)->forView()"
 />
 
 <!-- MODAL: Kelola BOQ — replikasi penuh halaman /boq (Tambah BOQ) -->

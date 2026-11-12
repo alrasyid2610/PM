@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\ListFilter\Sets\WorkOrderFilters;
 use App\Support\DataScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -306,31 +307,14 @@ class WorkOrderController extends Controller
 
     public function data(Request $request)
     {
-        $filters     = collect($request->input('filters', []))->filter(fn($f) => !empty($f['by']) && !empty($f['q']));
-        $isSearching = $filters->isNotEmpty();
+        $set         = new WorkOrderFilters();
+        $filters     = $set->normalize($request->input('filters'));
+        $isSearching = !empty($filters);
 
         $query = self::listBaseQuery()
             ->when(!$isSearching, fn($q) => $q->whereNull('wo.deleted_at'))
             ->when(!$isSearching && !$request->boolean('show_selesai'), fn($q) => $q->where('wo.status', '!=', 'completed'))
-            ->when($isSearching, function ($q) use ($filters) {
-                foreach ($filters as $f) {
-                    $by   = $f['by'];
-                    $val  = $f['q'];
-                    $like = '%' . $val . '%';
-                    match ($by) {
-                        'no_wo'     => $q->where('wo.no_wo', 'like', $like),
-                        'no_so'     => $q->where('s.no_so', 'like', $like),
-                        'judul'     => $q->where('s.judul_order', 'like', $like),
-                        'pelanggan' => $q->where('br.nama', 'like', $like),
-                        'status'    => match ($val) {
-                            'all'     => null,
-                            'deleted' => $q->whereNotNull('wo.deleted_at'),
-                            default   => $q->where('wo.status', $val),
-                        },
-                        default => null,
-                    };
-                }
-            });
+            ->tap(fn ($q) => $set->apply($q, $filters));
 
         // dd($query->get());
 

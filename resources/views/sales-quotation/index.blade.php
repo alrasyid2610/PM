@@ -20,22 +20,7 @@
     title="List of Sales Quotations"
     create-route="sales-quotations.create"
     :with-history="true"
-    :search-fields="[
-        ['label' => 'No. SQ',          'value' => 'no_sq'],
-        ['label' => 'Judul Order',     'value' => 'judul'],
-        ['label' => 'Pelanggan',       'value' => 'pelanggan'],
-        ['label' => 'Site',            'value' => 'site'],
-        ['label' => 'Status',          'value' => 'status', 'type' => 'select', 'options' => [
-            ['label' => 'All',        'value' => 'all'],
-            ['label' => 'Draft',      'value' => 'draft'],
-            ['label' => 'Menunggu Approval', 'value' => 'pending'],
-            ['label' => 'Final',      'value' => 'final'],
-            ['label' => 'Win',        'value' => 'win'],
-            ['label' => 'Lose',       'value' => 'lose'],
-            ['label' => 'Void',       'value' => 'void'],
-            ['label' => 'Deleted',    'value' => 'deleted'],
-        ]],
-    ]"
+    :search-fields="(new \App\Support\ListFilter\Sets\SalesQuotationFilters)->forView()"
 />
 
 {{-- Modal iframe: Create SQ Work Order (pola sama dengan "+ WO" di Sales Order) --}}

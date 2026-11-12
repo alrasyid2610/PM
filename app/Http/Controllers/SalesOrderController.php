@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\ListFilter\Sets\SalesOrderFilters;
 use App\Support\DataScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -655,31 +656,14 @@ class SalesOrderController extends Controller
 
     public function data(Request $request)
     {
-        $filters     = $request->input('filters', []);
+        $set         = new SalesOrderFilters();
+        $filters     = $set->normalize($request->input('filters'));
         $isSearching = !empty($filters);
 
         $query = self::listBaseQuery()
             ->when(!$isSearching, fn($q) => $q->whereNull('s.deleted_at'))
             ->when(!$isSearching, fn($q) => $q->where('s.status', '!=', 'completed'))
-            ->when($isSearching, function ($q) use ($filters) {
-                foreach ($filters as $f) {
-                    $by   = $f['by']  ?? '';
-                    $term = trim($f['q'] ?? '');
-                    if (!$by || $term === '') continue;
-                    $like = '%' . $term . '%';
-                    match ($by) {
-                        'no_so'     => $q->where('s.no_so', 'like', $like),
-                        'judul'     => $q->where('s.judul_order', 'like', $like),
-                        'pelanggan' => $q->where('br.nama', 'like', $like),
-                        'status'    => match ($term) {
-                            'all'     => null,
-                            'deleted' => $q->whereNotNull('s.deleted_at'),
-                            default   => $q->whereNull('s.deleted_at')->where('s.status', $term),
-                        },
-                        default => null,
-                    };
-                }
-            });
+            ->tap(fn ($q) => $set->apply($q, $filters));
 
         return DataTables::of($query)
             ->addIndexColumn()

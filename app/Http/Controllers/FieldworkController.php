@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\ListFilter\Sets\FieldworkFilters;
 use App\Support\DataScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -98,34 +99,14 @@ class FieldworkController extends Controller
 
     public function data(Request $request)
     {
-        $filters     = $request->input('filters', []);
+        $set         = new FieldworkFilters();
+        $filters     = $set->normalize($request->input('filters'));
         $isSearching = !empty($filters);
 
         $query = self::listBaseQuery()
             ->when(!$isSearching, fn($q) => $q->whereNull('fw.deleted_at'))
             ->when(!$isSearching, fn($q) => $q->where('fw.status', '!=', 'completed'))
-            ->when($isSearching, function ($q) use ($filters) {
-                foreach ($filters as $f) {
-                    $by   = $f['by']  ?? '';
-                    $term = trim($f['q'] ?? '');
-                    if (!$by || $term === '') continue;
-                    $like = '%' . $term . '%';
-                    match ($by) {
-                        'no_fwo' => $q->where('fw.no_fwo', 'like', $like),
-                        'no_wo'  => $q->where('wo.no_wo',  'like', $like),
-                        'judul'  => $q->where('fw.judul_pekerjaan', 'like', $like),
-                        'pelanggan' => $q->where('br.nama', 'like', $like),
-                        'site'   => $q->where(fn ($x) => $x->where('brs.nama_lokasi', 'like', $like)->orWhere('brs_wo.nama_lokasi', 'like', $like)),
-                        'status' => match ($term) {
-                            'all'     => null,
-                            'deleted' => $q->whereNotNull('fw.deleted_at'),
-                            // planned / on_progress memakai status efektif (planned yang tanggal mulainya tiba = on_progress)
-                            default   => $q->whereNull('fw.deleted_at')->whereRaw('(' . fwoStatusSql('fw') . ') = ?', [$term]),
-                        },
-                        default  => null,
-                    };
-                }
-            });
+            ->tap(fn ($q) => $set->apply($q, $filters));
 
         return DataTables::of($query)
             ->addIndexColumn()

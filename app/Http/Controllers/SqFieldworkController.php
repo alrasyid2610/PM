@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\ListFilter\Sets\SqFieldworkFilters;
 use App\Support\DataScope;
 use Illuminate\Http\Request;
 use App\Support\DocumentNumber;
@@ -388,8 +389,9 @@ class SqFieldworkController extends Controller
 
     public function data(Request $request)
     {
-        $filters = collect($request->input('filters', []))->filter(fn($f) => !empty($f['by']) && !empty($f['q']));
-        $isSearching = $filters->isNotEmpty();
+        $set         = new SqFieldworkFilters();
+        $filters     = $set->normalize($request->input('filters'));
+        $isSearching = !empty($filters);
 
         $query = DB::table('sq_fieldworks as f')
             ->leftJoin('sq_work_orders as w', 'w.id_sq_wo', '=', 'f.id_sq_wo')
@@ -399,20 +401,7 @@ class SqFieldworkController extends Controller
             ->leftJoin('business_relations as pel', 'pel.id_br', '=', 'sq.id_pelanggan')
             ->leftJoin('entitas as ent_pel', 'ent_pel.id_entitas', '=', 'pel.id_entitas')
             ->tap(fn ($q) => DataScope::sq($q, 'sq'))
-            ->when($isSearching, function ($q) use ($filters) {
-                foreach ($filters as $f) {
-                    $like = '%' . $f['q'] . '%';
-                    match ($f['by']) {
-                        'no_sq_fwo' => $q->where('f.no_sq_fwo', 'like', $like),
-                        'no_sq_wo' => $q->where('w.no_sq_wo', 'like', $like),
-                        'no_sq' => $q->where('sq.no_sq', 'like', $like),
-                        'pelanggan' => $q->where('pel.nama', 'like', $like),
-                        'site' => $q->where('brs.nama_lokasi', 'like', $like),
-                        'judul' => $q->where('f.judul_pekerjaan', 'like', $like),
-                        default => null,
-                    };
-                }
-            })
+            ->tap(fn ($q) => $set->apply($q, $filters))
             ->select([
                 'f.id_sq_fwo',
                 'f.no_sq_fwo',
