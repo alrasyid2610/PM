@@ -186,6 +186,7 @@
         so:      "{{ url('sales-orders') }}",
         sq:      "{{ url('sales-quotations') }}",
         'sq-approval': "{{ url('sales-quotations') }}",
+        'sq-belum-budget-fwo': "{{ url('sales-quotations') }}",
         termin:  "{{ url('termin') }}",
     }
     window.route.petaGeo = "{{ asset('assets/vendor/indonesia-geo/indonesia-38-provinces.geojson') }}";

@@ -29,6 +29,7 @@ var DW_INDEX_LISTS = {
     'so':               { no: 'no_so',  id: 'id_so' },
     'sq':               { no: 'no_sq',  id: 'id_sq' },
     'sq-approval':      { no: 'no_sq',  id: 'id_sq' },
+    'sq-belum-budget-fwo': { no: 'no_sq', id: 'id_sq' },
     'wo':               { no: 'no_wo',  id: 'id_wo' },
     'fwo':              { no: 'no_fwo', id: 'id_fwo' },
     'fwo-belum-jadwal': { no: 'no_fwo', id: 'id_fwo' },

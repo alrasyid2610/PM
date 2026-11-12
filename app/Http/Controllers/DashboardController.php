@@ -63,6 +63,7 @@ class DashboardController extends Controller
             'dash-so-nilai-per-bulan'  => $this->chartSoNilaiPerBulan($request),
             'dash-sq-final'            => $this->kpiSqFinal(),
             'dash-sq-pending'          => $this->kpiSqPending(),
+            'dash-sq-belum-budget-fwo' => $this->kpiSqBelumBudgetFwo(),
             'dash-sq-kedaluwarsa'      => $this->kpiSqKedaluwarsa(),
             'dash-sq-per-status'       => $this->chartSqPerStatus(),
             default                    => ['message' => 'Widget belum punya data'],
@@ -360,6 +361,36 @@ class DashboardController extends Controller
         return ['value' => $this->sqPendingQuery()->count(), 'sub' => 'menunggu keputusan manager'];
     }
 
+    /**
+     * Filter SQ terbaru aktif (Draft / Menunggu Approval / Final / Win; Lose & Void tidak dihitung) yang punya SQ FWO
+     * tetapi minimal 1 SQ FWO-nya belum punya Budget Plan (sq_fwo_budgets). SQ tanpa SQ FWO tidak ikut (belum ada yang dibudget).
+     * $q harus memakai alias tabel `s` untuk sales_quotations.
+     */
+    private function sqBelumBudgetFwoFilter($q)
+    {
+        return $q->whereNull('s.deleted_at')
+            ->where('s.is_latest', true)
+            ->whereIn('s.status', ['draft', 'pending', 'final', 'win'])
+            ->whereExists(function ($w) {
+                $w->select(DB::raw(1))->from('sq_work_orders as swo')
+                    ->join('sq_fieldworks as sf', 'sf.id_sq_wo', '=', 'swo.id_sq_wo')
+                    ->whereColumn('swo.id_sq', 's.id_sq')
+                    ->whereNotExists(function ($b) {
+                        $b->select(DB::raw(1))->from('sq_fwo_budgets as sb')
+                            ->whereColumn('sb.id_sq_fwo', 'sf.id_sq_fwo');
+                    });
+            });
+    }
+
+    private function kpiSqBelumBudgetFwo(): array
+    {
+        $n = $this->sqBelumBudgetFwoFilter(
+            DB::table('sales_quotations as s')->tap(fn ($q) => DataScope::sq($q, 's'))
+        )->count();
+
+        return ['value' => $n, 'sub' => 'SQ FWO belum punya Budget Plan'];
+    }
+
     private function kpiSqKedaluwarsa(): array
     {
         $today = now()->toDateString();
@@ -614,6 +645,12 @@ class DashboardController extends Controller
                 ->where('s.is_latest', true)
                 ->where('s.status', 'pending')
                 ->orderBy('s.diajukan_at')
+                ->get();
+
+        } elseif ($type === 'sq-belum-budget-fwo') {
+            // Kolom = index SQ; yang paling lama dibuat di atas (paling lama belum dibudget)
+            $rows = $this->sqBelumBudgetFwoFilter(SalesQuotationController::listBaseQuery())
+                ->orderBy('s.created_at')
                 ->get();
 
         } elseif ($type === 'so') {
