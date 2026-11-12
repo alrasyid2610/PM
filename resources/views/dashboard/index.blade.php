@@ -134,7 +134,7 @@
 
     {{-- Widget tabel (satu kartu, tab sesuai widget yang diizinkan) --}}
     @if(count($tables))
-    <div class="card">
+    <div class="card" id="dashboard-list-card">
         <div class="card-body">
             <div class="d-flex align-items-center gap-2 mb-3">
                 @foreach($tables as $i => $w)
@@ -189,6 +189,7 @@
         'sq-belum-budget-fwo': "{{ url('sales-quotations') }}",
         termin:  "{{ url('termin') }}",
     }
+    window.route.sqFwo = "{{ url('sq-fieldworks') }}";
     window.route.petaGeo = "{{ asset('assets/vendor/indonesia-geo/indonesia-38-provinces.geojson') }}";
     window.route.customerDetail = "{{ url('business-relations') }}";
     window.dashboardFirstTab =@json($tables[0]['key'] ?? null);

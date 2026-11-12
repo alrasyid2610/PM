@@ -362,23 +362,20 @@ class DashboardController extends Controller
     }
 
     /**
-     * Filter SQ terbaru aktif (Draft / Menunggu Approval / Final / Win; Lose & Void tidak dihitung) yang punya SQ FWO
-     * tetapi minimal 1 SQ FWO-nya belum punya Budget Plan (sq_fwo_budgets). SQ tanpa SQ FWO tidak ikut (belum ada yang dibudget).
-     * $q harus memakai alias tabel `s` untuk sales_quotations.
+     * Satuan = SQ FWO (1 baris = 1 SQ FWO): SQ FWO milik SQ terbaru aktif (Draft / Menunggu Approval / Final / Win;
+     * Lose & Void tidak dihitung) yang belum punya Budget Plan (sq_fwo_budgets).
+     * $q harus memakai alias tabel `s` untuk sales_quotations; alias `swo` & `sf` ditambahkan di sini.
      */
     private function sqBelumBudgetFwoFilter($q)
     {
-        return $q->whereNull('s.deleted_at')
+        return $q->join('sq_work_orders as swo', 'swo.id_sq', '=', 's.id_sq')
+            ->join('sq_fieldworks as sf', 'sf.id_sq_wo', '=', 'swo.id_sq_wo')
+            ->whereNull('s.deleted_at')
             ->where('s.is_latest', true)
             ->whereIn('s.status', ['draft', 'pending', 'final', 'win'])
-            ->whereExists(function ($w) {
-                $w->select(DB::raw(1))->from('sq_work_orders as swo')
-                    ->join('sq_fieldworks as sf', 'sf.id_sq_wo', '=', 'swo.id_sq_wo')
-                    ->whereColumn('swo.id_sq', 's.id_sq')
-                    ->whereNotExists(function ($b) {
-                        $b->select(DB::raw(1))->from('sq_fwo_budgets as sb')
-                            ->whereColumn('sb.id_sq_fwo', 'sf.id_sq_fwo');
-                    });
+            ->whereNotExists(function ($b) {
+                $b->select(DB::raw(1))->from('sq_fwo_budgets as sb')
+                    ->whereColumn('sb.id_sq_fwo', 'sf.id_sq_fwo');
             });
     }
 
@@ -649,9 +646,21 @@ class DashboardController extends Controller
 
         } elseif ($type === 'sq-belum-budget-fwo') {
             // Kolom = index SQ; yang paling lama dibuat di atas (paling lama belum dibudget)
+            // 1 baris = 1 SQ FWO belum dibudget (kolom index SQ + "SQ FWO" yang langsung link ke halaman SQ FWO)
             $rows = $this->sqBelumBudgetFwoFilter(SalesQuotationController::listBaseQuery())
-                ->orderBy('s.created_at')
-                ->get();
+                ->addSelect(['sf.id_sq_fwo', 'sf.no_sq_fwo as sq_fwo', 'sf.judul_pekerjaan as judul_sq_fwo'])
+                ->orderBy('s.created_at')->orderBy('swo.id_sq_wo')->orderBy('sf.urutan')->orderBy('sf.id_sq_fwo')
+                ->get()
+                // Urutan kolom di tabel = urutan kunci: taruh "SQ FWO" tepat setelah "No SQ"
+                ->map(function ($r) {
+                    $out = [];
+                    foreach ((array) $r as $k => $v) {
+                        if (in_array($k, ['sq_fwo', 'judul_sq_fwo'], true)) continue;
+                        $out[$k] = $v;
+                        if ($k === 'no_sq') { $out['sq_fwo'] = $r->sq_fwo; $out['judul_sq_fwo'] = $r->judul_sq_fwo; }
+                    }
+                    return (object) $out;
+                });
 
         } elseif ($type === 'so') {
             // Status SO yang benar: on-progress | completed | cancel (sebelumnya salah memakai 'selesai')

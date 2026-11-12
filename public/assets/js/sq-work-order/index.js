@@ -1463,7 +1463,7 @@ function renderSqWoFwoSummary(fwos) {
         return `<tr class="sq-fwo-data-row" data-search="${escHtml(search)}">
             <td ${TD} style="text-align:center;color:#94a3b8;">${idx + 1}</td>
             <td ${TD}>
-                <a href="/sq-fieldworks?open=${f.id_sq_fwo}" class="fw-semibold text-decoration-none" style="color:#dc2626;white-space:nowrap;">
+                <a href="/sq-fieldworks?open=${f.id_sq_fwo}" class="fw-semibold text-decoration-none" style="color:#1a56db;white-space:nowrap;">
                     ${escHtml(f.no_sq_fwo ?? '—')}
                 </a>
             </td>

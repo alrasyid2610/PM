@@ -13,7 +13,7 @@ $(document).ready(function () {
         $('.dw-tab-btn[data-type]').removeClass('active');
         $('.dw-tab-btn[data-type="' + type + '"]').addClass('active');
         switchTab(type);
-        $('html, body').animate({ scrollTop: $('.card').last().offset().top - 20 }, 300);
+        dwScrollKeDaftar();
     });
 
     $(document).on('click', '.dw-tab-btn[data-type]', function () {
@@ -22,6 +22,14 @@ $(document).ready(function () {
         switchTab($(this).data('type'));
     });
 });
+
+// Gulir ke kartu daftar (tab) setelah kartu angka diklik
+function dwScrollKeDaftar() {
+    var $t = $('#dashboard-list-card');
+    if (!$t.length) return;
+    // scrollIntoView menggulir kontainer scroll mana pun yang dipakai layout (bukan hanya window)
+    $t[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 // Daftar SO / SQ / WO / FWO memakai kolom yang SAMA dengan halaman index modulnya (server: listBaseQuery).
 // no = kolom nomor dokumen (dibuat link ke ?open=), id = kolom id baris untuk link tersebut.
@@ -80,6 +88,8 @@ function switchTab(type) {
             diajukan_oleh:  'Diajukan Oleh',
             diajukan_at:    'Diajukan Pada',
             hasil:          'Hasil',
+            sq_fwo:         'No SQ FWO',
+            judul_sq_fwo:   'Judul SQ FWO',
         };
 
         var clip = function (w) { return function (d, t) { return window.dtClip(d, t, w); }; };
@@ -92,6 +102,12 @@ function switchTab(type) {
             Site:             clip(220),
             'Site Pelanggan': clip(220),
         };
+        // SQ FWO belum dibudget: tiap SQ FWO jadi link ke halaman SQ FWO ("id||judul" dipisah "##")
+        window.datatableColumnRenderers.sq_fwo = function (data, t, row) {
+            if (t !== 'display') return data;
+            return '<a href="' + window.route.sqFwo + '?open=' + row.id_sq_fwo + '" class="fw-semibold text-decoration-none" style="color:#1a56db;white-space:nowrap;">' + escHtml(data ?? '-') + '</a>';
+        };
+        window.datatableColumnRenderers.judul_sq_fwo = clip(300);
         // Kolom nomor dokumen: link ke detail (SQ + badge revisi seperti index SQ)
         window.datatableColumnRenderers[idx.no] = function (data, t, row) {
             if (t !== 'display') return data;

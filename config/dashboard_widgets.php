@@ -43,8 +43,8 @@ return [
     ['slug' => 'dash-list-sq',         'label' => 'Daftar SQ Win Belum Jadi SO', 'kelompok' => 'Sales', 'type' => 'table', 'icon' => 'fa-file-signature', 'key' => 'sq'],
     ['slug' => 'dash-list-sq-approval', 'label' => 'Daftar SQ Menunggu Approval', 'kelompok' => 'Sales', 'type' => 'table', 'icon' => 'fa-hourglass-half', 'key' => 'sq-approval'],
     // SQ terbaru (Draft/Menunggu Approval/Final/Win) yang punya SQ FWO tetapi minimal 1 SQ FWO-nya belum diisi Budget Plan.
-    ['slug' => 'dash-sq-belum-budget-fwo',      'label' => 'SQ Belum Ada Budget SQ FWO',        'kelompok' => 'Sales', 'type' => 'kpi',   'icon' => 'fa-wallet', 'color' => '#b45309', 'bg' => '#fffbeb', 'tab' => 'sq-belum-budget-fwo'],
-    ['slug' => 'dash-list-sq-belum-budget-fwo', 'label' => 'Daftar SQ Belum Ada Budget SQ FWO', 'kelompok' => 'Sales', 'type' => 'table', 'icon' => 'fa-wallet', 'key' => 'sq-belum-budget-fwo'],
+    ['slug' => 'dash-sq-belum-budget-fwo',      'label' => 'SQ FWO Belum Ada Budget',        'kelompok' => 'Sales', 'type' => 'kpi',   'icon' => 'fa-wallet', 'color' => '#b45309', 'bg' => '#fffbeb', 'tab' => 'sq-belum-budget-fwo'],
+    ['slug' => 'dash-list-sq-belum-budget-fwo', 'label' => 'Daftar SQ FWO Belum Ada Budget', 'kelompok' => 'Sales', 'type' => 'table', 'icon' => 'fa-wallet', 'key' => 'sq-belum-budget-fwo'],
 
     // ── Operasional ──
     ['slug' => 'dash-wo-outstanding',  'label' => 'Outstanding WO',        'kelompok' => 'Operasional', 'type' => 'kpi',   'icon' => 'fa-briefcase',     'color' => '#0284c7', 'bg' => '#e0f2fe', 'tab' => 'wo'],
