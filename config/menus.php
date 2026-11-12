@@ -29,7 +29,6 @@ return [
         'group'           => 'Dashboard',
         'icon'            => 'fa-gauge',
         'type'            => 'direct',
-        'show_in_sidebar' => false,
         'items'           => [
             ['slug' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'fa-gauge'],
         ],
