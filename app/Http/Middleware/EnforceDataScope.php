@@ -67,6 +67,10 @@ class EnforceDataScope
             case 'wo-samples':
             case 'lab-sample-regs':
             case 'boq':
+            case 'wo-budgets':
+            case 'wo-budget-actuals':
+            case 'fwo-budgets':
+            case 'fwo-budget-actuals':
                 [$so2, $wo, $fwo] = $this->opsViaRoute($prefix, $route->getName(), $p, $request);
                 $so = array_merge($so, $so2);
                 break;
@@ -186,6 +190,40 @@ class EnforceDataScope
                     $s = DB::table('lab_samples')->where('id_lab_sample', $id)->first(['id_wo', 'id_fwo']);
                     $wo[]  = $s->id_wo ?? null;
                     $fwo[] = $s->id_fwo ?? null;
+                }
+                break;
+
+            // ── Budget Plan & Realisasi (sejak 2026-11-12): id baris diturunkan ke WO/FWO induknya ──
+            case 'wo-budgets':
+                $wo[] = $p['id_wo'] ?? ($id ? $this->val('wo_budgets', 'id_budget', $id, 'id_wo') : null);
+                $wo[] = $request->input('id_wo');
+                break;
+
+            case 'fwo-budgets':
+                $fwo[] = $p['id_fwo'] ?? ($id ? $this->val('fwo_budgets', 'id_budget', $id, 'id_fwo') : null);
+                $fwo[] = $request->input('id_fwo');
+                break;
+
+            case 'wo-budget-actuals':
+            case 'fwo-budget-actuals':
+                $isWo = $prefix === 'wo-budget-actuals';
+                $actualTable = $isWo ? 'wo_budget_actuals' : 'fwo_budget_actuals';
+                $itemTable   = $isWo ? 'wo_budget_items' : 'fwo_budget_items';
+                $budgetTable = $isWo ? 'wo_budgets' : 'fwo_budgets';
+                $parentCol   = $isWo ? 'id_wo' : 'id_fwo';
+
+                $itemIds = [];
+                if ($id) {
+                    $itemIds[] = $this->val($actualTable, 'id_actual', $id, 'id_budget_item');
+                }
+                $itemIds[] = $request->input('id_budget_item');
+                foreach ((array) $request->input('items', []) as $it) {          // bulk-verify
+                    $itemIds[] = $this->val($actualTable, 'id_actual', $it['id_actual'] ?? null, 'id_budget_item');
+                }
+                foreach (array_unique(array_filter($itemIds)) as $itemId) {
+                    $budgetId = $this->val($itemTable, 'id_budget_item', $itemId, 'id_budget');
+                    $parent   = $this->val($budgetTable, 'id_budget', $budgetId, $parentCol);
+                    if ($isWo) { $wo[] = $parent; } else { $fwo[] = $parent; }
                 }
                 break;
 
