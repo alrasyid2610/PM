@@ -159,11 +159,26 @@ class LabSampleRegController extends Controller
         // No. FWO per sample (sample asal FWO tidak punya id_wo, induknya lewat FWO)
         $fwoNo = DB::table('fieldworks')->whereIn('id_fwo', collect($samples)->pluck('id_fwo')->filter()->unique())->pluck('no_fwo', 'id_fwo');
 
+        // Parameter per sample = Testing Item yang dipilih pada BOQ FWO-nya (sample lama WO-langsung: item BOQ WO)
+        $rows = DB::table('lab_samples')->whereIn('id_lab_sample', collect($samples)->pluck('id_lab_sample'))->get(['id_lab_sample', 'id_fwo_boq', 'id_boq']);
+        $paramFwo = DB::table('fieldwork_boq_items as i')
+            ->join('testing_items as ti', 'ti.id_testing_item', '=', 'i.id_testing_item')
+            ->whereIn('i.id_fwo_boq', $rows->pluck('id_fwo_boq')->filter()->unique())
+            ->orderBy('i.id_testing_item')->get(['i.id_fwo_boq as k', 'ti.judul_indonesia'])
+            ->groupBy('k')->map(fn ($g) => $g->pluck('judul_indonesia')->filter()->values()->all());
+        $paramBoq = DB::table('boq_items as i')
+            ->join('testing_items as ti', 'ti.id_testing_item', '=', 'i.id_testing_item')
+            ->whereIn('i.id_boq', $rows->whereNull('id_fwo_boq')->pluck('id_boq')->filter()->unique())
+            ->orderBy('i.id_testing_item')->get(['i.id_boq as k', 'ti.judul_indonesia'])
+            ->groupBy('k')->map(fn ($g) => $g->pluck('judul_indonesia')->filter()->values()->all());
+        $parameter = $rows->mapWithKeys(fn ($r) => [$r->id_lab_sample => $r->id_fwo_boq ? ($paramFwo[$r->id_fwo_boq] ?? []) : ($paramBoq[$r->id_boq] ?? [])]);
+
         return Pdf::view('pdf.lab-sample-reg.form', [
-            'reg'     => $reg,
-            'wo'      => $wo,
-            'samples' => collect($samples),
-            'fwoNo'   => $fwoNo,
+            'reg'       => $reg,
+            'wo'        => $wo,
+            'samples'   => collect($samples),
+            'fwoNo'     => $fwoNo,
+            'parameter' => $parameter,
         ])
             ->headerView('pdf.layouts.sections.header')
             ->footerView('pdf.layouts.sections.footer')

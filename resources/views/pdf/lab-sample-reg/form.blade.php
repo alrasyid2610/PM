@@ -79,6 +79,7 @@
                 <th>No. Reg Lab</th>
                 <th>Jenis</th>
                 <th>BOQ</th>
+                <th style="width:30%;">Parameter</th>
                 <th>Titik Lokasi</th>
                 <th>FWO</th>
                 <th>Tgl Ambil</th>
@@ -93,13 +94,14 @@
                 <td>{{ $s->no_reg_lab ?? '-' }}</td>
                 <td>{{ $jenis[$s->jenis_sample] ?? ($s->jenis_sample ?: '-') }}</td>
                 <td>{{ $s->nama_boq ?? '-' }}</td>
+                <td style="font-size:8.5px;">{{ ($p = $parameter[$s->id_lab_sample] ?? []) ? implode(', ', $p) : '-' }}</td>
                 <td>{{ $s->titik_lokasi ?: '-' }}</td>
                 <td>{{ $s->id_fwo ? ($fwoNo[$s->id_fwo] ?? '-') : '-' }}</td>
                 <td>{{ $tgl($s->tanggal_pengambilan) }}</td>
                 <td>{{ $kondisi[$s->kondisi_sample] ?? ($s->kondisi_sample ?: '-') }}</td>
             </tr>
             @empty
-            <tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:14px;">Tidak ada sample pada pendaftaran ini.</td></tr>
+            <tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:14px;">Tidak ada sample pada pendaftaran ini.</td></tr>
             @endforelse
         </tbody>
     </table>

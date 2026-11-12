@@ -27,6 +27,65 @@ class TestingPointController extends Controller
         return view('testing-points.index');
     }
 
+    /** Pesan validasi data Testing Point (Bahasa Indonesia, bukan nama kolom teknis). */
+    private function pointMessages(): array
+    {
+        return [
+            'id_testing_standard.required'       => 'Testing Standard wajib dipilih.',
+            'id_testing_matriks_sample.required' => 'Testing Matriks Sample wajib dipilih.',
+            'nama.required'                      => 'Nama Testing Point wajib diisi.',
+            'is_aktif.required'                  => 'Status wajib dipilih.',
+        ];
+    }
+
+    /**
+     * Pilih baris Testing Item yang disimpan dari form (tabel dinamis).
+     * - Baris yang SELURUH isinya kosong (dan belum punya ID item) dilewati, tetapi Testing Point wajib punya minimal 1 item lengkap (422 bila tidak).
+     * - Baris yang sebagian terisi (atau item lama yang dikosongkan) tetapi ada kolom wajib kosong → 422 dengan pesan
+     *   yang menyebut baris & kolomnya. Kolom wajib (NOT NULL di `testing_items`): Judul Indonesia, Judul Inggris,
+     *   Parameter, Nilai. Dulu jadi error SQL mentah setelah Testing Point terlanjur tersimpan.
+     * @return int[] indeks baris yang disimpan
+     */
+    private function itemRowsToSave(Request $request, string $ketKey, bool $hasIds = false): array
+    {
+        $wajib = ['judul_indonesia' => 'Judul Indonesia', 'judul_inggris' => 'Judul Inggris', 'parameter' => 'Parameter', 'nilai' => 'Nilai'];
+        $judul = $request->judul_indonesia ?? [];
+        $keep = [];
+        $pesan = [];
+        foreach ($judul as $i => $val) {
+            $ada = fn ($k) => trim((string) (($request->$k ?? [])[$i] ?? '')) !== '';
+            $adaId = $hasIds && !empty(($request->id_testing_item ?? [])[$i]);
+            $lainIsi = $ada('judul_indonesia') || $ada('judul_inggris') || $ada('parameter') || $ada('unit') || $ada('nilai') || $ada($ketKey);
+
+            if (!$adaId && !$lainIsi) continue; // baris kosong sama sekali
+
+            $kurang = [];
+            foreach ($wajib as $k => $label) {
+                if (!$ada($k)) $kurang[] = $label;
+            }
+            if ($kurang) {
+                $pesan[] = 'Testing Item baris ke-' . ($i + 1) . ': ' . implode(', ', $kurang) . ' wajib diisi.';
+                continue;
+            }
+            $keep[] = $i;
+        }
+
+        if ($pesan) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                // 1 string (handler form hanya menampilkan elemen pertama tiap kunci)
+                'items' => [implode(' ', array_slice($pesan, 0, 5)) . (count($pesan) > 5 ? ' (+' . (count($pesan) - 5) . ' baris lain)' : '') . ' Lengkapi barisnya, atau kosongkan seluruh baris / hapus barisnya bila tidak dipakai.'],
+            ]);
+        }
+
+        // Testing Point wajib punya minimal 1 Testing Item (lengkap)
+        if (!$keep) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'items' => ['Testing Point minimal harus punya 1 Testing Item. Isi minimal satu baris item secara lengkap.'],
+            ]);
+        }
+        return $keep;
+    }
+
     public function data()
     {
         $query = DB::table('testing_points as tp')
@@ -126,7 +185,7 @@ class TestingPointController extends Controller
             'keterangan' => 'nullable|string',
             'is_aktif' => 'required|boolean',
             'attachments.*' => 'nullable|file|max:153600',
-        ]);
+        ], $this->pointMessages());
         unset($validated['attachments']); // wildcard rule ikut masuk ke $validated, tapi kolom DB-nya 'attachment' (singular)
 
         // Validasi terpisah untuk field per-item (dynamic table) — sengaja
@@ -142,12 +201,17 @@ class TestingPointController extends Controller
             'item_keterangan.*' => 'nullable|string|max:255',
         ]);
 
+        // Cek baris item SEBELUM apa pun disimpan (baris kosong dilewati, baris setengah terisi → 422)
+        $keepRows = $this->itemRowsToSave($request, 'item_keterangan');
+
         $upload = uploadAttachment($request->file('attachments'), $table);
         $files = $upload['files'];
 
 
         $validated['attachment'] = json_encode($files);
 
+        DB::beginTransaction();
+        try {
         $id = DB::table('testing_points')->insertGetId([
             ...$validated,
             'created_at' => now(),
@@ -165,6 +229,7 @@ class TestingPointController extends Controller
         $nomor           = $request->nomor           ?? [];
 
         foreach ($judul_indonesia as $i => $val) {
+            if (!in_array($i, $keepRows, true)) continue;
             DB::table('testing_items')->insert([
                 'id_testing_point'     => $id,
                 'nomor'                => (int) ($nomor[$i] ?? ($i + 1)),
@@ -182,6 +247,12 @@ class TestingPointController extends Controller
 
         $after = DB::table('testing_points')->where('id_testing_point', $id)->get()->toJson();
         saveAudit('testing_points', $id, 'Create', '', $after);
+
+        DB::commit();
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            throw $th; // semua-atau-tidak-sama-sekali: Testing Point tidak tersimpan setengah jalan
+        }
 
         return response()->json([
             'status' => 'success',
@@ -226,7 +297,7 @@ class TestingPointController extends Controller
             'attachments.*' => 'nullable|file|max:153600',
             'keterangan_point' => 'nullable|string',
             'is_aktif' => 'required|boolean',
-        ]);
+        ], $this->pointMessages());
         unset($validated['attachments']); // wildcard rule ikut masuk ke $validated, tapi kolom DB-nya 'attachment' (singular)
 
         // Validasi terpisah untuk field per-item (dynamic table) — sengaja
@@ -243,6 +314,8 @@ class TestingPointController extends Controller
             'keterangan.*'      => 'nullable|string|max:255',
             'nomor.*'           => 'nullable|integer',
         ]);
+
+        $keepRows = $this->itemRowsToSave($request, 'keterangan', true);
 
         // Capture BEFORE state (point + lines)
         $beforePoint = (array) DB::table('testing_points')->where('id_testing_point', $id)->first();
@@ -275,6 +348,7 @@ class TestingPointController extends Controller
             $currentIds = [];
 
             foreach ($judul_indonesia as $i => $val) {
+                if (!in_array($i, $keepRows, true)) continue; // baris kosong sama sekali
 
                 $itemId = $ids[$i] ?? null;
 
@@ -362,7 +436,7 @@ class TestingPointController extends Controller
             'nomor_halaman' => 'nullable|string|max:50',
             'keterangan' => 'nullable|string',
             'is_aktif' => 'required|boolean',
-        ]);
+        ], $this->pointMessages());
 
         // Validasi terpisah untuk field per-item, sama seperti store() — tidak
         // digabung ke $validated supaya tidak ikut ke-spread ke insert
@@ -391,6 +465,8 @@ class TestingPointController extends Controller
             ], 422);
         }
 
+        $keepRows = $this->itemRowsToSave($request, 'item_keterangan');
+
         DB::beginTransaction();
 
         try {
@@ -411,6 +487,7 @@ class TestingPointController extends Controller
             $nomor           = $request->nomor           ?? [];
 
             foreach ($judul_indonesia as $i => $val) {
+                if (!in_array($i, $keepRows, true)) continue;
                 DB::table('testing_items')->insert([
                     'id_testing_point'     => $newId,
                     'nomor'                => (int) ($nomor[$i] ?? ($i + 1)),
