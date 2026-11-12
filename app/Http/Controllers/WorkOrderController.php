@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DataScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
@@ -254,6 +255,7 @@ class WorkOrderController extends Controller
         $search = $request->q;
 
         $data = DB::table('work_orders')
+            ->tap(fn ($q) => DataScope::wo($q))
             ->whereNull('deleted_at')
             ->where('no_wo', 'like', "%{$search}%")
             ->get();
@@ -280,6 +282,7 @@ class WorkOrderController extends Controller
     public static function listBaseQuery()
     {
         return DB::table('work_orders as wo')
+            ->tap(fn ($q) => DataScope::wo($q, 'wo'))
             ->leftJoin('sales_orders as s', 'wo.id_so', '=', 's.id_so')
             ->leftJoin('business_relations as br', 'wo.id_pelanggan_pekerjaan', '=', 'br.id_br')
             ->leftJoin('business_relation_sites as brs', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')

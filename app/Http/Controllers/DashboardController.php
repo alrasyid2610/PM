@@ -86,6 +86,7 @@ class DashboardController extends Controller
     private function kpiWoOutstanding(): array
     {
         $n = DB::table('work_orders')
+            ->tap(fn ($q) => DataScope::wo($q))
             ->whereNull('deleted_at')
             ->where('status', 'onprogress')
             ->count();
@@ -96,7 +97,7 @@ class DashboardController extends Controller
     /** FWO belum dijadwalkan: belum selesai dan tanggal mulainya belum diisi (mis. FWO hasil Terbitkan SO). */
     private function fwoBelumJadwalQuery($base = null)
     {
-        return ($base ?? DB::table('fieldworks as fw'))
+        return ($base ?? DB::table('fieldworks as fw')->tap(fn ($q) => DataScope::fwo($q, 'fw')))
             ->whereNull('fw.deleted_at')
             ->whereNull('fw.tanggal_mulai')
             ->where('fw.status', '!=', 'completed');
@@ -111,6 +112,7 @@ class DashboardController extends Controller
     {
         // FWO belum selesai = Planned + On Progress (On Progress = planned yang tanggal mulainya tiba, atau dimulai manual)
         $aktif = DB::table('fieldworks as fw')
+            ->tap(fn ($q) => DataScope::fwo($q, 'fw'))
             ->whereNull('fw.deleted_at')
             ->where('fw.status', '!=', 'completed');
         $n          = (clone $aktif)->count();
@@ -131,6 +133,7 @@ class DashboardController extends Controller
         $today = now()->toDateString();
 
         $wo = DB::table('work_orders')
+            ->tap(fn ($q) => DataScope::wo($q))
             ->whereNull('deleted_at')
             ->where('status', '!=', 'completed')
             ->whereNotNull('tanggal_selesai')
@@ -140,6 +143,7 @@ class DashboardController extends Controller
         // Status FWO yang benar `completed` (sebelumnya salah dibandingkan dengan 'selesai'
         // sehingga FWO yang sudah selesai ikut terhitung overdue)
         $fwo = DB::table('fieldworks')
+            ->tap(fn ($q) => DataScope::fwo($q))
             ->whereNull('deleted_at')
             ->where('status', '!=', 'completed')
             ->whereNotNull('tanggal_selesai')

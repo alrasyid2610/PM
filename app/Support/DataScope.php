@@ -5,7 +5,7 @@ namespace App\Support;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Segregasi data SO & SQ (sejak 2026-11-01).
+ * Segregasi data SO & SQ (sejak 2026-11-01); WO & FWO beserta turunannya mengikuti SO induknya (sejak 2026-11-12).
  * Pemilik data = PIC Order + PIC Input. User melihat data miliknya dan milik seluruh bawahannya
  * (hierarki `users.id_atasan`, bertingkat ke bawah). Pemegang Aksi Khusus `so-lihat-semua` /
  * `sq-lihat-semua` melihat semuanya. Approver SQ (`sq-approve`) juga melihat SQ berstatus pending.
@@ -66,6 +66,31 @@ class DataScope
         return $query->where(fn ($q) => $q->whereIn($p . 'pic_input', $ids)->orWhereIn($p . 'pic_order', $ids));
     }
 
+    /**
+     * Batasi query WO: WO boleh dilihat bila SO induknya boleh dilihat user (aturan & hak `so-lihat-semua` sama dengan SO).
+     * $alias = alias tabel work_orders ('' bila tanpa alias).
+     */
+    public static function wo($query, string $alias = '')
+    {
+        if (self::seeAllSo()) {
+            return $query;
+        }
+        $p = $alias === '' ? '' : $alias . '.';
+
+        return $query->whereIn($p . 'id_so', self::so(DB::table('sales_orders')->select('id_so')));
+    }
+
+    /** Batasi query FWO: FWO boleh dilihat bila WO induknya (→ SO induknya) boleh dilihat. $alias = alias tabel fieldworks. */
+    public static function fwo($query, string $alias = '')
+    {
+        if (self::seeAllSo()) {
+            return $query;
+        }
+        $p = $alias === '' ? '' : $alias . '.';
+
+        return $query->whereIn($p . 'id_wo', self::wo(DB::table('work_orders')->select('id_wo')));
+    }
+
     /** Batasi query SQ. Approver juga melihat SQ pending. */
     public static function sq($query, string $alias = '')
     {
@@ -103,5 +128,25 @@ class DataScope
 
         return !DB::table('sales_quotations')->where('id_sq', $idSq)->exists()
             || self::sq(DB::table('sales_quotations')->where('id_sq', $idSq))->exists();
+    }
+
+    public static function canSeeWo($idWo): bool
+    {
+        if (!$idWo || self::seeAllSo()) {
+            return true;
+        }
+
+        return !DB::table('work_orders')->where('id_wo', $idWo)->exists()
+            || self::wo(DB::table('work_orders')->where('id_wo', $idWo))->exists();
+    }
+
+    public static function canSeeFwo($idFwo): bool
+    {
+        if (!$idFwo || self::seeAllSo()) {
+            return true;
+        }
+
+        return !DB::table('fieldworks')->where('id_fwo', $idFwo)->exists()
+            || self::fwo(DB::table('fieldworks')->where('id_fwo', $idFwo))->exists();
     }
 }

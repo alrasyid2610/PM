@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DataScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Spatie\LaravelPdf\Facades\Pdf;
@@ -55,6 +56,7 @@ class LabSampleRegController extends Controller
         $idWo = (int) $request->query('wo');
 
         $rows = DB::table('fieldworks as f')
+            ->tap(fn ($query) => DataScope::fwo($query, 'f'))
             ->join('work_orders as w', 'w.id_wo', '=', 'f.id_wo')
             ->leftJoin('sales_orders as so', 'so.id_so', '=', 'w.id_so')
             ->leftJoin('business_relations as br', 'br.id_br', '=', 'so.id_pelanggan')
@@ -102,6 +104,7 @@ class LabSampleRegController extends Controller
     {
         $query = DB::table('wo_lab_sample_regs as r')
             ->join('work_orders as w', 'w.id_wo', '=', 'r.id_wo')
+            ->tap(fn ($q) => DataScope::wo($q, 'w'))
             ->leftJoin('sales_orders as so', 'so.id_so', '=', 'w.id_so')
             ->leftJoin('business_relations as br', 'br.id_br', '=', 'so.id_pelanggan')
             ->leftJoin('entitas as ent', 'ent.id_entitas', '=', 'br.id_entitas')

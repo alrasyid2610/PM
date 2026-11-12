@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DataScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
@@ -19,6 +20,7 @@ class BoqController extends Controller
     {
         $data = DB::table('boq as b')
             ->leftJoin('work_orders as wo', 'b.id_wo', '=', 'wo.id_wo')
+            ->tap(fn ($q) => DataScope::wo($q, 'wo'))
             ->leftJoin('boq_items as bi', function ($join) {
                 $join->on('b.id_boq', '=', 'bi.id_boq')->whereNull('bi.deleted_at');
             })
@@ -676,6 +678,7 @@ class BoqController extends Controller
         $search = $request->q;
 
         $data = DB::table('work_orders')
+            ->tap(fn ($q) => DataScope::wo($q))
             ->where('no_wo', 'like', "%{$search}%")
             ->limit(10)
             ->get();

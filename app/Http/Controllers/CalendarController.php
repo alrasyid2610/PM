@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DataScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -31,6 +32,7 @@ class CalendarController extends Controller
         // ── FWO ────────────────────────────────────────────────────────────────
         if (in_array('fwo', $types)) {
             $rows = DB::table('fieldworks as fw')
+                ->tap(fn ($q) => DataScope::fwo($q, 'fw'))
                 ->leftJoin('work_orders as wo', 'fw.id_wo', '=', 'wo.id_wo')
                 ->leftJoin('business_relation_sites as brs', 'fw.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
                 ->whereNull('fw.deleted_at')
@@ -74,6 +76,7 @@ class CalendarController extends Controller
         // ── WO ─────────────────────────────────────────────────────────────────
         if (in_array('wo', $types)) {
             $rows = DB::table('work_orders as wo')
+                ->tap(fn ($q) => DataScope::wo($q, 'wo'))
                 ->leftJoin('business_relation_sites as brs', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
                 ->leftJoin('business_relations as br', 'wo.id_pelanggan_pekerjaan', '=', 'br.id_br')
                 ->whereNull('wo.deleted_at')
@@ -115,6 +118,7 @@ class CalendarController extends Controller
         // ── SO ─────────────────────────────────────────────────────────────────
         if (in_array('so', $types)) {
             $rows = DB::table('sales_orders as s')
+                ->tap(fn ($q) => DataScope::so($q, 's'))
                 ->leftJoin('business_relations as br', 's.id_pelanggan', '=', 'br.id_br')
                 ->leftJoin('business_relation_sites as brs', 's.id_site_pelanggan', '=', 'brs.id_site')
                 ->whereNull('s.deleted_at')

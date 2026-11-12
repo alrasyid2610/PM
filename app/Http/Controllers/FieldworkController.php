@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DataScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
@@ -59,6 +60,7 @@ class FieldworkController extends Controller
     public static function listBaseQuery()
     {
         return DB::table('fieldworks as fw')
+            ->tap(fn ($q) => DataScope::fwo($q, 'fw'))
             ->leftJoin('work_orders as wo', 'fw.id_wo', '=', 'wo.id_wo')
             // Pelanggan = Perusahaan pekerjaan WO (sama seperti index WO); Site = Site pekerjaan FWO, cadangan Site WO
             ->leftJoin('business_relations as br', 'wo.id_pelanggan_pekerjaan', '=', 'br.id_br')
