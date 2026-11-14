@@ -19,7 +19,7 @@ class OutputTambahanController extends Controller
     use HasAuditHistory;
 
     protected function auditTable(): string { return 'output_tambahan'; }
-    protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_output_tambahan']; }
+    protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_output_tambahan', 'id_output_judul']; }
 
     /**
      * Pesan penolakan bila pemilik item terkunci, atau null bila boleh diubah.
@@ -156,7 +156,8 @@ class OutputTambahanController extends Controller
     private function validated(Request $request): array
     {
         return $request->validate([
-            'nama_item'       => 'required|string|max:255',
+            'id_output_judul' => 'nullable|integer',
+            'nama_item'       => 'nullable|string|max:255', // cadangan bila id tidak dikirim; tetap harus cocok dengan Master Output
             'qty'             => 'required|integer|min:1',
             'id_satuan'       => 'nullable|integer|exists:satuan,id_satuan',
             'status'          => 'nullable|in:belum_siap,siap,terkirim',
@@ -186,6 +187,12 @@ class OutputTambahanController extends Controller
 
         $validated = $this->validated($request);
 
+        // Nama item wajib dari Master Output — diperiksa SEBELUM apa pun disimpan (termasuk upload lampiran)
+        $master = OutputJudul::pilih('other', $validated['id_output_judul'] ?? null, $validated['nama_item'] ?? null);
+        if (!$master) {
+            return response()->json(['success' => false, 'message' => OutputJudul::pesanTidakSah()], 422);
+        }
+
         $files = [];
         if ($request->hasFile('attachments')) {
             $upload = uploadAttachment($request->file('attachments'), 'output_tambahan');
@@ -195,7 +202,8 @@ class OutputTambahanController extends Controller
         $id = DB::table('output_tambahan')->insertGetId([
             'id_wo'           => $idWo,
             'id_so'           => $idSo,
-            'nama_item'       => OutputJudul::resolve('other', $validated['nama_item']),
+            'id_output_judul' => $master->id_output_judul,
+            'nama_item'       => $master->judul,
             'qty'             => $validated['qty'],
             'id_satuan'       => $validated['id_satuan'] ?? null,
             'status'          => $this->guardSiap($validated['status'] ?? 'belum_siap', 'belum_siap'),
@@ -233,6 +241,12 @@ class OutputTambahanController extends Controller
 
         $validated = $this->validated($request);
 
+        // Nama item wajib dari Master Output; judul yang SUDAH dipakai item ini tetap sah walau sudah dinonaktifkan
+        $master = OutputJudul::pilih('other', $validated['id_output_judul'] ?? null, $validated['nama_item'] ?? null, $row->id_output_judul ? (int) $row->id_output_judul : null);
+        if (!$master) {
+            return response()->json(['success' => false, 'message' => OutputJudul::pesanTidakSah()], 422);
+        }
+
         $existing = $request->input('existing_attachments', []);
         $newFiles = [];
         if ($request->hasFile('attachments')) {
@@ -244,7 +258,8 @@ class OutputTambahanController extends Controller
         $before = DB::table('output_tambahan')->where('id_output_tambahan', $id)->get()->toJson();
 
         DB::table('output_tambahan')->where('id_output_tambahan', $id)->update([
-            'nama_item'       => OutputJudul::resolve('other', $validated['nama_item']),
+            'id_output_judul' => $master->id_output_judul,
+            'nama_item'       => $master->judul,
             'qty'             => $validated['qty'],
             'id_satuan'       => $validated['id_satuan'] ?? null,
             'status'          => $this->guardSiap($validated['status'] ?? $row->status, $row->status),

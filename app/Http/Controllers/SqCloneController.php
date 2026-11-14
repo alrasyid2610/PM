@@ -6,6 +6,7 @@ use App\Services\NotificationDispatcher;
 use App\Support\DocumentNumber;
 use App\Support\NotificationRoles;
 use App\Support\SqKeterangan;
+use App\Support\SqDiscount;
 use App\Support\SqLock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -376,6 +377,7 @@ class SqCloneController extends Controller
                 'judul_order' => $in['judul_order'],
                 'rencana_mulai' => $in['rencana_mulai'] ?? null,
                 'discount' => (int) ($source->discount ?? 0),
+                'discount_persen' => $source->discount_persen ?? null,
                 'cara_pembayaran' => $in['cara_pembayaran'] ?? null,
                 'keterangan' => $in['keterangan'] ?? null,
                 'status' => 'draft',

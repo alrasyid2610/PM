@@ -183,6 +183,7 @@
         wo:      "{{ url('work-orders') }}",
         fwo:     "{{ url('fieldworks') }}",
         'fwo-belum-jadwal': "{{ url('fieldworks') }}",
+        'sqfwo-ada-budget': "{{ url('sq-fieldworks') }}",
         so:      "{{ url('sales-orders') }}",
         sq:      "{{ url('sales-quotations') }}",
         'sq-approval': "{{ url('sales-quotations') }}",

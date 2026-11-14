@@ -38,6 +38,7 @@ var DW_INDEX_LISTS = {
     'sq':               { no: 'no_sq',  id: 'id_sq' },
     'sq-approval':      { no: 'no_sq',  id: 'id_sq' },
     'sq-belum-budget-fwo': { no: 'no_sq', id: 'id_sq' },
+    'sqfwo-ada-budget': { no: 'no_sq_fwo', id: 'id_sq_fwo' },
     'wo':               { no: 'no_wo',  id: 'id_wo' },
     'fwo':              { no: 'no_fwo', id: 'id_fwo' },
     'fwo-belum-jadwal': { no: 'no_fwo', id: 'id_fwo' },
@@ -90,6 +91,15 @@ function switchTab(type) {
             hasil:          'Hasil',
             sq_fwo:         'No SQ FWO',
             judul_sq_fwo:   'Judul SQ FWO',
+            // daftar "SQ FWO Sudah Ada Budget" (kolom index SQ FWO + budget)
+            no_sq_fwo:       'No FWO',
+            no_sq_wo:        'No WO',
+            site_pekerjaan:  'Site Pekerjaan',
+            judul_pekerjaan: 'Judul Pekerjaan',
+            hari_ke:         'Hari Ke-',
+            durasi_hari:     'Durasi',
+            jumlah_plan:     'Jumlah Plan',
+            total_budget:    'Total Estimasi',
         };
 
         var clip = function (w) { return function (d, t) { return window.dtClip(d, t, w); }; };
@@ -108,6 +118,13 @@ function switchTab(type) {
             return '<a href="' + window.route.sqFwo + '?open=' + row.id_sq_fwo + '" class="fw-semibold text-decoration-none" style="color:#1a56db;white-space:nowrap;">' + escHtml(data ?? '-') + '</a>';
         };
         window.datatableColumnRenderers.judul_sq_fwo = clip(300);
+        // Daftar SQ FWO (kolom huruf kecil seperti index SQ FWO): potong teks panjang + format rupiah
+        window.datatableColumnRenderers.pelanggan       = clip(240);
+        window.datatableColumnRenderers.site_pekerjaan  = clip(220);
+        window.datatableColumnRenderers.judul_pekerjaan = clip(340);
+        window.datatableColumnRenderers.total_budget = function (d, t) {
+            return t === 'display' ? 'Rp ' + Number(d || 0).toLocaleString('id-ID') : d;
+        };
         // Kolom nomor dokumen: link ke detail (SQ + badge revisi seperti index SQ)
         window.datatableColumnRenderers[idx.no] = function (data, t, row) {
             if (t !== 'display') return data;

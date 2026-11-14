@@ -480,6 +480,7 @@ function renderForm(res) {
                         <div class="col-12">
                             <label class="form-label fw-semibold" style="font-size:12px;">Nama Item <span class="text-danger">*</span></label>
                             <select class="form-select form-select-sm" id="outputOtherModal-nama" data-no-disable></select>
+                            <div class="form-text" style="font-size:11px;">Pilih dari Master Output. Belum ada? ${can('output-master', 'can_create') ? '<a href="/output-master/create" target="_blank">Tambahkan di Master Output</a>' : 'Minta admin menambahkannya di Master Output'}.</div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold" style="font-size:12px;">Qty <span class="text-danger">*</span></label>

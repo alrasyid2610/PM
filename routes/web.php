@@ -72,6 +72,7 @@ use App\Http\Controllers\LabSampleController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PersonnelController;
 use App\Http\Controllers\KendaraanController;
+use App\Http\Controllers\OutputMasterController;
 use App\Http\Controllers\DocumentationController;
 use Spatie\LaravelPdf\Facades\Pdf;
 
@@ -268,6 +269,20 @@ Route::prefix('personnel')->name('personnel.')->group(function () {
     Route::get('/{id}/history', [PersonnelController::class, 'history'])->name('history')->whereNumber('id');
     Route::post('/{id}/account', [PersonnelController::class, 'createAccount'])->name('create-account')->whereNumber('id');
     Route::delete('/{id}/account', [PersonnelController::class, 'revokeAccount'])->name('revoke-account')->whereNumber('id');
+});
+
+// Master Output — daftar judul Output Pekerjaan / Output Other (izin menu `output-master`); select di modal WO/SO memakai /output-judul/select2
+Route::prefix('output-master')->name('output-master.')->group(function () {
+    Route::get('/', [OutputMasterController::class, 'index'])->name('index');
+    Route::get('/data', [OutputMasterController::class, 'data'])->name('data');
+    Route::get('/create', [OutputMasterController::class, 'create'])->name('create');
+    Route::post('/', [OutputMasterController::class, 'store'])->name('store');
+    Route::get('/{id}', [OutputMasterController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [OutputMasterController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [OutputMasterController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/detail', [OutputMasterController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::get('/{id}/history', [OutputMasterController::class, 'history'])->name('history')->whereNumber('id');
+    Route::put('/{id}/merge', [OutputMasterController::class, 'merge'])->name('merge')->whereNumber('id'); // PUT → izin ubah
 });
 
 Route::prefix('kendaraan')->name('kendaraan.')->group(function () {

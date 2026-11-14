@@ -41,6 +41,9 @@ return [
     ['slug' => 'dash-sq-kedaluwarsa',  'label' => 'SQ Final Mendekati Kedaluwarsa', 'kelompok' => 'Sales', 'type' => 'kpi', 'icon' => 'fa-hourglass-half', 'color' => '#d97706', 'bg' => '#fffbeb', 'tab' => 'sq'],
     ['slug' => 'dash-sq-per-status',   'label' => 'SQ per Status',          'kelompok' => 'Sales', 'type' => 'chart', 'icon' => 'fa-chart-pie', 'kind' => 'donut'],
     ['slug' => 'dash-list-sq',         'label' => 'Daftar SQ Win Belum Jadi SO', 'kelompok' => 'Sales', 'type' => 'table', 'icon' => 'fa-file-signature', 'key' => 'sq'],
+    // SQ FWO (FWO estimasi di dalam SQ WO) yang sudah punya Budget Plan berisi minimal 1 item — hanya dari SQ versi terbaru.
+    ['slug' => 'dash-sqfwo-ada-budget', 'label' => 'SQ FWO Sudah Ada Budget', 'kelompok' => 'Sales', 'type' => 'kpi', 'icon' => 'fa-wallet', 'color' => '#0f766e', 'bg' => '#f0fdfa', 'tab' => 'sqfwo-ada-budget'],
+    ['slug' => 'dash-list-sqfwo-ada-budget', 'label' => 'Daftar SQ FWO Sudah Ada Budget', 'kelompok' => 'Sales', 'type' => 'table', 'icon' => 'fa-wallet', 'key' => 'sqfwo-ada-budget'],
     ['slug' => 'dash-list-sq-approval', 'label' => 'Daftar SQ Menunggu Approval', 'kelompok' => 'Sales', 'type' => 'table', 'icon' => 'fa-hourglass-half', 'key' => 'sq-approval'],
     // SQ terbaru (Draft/Menunggu Approval/Final/Win) yang punya SQ FWO tetapi minimal 1 SQ FWO-nya belum diisi Budget Plan.
     ['slug' => 'dash-sq-belum-budget-fwo',      'label' => 'SQ FWO Belum Ada Budget',        'kelompok' => 'Sales', 'type' => 'kpi',   'icon' => 'fa-wallet', 'color' => '#b45309', 'bg' => '#fffbeb', 'tab' => 'sq-belum-budget-fwo'],

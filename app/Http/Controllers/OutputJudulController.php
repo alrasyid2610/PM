@@ -6,17 +6,16 @@ use App\Support\OutputJudul;
 use Illuminate\Http\Request;
 
 /**
- * Daftar judul Output untuk select2 (Output Pekerjaan & Output Other). Hanya baca —
- * judul baru masuk master otomatis saat output disimpan (lihat OutputJudul::resolve()).
+ * Daftar judul AKTIF dari Master Output untuk select di modal Output Pekerjaan / Output Other (WO dan SO).
+ * Hanya baca — judul dikelola di menu "Master Output" (OutputMasterController); lihat App\Support\OutputJudul.
  */
 class OutputJudulController extends Controller
 {
+    /** @return array<int,array{id:int,text:string,is_lhu:int}> */
     public function select2(Request $request)
     {
         $tipe = $request->query('tipe') === 'other' ? 'other' : 'pekerjaan';
 
-        return response()->json(
-            collect(OutputJudul::daftar($tipe))->map(fn ($j) => ['id' => $j, 'text' => $j])->values()
-        );
+        return response()->json(OutputJudul::daftar($tipe));
     }
 }

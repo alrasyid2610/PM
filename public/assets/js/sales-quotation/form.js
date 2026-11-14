@@ -1,3 +1,33 @@
+// Discount SQ persen ↔ Rupiah saling mengisi (lihat SqDiscount / SalesQuotationController::update).
+// Dasar hitung = subtotal BOQ SQ (= "Total Nilai" di KPI); diperbarui setiap kali detail/KPI dimuat.
+window.sqDiscountSubtotal = 0;
+
+// Persen yang ditampilkan: tersimpan bila ada; SQ lama yang hanya punya Rupiah → diturunkan dari subtotal
+function sqDiscountPersenAwal(res) {
+    window.sqDiscountSubtotal = Number(res.subtotal_sq) || 0;
+    if (res.discount_persen != null) return Number(res.discount_persen);
+    if (window.sqDiscountSubtotal > 0 && Number(res.discount) > 0) {
+        return Math.round((Number(res.discount) / window.sqDiscountSubtotal) * 1e6) / 1e4;
+    }
+    return '';
+}
+
+$(document).off('input.sqDiscount', '.sq-discount-persen').on('input.sqDiscount', '.sq-discount-persen', function () {
+    $('#sqDiscountSumber').val('persen');
+    const sub = window.sqDiscountSubtotal || 0;
+    const pct = parseFloat(String(this.value).replace(',', '.'));
+    if (!sub || isNaN(pct)) { $('.sq-discount-rp').val(''); return; }
+    $('.sq-discount-rp').val(Math.round((sub * pct) / 100).toLocaleString('en-US'));
+});
+
+$(document).off('input.sqDiscount', '.sq-discount-rp').on('input.sqDiscount', '.sq-discount-rp', function () {
+    $('#sqDiscountSumber').val('rp');
+    const sub = window.sqDiscountSubtotal || 0;
+    const rp = parseInt(String(this.value).replace(/,/g, ''), 10);
+    if (!sub || isNaN(rp)) { $('.sq-discount-persen').val(''); return; }
+    $('.sq-discount-persen').val(Math.round((rp / sub) * 1e6) / 1e4);
+});
+
 function sqStatusBadge(res) {
     if (res.deleted_at) {
         return `<span class="pm-badge" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;">
@@ -223,6 +253,10 @@ function renderForm(res) {
                 mode: 'ajax', url: '/office/select2', placeholder: 'Pilih Office',
                 label: res.name_office || null, className: 'col-md-6', allowClear: true, createUrl: '/office/create',
             })}
+            ${(typeof canLihatNilai !== 'function' || canLihatNilai()) ? `
+            ${formGroup.text('discount_persen', 'Discount (%)', sqDiscountPersenAwal(res), false, { className: 'col-md-3', inputClass: 'sq-discount-persen' })}
+            ${formGroup.text('discount', 'Discount (Rp)', (res.subtotal_sq ?? 0) > 0 ? (res.discount ?? 0) : '', false, { className: 'col-md-3', inputClass: 'input-num-mask input-num-int sq-discount-rp' })}
+            <input type="hidden" name="discount_sumber" id="sqDiscountSumber" value="">` : ''}
         </div>`,
     )}
 

@@ -10,10 +10,12 @@ class OutputPekerjaanController extends Controller
 {
     public function byWo($id_wo)
     {
-        $outputs = DB::table('output_pekerjaan')
-            ->where('id_wo', $id_wo)
-            ->orderBy('id_output')
-            ->get();
+        $outputs = DB::table('output_pekerjaan as o')
+            ->leftJoin('output_judul as mj', 'mj.id_output_judul', '=', 'o.id_output_judul')
+            ->where('o.id_wo', $id_wo)
+            ->orderBy('o.id_output')
+            // judul_is_lhu = penanda LHU di Master Output (default saklar LHU di modal edit)
+            ->get(['o.*', 'mj.is_lhu as judul_is_lhu']);
 
         // Sample FWO yang dicakup tiap LHU (satu query untuk semua output)
         $samples = $outputs->isEmpty() ? collect() : DB::table('output_pekerjaan_samples as os')
@@ -115,7 +117,8 @@ class OutputPekerjaanController extends Controller
     {
         $request->validate([
             'id_wo'          => 'required|integer',
-            'judul_output'   => 'required|string|max:255',
+            'id_output_judul' => 'nullable|integer',
+            'judul_output'   => 'nullable|string|max:255', // cadangan bila id tidak dikirim; tetap harus cocok dengan Master Output
             'judul_dokumen'  => 'nullable|string|max:255',
             'jenis_dokumen'  => 'nullable|in:copy,asli,asli_dan_copy',
             'qty_copy'       => 'nullable|integer|min:0',
@@ -129,6 +132,12 @@ class OutputPekerjaanController extends Controller
             'sample_ids'     => 'nullable|array',
             'sample_ids.*'   => 'integer',
         ]);
+
+        // Judul wajib dari Master Output — diperiksa SEBELUM apa pun disimpan
+        $master = OutputJudul::pilih('pekerjaan', $request->id_output_judul, $request->judul_output);
+        if (!$master) {
+            return response()->json(['message' => OutputJudul::pesanTidakSah()], 422);
+        }
 
         // Penghubung sample diperiksa SEBELUM apa pun disimpan (termasuk upload lampiran)
         $isLhu     = $request->boolean('is_lhu');
@@ -151,10 +160,11 @@ class OutputPekerjaanController extends Controller
             $status = 'belum_siap';
         }
 
-        $id = DB::transaction(function () use ($request, $status, $files, $isLhu, $sampleIds) {
+        $id = DB::transaction(function () use ($request, $status, $files, $isLhu, $sampleIds, $master) {
         $newId = DB::table('output_pekerjaan')->insertGetId([
             'id_wo'           => $request->id_wo,
-            'judul_output'    => OutputJudul::resolve('pekerjaan', $request->judul_output),
+            'id_output_judul' => $master->id_output_judul,
+            'judul_output'    => $master->judul,
             'is_lhu'          => $isLhu ? 1 : 0,
             'judul_dokumen'   => $request->judul_dokumen,
             'jenis_dokumen'   => $request->jenis_dokumen,
@@ -199,7 +209,8 @@ class OutputPekerjaanController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'judul_output'   => 'required|string|max:255',
+            'id_output_judul' => 'nullable|integer',
+            'judul_output'   => 'nullable|string|max:255', // cadangan bila id tidak dikirim; tetap harus cocok dengan Master Output
             'judul_dokumen'  => 'nullable|string|max:255',
             'jenis_dokumen'  => 'nullable|in:copy,asli,asli_dan_copy',
             'qty_copy'       => 'nullable|integer|min:0',
@@ -213,6 +224,13 @@ class OutputPekerjaanController extends Controller
             'sample_ids'      => 'nullable|array',
             'sample_ids.*'    => 'integer',
         ]);
+
+        // Judul wajib dari Master Output; judul yang SUDAH dipakai output ini tetap sah walau sudah dinonaktifkan
+        $idJudulSaatIni = (int) DB::table('output_pekerjaan')->where('id_output', $id)->value('id_output_judul');
+        $master = OutputJudul::pilih('pekerjaan', $request->id_output_judul, $request->judul_output, $idJudulSaatIni ?: null);
+        if (!$master) {
+            return response()->json(['message' => OutputJudul::pesanTidakSah()], 422);
+        }
 
         // Penghubung sample diperiksa SEBELUM apa pun diubah (termasuk upload lampiran)
         $idWo      = (int) DB::table('output_pekerjaan')->where('id_output', $id)->value('id_wo');
@@ -241,9 +259,10 @@ class OutputPekerjaanController extends Controller
             $status = $current;
         }
 
-        DB::transaction(function () use ($request, $id, $status, $allFiles, $isLhu, $sampleIds) {
+        DB::transaction(function () use ($request, $id, $status, $allFiles, $isLhu, $sampleIds, $master) {
         DB::table('output_pekerjaan')->where('id_output', $id)->update([
-            'judul_output'  => OutputJudul::resolve('pekerjaan', $request->judul_output),
+            'id_output_judul' => $master->id_output_judul,
+            'judul_output'  => $master->judul,
             'is_lhu'        => $isLhu ? 1 : 0,
             'judul_dokumen' => $request->judul_dokumen,
             'jenis_dokumen' => $request->jenis_dokumen,

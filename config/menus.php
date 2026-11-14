@@ -111,6 +111,7 @@ return [
             ['slug' => 'bank-accounts', 'label' => 'Bank Account', 'icon' => 'fa-building-columns'],
             ['slug' => 'poin-keterangan', 'label' => 'Poin Keterangan', 'icon' => 'fa-list-ol'],
             ['slug' => 'kendaraan', 'label' => 'Kendaraan', 'icon' => 'fa-truck-pickup'],
+            ['slug' => 'output-master', 'label' => 'Master Output', 'icon' => 'fa-file-lines'],
         ],
     ],
     [

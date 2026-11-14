@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\DocumentNumber;
+use App\Support\SqDiscount;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -174,7 +175,8 @@ class SqConvertController extends Controller
                     'pic_order' => $input['pic_order'],
                     'pic_marketing_internal' => $sq->pic_marketing_internal,
                     'pic_marketing_eksternal' => $sq->pic_marketing_eksternal,
-                    'discount' => (int) ($sq->discount ?? 0),
+                    'discount' => SqDiscount::effective($sq, SqDiscount::subtotal((int) $sq->id_sq)),
+                    'discount_persen' => $sq->discount_persen ?? null,
                     'status' => 'on-progress',
                     'cara_pembayaran' => $sq->cara_pembayaran,
                     'keterangan' => $sq->keterangan,

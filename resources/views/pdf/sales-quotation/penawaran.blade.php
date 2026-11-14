@@ -26,7 +26,7 @@
     /* Judul bagian (I/II) tidak boleh tertinggal sendirian di dasar halaman; Grand Total tidak boleh sendirian di halaman baru */
     .offer tr.section { break-after: avoid; page-break-after: avoid; }
     .offer tr.total { break-before: avoid; page-break-before: avoid; }
-    /* Sub Total + PPN (hanya bila memakai rekening PPN): satu blok dengan Grand Total */
+    /* Sub Total + Diskon + PPN (bila ada diskon / rekening PPN): satu blok dengan Grand Total */
     .offer tr.subt { break-after: avoid; page-break-after: avoid; }
     .offer tr.subt td { font-weight: 700; background: #dbe8f5; }
     .offer tr.total td { font-weight: 700; background: #203864; color: #fff; border-color: #203864; }
@@ -128,15 +128,23 @@
             @endforeach
             @endif
 
-            @if ($pakaiPpn)
+            @if ($pakaiPpn || $diskon > 0)
             <tr class="subt">
                 <td colspan="6" style="text-align:right;">Sub Total</td>
                 <td class="r">{{ $fmt($subtotal) }}</td>
             </tr>
+            @if ($diskon > 0)
+            <tr class="subt">
+                <td colspan="6" style="text-align:right;">{{ $diskonLabel }}</td>
+                <td class="r">Rp ({{ number_format((float) $diskon, 0, ',', '.') }})</td>
+            </tr>
+            @endif
+            @if ($pakaiPpn)
             <tr class="subt">
                 <td colspan="6" style="text-align:right;">PPN</td>
                 <td class="r">{{ $fmt($ppn) }}</td>
             </tr>
+            @endif
             @endif
             <tr class="total">
                 <td colspan="6" style="text-align:right;">Grand Total</td>

@@ -47,7 +47,7 @@ class BudgetBasis
                 ->selectRaw('COALESCE(SUM(qty * harga), 0) as t')->value('t');
         }
 
-        return self::result(max(0, $subtotal - (int) ($sq->discount ?? 0)), 'SQ', $sq->no_sq ?? null);
+        return self::result(max(0, $subtotal - SqDiscount::effective($sq, $subtotal)), 'SQ', $sq->no_sq ?? null);
     }
 
     private static function result(int $nilai, string $jenis, ?string $no): array

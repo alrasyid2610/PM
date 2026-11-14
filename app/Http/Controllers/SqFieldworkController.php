@@ -387,13 +387,14 @@ class SqFieldworkController extends Controller
         return response()->json(['success' => true]);
     }
 
-    public function data(Request $request)
+    /**
+     * Query dasar daftar SQ FWO (join + kolom + pembatas akses SQ) — dipakai halaman index (data()) DAN daftar widget
+     * dashboard, supaya kolom keduanya selalu sama. Filter/pembatas lain ditambahkan oleh pemanggil.
+     * Catatan tampilan: kolom `pelanggan` perlu dirapikan dengan presentRow() (nama berprefix entitas).
+     */
+    public static function listBaseQuery()
     {
-        $set         = new SqFieldworkFilters();
-        $filters     = $set->normalize($request->input('filters'));
-        $isSearching = !empty($filters);
-
-        $query = DB::table('sq_fieldworks as f')
+        return DB::table('sq_fieldworks as f')
             ->leftJoin('sq_work_orders as w', 'w.id_sq_wo', '=', 'f.id_sq_wo')
             ->leftJoin('sales_quotations as sq', 'sq.id_sq', '=', 'w.id_sq')
             ->leftJoin('business_relation_sites as brs', 'brs.id_site', '=', 'f.id_site_pelanggan_pekerjaan')
@@ -401,7 +402,6 @@ class SqFieldworkController extends Controller
             ->leftJoin('business_relations as pel', 'pel.id_br', '=', 'sq.id_pelanggan')
             ->leftJoin('entitas as ent_pel', 'ent_pel.id_entitas', '=', 'pel.id_entitas')
             ->tap(fn ($q) => DataScope::sq($q, 'sq'))
-            ->tap(fn ($q) => $set->apply($q, $filters))
             ->select([
                 'f.id_sq_fwo',
                 'f.no_sq_fwo',
@@ -417,6 +417,24 @@ class SqFieldworkController extends Controller
                 'f.durasi_hari',
                 'f.created_at',
             ]);
+    }
+
+    /** Rapikan 1 baris hasil listBaseQuery(): nama pelanggan berprefix entitas, kolom bantu dibuang. */
+    public static function presentRow($row)
+    {
+        $row->pelanggan = brDisplayName($row->entitas_pelanggan, $row->pelanggan);
+        unset($row->entitas_pelanggan);
+
+        return $row;
+    }
+
+    public function data(Request $request)
+    {
+        $set         = new SqFieldworkFilters();
+        $filters     = $set->normalize($request->input('filters'));
+
+        $query = self::listBaseQuery()
+            ->tap(fn ($q) => $set->apply($q, $filters));
 
         return DataTables::of($query)
             ->addIndexColumn()

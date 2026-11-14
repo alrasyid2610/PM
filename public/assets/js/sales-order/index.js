@@ -758,7 +758,7 @@ $(document).on('click', '.btn-so-output-other-edit', function (e) {
     $.get('/so-output-other/' + id)
         .done(function (r) {
             $modal.find('#soOutputOtherModal-id-so').val(r.id_so);
-            initJudulOutputSelect($modal.find('#soOutputOtherModal-nama'), 'other', $modal, r.nama_item || '');
+            initJudulOutputSelect($modal.find('#soOutputOtherModal-nama'), 'other', $modal, r.id_output_judul || '', r.nama_item || '');
             const qtyEl = $modal.find('#soOutputOtherModal-qty')[0];
             if (qtyEl && qtyEl._cleave) qtyEl._cleave.setRawValue(r.qty || ''); else $modal.find('#soOutputOtherModal-qty').val(r.qty || '');
             toggleSoOutputOtherSiapOption($modal, r.status);
@@ -804,15 +804,15 @@ $(document).on('click', '#soOutputOtherModal-btn-save', function () {
     const idSo = $modal.find('#soOutputOtherModal-id-so').val();
     const $btn = $(this);
 
-    const namaItem = ($modal.find('#soOutputOtherModal-nama').val() || '').trim();
+    const idJudul = ($modal.find('#soOutputOtherModal-nama').val() || '').trim(); // id Master Output
     const qty = rawNumVal($modal.find('#soOutputOtherModal-qty')[0]);
-    if (!namaItem) { Notify.warning('Nama item wajib diisi.'); return; }
+    if (!idJudul) { Notify.warning('Nama item wajib dipilih dari daftar.'); return; }
     if (!qty)      { Notify.warning('Qty wajib diisi.'); return; }
 
     const fd = new FormData();
     fd.append('_token', window.route.csrf);
     fd.append('id_so', idSo);
-    fd.append('nama_item', namaItem);
+    fd.append('id_output_judul', idJudul);
     fd.append('qty', qty);
     fd.append('id_satuan', $modal.find('#soOutputOtherModal-satuan').val() || '');
     fd.append('status', $modal.find('#soOutputOtherModal-status').val());

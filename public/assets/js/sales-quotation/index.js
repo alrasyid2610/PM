@@ -221,6 +221,7 @@ function renderSqSummary(wos, idSq) {
     const totalOther    = sum('total_boq_other');
     const totalSampling = sum('total_boq_sampling');
     const totalNilai    = totalBoq + totalOther + totalSampling;
+    window.sqDiscountSubtotal = totalNilai; // dasar hitung Discount SQ (persen ↔ Rp) mengikuti Total Nilai terbaru
     const fmtRp = (n) => 'Rp ' + Number(n || 0).toLocaleString('en-US');
 
     const kpiCard = (icon, iconBg, label, value) => `<div class="pm-kpi-card">

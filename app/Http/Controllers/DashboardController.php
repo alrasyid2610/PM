@@ -56,6 +56,7 @@ class DashboardController extends Controller
             'dash-wo-outstanding'      => $this->kpiWoOutstanding(),
             'dash-fwo-outstanding'     => $this->kpiFwoOutstanding(),
             'dash-fwo-belum-jadwal'    => $this->kpiFwoBelumJadwal(),
+            'dash-sqfwo-ada-budget'    => $this->kpiSqFwoAdaBudget(),
             'dash-termin-outstanding'  => $this->kpiTerminOutstanding(),
             'dash-overdue'             => $this->kpiOverdue(),
             'dash-so-per-bulan'        => $this->chartSoPerBulan($request),
@@ -106,6 +107,34 @@ class DashboardController extends Controller
     private function kpiFwoBelumJadwal(): array
     {
         return ['value' => $this->fwoBelumJadwalQuery()->count(), 'sub' => 'menunggu jadwal dari tim sampling'];
+    }
+
+    /**
+     * SQ FWO yang sudah punya budget: Budget Plan FWO berisi minimal 1 item, dari SQ versi terbaru yang belum dihapus.
+     * Pembatas akses SQ (DataScope) sudah ada di query dasar. Alias query: f = sq_fieldworks, w = sq_work_orders, sq.
+     */
+    private function sqFwoAdaBudgetQuery($base)
+    {
+        return $base
+            ->whereNull('sq.deleted_at')
+            ->where('sq.is_latest', true)
+            ->whereExists(function ($q) {
+                $q->select(DB::raw(1))->from('sq_fwo_budgets as fb')
+                    ->join('sq_fwo_budget_items as fbi', 'fbi.id_sq_budget', '=', 'fb.id_sq_budget')
+                    ->whereColumn('fb.id_sq_fwo', 'f.id_sq_fwo');
+            });
+    }
+
+    private function kpiSqFwoAdaBudget(): array
+    {
+        $fwoIds = $this->sqFwoAdaBudgetQuery(SqFieldworkController::listBaseQuery())->select('f.id_sq_fwo');
+        $n      = (clone $fwoIds)->count();
+        $total  = DB::table('sq_fwo_budget_items as i')
+            ->join('sq_fwo_budgets as fb', 'fb.id_sq_budget', '=', 'i.id_sq_budget')
+            ->whereIn('fb.id_sq_fwo', $fwoIds)
+            ->sum('i.nominal_budget');
+
+        return ['value' => $n, 'sub' => 'total estimasi Rp ' . number_format((int) $total, 0, ',', '.')];
     }
 
     private function kpiFwoOutstanding(): array
@@ -619,6 +648,17 @@ class DashboardController extends Controller
                 ->orderBy('fw.created_at')
                 ->get();
             $rows = $this->fwoRowsWithHasil($rows)->each(fn ($r) => $r->status = 'belum_jadwal');
+
+        } elseif ($type === 'sqfwo-ada-budget') {
+            // Kolom index SQ FWO + 2 kolom khusus di ujung (jumlah plan & total estimasi budget); yang terbaru dibuat di atas
+            $rows = $this->sqFwoAdaBudgetQuery(SqFieldworkController::listBaseQuery())
+                ->addSelect([
+                    DB::raw('(SELECT COUNT(*) FROM sq_fwo_budgets fb WHERE fb.id_sq_fwo = f.id_sq_fwo) as jumlah_plan'),
+                    DB::raw('(SELECT COALESCE(SUM(fbi.nominal_budget), 0) FROM sq_fwo_budgets fb JOIN sq_fwo_budget_items fbi ON fbi.id_sq_budget = fb.id_sq_budget WHERE fb.id_sq_fwo = f.id_sq_fwo) as total_budget'),
+                ])
+                ->orderByDesc('f.created_at')
+                ->get()
+                ->map(fn ($r) => SqFieldworkController::presentRow($r));
 
         } elseif ($type === 'sq') {
             // SQ Win terbaru yang belum diterbitkan jadi SO; yang paling dekat masa berlakunya di atas

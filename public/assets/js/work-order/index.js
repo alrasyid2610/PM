@@ -592,7 +592,7 @@ $(document).on('click', '.btn-output-other-edit', function (e) {
     $.get(`/wo-output-other/${id}`)
         .done(function (r) {
             $modal.find('#outputOtherModal-id-wo').val(r.id_wo);
-            initJudulOutputSelect($modal.find('#outputOtherModal-nama'), 'other', $modal, r.nama_item || '');
+            initJudulOutputSelect($modal.find('#outputOtherModal-nama'), 'other', $modal, r.id_output_judul || '', r.nama_item || '');
             const qtyEl = $modal.find('#outputOtherModal-qty')[0];
             if (qtyEl && qtyEl._cleave) qtyEl._cleave.setRawValue(r.qty || ''); else $modal.find('#outputOtherModal-qty').val(r.qty || '');
             toggleOutputOtherSiapOption($modal, r.status);
@@ -639,15 +639,15 @@ $(document).on('click', '#outputOtherModal-btn-save', function () {
     const idWo   = $modal.find('#outputOtherModal-id-wo').val();
     const $btn   = $(this);
 
-    const namaItem = ($modal.find('#outputOtherModal-nama').val() || '').trim();
+    const idJudul  = ($modal.find('#outputOtherModal-nama').val() || '').trim(); // id Master Output
     const qty      = rawNumVal($modal.find('#outputOtherModal-qty')[0]);
-    if (!namaItem) { Notify.warning('Nama item wajib diisi.'); return; }
+    if (!idJudul)  { Notify.warning('Nama item wajib dipilih dari daftar.'); return; }
     if (!qty)      { Notify.warning('Qty wajib diisi.'); return; }
 
     const fd = new FormData();
     fd.append('_token', window.route.csrf);
     fd.append('id_wo', idWo);
-    fd.append('nama_item', namaItem);
+    fd.append('id_output_judul', idJudul);
     fd.append('qty', qty);
     fd.append('id_satuan', $modal.find('#outputOtherModal-satuan').val() || '');
     fd.append('status', $modal.find('#outputOtherModal-status').val());
@@ -1679,6 +1679,8 @@ function showOutputForm(data) {
         '<div class="col-md-6">' +
         '<label class="form-label form-label-sm text-muted mb-1">Judul Output <span class="text-danger">*</span></label>' +
         '<select id="outputJudulOutput" class="form-select form-select-sm"></select>' +
+        '<div class="form-text" style="font-size:11px;">Pilih dari Master Output. Belum ada? ' +
+        (can('output-master', 'can_create') ? '<a href="/output-master/create" target="_blank">Tambahkan di Master Output</a>' : 'Minta admin menambahkannya di Master Output') + '.</div>' +
         '</div>' +
         '<div class="col-md-6">' +
         '<label class="form-label form-label-sm text-muted mb-1">Nomor Dokumen</label>' +
@@ -1751,7 +1753,7 @@ function showOutputForm(data) {
     );
     $('#modalOutputFormBody').html(html);
     initFpDate('#modalOutputFormBody');
-    initJudulOutputSelect($('#outputJudulOutput'), 'pekerjaan', $('#modalOutputForm'), isEdit ? (data.judul_output || '') : '');
+    initJudulOutputSelect($('#outputJudulOutput'), 'pekerjaan', $('#modalOutputForm'), isEdit ? (data.id_output_judul || '') : '', isEdit ? (data.judul_output || '') : '');
     outputFilePond = createFileUploader('#outputAttachments');
     triggerOutputQtyVisibility(isEdit ? (data.jenis_dokumen || '') : '');
 
@@ -1760,7 +1762,7 @@ function showOutputForm(data) {
     outputSampleOpts = null;
     outputSampleSel = new Set(isEdit ? (data.samples || []).map(function (s) { return String(s.id_lab_sample); }) : []);
     $('#outputIsLhu').prop('checked', !!(isEdit && Number(data.is_lhu)));
-    outputLhuManual = !!(isEdit && (!!Number(data.is_lhu)) !== outputTitleIsLhu(data.judul_output));
+    outputLhuManual = !!(isEdit && (!!Number(data.is_lhu)) !== !!Number(data.judul_is_lhu));
     applyOutputLhuState('');
 
     var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalOutputForm'));
@@ -1773,12 +1775,10 @@ function triggerOutputQtyVisibility(jenis) {
 }
 
 // ── Output LHU: saklar + pemilih sample FWO ────────────────────────────────────
-// LHU = judul mengandung kata "LHU" (tidak peka huruf besar-kecil). Saklar tercentang otomatis dari judul
-// sampai user mengaturnya sendiri. Sample yang boleh dipilih: sample FWO di bawah WO ini yang sudah registrasi lab
+// LHU = penanda `is_lhu` pada judul di Master Output (sejak 2026-11-14; sebelumnya ditebak dari kata "LHU" di judul).
+// Saklar tercentang otomatis dari penanda itu sampai user mengaturnya sendiri (judulOutputIsLhu() di core/judulOutput.js).
+// Sample yang boleh dipilih: sample FWO di bawah WO ini yang sudah registrasi lab
 // (satu sample hanya ke satu output) — daftar & aturan di OutputPekerjaanController::sampleOptions().
-function outputTitleIsLhu(judul) {
-    return /\bLHU\b/i.test(judul || '');
-}
 
 // Badge "LHU" + jumlah sample (klik = lihat daftar) di kolom judul tabel Output
 function outputLhuBadgeHtml(item) {
@@ -1892,11 +1892,11 @@ function refreshOutputSampleUi() {
 
 $(document).on('change', '#outputJudulOutput', function () {
     if (outputLhuManual) return;
-    var lhu = outputTitleIsLhu($(this).val());
+    var lhu = judulOutputIsLhu($(this));
     var $cb = $('#outputIsLhu');
     if ($cb.is(':checked') === lhu) return;
     $cb.prop('checked', lhu);
-    applyOutputLhuState(lhu ? 'Otomatis aktif karena judul mengandung "LHU"' : '');
+    applyOutputLhuState(lhu ? 'Otomatis aktif: judul ini ditandai LHU di Master Output' : '');
 });
 
 $(document).on('change', '#outputIsLhu', function () {
@@ -2111,12 +2111,12 @@ $(document).ready(function () {
             return;
         }
 
-        var judulOutput = ($("#outputJudulOutput").val() || "").trim();
-        if (!judulOutput) {
+        var idJudulOutput = ($("#outputJudulOutput").val() || "").trim(); // id Master Output
+        if (!idJudulOutput) {
             Swal.fire({
                 icon: "warning",
                 title: "Field wajib diisi",
-                text: "Judul Output harus diisi.",
+                text: "Judul Output harus dipilih dari daftar.",
             });
             return;
         }
@@ -2125,7 +2125,7 @@ $(document).ready(function () {
 
         var fd = new FormData();
         fd.append("_token", window.route.csrf);
-        fd.append("judul_output", judulOutput);
+        fd.append("id_output_judul", idJudulOutput);
         fd.append("judul_dokumen", $("#outputJudulDokumen").val().trim());
         fd.append("status", $("#outputStatus").val());
         fd.append("jenis_dokumen", $("#outputJenisDokumen").val());

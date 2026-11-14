@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Support\ListFilter\Sets\SalesQuotationFilters;
 use App\Support\DataScope;
+use App\Support\SqDiscount;
 use Illuminate\Http\Request;
 use App\Support\DocumentNumber;
 use App\Support\SqLock;
@@ -176,6 +177,10 @@ class SalesQuotationController extends Controller
         $sq->pelanggan_pay_display = brDisplayName($sq->entitas_pay, $sq->pelanggan_pay);
         $sq->attachment = $sq->attachment ? json_decode($sq->attachment) : [];
 
+        // Discount SQ: subtotal BOQ (dasar hitung persen ↔ Rupiah) + Rupiah yang berlaku saat ini
+        $sq->subtotal_sq = SqDiscount::subtotal((int) $id);
+        $sq->discount    = SqDiscount::effective($sq, $sq->subtotal_sq);
+
         // Approval: nama pengaju & pengambil keputusan, dan apakah user ini boleh menarik pengajuan
         $namaUser = DB::table('users')->whereIn('id', array_filter([$sq->diajukan_oleh, $sq->approval_oleh]))->pluck('name', 'id');
         $sq->diajukan_oleh_nama = $namaUser[$sq->diajukan_oleh] ?? null;
@@ -208,10 +213,36 @@ class SalesQuotationController extends Controller
             'keterangan_status' => 'nullable|string',
         ]), $this->sqRequiredMessages());
 
+        // Discount (persen ↔ Rupiah): hanya diubah bila field-nya ikut dikirim (user tanpa hak lihat nilai tidak menerima field ini)
+        $discountCols = [];
+        if ($request->has('discount') || $request->has('discount_persen')) {
+            $request->validate([
+                'discount'        => 'nullable|integer|min:0',
+                'discount_persen' => 'nullable|numeric|min:0|max:100',
+            ], [
+                'discount.integer'    => 'Discount harus berupa angka bulat (Rupiah).',
+                'discount.min'        => 'Discount tidak boleh negatif.',
+                'discount_persen.max' => 'Discount persen tidak boleh lebih dari 100.',
+                'discount_persen.min' => 'Discount persen tidak boleh negatif.',
+            ]);
+            $subtotal = SqDiscount::subtotal((int) $id);
+            [$rp, $pct] = SqDiscount::resolve(
+                $request->filled('discount_persen') ? (float) $request->discount_persen : null,
+                $request->filled('discount') ? (int) $request->discount : null,
+                $subtotal,
+                $request->input('discount_sumber')
+            );
+            if ($subtotal > 0 && $rp > $subtotal) {
+                return response()->json(['message' => 'Discount tidak boleh melebihi subtotal BOQ (Rp ' . number_format($subtotal, 0, ',', '.') . ').'], 422);
+            }
+            $discountCols = ['discount' => $rp, 'discount_persen' => $pct];
+        }
+
         $before = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
 
         DB::table('sales_quotations')->where('id_sq', $id)->update(array_merge(
             self::orderPartyColumns($request),
+            $discountCols,
             [
                 'tanggal_sq' => $validated['tanggal_sq'],
                 'berlaku_sampai' => $validated['berlaku_sampai'] ?? null,
@@ -783,7 +814,7 @@ class SalesQuotationController extends Controller
         }
 
         $subtotal = ($tot['boq_gross'] - $tot['boq_disc']) + $tot['other'] + $tot['sampling'];
-        $discountSq = (int) ($sq->discount ?? 0);
+        $discountSq = SqDiscount::effective($sq, $subtotal);
         $pendapatan = max(0, $subtotal - $discountSq);
         $margin = $pendapatan - $tot['biaya'];
 
@@ -964,11 +995,12 @@ class SalesQuotationController extends Controller
         $bagianII = self::gabungFreq($bagianII);
 
         $subtotal    = $bagianI->sum('total') + $bagianII->sum('total');
-        $discountSq  = (int) ($sq->discount ?? 0);
+        $discountSq  = SqDiscount::effective($sq, $subtotal);
         $grandTotal  = max(0, $subtotal - $discountSq);
 
-        // Bila ada poin Keterangan yang memakai Rekening PPN (bank_accounts.is_ppn), total dicetak
-        // Sub Total + PPN + Grand Total (diskon SQ diabaikan). Tanpa rekening PPN: Grand Total seperti biasa.
+        // Diskon SQ (sejak 2026-11-14) dicetak sebagai baris sendiri: Sub Total → Diskon → [PPN] → Grand Total.
+        // Bila ada poin Keterangan yang memakai Rekening PPN (bank_accounts.is_ppn), PPN dihitung dari
+        // (Sub Total − Diskon). Tanpa rekening PPN: Grand Total = Sub Total − Diskon.
         $keteranganRows = SqKeterangan::rows((int) $id);
         $rekeningPpn    = DB::table('bank_accounts')->whereNull('deleted_at')->where('is_ppn', 1)->pluck('id_bank_account')->all();
         $pakaiPpn = $keteranganRows->contains(fn ($row) => collect($row->isian)->contains(
@@ -976,9 +1008,15 @@ class SalesQuotationController extends Controller
         ));
         $ppn = 0;
         if ($pakaiPpn) {
-            $ppn        = (int) round($subtotal * self::TARIF_PPN);
-            $grandTotal = $subtotal + $ppn;
+            $ppn        = (int) round(max(0, $subtotal - $discountSq) * self::TARIF_PPN);
+            $grandTotal = max(0, $subtotal - $discountSq) + $ppn;
         }
+
+        // Label persen pada baris diskon: persen tersimpan, atau diturunkan dari Rupiah ÷ Sub Total (tanpa nol di belakang koma)
+        $diskonPersen = $sq->discount_persen ?? ($subtotal > 0 ? $discountSq / $subtotal * 100 : null);
+        $diskonLabel  = $discountSq > 0 && $diskonPersen !== null
+            ? 'Diskon ' . rtrim(rtrim(number_format((float) $diskonPersen, 2, ',', ''), '0'), ',') . '%'
+            : 'Diskon';
 
         // Nomor & tanggal dicetak di kop tiap halaman
         $noDok   = $sq->no_sq . ($sq->revisi > 0 ? ' Rev. ' . str_pad($sq->revisi, 2, '0', STR_PAD_LEFT) : ' Rev. 00');
@@ -994,6 +1032,8 @@ class SalesQuotationController extends Controller
             'grandTotal'  => $grandTotal,
             'pakaiPpn'    => $pakaiPpn,
             'subtotal'    => $subtotal,
+            'diskon'      => $discountSq,
+            'diskonLabel' => $diskonLabel,
             'ppn'         => $ppn,
             // Poin keterangan terstruktur (teks final bila SQ sudah Final, render langsung bila Draft)
             'keterangan'  => $keteranganRows->pluck('teks'),

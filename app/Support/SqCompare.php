@@ -61,7 +61,7 @@ class SqCompare
             'tanggal'   => ['label' => 'Tanggal SQ', 'fields' => ['x' => $f('Tanggal SQ', self::tgl($sq->tanggal_sq))]],
             'berlaku'   => ['label' => 'Berlaku Sampai', 'fields' => ['x' => $f('Berlaku Sampai', self::tgl($sq->berlaku_sampai))]],
             'mulai'     => ['label' => 'Rencana Mulai', 'fields' => ['x' => $f('Rencana Mulai', self::tgl($sq->rencana_mulai))]],
-            'discount'  => ['label' => 'Discount SQ', 'fields' => ['x' => $f('Discount SQ', (int) $sq->discount, self::rp($sq->discount))]],
+            'discount'  => ['label' => 'Discount SQ', 'fields' => ['x' => $f('Discount SQ', $discSq = SqDiscount::effective($sq, SqDiscount::subtotal((int) $sq->id_sq)), self::rp($discSq))]],
             'bayar'     => ['label' => 'Cara Pembayaran', 'fields' => ['x' => $f('Cara Pembayaran', $sq->cara_pembayaran ?? '')]],
             'ket'       => ['label' => 'Keterangan', 'fields' => ['x' => $f('Keterangan', $sq->keterangan ?? '')]],
         ];
@@ -200,7 +200,7 @@ class SqCompare
             ];
         }
 
-        $discount = (int) $sq->discount;
+        $discount = SqDiscount::effective($sq, (int) $pendapatanBruto);
         $pendapatan = max(0, $pendapatanBruto - $discount);
 
         return [
