@@ -681,9 +681,11 @@ class SalesQuotationController extends Controller
             ->tap(fn ($q) => DataScope::sq($q, 's'))
             ->leftJoin('business_relations as br', 's.id_pelanggan', '=', 'br.id_br')
             ->leftJoin('business_relation_sites as brs', 's.id_site_pelanggan', '=', 'brs.id_site')
+            ->leftJoin('users as uo', 'uo.id', '=', 's.pic_order')
             ->select([
                 's.id_sq',
                 DB::raw("CASE WHEN s.deleted_at IS NOT NULL THEN 'deleted' ELSE s.status END as status"),
+                'uo.name as PIC Order',
                 's.no_sq',
                 's.revisi',
                 'br.nama as Pelanggan',
