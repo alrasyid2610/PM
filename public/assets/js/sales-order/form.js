@@ -498,6 +498,17 @@ function renderForm(res) {
                         </select>
                     </div>
                 </div>
+
+                <!-- PIC Lapangan (1 baris penuh, opsional) -->
+                <div class="row g-3 form-1">
+                    <div class="mb-3 col-12">
+                        <label class="form-label">PIC Lapangan</label>
+                        <select name="id_pic_lapangan" id="detail_id_pic_lapangan" class="form-select disabled">
+                            <option value=""></option>
+                            ${res.id_pic_lapangan ? `<option value="${res.id_pic_lapangan}" selected>${escHtml(res.pic_lapangan ?? '')}</option>` : ''}
+                        </select>
+                    </div>
+                </div>
             `,
     )}
 

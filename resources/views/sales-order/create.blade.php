@@ -179,6 +179,18 @@
                         </select>
                     </div>
                 </div>
+
+                <!-- PIC Lapangan — 1 baris penuh, opsional -->
+                <div class="row g-3 mt-1">
+                    <div class="col-12">
+                        <label class="form-label">PIC Lapangan</label>
+                        <select name="id_pic_lapangan"
+                            id="id_pic_lapangan"
+                            class="form-select">
+                            <option value="">Pilih PIC Lapangan</option>
+                        </select>
+                    </div>
+                </div>
     
             </x-section-card>
         </div>
@@ -305,6 +317,7 @@
         initPicSelect('#id_pic_pelanggan', 'Pilih PIC');
         initPicSelect('#id_pic_pelanggan_delivery', 'Pilih PIC');
         initPicSelect('#id_pic_pelanggan_payment', 'Pilih PIC');
+        initPicSelect('#id_pic_lapangan', 'Pilih PIC Lapangan');
 
         // Begitu Perusahaan & Site Pemesan sudah lengkap → salin ke Pengiriman
         // & Pembayaran (PIC ikut kalau sudah dipilih juga). Hanya mengisi field

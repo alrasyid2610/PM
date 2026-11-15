@@ -113,6 +113,7 @@ class SalesOrderController extends Controller
         // VALIDATION
         // ==========================
         $request->validate(array_merge($this->soRequiredRules(), [
+            'id_pic_lapangan' => 'nullable|integer',
             'attachments'   => 'nullable|array',
             'attachments.*' => 'nullable|file|max:153600',
             'discount_persen' => 'nullable|numeric|min:0|max:100',
@@ -159,6 +160,7 @@ class SalesOrderController extends Controller
             'id_pelanggan_payment' => $request->id_pelanggan_payment,
             'id_site_pelanggan_payment' => $request->id_site_pelanggan_payment,
             'id_pic_pelanggan_payment' => $request->id_pic_pelanggan_payment,
+            'id_pic_lapangan' => $request->filled('id_pic_lapangan') ? (int) $request->id_pic_lapangan : null,
 
             // PIC
             'pic_input' => $request->pic_input,
@@ -272,6 +274,7 @@ class SalesOrderController extends Controller
             ->leftJoin('business_relations as pay', 'so.id_pelanggan_payment', '=', 'pay.id_br')
             ->leftJoin('business_relation_sites as site_pay', 'so.id_site_pelanggan_payment', '=', 'site_pay.id_site')
             ->leftJoin('business_relation_contacts as brc_pay', 'brc_pay.id_contact', '=', 'so.id_pic_pelanggan_payment')
+            ->leftJoin('business_relation_contacts as brc_lap', 'brc_lap.id_contact', '=', 'so.id_pic_lapangan')
             ->leftJoin('users as pic_i', 'pic_i.id', '=', 'so.pic_input')
             ->leftJoin('users as pic_o', 'pic_o.id', '=', 'so.pic_order')
             ->leftJoin('users as marketing_internal', 'marketing_internal.id', '=', 'so.pic_marketing_internal')
@@ -303,6 +306,7 @@ class SalesOrderController extends Controller
                 'site_pay.nama_lokasi as pelanggan_site_pay',
                 'brc_pay.id_contact as id_pic_pelanggan_payment',
                 'brc_pay.nama_pic as pic_pelanggan_pay',
+                'brc_lap.nama_pic as pic_lapangan',
                 'pic_i.name as pic_input_name',
                 'pic_o.name as pic_ordername',
                 'marketing_internal.name as marketing_internal_name',
@@ -374,6 +378,7 @@ class SalesOrderController extends Controller
             'no_po' => 'nullable|string|max:100',
             'id_office' => 'nullable|integer',
             'pic_marketing_eksternal' => 'nullable|integer',
+            'id_pic_lapangan' => 'nullable|integer',
             'id_sc' => 'nullable|integer',
             'discount' => 'nullable|integer|min:0',
             'discount_persen' => 'nullable|numeric|min:0|max:100',
@@ -440,6 +445,7 @@ class SalesOrderController extends Controller
                     'id_pelanggan_payment' => $validated['id_pelanggan_payment'],
                     'id_site_pelanggan_payment' => $validated['id_site_pelanggan_payment'] ?? null,
                     'id_pic_pelanggan_payment' => $validated['id_pic_pelanggan_payment'] ?? null,
+                    'id_pic_lapangan' => $validated['id_pic_lapangan'] ?? null,
 
                     'pic_input' => $validated['pic_input'] ?? null,
                     'pic_order' => $validated['pic_order'] ?? null,
@@ -688,6 +694,7 @@ class SalesOrderController extends Controller
             ->leftJoin('business_relations as pay', 'so.id_pelanggan_payment', '=', 'pay.id_br')
             ->leftJoin('business_relation_sites as site_pay', 'so.id_site_pelanggan_payment', '=', 'site_pay.id_site')
             ->leftJoin('business_relation_contacts as brc_pay', 'brc_pay.id_contact', '=', 'so.id_pic_pelanggan_payment')
+            ->leftJoin('business_relation_contacts as brc_lap', 'brc_lap.id_contact', '=', 'so.id_pic_lapangan')
             ->leftJoin('office as o', 'o.id_office', '=', 'so.id_office')
             ->leftJoin('users as pic_i', 'pic_i.id', '=', 'so.pic_input')
             ->leftJoin('users as pic_o', 'pic_o.id', '=', 'so.pic_order')
@@ -707,6 +714,7 @@ class SalesOrderController extends Controller
                 'pay.nama as nama_pelanggan_payment',
                 'site_pay.nama_lokasi as nama_site_payment',
                 'brc_pay.nama_pic as pic_payment',
+                'brc_lap.nama_pic as pic_lapangan',
                 'o.name as nama_office',
                 'pic_i.name as nama_pic_input',
                 'pic_o.name as nama_pic_order',
@@ -981,6 +989,7 @@ class SalesOrderController extends Controller
             ->leftJoin('business_relations as pay', 'so.id_pelanggan_payment', '=', 'pay.id_br')
             ->leftJoin('business_relation_sites as site_pay', 'so.id_site_pelanggan_payment', '=', 'site_pay.id_site')
             ->leftJoin('business_relation_contacts as brc_pay', 'brc_pay.id_contact', '=', 'so.id_pic_pelanggan_payment')
+            ->leftJoin('business_relation_contacts as brc_lap', 'brc_lap.id_contact', '=', 'so.id_pic_lapangan')
             ->leftJoin('users as pic_i', 'pic_i.id', '=', 'so.pic_input')
             ->leftJoin('users as pic_o', 'pic_o.id', '=', 'so.pic_order')
             ->leftJoin('users as mkt_i', 'mkt_i.id', '=', 'so.pic_marketing_internal')
@@ -1000,6 +1009,7 @@ class SalesOrderController extends Controller
                 'pay.nama as nama_pelanggan_payment',
                 'site_pay.nama_lokasi as nama_site_payment',
                 'brc_pay.nama_pic as pic_payment',
+                'brc_lap.nama_pic as pic_lapangan',
                 'pic_i.name as nama_pic_input',
                 'pic_o.name as nama_pic_order',
                 'mkt_i.name as nama_marketing_internal',
@@ -1285,6 +1295,7 @@ class SalesOrderController extends Controller
             'so.id_pelanggan_payment'         => 'nullable|integer',
             'so.id_site_pelanggan_payment'    => 'nullable|integer',
             'so.id_pic_pelanggan_payment'     => 'nullable|integer',
+            'so.id_pic_lapangan'              => 'nullable|integer',
             'so.pic_input'                    => 'nullable|integer',
             'so.pic_order'                    => 'nullable|integer',
             'so.pic_marketing_internal'       => 'nullable|integer',
@@ -1449,6 +1460,7 @@ class SalesOrderController extends Controller
                     'id_pelanggan_payment' => $soInput['id_pelanggan_payment'] ?? null,
                     'id_site_pelanggan_payment' => $soInput['id_site_pelanggan_payment'] ?? null,
                     'id_pic_pelanggan_payment' => $soInput['id_pic_pelanggan_payment'] ?? null,
+                    'id_pic_lapangan' => $soInput['id_pic_lapangan'] ?? null,
                     'pic_input' => $soInput['pic_input'] ?? null,
                     'pic_order' => $soInput['pic_order'] ?? null,
                     'pic_marketing_internal' => $soInput['pic_marketing_internal'] ?? null,

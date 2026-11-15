@@ -184,6 +184,7 @@ function fillSoForm(so) {
     initPicSelect('#so_id_pic_pelanggan', soCompanyIds, soSiteIds, so.id_pic_pelanggan, so.pic_pelanggan);
     initPicSelect('#so_id_pic_pelanggan_delivery', soCompanyIds, soSiteIds, so.id_pic_pelanggan_delivery, so.pic_delivery);
     initPicSelect('#so_id_pic_pelanggan_payment', soCompanyIds, soSiteIds, so.id_pic_pelanggan_payment, so.pic_payment);
+    initPicSelect('#so_id_pic_lapangan', soCompanyIds, soSiteIds, so.id_pic_lapangan, so.pic_lapangan);
 
     // Begitu Pemesan (Perusahaan, Site, PIC) dipilih → disamakan ke Pengiriman & Pembayaran
     // Hanya Site & PIC Pemesan yang memicu auto-fill (bukan Perusahaan, karena
@@ -1959,6 +1960,7 @@ function submitClone() {
         id_pelanggan_payment: $('#so_id_pelanggan_payment').val() || null,
         id_site_pelanggan_payment: $('#so_id_site_pelanggan_payment').val() || null,
         id_pic_pelanggan_payment: $('#so_id_pic_pelanggan_payment').val() || null,
+        id_pic_lapangan: $('#so_id_pic_lapangan').val() || null,
         pic_input: $('#so_pic_input').val() || null,
         pic_order: $('#so_pic_order').val() || null,
         pic_marketing_internal: $('#so_pic_marketing_internal').val() || null,

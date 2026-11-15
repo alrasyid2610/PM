@@ -123,6 +123,7 @@ function initSoPicFields() {
         '#detail_id_pic_pelanggan',
         '#detail_id_pic_pelanggan_delivery',
         '#detail_id_pic_pelanggan_payment',
+        '#detail_id_pic_lapangan',
     ];
 
     selectors.forEach(function (sel) {

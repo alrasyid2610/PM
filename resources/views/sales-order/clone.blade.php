@@ -227,6 +227,10 @@
                         <label class="form-label">PIC</label>
                         <select id="so_id_pic_pelanggan_payment" class="form-select"></select>
                     </div>
+                    <div class="col-12">
+                        <label class="form-label">PIC Lapangan</label>
+                        <select id="so_id_pic_lapangan" class="form-select"></select>
+                    </div>
                 </div>
             </x-section-card>
         </div>

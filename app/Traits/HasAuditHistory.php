@@ -191,6 +191,7 @@ trait HasAuditHistory
             'id_pic_pelanggan'            => ['business_relation_contacts', 'id_contact', 'nama_pic'],
             'id_pic_pelanggan_delivery'   => ['business_relation_contacts', 'id_contact', 'nama_pic'],
             'id_pic_pelanggan_payment'    => ['business_relation_contacts', 'id_contact', 'nama_pic'],
+            'id_pic_lapangan'             => ['business_relation_contacts', 'id_contact', 'nama_pic'],
             'pic_input'                   => ['users', 'id', 'name'],
             'pic_order'                   => ['users', 'id', 'name'],
             'pic_marketing_internal'      => ['users', 'id', 'name'],
