@@ -140,9 +140,9 @@ function renderForm(res) {
             ${formGroup.text('hari_mulai', 'Hari Mulai (ke-)', res.hari_mulai, true, { className: 'col-md-3' })}
             ${formGroup.text('durasi_hari', 'Durasi (hari)', res.durasi_hari, false, { className: 'col-md-3' })}
             <div class="col-md-3">
-                <label class="form-label">Frekuensi</label>
-                <select name="interval_bulan" class="form-select disabled">
-                    <option value="">— Tidak ada —</option>
+                <label class="form-label required">Frekuensi</label>
+                <select name="interval_bulan" class="form-select disabled" required>
+                    <option value="">— Pilih frekuensi —</option>
                     ${[[1, 'Bulanan'], [2, 'Bimulanan'], [3, 'Triwulan'], [4, 'Caturwulan'], [6, 'Semester'], [12, 'Annual']]
                         .map(([v, l]) => `<option value="${v}" ${res.interval_bulan == v ? 'selected' : ''}>${l}</option>`).join('')}
                 </select>

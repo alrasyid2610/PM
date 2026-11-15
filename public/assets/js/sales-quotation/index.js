@@ -207,7 +207,7 @@ function loadSqWoList(idSq, done) {
     });
 }
 
-// Salin SQ WO — membuka halaman Clone SQ WO (bukan modal), memakai halaman Clone SQ dalam mode 1 WO
+// Salin SQ WO — membuka halaman Clone SQ WO (bukan modal); jumlah salinan (maks 24) & pratinjau jadwal diisi di halaman itu
 $(document).on('click', '.btn-copy-sq-wo', function () {
     window.location.href = '/sq-work-orders/' + $(this).data('sq-wo-id') + '/clone';
 });

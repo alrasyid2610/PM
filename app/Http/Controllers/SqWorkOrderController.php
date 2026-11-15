@@ -55,15 +55,13 @@ class SqWorkOrderController extends Controller
             'id_pic_pelanggan_pekerjaan' => 'nullable|integer',
             'hari_mulai' => 'required|integer|min:1',
             'durasi_hari' => 'nullable|integer|min:1',
-            'interval_bulan' => 'nullable|integer|in:1,2,3,4,6,12',
+            'interval_bulan' => 'required|integer|in:1,2,3,4,6,12',
             'no_urut_period' => 'nullable|integer|min:1',
             'keterangan' => 'nullable|string',
+        ], [
+            'interval_bulan.required' => 'Frekuensi wajib dipilih.',
+            'interval_bulan.in'       => 'Frekuensi tidak valid.',
         ]);
-
-        if (empty($validated['interval_bulan'])) {
-            $validated['interval_bulan'] = null;
-            $validated['no_urut_period'] = null;
-        }
 
         $urutan = 1 + (int) DB::table('sq_work_orders')->where('id_sq', $validated['id_sq'])->max('urutan');
 
@@ -124,15 +122,13 @@ class SqWorkOrderController extends Controller
             'id_pic_pelanggan_pekerjaan' => 'nullable|integer',
             'hari_mulai' => 'required|integer|min:1',
             'durasi_hari' => 'nullable|integer|min:1',
-            'interval_bulan' => 'nullable|integer|in:1,2,3,4,6,12',
+            'interval_bulan' => 'required|integer|in:1,2,3,4,6,12',
             'no_urut_period' => 'nullable|integer|min:1',
             'keterangan' => 'nullable|string',
+        ], [
+            'interval_bulan.required' => 'Frekuensi wajib dipilih.',
+            'interval_bulan.in'       => 'Frekuensi tidak valid.',
         ]);
-
-        if (empty($validated['interval_bulan'])) {
-            $validated['interval_bulan'] = null;
-            $validated['no_urut_period'] = null;
-        }
 
         $before = DB::table('sq_work_orders')->where('id_sq_wo', $id)->get()->toJson();
 

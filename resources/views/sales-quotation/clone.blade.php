@@ -57,7 +57,9 @@
                 <div>
                     Menyalin <strong id="cloneSourceLabel">-</strong> menjadi SQ WO baru di SQ yang sama (hanya bisa jika SQ berstatus Draft).
                     Semua field di bawah pre-filled dari WO sumber dan bisa diedit bebas sebelum disimpan. Ikut disalin: BOQ, BOQ Other/Sampling,
-                    FWO (Fieldwork BOQ), dan Budget Plan WO &amp; FWO beserta item.
+                    FWO (Fieldwork BOQ), dan Budget Plan WO &amp; FWO beserta item. Isian di bawah adalah <strong>salinan pertama</strong>
+                    (jadwal sudah digeser satu langkah frekuensi); isi <strong>Jumlah Salinan</strong> bila ingin beberapa salinan sekaligus
+                    &mdash; salinan berikutnya mengikuti salinan pertama dengan jadwal & Urutan ke- berjalan otomatis.
                 </div>
                 @else
                 <div>
@@ -187,6 +189,25 @@
                         <div class="form-text">Jika dimatikan, SQ baru memakai paket keterangan standar. Isian rekening/kontak tetap bisa diubah di tab Keterangan.</div>
                     </div>
                 </div>
+            </x-section-card>
+        </div>
+        @endif
+
+        @if ($woOnly)
+        <!-- SECTION JUMLAH SALINAN (hanya Clone SQ WO) -->
+        <div class="col-12" id="salinanSectionWrap">
+            <x-section-card icon="fa-copy" color="icon-purple" title="Jumlah Salinan" subtitle="Buat beberapa salinan sekaligus; jadwal & Urutan ke- berjalan otomatis">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3 col-6">
+                        <label class="form-label required" for="cloneJumlah">Jumlah salinan</label>
+                        <input type="number" id="cloneJumlah" class="form-control" min="1" max="24" value="1">
+                        <div class="form-text">Maksimal 24.</div>
+                    </div>
+                    <div class="col-md-9 col-12">
+                        <div id="clonePlanInfo" class="text-muted" style="font-size:12px;"></div>
+                    </div>
+                </div>
+                <div id="clonePlan" class="mt-3"></div>
             </x-section-card>
         </div>
         @endif

@@ -51,7 +51,10 @@ class SqCloneController extends Controller
         $wo = DB::table('sq_work_orders')->where('id_sq_wo', $idWo)->first();
         if (!$wo) return response()->json(['message' => 'SQ Work Order tidak ditemukan'], 404);
 
-        return $this->cloneData(request()->merge(['wo' => $idWo]), $wo->id_sq);
+        $res = $this->cloneData(request()->merge(['wo' => $idWo]), $wo->id_sq);
+        if ($res->getStatusCode() !== 200) return $res;
+
+        return response()->json($this->prefillSalinanPertama($res->getData(true), (int) $wo->id_sq));
     }
 
     public function cloneData(Request $request, $id)
@@ -210,6 +213,84 @@ class SqCloneController extends Controller
         return $this->clonePost($request->merge(['wo_only' => true]), $wo->id_sq);
     }
 
+    // ── Clone SQ WO multi-salinan (sejak 2026-11-14) ─────────────────────────
+    // Halaman Clone SQ WO punya isian "Jumlah salinan" (default 1, maks 24). Isian di halaman = SALINAN PERTAMA; salinan ke-2 dst.
+    // = salinan pertama digeser (frekuensi bulan x 30 hari x k) pada Hari Mulai WO, Hari ke FWO, Hari Mulai/Selesai Budget Plan,
+    // dan Urutan ke- bertambah k. Judul, site, PIC, BOQ, FWO, Budget sama persis dengan salinan pertama.
+
+    /** Maksimum salinan sekali proses. */
+    public const BATCH_MAKS = 24;
+
+    /** Hari per bulan untuk geseran jadwal antar salinan (aturan: bulan frekuensi x 30 hari). */
+    public const HARI_PER_BULAN = 30;
+
+    /** Urutan ke- berikutnya untuk WO baru pada SQ + frekuensi yang sama (selaras dengan form Tambah SQ WO). */
+    private function nextUrutanPeriod(int $idSq, int $interval): int
+    {
+        $sama = DB::table('sq_work_orders')->where('id_sq', $idSq)->where('interval_bulan', $interval);
+
+        return max((int) (clone $sama)->count(), (int) (clone $sama)->max('no_urut_period')) + 1;
+    }
+
+    /**
+     * Isian awal halaman Clone SQ WO = nilai SALINAN PERTAMA: jadwal sudah digeser satu langkah frekuensi dan Urutan ke- sudah
+     * berikutnya (user tidak perlu menghitung). Tanpa frekuensi (data lama) tidak digeser.
+     */
+    private function prefillSalinanPertama(array $data, int $idSq): array
+    {
+        $wo = $data['wos'][0] ?? null;
+        if (!$wo || empty($wo['interval_bulan'])) return $data;
+
+        $geser = (int) $wo['interval_bulan'] * self::HARI_PER_BULAN;
+        $plus = fn ($v) => ($v === null || $v === '') ? $v : (int) $v + $geser;
+        $budgets = fn (array $list) => array_map(function ($b) use ($plus) {
+            $b['hari_mulai'] = $plus($b['hari_mulai']);
+            $b['hari_selesai'] = $plus($b['hari_selesai']);
+            return $b;
+        }, $list);
+
+        $wo['hari_mulai'] = $plus($wo['hari_mulai'] ?: 1);
+        $wo['no_urut_period'] = $this->nextUrutanPeriod($idSq, (int) $wo['interval_bulan']);
+        $wo['budgets'] = $budgets($wo['budgets'] ?? []);
+        $wo['fwos'] = array_map(function ($f) use ($plus, $budgets) {
+            $f['hari_ke'] = $plus($f['hari_ke'] ?: 1);
+            $f['budgets'] = $budgets($f['budgets'] ?? []);
+            return $f;
+        }, $wo['fwos'] ?? []);
+
+        $data['wos'][0] = $wo;
+
+        return $data;
+    }
+
+    /** Salinan ke-$k (0 = pertama, tidak digeser) dari payload WO: jadwal digeser bulan frekuensi x 30 hari x k, Urutan ke- + k. */
+    private function shiftWoPayload(array $woIn, int $k): array
+    {
+        if ($k === 0) return $woIn;
+
+        $interval = (int) ($woIn['interval_bulan'] ?? 0);
+        if (!$interval) throw new \RuntimeException('Frekuensi wajib dipilih untuk membuat lebih dari 1 salinan.');
+
+        $geser = $interval * self::HARI_PER_BULAN * $k;
+        $plus = fn ($v) => ($v === null || $v === '') ? $v : (int) $v + $geser;
+        $budgets = fn ($list) => array_map(function ($b) use ($plus) {
+            $b['hari_mulai'] = $plus($b['hari_mulai'] ?? null);
+            $b['hari_selesai'] = $plus($b['hari_selesai'] ?? null);
+            return $b;
+        }, $list ?? []);
+
+        $woIn['hari_mulai'] = $plus($woIn['hari_mulai'] ?? 1);
+        if (!empty($woIn['no_urut_period'])) $woIn['no_urut_period'] = (int) $woIn['no_urut_period'] + $k;
+        $woIn['budgets'] = $budgets($woIn['budgets'] ?? []);
+        $woIn['fwos'] = array_map(function ($f) use ($plus, $budgets) {
+            $f['hari_ke'] = $plus($f['hari_ke'] ?? 1);
+            $f['budgets'] = $budgets($f['budgets'] ?? []);
+            return $f;
+        }, $woIn['fwos'] ?? []);
+
+        return $woIn;
+    }
+
     public function clonePost(Request $request, $id)
     {
         $woOnly = (bool) $request->input('wo_only');
@@ -218,6 +299,7 @@ class SqCloneController extends Controller
         if (!$source) return response()->json(['message' => 'Sales Quotation tidak ditemukan'], 404);
 
         $rules = [
+            'jumlah' => 'nullable|integer|min:1|max:' . self::BATCH_MAKS,
             'wos' => 'required|array|min:1',
             'wos.*.source_id_wo' => 'required|integer',
             'wos.*.include' => 'required|boolean',
@@ -226,7 +308,7 @@ class SqCloneController extends Controller
             'wos.*.id_pic_pelanggan_pekerjaan' => 'nullable|integer',
             'wos.*.hari_mulai' => 'nullable|integer|min:1',
             'wos.*.durasi_hari' => 'nullable|integer|min:1',
-            'wos.*.interval_bulan' => 'nullable|integer',
+            'wos.*.interval_bulan' => 'nullable|integer|in:1,2,3,4,6,12',
             'wos.*.no_urut_period' => 'nullable|integer|min:1',
             'wos.*.keterangan' => 'nullable|string',
 
@@ -281,6 +363,9 @@ class SqCloneController extends Controller
         }
 
         $messages = [
+            'jumlah.integer' => 'Jumlah salinan harus berupa angka bulat.',
+            'jumlah.min' => 'Jumlah salinan minimal 1.',
+            'jumlah.max' => 'Jumlah salinan maksimal ' . self::BATCH_MAKS . '.',
             'sq.tanggal_sq.required' => 'Tanggal SQ wajib diisi.',
             'sq.judul_order.required' => 'Judul Order wajib diisi.',
             'sq.berlaku_sampai.after_or_equal' => 'Berlaku Sampai tidak boleh sebelum Tanggal SQ.',
@@ -309,9 +394,9 @@ class SqCloneController extends Controller
 
         $sourceWos = DB::table('sq_work_orders')->where('id_sq', $id)->get()->keyBy('id_sq_wo');
         $skippedFwoBoq = 0;
-
+        $jumlah = $woOnly ? max(1, (int) ($validated['jumlah'] ?? 1)) : 1;
         try {
-            $result = DB::transaction(function () use ($validated, $source, $woOnly, $sourceWos, &$skippedFwoBoq) {
+            $result = DB::transaction(function () use ($validated, $source, $woOnly, $sourceWos, $jumlah, &$skippedFwoBoq) {
                 if ($woOnly) {
                     $targetSqId = (int) $source->id_sq;
                     $urutan = (int) DB::table('sq_work_orders')->where('id_sq', $targetSqId)->max('urutan');
@@ -327,7 +412,13 @@ class SqCloneController extends Controller
                     $src = $sourceWos->get($woIn['source_id_wo']);
                     if (!$src) throw new \RuntimeException('Work Order sumber tidak valid atau bukan milik SQ ini.');
 
-                    $newWoIds[] = $this->cloneWo($woIn, $src, $targetSqId, ++$urutan, $skippedFwoBoq);
+                    // Clone SQ WO: N salinan identik dari isian halaman (salinan ke-2 dst. digeser jadwalnya)
+                    for ($k = 0; $k < $jumlah; $k++) {
+                        $newWoIds[] = $this->cloneWo(
+                            $this->shiftWoPayload($woIn, $k), $src, $targetSqId, ++$urutan, $skippedFwoBoq,
+                            $jumlah > 1 ? 'salinan ' . ($k + 1) . " dari {$jumlah}" : null
+                        );
+                    }
                 }
 
                 if (!$newWoIds && $woOnly) {
@@ -343,7 +434,7 @@ class SqCloneController extends Controller
         $skipNote = $skippedFwoBoq ? " ({$skippedFwoBoq} alokasi Fieldwork BOQ dilewati karena BOQ WO terkait tidak disertakan)" : '';
 
         if ($woOnly) {
-            return response()->json($result + ['success' => true, 'message' => 'SQ Work Order berhasil disalin' . $skipNote]);
+            return response()->json($result + ['success' => true, 'message' => ($jumlah > 1 ? "{$jumlah} SQ Work Order" : 'SQ Work Order') . ' berhasil disalin' . $skipNote]);
         }
 
         $sqBaru = DB::table('sales_quotations')->where('id_sq', $result['id_sq'])->first(['no_sq', 'judul_order']);
@@ -401,12 +492,15 @@ class SqCloneController extends Controller
     }
 
     /** Salin 1 WO sumber (+ BOQ, Other/Sampling, Budget, FWO) ke SQ target. Mengembalikan id_sq_wo baru. */
-    private function cloneWo(array $in, object $src, int $targetSqId, int $urutan, int &$skippedFwoBoq): int
+    private function cloneWo(array $in, object $src, int $targetSqId, int $urutan, int &$skippedFwoBoq, ?string $catatan = null): int
     {
         $label = $src->no_sq_wo ?: "WO #{$src->id_sq_wo}";
 
         $judul = trim((string) ($in['judul_pekerjaan'] ?? ''));
         if ($judul === '') throw new \RuntimeException("{$label}: Judul Pekerjaan wajib diisi.");
+
+        // Frekuensi wajib (sejak 2026-11-14): dasar urutan & geseran jadwal salinan
+        if (empty($in['interval_bulan'])) throw new \RuntimeException("{$label}: Frekuensi wajib dipilih.");
 
         // Perusahaan WO selalu diturunkan dari Site yang dipilih (sq_work_orders tidak punya field Perusahaan di UI)
         $siteId = $in['id_site_pelanggan_pekerjaan'] ?? null;
@@ -583,7 +677,7 @@ class SqCloneController extends Controller
         }
 
         $after = DB::table('sq_work_orders')->where('id_sq_wo', $idWo)->get()->toJson();
-        saveAudit('sq_work_orders', $idWo, 'Create', json_encode(['note' => 'Clone dari SQ WO ' . ($src->no_sq_wo ?: $src->id_sq_wo)]), $after);
+        saveAudit('sq_work_orders', $idWo, 'Create', json_encode(['note' => 'Clone dari SQ WO ' . ($src->no_sq_wo ?: $src->id_sq_wo) . ($catatan ? " ({$catatan})" : '')]), $after);
 
         return (int) $idWo;
     }

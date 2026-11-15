@@ -46,9 +46,9 @@
                         <input type="number" min="1" name="durasi_hari" class="form-control">
                     </div>
                     <div class="col-md-3 col-12">
-                        <label class="form-label">Frekuensi</label>
-                        <select name="interval_bulan" id="interval_bulan" class="form-select">
-                            <option value="">— Tidak ada —</option>
+                        <label class="form-label required">Frekuensi</label>
+                        <select name="interval_bulan" id="interval_bulan" class="form-select" required>
+                            <option value="">— Pilih frekuensi —</option>
                             <option value="1">Bulanan</option>
                             <option value="2">Bimulanan</option>
                             <option value="3">Triwulan</option>

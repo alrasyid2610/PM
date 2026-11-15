@@ -70,8 +70,52 @@ function renderClonePage(res) {
     $('#cloneSqForm').removeClass('d-none');
 
     // Mode Clone SQ WO cuma ada 1 card — langsung dibuka supaya field bisa diedit tanpa klik tambahan
-    if (WO_ONLY) $('#woAccordion .wo-toggle').first().trigger('click');
+    if (WO_ONLY) {
+        $('#woAccordion .wo-toggle').first().trigger('click');
+        renderClonePlan();
+    }
 }
+
+// ── Jumlah salinan + pratinjau (hanya Clone SQ WO) ─────────────────────────
+// Isian card WO = salinan pertama; salinan ke-k digeser (bulan frekuensi x 30 hari x k) — aturan sama dengan shiftWoPayload() di server.
+const CLONE_JUMLAH_MAKS = 24;
+const CLONE_HARI_PER_BULAN = 30;
+
+function cloneJumlah() {
+    const n = parseInt($('#cloneJumlah').val(), 10);
+    return isNaN(n) ? 0 : n;
+}
+
+function renderClonePlan() {
+    if (!WO_ONLY) return;
+    const $c = $('#clonePlan');
+    const n = Math.max(1, Math.min(CLONE_JUMLAH_MAKS, cloneJumlah() || 1));
+    const interval = parseInt($('#woAccordion .wo-interval').first().val(), 10) || 0;
+    const hari = parseInt($('#woAccordion .wo-hari-mulai').first().val(), 10) || 1;
+    const urut = parseInt($('#woAccordion .wo-urutan').first().val(), 10) || null;
+    const judul = $('#woAccordion .wo-judul').first().val() || '';
+    const src = (cloneSourceData && cloneSourceData.wos && cloneSourceData.wos[0]) || {};
+    const fwo = (src.fwos || []).length;
+    const geser = interval * CLONE_HARI_PER_BULAN;
+
+    $('#clonePlanInfo').html(interval
+        ? 'Frekuensi <b>' + escHtml(INTERVAL_LABELS[interval] || (interval + ' bln')) + '</b> — salinan ke-2 dst. digeser ' + geser + ' hari dari salinan sebelumnya. Isi (BOQ, FWO, Budget) sama persis.'
+        : '<span class="text-danger">Pilih Frekuensi pada card Work Order di bawah agar jadwal salinan bisa dihitung.</span>');
+
+    const rows = [];
+    for (let k = 0; k < n; k++) {
+        rows.push('<tr><td class="text-center">' + (k + 1) + '</td>'
+            + '<td class="text-center">' + (urut ? urut + k : '-') + '</td>'
+            + '<td class="text-center">ke-' + (hari + geser * k) + (k ? ' <span class="text-muted">(+' + (geser * k) + ' hr)</span>' : '') + '</td>'
+            + '<td>' + escHtml(judul || '-') + '</td><td class="text-center">' + fwo + '</td></tr>');
+    }
+    $c.html('<div style="max-height:260px;overflow:auto;border:1px solid #e2e8f0;border-radius:6px;"><table class="table table-sm mb-0" style="font-size:12px;">'
+        + '<thead style="position:sticky;top:0;background:#f8fafc;"><tr><th class="text-center">Salinan</th><th class="text-center">Urutan ke-</th><th class="text-center">Hari Mulai</th><th>Judul</th><th class="text-center">FWO</th></tr></thead>'
+        + '<tbody>' + rows.join('') + '</tbody></table></div>');
+}
+
+$(document).on('input change', '#cloneJumlah, #woAccordion .wo-hari-mulai, #woAccordion .wo-urutan, #woAccordion .wo-interval, #woAccordion .wo-judul', renderClonePlan);
+
 
 // ── Form SQ ──────────────────────────────────────────────────────────────
 
@@ -320,7 +364,7 @@ function renderWoAccordion(wos) {
 }
 
 function buildWoBodyHtml(wo) {
-    const intervalOptions = [['', '— Tidak ada —']].concat(Object.entries(INTERVAL_LABELS))
+    const intervalOptions = [['', '— Pilih frekuensi —']].concat(Object.entries(INTERVAL_LABELS))
         .map(([val, label]) => `<option value="${val}" ${String(wo.interval_bulan ?? '') === String(val) ? 'selected' : ''}>${label}</option>`)
         .join('');
 
@@ -339,7 +383,7 @@ function buildWoBodyHtml(wo) {
                 <input type="number" min="1" class="form-control wo-durasi" value="${wo.durasi_hari ?? ''}">
             </div>
             <div class="col-md-3 col-6">
-                <label class="form-label">Frekuensi</label>
+                <label class="form-label required">Frekuensi</label>
                 <select class="form-select wo-interval">${intervalOptions}</select>
             </div>
             <div class="col-md-3 col-6 wo-urutan-wrap" style="${wo.interval_bulan ? '' : 'display:none;'}">
@@ -1063,6 +1107,7 @@ function validateWosPayload(wosPayload) {
 
         if (!wo.judul_pekerjaan || !String(wo.judul_pekerjaan).trim()) errors.push(`${woLabel}: Judul Pekerjaan wajib diisi.`);
         if (!wo.hari_mulai || Number(wo.hari_mulai) < 1) errors.push(`${woLabel}: Hari Mulai wajib diisi (minimal 1).`);
+        if (!wo.interval_bulan) errors.push(`${woLabel}: Frekuensi wajib dipilih.`);
 
         budgetErrors(wo.budgets, woLabel);
 
@@ -1189,8 +1234,21 @@ function submitClone() {
         return;
     }
 
+    let jumlah = 1;
+    if (WO_ONLY) {
+        jumlah = cloneJumlah();
+        if (jumlah < 1 || jumlah > CLONE_JUMLAH_MAKS) {
+            Notify.error('Jumlah salinan harus 1 sampai ' + CLONE_JUMLAH_MAKS + '.');
+            return;
+        }
+        if (jumlah > 1 && !wosPayload[0].interval_bulan) {
+            Notify.error('Pilih Frekuensi pada card Work Order untuk membuat lebih dari 1 salinan.');
+            return;
+        }
+    }
+
     const confirmMsg = WO_ONLY
-        ? 'Buat salinan SQ Work Order ini beserta BOQ, FWO, dan Budget-nya?'
+        ? (jumlah > 1 ? `Buat ${jumlah} salinan SQ Work Order ini beserta BOQ, FWO, dan Budget-nya?` : 'Buat salinan SQ Work Order ini beserta BOQ, FWO, dan Budget-nya?')
         : `Buat salinan Sales Quotation ini beserta ${includedCount} WO yang dicentang?`;
 
     Notify.confirm(confirmMsg, function () {
@@ -1201,14 +1259,14 @@ function submitClone() {
             url: window.cloneRoute.submit,
             method: 'POST',
             data: JSON.stringify(WO_ONLY
-                ? { _token: window.cloneRoute.csrf, wo_only: true, wos: wosPayload }
+                ? { _token: window.cloneRoute.csrf, wo_only: true, jumlah: jumlah, wos: wosPayload }
                 : { _token: window.cloneRoute.csrf, sq: sqPayload, wos: wosPayload }),
             contentType: 'application/json',
             success: function (res) {
                 Notify.success(res.message || 'Berhasil disalin');
                 setTimeout(function () {
                     window.location.href = WO_ONLY
-                        ? '/sq-work-orders?open=' + (res.id_sq_wo || '')
+                        ? (jumlah > 1 ? '/sales-quotations?open=' + res.id_sq : '/sq-work-orders?open=' + (res.id_sq_wo || ''))
                         : '/sales-quotations?open=' + res.id_sq;
                 }, 800);
             },
