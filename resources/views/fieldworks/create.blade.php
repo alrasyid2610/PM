@@ -74,6 +74,14 @@
                         </select>
                     </div>
 
+                    <div class="col-md-6">
+                        <label class="form-label">PIC Lapangan (Aktual)</label>
+                        <select name="id_pic_lapangan_aktual" id="create_id_pic_aktual" class="form-select">
+                            <option value="">-- Pilih PIC Lapangan --</option>
+                        </select>
+                        <div class="form-text">Opsional. Bila diisi, nama ini yang dicetak di printout FWO (menggantikan PIC Pelanggan).</div>
+                    </div>
+
                     <div class="col-md-4">
                         <label class="form-label">Penyelia</label>
                         <select name="id_penyelia" id="create_id_penyelia" class="form-select">
@@ -186,6 +194,13 @@
     // semua BRC se-sistem.
     let currentWoIdBr = null;
 
+    // PIC Pelanggan otomatis terisi dari PIC Lapangan SO; tetap bisa diganti user.
+    function setDefaultPic(idPic, namaPic) {
+        const $pic = $('#create_id_pic');
+        if (!idPic || $pic.val()) return;
+        $pic.append(new Option(namaPic || ('PIC #' + idPic), idPic, true, true)).trigger('change');
+    }
+
     function noResultsAdd(createUrl) {
         return {
             language: {
@@ -238,6 +253,8 @@
                 // Perusahaan WO berubah → PIC yang sudah dipilih (kalau ada)
                 // belum tentu valid lagi untuk Perusahaan baru
                 $('#create_id_pic').val(null).trigger('change');
+                $('#create_id_pic_aktual').val(null).trigger('change');
+                setDefaultPic(e.params.data.id_pic_lapangan_so, e.params.data.nama_pic_lapangan_so);
             });
         }
 
@@ -290,6 +307,9 @@
 
                 // Scope PIC Pelanggan ke Perusahaan WO ini
                 currentWoIdBr = res.id_pelanggan_pekerjaan || null;
+
+                // Default PIC Pelanggan = PIC Lapangan di SO (bila ada & PIC belum dipilih)
+                setDefaultPic(res.id_pic_lapangan_so, res.nama_pic_lapangan_so);
             });
         }
 
@@ -307,6 +327,21 @@
                 cache: true,
             },
             ...noResultsAdd('/business-relations/create'),
+        });
+
+        $('#create_id_pic_aktual').select2({
+            width: '100%',
+            placeholder: 'Ketik nama PIC lapangan...',
+            allowClear: true,
+            minimumInputLength: 0,
+            ajax: {
+                url: "{{ route('business-relation-contacts.select2') }}",
+                dataType: 'json',
+                delay: 250,
+                data: p => ({ q: p.term, id_br: currentWoIdBr || '' }),
+                processResults: d => ({ results: d }),
+                cache: false,
+            },
         });
 
         $('#create_id_penyelia').select2({

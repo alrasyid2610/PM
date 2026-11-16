@@ -319,6 +319,21 @@ function renderFwoForm(res) {
                                     },
                                 )}
                                 ${formGroup.select(
+                                    "id_pic_lapangan_aktual",
+                                    "PIC Lapangan (Aktual)",
+                                    res.id_pic_lapangan_aktual,
+                                    [],
+                                    {
+                                        mode: "ajax",
+                                        url: window.route.picSelect2,
+                                        placeholder: "Pilih PIC Lapangan",
+                                        label: res.pic_lapangan_aktual_name,
+                                        className: "col-md-6",
+                                        createUrl:
+                                            "/business-relation-contacts/create",
+                                    },
+                                )}
+                                ${formGroup.select(
                                     "id_penyelia",
                                     "Penyelia",
                                     res.id_penyelia,

@@ -123,6 +123,7 @@ class FieldworkController extends Controller
             ->leftJoin('sales_orders as so', 'wo.id_so', '=', 'so.id_so')
             ->leftJoin('business_relation_sites as brs', 'fw.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
             ->leftJoin('business_relation_contacts as brc', 'fw.id_pic_pelanggan_pekerjaan', '=', 'brc.id_contact')
+            ->leftJoin('business_relation_contacts as brc_la', 'fw.id_pic_lapangan_aktual', '=', 'brc_la.id_contact')
             ->leftJoin('users as pny', 'pny.id', '=', 'fw.id_penyelia')
             ->where('fw.id_fwo', $id)
             ->leftJoin('business_relation_sites as brs_wo', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs_wo.id_site')
@@ -140,6 +141,7 @@ class FieldworkController extends Controller
                 'so.no_so',
                 'brs.nama_lokasi as site_name',
                 'brc.nama_pic as pic_name',
+                'brc_la.nama_pic as pic_lapangan_aktual_name',
                 'brs_wo.nama_lokasi as wo_site_name',
                 'pny.name as nama_penyelia',
             ])
@@ -264,6 +266,7 @@ class FieldworkController extends Controller
             'judul_pekerjaan'             => 'required|string|max:500',
             'id_site_pelanggan_pekerjaan' => 'required|integer',
             'id_pic_pelanggan_pekerjaan'  => 'required|integer',
+            'id_pic_lapangan_aktual'      => 'nullable|integer',
             'id_penyelia'                 => 'nullable|integer|exists:users,id',
             'tanggal_mulai'               => 'nullable|date',
             'tanggal_selesai'             => 'nullable|date',
@@ -313,6 +316,7 @@ class FieldworkController extends Controller
             'judul_pekerjaan'             => $validated['judul_pekerjaan'],
             'id_site_pelanggan_pekerjaan' => $validated['id_site_pelanggan_pekerjaan'],
             'id_pic_pelanggan_pekerjaan'  => $validated['id_pic_pelanggan_pekerjaan'],
+            'id_pic_lapangan_aktual'      => $validated['id_pic_lapangan_aktual'] ?? null,
             'id_penyelia'                 => $validated['id_penyelia'] ?? null,
             'tanggal_mulai'               => $validated['tanggal_mulai'] ?? null,
             'tanggal_selesai'             => $validated['tanggal_selesai'] ?? null,
@@ -363,6 +367,7 @@ class FieldworkController extends Controller
             'judul_pekerjaan'             => 'required|string|max:500',
             'id_site_pelanggan_pekerjaan' => 'required|integer',
             'id_pic_pelanggan_pekerjaan'  => 'required|integer',
+            'id_pic_lapangan_aktual'      => 'nullable|integer',
             'id_penyelia'                 => 'nullable|integer|exists:users,id',
             'tanggal_mulai'               => 'nullable|date',
             'tanggal_selesai'             => 'nullable|date',
@@ -777,6 +782,7 @@ class FieldworkController extends Controller
                 'judul_pekerjaan'             => $validated['judul_pekerjaan'],
                 'id_site_pelanggan_pekerjaan' => $source->id_site_pelanggan_pekerjaan,
                 'id_pic_pelanggan_pekerjaan'  => $source->id_pic_pelanggan_pekerjaan,
+                'id_pic_lapangan_aktual'      => $source->id_pic_lapangan_aktual ?? null,
                 'id_penyelia'                 => $validated['id_penyelia'] ?? $source->id_penyelia,
                 'tanggal_mulai'               => $validated['tanggal_mulai'] ?? null,
                 'tanggal_selesai'             => $validated['tanggal_selesai'] ?? null,
@@ -892,6 +898,7 @@ class FieldworkController extends Controller
             // Pelanggan brsWO
             ->leftJoin('business_relation_sites as brsWO', 'brsWO.id_site', '=', 'wo.id_site_pelanggan_pekerjaan')
             ->leftJoin('business_relation_contacts as brc', 'brc.id_contact', '=', 'fw.id_pic_pelanggan_pekerjaan')
+            ->leftJoin('business_relation_contacts as brc_la', 'brc_la.id_contact', '=', 'fw.id_pic_lapangan_aktual')
             ->leftJoin('users as pny', 'pny.id', '=', 'fw.id_penyelia')
 
             ->where('fw.id_fwo', $id)
@@ -906,6 +913,8 @@ class FieldworkController extends Controller
                 'brsWO.alamat_lengkap as alamat_lengkap_wo',
                 'brc.nama_pic',
                 'brc.nomor_telepon_pic',
+                'brc_la.nama_pic as nama_pic_lapangan_aktual',
+                'brc_la.nomor_telepon_pic as nomor_telepon_pic_lapangan_aktual',
                 'pny.name as nama_penyelia',
             ])
             ->first();

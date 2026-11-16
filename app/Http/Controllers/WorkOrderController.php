@@ -261,8 +261,14 @@ class WorkOrderController extends Controller
             ->where('no_wo', 'like', "%{$search}%")
             ->get();
 
+        // PIC Lapangan SO -> dipakai sebagai default PIC Pelanggan di form Tambah FWO
+        $idSoList = $data->pluck('id_so')->filter()->unique()->all();
+        $picSoMap = DB::table('sales_orders')->whereIn('id_so', $idSoList)->pluck('id_pic_lapangan', 'id_so');
+        $picNama = DB::table('business_relation_contacts')->whereIn('id_contact', $picSoMap->filter()->unique()->all())->pluck('nama_pic', 'id_contact');
+
         return response()->json(
-            $data->map(function ($item) {
+            $data->map(function ($item) use ($picSoMap, $picNama) {
+                $idPicSo = $picSoMap[$item->id_so] ?? null;
                 return [
                     'id'    => $item->id_wo,         // HARUS 'id'
                     'text'  => $item->no_wo . " - " . $item->judul_pekerjaan,         // HARUS 'text' agar muncul di dropdown
@@ -271,6 +277,8 @@ class WorkOrderController extends Controller
                     'id_pelanggan_pekerjaan' => $item->id_pelanggan_pekerjaan,   // Data tambahan (opsional)
                     'id_site_pelanggan_pekerjaan' => $item->id_site_pelanggan_pekerjaan,   // Data tambahan (opsional)
                     'keterangan' => $item->keterangan,   // Data tambahan (opsional)
+                    'id_pic_lapangan_so' => $idPicSo,
+                    'nama_pic_lapangan_so' => $idPicSo ? ($picNama[$idPicSo] ?? null) : null,
                 ];
             })
         );
@@ -527,9 +535,12 @@ class WorkOrderController extends Controller
             ->leftJoin('business_relations as br', 'wo.id_pelanggan_pekerjaan', '=', 'br.id_br')
             ->leftJoin('business_relation_sites as brs', 'wo.id_site_pelanggan_pekerjaan', '=', 'brs.id_site')
             ->leftJoin('users as pic', 'wo.id_pic_pelanggan_pekerjaan', '=', 'pic.id')
+            ->leftJoin('business_relation_contacts as brc_lap', 'brc_lap.id_contact', '=', 's.id_pic_lapangan')
             ->select([
                 'wo.id_wo',
                 's.id_so',
+                's.id_pic_lapangan as id_pic_lapangan_so',
+                'brc_lap.nama_pic as nama_pic_lapangan_so',
                 's.tanggal_so',
                 'wo.tanggal_mulai',
                 'wo.tanggal_selesai',

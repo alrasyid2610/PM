@@ -1661,8 +1661,8 @@ $(document).ready(function () {
             // di-init ulang oleh initDynamicSelect() setelah initSelect() —
             // makanya reinit custom-nya harus di sini (afterLoad), bukan di
             // initSelect, supaya tidak ketimpa lagi (sama seperti kasus Site SO).
-            (function initFwoPicSelect() {
-                const $el = $('#detail_id_pic_pelanggan_pekerjaan');
+            ['#detail_id_pic_pelanggan_pekerjaan', '#detail_id_pic_lapangan_aktual'].forEach(function (sel) {
+                const $el = $(sel);
                 if (!$el.length) return;
                 if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
 
@@ -1697,7 +1697,7 @@ $(document).ready(function () {
                     },
                     escapeMarkup: function (m) { return m; },
                 });
-            })();
+            });
             currentPersonelData = res.personels || [];
             try {
                 fwoAttachmentData = res.attachments

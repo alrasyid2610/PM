@@ -53,7 +53,10 @@
                 <td class="label">Contact Person</td>
                 <td class="colon">:</td>
                 <td class="value">
-                    @if($fwo->nama_pic)
+                    {{-- PIC Lapangan (aktual) didahulukan; bila kosong pakai PIC Pelanggan --}}
+                    @if($fwo->nama_pic_lapangan_aktual)
+                        {{ $fwo->nama_pic_lapangan_aktual }}{{ $fwo->nomor_telepon_pic_lapangan_aktual ? ' (' . $fwo->nomor_telepon_pic_lapangan_aktual . ')' : '' }}
+                    @elseif($fwo->nama_pic)
                         {{ $fwo->nama_pic }}{{ $fwo->nomor_telepon_pic ? ' (' . $fwo->nomor_telepon_pic . ')' : '' }}
                     @else
                         -

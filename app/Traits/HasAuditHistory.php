@@ -161,6 +161,7 @@ trait HasAuditHistory
     private const AUDIT_ID_PER_TABEL = [
         'fieldworks' => [
             'id_pic_pelanggan_pekerjaan' => ['business_relation_contacts', 'id_contact', 'nama_pic'],
+            'id_pic_lapangan_aktual'     => ['business_relation_contacts', 'id_contact', 'nama_pic'],
             'id_penyelia'                => ['users', 'id', 'name'],
             'id_wo'                      => ['work_orders', 'id_wo', 'no_wo'],
         ],
