@@ -3,6 +3,7 @@
 use App\Http\Controllers\BusinessRelationController;
 use App\Http\Controllers\BusinessRelationSiteController;
 use App\Http\Controllers\SiteDirectoryController;
+use App\Http\Controllers\ReportKelengkapanController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BoqController;
@@ -664,6 +665,14 @@ Route::prefix('site-directory')
     ->group(function () {
         Route::get('/', [SiteDirectoryController::class, 'index'])->name('index');
         Route::get('/data', [SiteDirectoryController::class, 'data'])->name('data');
+    });
+
+// Report Kelengkapan SO & SQ (read-only, sejak 2026-11-16) — slug 'report-kelengkapan'.
+Route::prefix('report-kelengkapan')
+    ->name('report-kelengkapan.')
+    ->group(function () {
+        Route::get('/', [ReportKelengkapanController::class, 'index'])->name('index');
+        Route::get('/data', [ReportKelengkapanController::class, 'data'])->name('data');
     });
 
 

@@ -42,8 +42,11 @@
 
     .sign { margin-top: 22px; font-size: 14px; page-break-inside: avoid; break-inside: avoid; }
     .sign-inner { display: inline-block; text-align: center; min-width: 170px; }
-    .sign-img { display: block; width: 170px; height: auto; margin: 2px auto 6px; }
-    .sign-pt { width: 170px; margin: -2px auto 6px; padding-left: 8px; text-align: left; font-size: 8px; color: #6b7280; }
+    /* Gambar e-sign: QR ada di sisi kiri gambar (monogram "FP" di kanan), jadi gambar digeser ke kanan 22px
+       (QR terukur di x 33–167 dari 270 px → pusat QR 100 px; pada lebar tampil 170 px = 63 px, pusat blok = 85 px)
+       supaya QR tepat di tengah, sejajar "Hormat kami," / nama / jabatan. Teks perusahaan ikut digeser. */
+    .sign-img { display: block; width: 170px; height: auto; margin: 2px auto 6px; position: relative; left: 22px; }
+    .sign-pt { width: 170px; margin: -2px auto 6px; padding-left: 8px; text-align: left; font-size: 8px; color: #6b7280; position: relative; left: 22px; }
     .sign-nama { font-weight: 700; font-size: 14px; }
     .sign-jabatan { font-size: 13px; }
 @endsection

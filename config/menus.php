@@ -68,6 +68,15 @@ return [
         ],
     ],
     [
+        // Report (read-only). Report baru ditambah sebagai item di grup ini.
+        'group'   => 'Report',
+        'icon'    => 'fa-chart-column',
+        'type'    => 'submenu',
+        'items'   => [
+            ['slug' => 'report-kelengkapan', 'label' => 'Kelengkapan SO & SQ', 'icon' => 'fa-list-check'],
+        ],
+    ],
+    [
         'group'   => 'Business Relation',
         'icon'    => 'fa-handshake',
         'type'    => 'submenu',
