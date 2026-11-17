@@ -107,7 +107,7 @@ function renderForm(res) {
                 icon: "fa-solid fa-file-invoice",
                 attrs: `onclick="window.open('/sales-quotations/${res.id_sq}/penawaran','_blank')"`,
             },
-            ...(!isDeleted && isWin && res.id_so_terbit ? [{
+            ...(!isDeleted ? [{
                 label: "Executive Summary (Internal)",
                 icon: "fa-solid fa-chart-pie",
                 attrs: `onclick="window.open('/sales-quotations/${res.id_sq}/executive-summary','_blank')"`,

@@ -762,9 +762,6 @@ class SalesQuotationController extends Controller
             ->first();
 
         if (!$sq) abort(404, 'Sales Quotation tidak ditemukan');
-        if ($sq->status !== 'win' || !$sq->no_so) {
-            abort(422, 'Executive Summary hanya tersedia untuk SQ berstatus Win yang SO-nya sudah terbit.');
-        }
         $sq->nama_pelanggan_display = brDisplayName($sq->entitas_pelanggan, $sq->nama_pelanggan);
 
         $wos = DB::table('sq_work_orders')->where('id_sq', $id)->orderBy('urutan')->orderBy('id_sq_wo')->get();
