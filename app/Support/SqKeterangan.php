@@ -145,10 +145,10 @@ class SqKeterangan
 
         $kontak = null;
         if (in_array('user', $tipe, true)) {
-            $sq = DB::table('sales_quotations')->where('id_sq', $idSq)->first(['pic_marketing_internal', 'pic_input']);
-            foreach ([$sq->pic_marketing_internal ?? null, $sq->pic_input ?? null] as $uid) {
-                if ($uid && DB::table('users')->where('id', $uid)->where('is_active', 1)->exists()) { $kontak = (int) $uid; break; }
-            }
+            // Default = PIC Order SQ (sejak 2026-11-18; dulu Marketing Internal → PIC Input). Tanpa cadangan:
+            // sumber pilihan hanya user Grup "PIC", jadi kalau PIC Order kosong/nonaktif dibiarkan kosong.
+            $uid = DB::table('sales_quotations')->where('id_sq', $idSq)->value('pic_order');
+            if ($uid && DB::table('users')->where('id', $uid)->where('is_active', 1)->exists()) $kontak = (int) $uid;
         }
 
         $nilai = [];

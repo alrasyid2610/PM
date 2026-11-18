@@ -71,7 +71,10 @@ class SqKeteranganController extends Controller
         }
 
         if ($request->tipe === 'user') {
+            // Sejak 2026-11-18 hanya user Grup/Departemen "PIC" (aturan sama dengan PIC Order SO/SQ)
             $rows = DB::table('users')->where('is_active', 1)
+                ->whereIn('menu_group_id', DB::table('menu_groups')
+                    ->whereRaw('LOWER(name) = ?', [mb_strtolower(\App\Http\Controllers\UserController::GRUP_PIC_ORDER)])->select('id'))
                 ->when($q !== '', fn ($w) => $w->where('name', 'like', "%{$q}%"))
                 ->orderBy('name')->limit(30)->get(['id', 'name', 'no_hp']);
             return response()->json($rows->map(fn ($u) => ['id' => $u->id, 'text' => trim($u->name . ' ' . ($u->no_hp ?? ''))]));

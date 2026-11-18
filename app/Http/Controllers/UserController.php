@@ -45,7 +45,7 @@ class UserController extends Controller
     }
 
     /** Nama Grup / Departemen (`menu_groups.name`) user yang boleh dipilih sebagai PIC Order di SO & SQ. */
-    private const GRUP_PIC_ORDER = 'PIC';
+    public const GRUP_PIC_ORDER = 'PIC';
 
     /**
      * Daftar user untuk Select2. `?peran=pic_order` (PIC Order SO/SQ) membatasi hasil ke user yang Grup /
