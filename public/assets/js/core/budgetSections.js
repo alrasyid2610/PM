@@ -373,6 +373,12 @@ window.BudgetSections = (function () {
             if (cfg && cfg.onChange) cfg.onChange();
         })
         .off('input.biTanpa', '.bi-qty-tanpa').on('input.biTanpa', '.bi-qty-tanpa', function () { var cfg = cfgOf(this); if (cfg) applyTanpaState(cfg); })
+        // Tombol hapus baris di kiri (sejak 2026-11-18) = salinan tombol hapus di kolom paling kanan; klik
+        // diteruskan ke tombol kanan supaya logika hapus tiap modul (WO/FWO/SQ WO/SQ FWO) dipakai ulang.
+        .off('click.biSec', '.btn-bi-remove-left').on('click.biSec', '.btn-bi-remove-left', function (e) {
+            e.stopPropagation();
+            $(this).closest('tr').find('button[title="Hapus baris"]').not('.btn-bi-remove-left').first().trigger('click');
+        })
         .off('click.biSec', '.btn-bi-cat-add').on('click.biSec', '.btn-bi-cat-add', function (e) {
             e.stopPropagation();
             var cfg = cfgOf(this);

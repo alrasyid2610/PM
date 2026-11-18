@@ -325,9 +325,10 @@ function buildSqFwoBudgetItemRow(item) {
     return `<tr class="sq-fwo-budget-item-row">
         <td>
             <input type="hidden" class="bi-id" value="${item ? item.id_sq_budget_item : ''}">
+            <div class="d-flex align-items-center flex-nowrap gap-1"><button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 btn-bi-remove-left flex-shrink-0" data-no-disable title="Hapus baris" style="font-size:11px;"><i class="fa-solid fa-trash" style="color:#dc2626;"></i></button>
             <select class="form-select form-select-sm bi-account" data-no-disable style="min-width:160px;">
                 ${item ? `<option value="${item.id_account}" selected>${escHtml(item.nama_account)}</option>` : '<option value="">Pilih Account</option>'}
-            </select>
+            </select></div>
         </td>
         <td style="width:80px;">
             <input type="number" step="any" min="0" class="form-control form-control-sm bi-hari"
