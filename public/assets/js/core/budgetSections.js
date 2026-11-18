@@ -99,25 +99,22 @@ window.BudgetSections = (function () {
     }
 
     function headerHtml(cat, idx) {
-        // 11 kolom tabel: 10 pertama (Account … Cash Advance) dipakai judul + "+ Item"; kolom ke-11 (kolom hapus)
-        // berisi tombol hapus kategori, jadi sejajar tegak lurus dengan tombol hapus baris item di bawahnya.
+        // Satu sel selebar 11 kolom. Tombol "+ Item" & hapus kategori ditaruh di KIRI (tepat setelah ikon
+        // collapse/expand) supaya tidak perlu scroll horizontal ke ujung kanan tabel yang lebar; subtotal di kanan.
         return '<tr class="bi-cat-header" data-cat="' + esc(cat.id_kategori) + '">' +
-            '<td colspan="10" style="background:#f0fdf4;border-top:2px solid #bbf7d0;cursor:pointer;padding:6px 10px;">' +
+            '<td colspan="11" style="background:#f0fdf4;border-top:2px solid #bbf7d0;cursor:pointer;padding:6px 10px;">' +
             '<div class="d-flex align-items-center gap-2 flex-wrap">' +
             '<i class="fa-solid fa-chevron-down bi-cat-chevron" style="font-size:10px;color:#0f766e;transition:transform .2s;"></i>' +
+            '<button type="button" class="pm-btn-pill pm-btn-pill--teal btn-bi-cat-add" data-no-disable>' +
+            '<i class="fa-solid fa-plus" style="font-size:10px;"></i> Item</button>' +
+            '<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 btn-bi-cat-remove" data-no-disable title="Hapus kategori ini" style="font-size:11px;">' +
+            '<i class="fa-solid fa-trash" style="color:#dc2626;"></i></button>' +
             '<span class="fw-semibold bi-cat-title" style="color:#0f766e;font-size:13px;" data-nama="' + esc(cat.nama) + '">' + letter(idx) + '. ' + esc(cat.nama) + '</span>' +
             '<span class="bi-cat-count" style="font-size:10px;background:#dcfce7;color:#166534;border-radius:10px;padding:1px 8px;"></span>' +
             '<span class="bi-cat-empty" style="font-size:11px;color:#b45309;"><i class="fa-solid fa-circle-exclamation me-1"></i>Belum diisi</span>' +
             '<span class="ms-auto fw-semibold bi-cat-sub" style="font-size:12px;color:#0f766e;"></span>' +
-            '<button type="button" class="pm-btn-pill pm-btn-pill--teal btn-bi-cat-add" data-no-disable>' +
-            '<i class="fa-solid fa-plus" style="font-size:10px;"></i> Item</button>' +
-            '</div></td>' +
-            '<td class="text-center" style="background:#f0fdf4;border-top:2px solid #bbf7d0;cursor:pointer;padding:6px 10px;">' +
-            '<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 btn-bi-cat-remove" data-no-disable title="Hapus kategori ini" style="font-size:11px;">' +
-            '<i class="fa-solid fa-trash" style="color:#dc2626;"></i></button>' +
-            '</td></tr>';
+            '</div></td></tr>';
     }
-
     // Isi ulang section. items = item budget yang sudah ada (edit) atau [] (tambah).
     // opts.template = true (Tambah/Edit/Clone Budget Plan): semua kategori aktif langsung tampil sebagai section
     // (urut `urutan` master); item yang sudah ada menempati kategorinya, sisanya section kosong — user tinggal "+ Item".
@@ -406,7 +403,7 @@ window.BudgetSections = (function () {
             if (cfg) addCategory(cfg, $(this).attr('data-cat'));
         })
         .off('click.biSec', '.bi-cat-header').on('click.biSec', '.bi-cat-header', function (e) {
-            if ($(e.target).closest('.btn-bi-cat-add').length) return;
+            if ($(e.target).closest('.btn-bi-cat-add, .btn-bi-cat-remove').length) return;
             toggle($(this));
         });
 
