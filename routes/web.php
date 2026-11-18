@@ -512,6 +512,12 @@ Route::prefix('testing-points')
         Route::post('/', [TestingPointController::class, 'store'])->name('store');
         Route::post('/{id}/duplicate', [TestingPointController::class, 'duplicate'])->name('duplicate');
 
+        // Approval Testing Point & Paket (setujui/tolak butuh slug aksi testing-point-approve — lihat CheckMenuPermission::ACTION_ROUTES)
+        foreach (['ajukan', 'tarik', 'setujui', 'tolak'] as $aksi) {
+            Route::post('/{id}/' . $aksi, [TestingPointController::class, $aksi])->name($aksi)->whereNumber('id');
+            Route::post('/{id}/paket/{paket}/' . $aksi, [TestingPointPaketController::class, $aksi])->name('paket.' . $aksi)->whereNumber(['id', 'paket']);
+        }
+
         // Paket Testing Point (subset item) — CRUD di tab "Paket" detail Testing Point
         Route::get('/{id}/paket', [TestingPointPaketController::class, 'index'])->name('paket.index')->whereNumber('id');
         Route::post('/{id}/paket', [TestingPointPaketController::class, 'store'])->name('paket.store')->whereNumber('id');

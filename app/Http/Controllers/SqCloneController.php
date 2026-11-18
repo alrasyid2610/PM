@@ -552,6 +552,9 @@ class SqCloneController extends Controller
                 if (!$pointId || !DB::table('testing_points')->where('id_testing_point', $pointId)->exists()) {
                     throw new \RuntimeException("{$label}: Testing Point untuk BOQ baru tidak valid.");
                 }
+                if ($msg = \App\Support\TestingPointApproval::pesanTidakBisaDipakai([$pointId])) {
+                    throw new \RuntimeException("{$label}: " . $msg);
+                }
                 $itemIds = DB::table('testing_items')->where('id_testing_point', $pointId)
                     ->whereIn('id_testing_item', $r['id_testing_items'] ?? [])->pluck('id_testing_item')->all();
                 if (!$itemIds) throw new \RuntimeException("{$label}: pilih minimal 1 Testing Item untuk BOQ baru.");

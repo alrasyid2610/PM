@@ -231,6 +231,11 @@ class BoqController extends Controller
             ], 422);
         }
 
+        // Guard: Testing Point baru hanya boleh yang sudah Disetujui
+        if ($msg = \App\Support\TestingPointApproval::pesanTidakBisaDipakai($incomingPtIds)) {
+            return response()->json(['success' => false, 'message' => $msg], 422);
+        }
+
         // Guard: testing point sudah ada di DB untuk WO ini (active)
         $alreadyExists = DB::table('boq')
             ->where('id_wo', $idWo)
@@ -332,6 +337,12 @@ class BoqController extends Controller
         }
 
         $incomingPointIds = collect($validated['sections'])->pluck('id_testing_point');
+
+        // Guard: hanya Testing Point BARU (belum punya BOQ di WO ini) yang wajib Disetujui —
+        // BOQ lama tetap boleh disimpan walau Testing Point-nya sedang menunggu approval ulang
+        if ($msg = \App\Support\TestingPointApproval::pesanTidakBisaDipakai($incomingPointIds->diff($existingBoqs->keys()))) {
+            return response()->json(['success' => false, 'message' => $msg], 422);
+        }
 
         // Testing points that exist in DB but not in payload → will be removed
         $removedPointIds = $existingBoqs->keys()->diff($incomingPointIds);

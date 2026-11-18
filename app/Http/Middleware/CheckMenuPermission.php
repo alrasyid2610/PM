@@ -77,6 +77,7 @@ class CheckMenuPermission
         'wo-budget-actuals'  => ['verify' => 'wo-budget-verify', 'bulk-verify' => 'wo-budget-verify'],
         'termin'             => ['siap-kirim' => 'termin-siap-kirim', 'selesai' => 'termin-selesai'],
         'sales-quotations'   => ['setujui' => 'sq-approve', 'tolak' => 'sq-approve'],
+        'testing-points'     => ['setujui' => 'testing-point-approve', 'tolak' => 'testing-point-approve'],
     ];
 
     // Endpoint yang HANYA dipakai oleh satu tab detail WO → dijaga oleh slug "Akses Tab"-nya
@@ -195,6 +196,11 @@ class CheckMenuPermission
 
         // Holding BR (tambah/lepas anggota) = mengubah data BR → can_update (bukan create/delete)
         if (in_array($method, ['POST', 'DELETE'], true) && preg_match('#^business-relations/\d+/holding#', $path)) {
+            return 'can_update';
+        }
+
+        // Ajukan / Tarik approval Testing Point & Paket = mengubah status data yang sudah ada → can_update
+        if ($method === 'POST' && preg_match('#^testing-points/\d+/(paket/\d+/)?(ajukan|tarik)$#', $path)) {
             return 'can_update';
         }
 

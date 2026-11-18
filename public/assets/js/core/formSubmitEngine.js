@@ -81,6 +81,10 @@ function submitCrudForm(options) {
             success: function (response) {
                 if (progress) progress.close();
                 Notify.success("Data berhasil diperbarui");
+                // Server menandai perubahan memicu approval ulang (Testing Point) → beri tahu user
+                if (response && response.approval_reset && response.message) {
+                    Notify.warning(response.message);
+                }
 
                 if (reload) {
                     reload(id);

@@ -76,6 +76,12 @@ class SqBoqController extends Controller
         $snapshotSebelum = $this->boqSnapshot((int) $id_sq_wo);
 
         $existing = DB::table('sq_boq')->where('id_sq_wo', $id_sq_wo)->get()->keyBy('id_testing_point');
+
+        // Hanya Testing Point BARU (belum ada di BOQ SQ WO ini) yang wajib sudah Disetujui
+        if ($msg = \App\Support\TestingPointApproval::pesanTidakBisaDipakai($incomingPtIds->diff($existing->keys()))) {
+            return response()->json(['success' => false, 'message' => $msg], 422);
+        }
+
         $removedPtIds = $existing->keys()->diff($incomingPtIds);
 
         foreach ($removedPtIds as $ptId) {

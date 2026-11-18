@@ -1623,6 +1623,9 @@ class SalesOrderController extends Controller
                             if (!$testingPointExists) {
                                 throw new \RuntimeException("Testing Point yang dipilih untuk BOQ baru pada WO \"{$sourceWo->no_wo}\" tidak valid.");
                             }
+                            if ($msg = \App\Support\TestingPointApproval::pesanTidakBisaDipakai([$newTestingPointId])) {
+                                throw new \RuntimeException($msg);
+                            }
 
                             if (in_array($newTestingPointId, $usedTestingPoints)) {
                                 throw new \RuntimeException("Testing Point yang dipilih sudah dipakai di BOQ lain pada WO \"{$sourceWo->no_wo}\".");

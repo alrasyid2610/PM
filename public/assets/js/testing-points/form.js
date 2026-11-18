@@ -1,4 +1,21 @@
+// Badge status approval (Draft / Menunggu Approval / Disetujui) — dipakai di action bar detail & kolom index
+function approvalBadge(status, extraStyle) {
+    const map = {
+        draft:    { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0', icon: 'fa-pen', label: 'Draft' },
+        pending:  { bg: '#fffbeb', color: '#b45309', border: '#fde68a', icon: 'fa-hourglass-half', label: 'Menunggu Approval' },
+        approved: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: 'fa-circle-check', label: 'Disetujui' },
+    };
+    const s = map[status] || map.draft;
+    return `<span class="pm-badge" style="background:${s.bg};color:${s.color};border:1px solid ${s.border};${extraStyle || ''}">
+        <i class="fa-solid ${s.icon}" style="font-size:10px;"></i> ${s.label}</span>`;
+}
+
 function renderForm(res) {
+    const isPending  = res.status_approval === 'pending';
+    const isDraft    = !res.status_approval || res.status_approval === 'draft';
+    const isApproved = res.status_approval === 'approved';
+    const fmtTgl = (t) => t ? new Date(t).toLocaleString('id-ID') : '';
+
     return `
 <form id="detailForm" enctype="multipart/form-data">
     <input type="hidden" name="_token" value="${window.route.csrf}">
@@ -9,8 +26,42 @@ function renderForm(res) {
         createdAt: escHtml(res.created_at ?? '—'),
         updatedAt: escHtml(res.updated_at ?? '—'),
         deleteId: res.id_testing_point,
-        editText: 'Edit Testing Point',
+        editText: isPending ? '' : 'Edit Testing Point', // menunggu approval = terkunci
+        statusBadge: approvalBadge(res.status_approval),
         noWrap: true,
+        moreActions: [
+            ...(isDraft && can('testing-points', 'can_update') ? [{
+                label: 'Ajukan Approval', icon: 'fa-solid fa-paper-plane',
+                attrs: `onclick="aksiApprovalPoint('ajukan', ${res.id_testing_point})"`,
+            }] : []),
+            ...(isPending && res.bisa_tarik ? [{
+                label: 'Tarik Pengajuan', icon: 'fa-solid fa-rotate-left',
+                attrs: `onclick="aksiApprovalPoint('tarik', ${res.id_testing_point})"`,
+            }] : []),
+            ...(isPending && can('testing-point-approve', 'can_update') ? [{
+                label: 'Setujui Testing Point', icon: 'fa-solid fa-circle-check',
+                attrs: `onclick="aksiApprovalPoint('setujui', ${res.id_testing_point})"`,
+            }, {
+                label: 'Tolak Testing Point', icon: 'fa-solid fa-circle-xmark',
+                attrs: `onclick="aksiApprovalPoint('tolak', ${res.id_testing_point})"`,
+            }] : []),
+        ],
+        extra: isPending
+            ? `<span style="font-size:11px;color:#b45309;display:flex;align-items:center;gap:5px;">
+                   <i class="fa-solid fa-hourglass-half" style="font-size:10px;"></i>
+                   Menunggu approval — diajukan oleh <b>${escHtml(res.diajukan_oleh_nama || '—')}</b>${res.diajukan_at ? ' pada ' + fmtTgl(res.diajukan_at) : ''}. Terkunci dan belum bisa dipakai di BOQ baru sampai ada keputusan.
+               </span>`
+            : (isDraft && res.catatan_approval)
+            ? `<span style="font-size:11px;color:#b91c1c;display:flex;align-items:center;gap:5px;">
+                   <i class="fa-solid fa-circle-xmark" style="font-size:10px;"></i>
+                   Pengajuan ditolak oleh <b>${escHtml(res.approval_oleh_nama || '—')}</b>${res.approval_at ? ' pada ' + fmtTgl(res.approval_at) : ''}: ${escHtml(res.catatan_approval)}
+               </span>`
+            : isDraft
+            ? `<span style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:5px;">
+                   <i class="fa-solid fa-lock" style="font-size:10px;"></i>
+                   Draft — belum bisa dipakai di BOQ. Lengkapi lalu <b>Ajukan Approval</b> (menu ⋮).
+               </span>`
+            : '',
     })}
 
     <div class="pm-tab-card">

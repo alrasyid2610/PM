@@ -50,6 +50,9 @@ return [
     ['slug' => 'dash-list-sq-belum-budget-fwo', 'label' => 'Daftar SQ FWO Belum Ada Budget', 'kelompok' => 'Sales', 'type' => 'table', 'icon' => 'fa-wallet', 'key' => 'sq-belum-budget-fwo'],
 
     // ── Operasional ──
+    // Approval Testing Point & Paket (kunci: Aksi Khusus testing-point-approve untuk approver; widget ini untuk yang perlu memantau antrean)
+    ['slug' => 'dash-tp-pending',      'label' => 'Testing Point Menunggu Approval', 'kelompok' => 'Operasional', 'type' => 'kpi', 'icon' => 'fa-hourglass-half', 'color' => '#b45309', 'bg' => '#fffbeb', 'tab' => 'tp-approval'],
+    ['slug' => 'dash-list-tp-approval', 'label' => 'Daftar Testing Point & Paket Menunggu Approval', 'kelompok' => 'Operasional', 'type' => 'table', 'icon' => 'fa-hourglass-half', 'key' => 'tp-approval'],
     ['slug' => 'dash-wo-outstanding',  'label' => 'Outstanding WO',        'kelompok' => 'Operasional', 'type' => 'kpi',   'icon' => 'fa-briefcase',     'color' => '#0284c7', 'bg' => '#e0f2fe', 'tab' => 'wo'],
     ['slug' => 'dash-fwo-outstanding', 'label' => 'Outstanding FWO',       'kelompok' => 'Operasional', 'type' => 'kpi',   'icon' => 'fa-helmet-safety', 'color' => '#0d9488', 'bg' => '#f0fdfa', 'tab' => 'fwo'],
     // FWO belum dijadwalkan = tanggal_mulai kosong (mis. FWO hasil Terbitkan SO; tim sampling yang mengisi jadwal).

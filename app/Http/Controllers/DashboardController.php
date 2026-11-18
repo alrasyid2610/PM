@@ -64,6 +64,7 @@ class DashboardController extends Controller
             'dash-so-nilai-per-bulan'  => $this->chartSoNilaiPerBulan($request),
             'dash-sq-final'            => $this->kpiSqFinal(),
             'dash-sq-pending'          => $this->kpiSqPending(),
+            'dash-tp-pending'          => $this->kpiTpPending(),
             'dash-sq-belum-budget-fwo' => $this->kpiSqBelumBudgetFwo(),
             'dash-sq-kedaluwarsa'      => $this->kpiSqKedaluwarsa(),
             'dash-sq-per-status'       => $this->chartSqPerStatus(),
@@ -394,6 +395,29 @@ class DashboardController extends Controller
         return ['value' => $this->sqPendingQuery()->count(), 'sub' => 'menunggu keputusan manager'];
     }
 
+    /** Testing Point + Paket Testing Point yang diajukan dan menunggu keputusan approver. */
+    private function tpPendingRows()
+    {
+        $titik = DB::table('testing_points as tp')
+            ->leftJoin('users as u', 'u.id', '=', 'tp.diajukan_oleh')
+            ->whereNull('tp.deleted_at')->where('tp.status_approval', 'pending')
+            ->selectRaw("tp.id_testing_point, tp.nama as nama, 'Testing Point' as jenis, u.name as diajukan_oleh, DATE_FORMAT(tp.diajukan_at, '%Y-%m-%d %H:%i') as diajukan_at, tp.diajukan_at as urut");
+
+        $paket = DB::table('testing_point_paket as pk')
+            ->join('testing_points as tp', 'tp.id_testing_point', '=', 'pk.id_testing_point')
+            ->leftJoin('users as u', 'u.id', '=', 'pk.diajukan_oleh')
+            ->whereNull('tp.deleted_at')->where('pk.status_approval', 'pending')
+            ->selectRaw("tp.id_testing_point, CONCAT(pk.nama, ' — ', tp.nama) as nama, 'Paket' as jenis, u.name as diajukan_oleh, DATE_FORMAT(pk.diajukan_at, '%Y-%m-%d %H:%i') as diajukan_at, pk.diajukan_at as urut");
+
+        // Digabung di PHP (bukan UNION SQL): collation kolom nama Testing Point & Paket bisa berbeda → error 1271
+        return $titik->get()->concat($paket->get());
+    }
+
+    private function kpiTpPending(): array
+    {
+        return ['value' => $this->tpPendingRows()->count(), 'sub' => 'menunggu keputusan approver'];
+    }
+
     /**
      * Satuan = SQ FWO (1 baris = 1 SQ FWO): SQ FWO milik SQ terbaru aktif (Draft / Menunggu Approval / Final / Win;
      * Lose & Void tidak dihitung) yang belum punya Budget Plan (sq_fwo_budgets).
@@ -687,6 +711,10 @@ class DashboardController extends Controller
                 ->where('s.status', 'pending')
                 ->orderBy('s.diajukan_at')
                 ->get();
+
+        } elseif ($type === 'tp-approval') {
+            // Testing Point & Paket menunggu approval; yang paling lama menunggu di atas (kolom bantu `urut` dibuang)
+            $rows = $this->tpPendingRows()->sortBy('urut')->values()->each(function ($r) { unset($r->urut); });
 
         } elseif ($type === 'sq-belum-budget-fwo') {
             // Kolom = index SQ; yang paling lama dibuat di atas (paling lama belum dibudget)

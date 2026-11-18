@@ -22,7 +22,7 @@ class NotificationCatalog
         'wo_pic'             => 'PIC Pekerjaan WO',
         'fwo_penyelia'       => 'Penyelia FWO',
         'fwo_personel'       => 'Personel FWO (yang punya akun login)',
-        'pengaju'            => 'Pengaju SQ',
+        'pengaju'            => 'Pengaju (SQ / Testing Point)',
     ];
 
     private const ROLES_SO  = ['actor', 'pic_input', 'pic_order', 'marketing_internal', 'marketing_eksternal'];
@@ -146,6 +146,24 @@ class NotificationCatalog
                 'description' => 'Terpicu begitu SQ ditandai Lose.',
                 'fields' => ['no_sq', 'judul_order', 'nama_user'],
                 'roles'  => self::ROLES_SQ,
+            ],
+            'testing_point.diajukan' => [
+                'label' => 'Testing Point / Paket Diajukan (Menunggu Approval)', 'module' => 'Testing Point',
+                'description' => 'Terpicu begitu Testing Point atau Paket diajukan untuk approval (termasuk perubahan pada data yang sudah disetujui). Penerima biasanya "User tertentu" (approver).',
+                'fields' => ['nama', 'nama_user'],
+                'roles'  => ['actor', 'pengaju'],
+            ],
+            'testing_point.disetujui' => [
+                'label' => 'Testing Point / Paket Disetujui', 'module' => 'Testing Point',
+                'description' => 'Terpicu begitu Testing Point atau Paket disetujui (siap dipakai di BOQ).',
+                'fields' => ['nama', 'nama_user'],
+                'roles'  => ['actor', 'pengaju'],
+            ],
+            'testing_point.ditolak' => [
+                'label' => 'Testing Point / Paket Ditolak', 'module' => 'Testing Point',
+                'description' => 'Terpicu begitu Testing Point atau Paket ditolak (kembali Draft beserta alasan).',
+                'fields' => ['nama', 'catatan', 'nama_user'],
+                'roles'  => ['actor', 'pengaju'],
             ],
             'termin.siap_kirim' => [
                 'label' => 'Termin Siap Kirim', 'module' => 'Termin',

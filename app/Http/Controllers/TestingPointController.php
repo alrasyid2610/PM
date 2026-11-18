@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistoryWithLines;
 use App\Traits\HasAttachment;
+use App\Support\TestingPointApproval;
 
 class TestingPointController extends Controller
 {
@@ -16,7 +17,7 @@ class TestingPointController extends Controller
     protected function attachmentPrimaryKey(): string { return 'id_testing_point'; }
 
     protected function auditTable(): string { return 'testing_points'; }
-    protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_testing_point', '_lines']; }
+    protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_testing_point', '_lines', 'diajukan_oleh', 'approval_oleh']; }
     protected function auditLinesTable(): string { return 'testing_items'; }
     protected function auditLinesForeignKey(): string { return 'id_testing_point'; }
     protected function auditLinesPrimaryKey(): string { return 'id_testing_item'; }
@@ -120,6 +121,7 @@ class TestingPointController extends Controller
                 // 'tms.kode as matriks_sample_kode',
                 // 'tms.judul_indonesia as matriks_sample_judul_indonesia',
                 'tp.is_aktif',
+                'tp.status_approval as approval',
                 'tp.created_at'
             ])
             // Urut abjad berdasarkan kolom Kode (sejak 2026-11-18); id sebagai pemutus bila Kode kembar
@@ -128,6 +130,7 @@ class TestingPointController extends Controller
 
         return DataTables::of($query)
             ->addIndexColumn()
+            ->editColumn('approval', fn ($row) => TestingPointApproval::label($row->approval))
             ->editColumn('is_aktif', function ($row) {
                 return $row->is_aktif ? 'Aktif' : 'Tidak Aktif';
             })
@@ -147,6 +150,8 @@ class TestingPointController extends Controller
             ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
             ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->whereNull('tp.deleted_at')
+            // Hanya Testing Point yang sudah Disetujui yang boleh dipilih untuk BOQ
+            ->where('tp.status_approval', TestingPointApproval::APPROVED)
             ->where(function ($q) use ($search) {
                 $q->where('tp.nama', 'like', "%{$search}%")
                   ->orWhere('tms.judul_indonesia', 'like', "%{$search}%")
@@ -217,6 +222,7 @@ class TestingPointController extends Controller
         try {
         $id = DB::table('testing_points')->insertGetId([
             ...$validated,
+            'status_approval' => TestingPointApproval::DRAFT, // harus diajukan & disetujui dulu sebelum bisa dipakai di BOQ
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -268,10 +274,14 @@ class TestingPointController extends Controller
         $data = DB::table('testing_points as a')
             ->leftJoin('testing_standards as b', 'a.id_testing_standard', '=', 'b.id_testing_standard')
             ->leftJoin('testing_matriks_samples as c', 'c.id_testing_matriks_sample', '=', 'a.id_testing_matriks_sample')
+            ->leftJoin('users as u_aju', 'u_aju.id', '=', 'a.diajukan_oleh')
+            ->leftJoin('users as u_app', 'u_app.id', '=', 'a.approval_oleh')
             ->where('a.id_testing_point', $id)
             ->whereNull('a.deleted_at')
             ->select(
                 'a.*',
+                'u_aju.name as diajukan_oleh_nama',
+                'u_app.name as approval_oleh_nama',
                 'b.nomor as standard_nomor',
                 'b.judul as standard_judul',
                 'c.kode as matrik_sample_kode',
@@ -283,12 +293,82 @@ class TestingPointController extends Controller
             return response()->json(['message' => 'Data tidak ditemukan'], 404);
         }
 
+        $data->bisa_tarik = $data->status_approval === TestingPointApproval::PENDING
+            && ((int) $data->diajukan_oleh === (int) auth()->id() || userCan(TestingPointApproval::SLUG, 'can_update'));
+
         return response()->json($data);
+    }
+
+    // ── Approval (lihat App\Support\TestingPointApproval) ────────────────────
+
+    private function namaPoint($id): string
+    {
+        return (string) DB::table('testing_points')->where('id_testing_point', $id)->value('nama');
+    }
+
+    private function approvalResponse(array $hasil)
+    {
+        return response()->json($hasil[1], $hasil[0]);
+    }
+
+    /** Draft → Menunggu Approval. Syarat: punya minimal 1 Testing Item. */
+    public function ajukan($id)
+    {
+        if (!DB::table('testing_items')->where('id_testing_point', $id)->exists()) {
+            return response()->json(['message' => 'Testing Point belum punya Testing Item.'], 422);
+        }
+        return $this->approvalResponse(TestingPointApproval::ajukan('testing_points', 'id_testing_point', (int) $id, $this->namaPoint($id)));
+    }
+
+    public function tarik($id)
+    {
+        return $this->approvalResponse(TestingPointApproval::tarik('testing_points', 'id_testing_point', (int) $id));
+    }
+
+    /** Butuh slug aksi `testing-point-approve` (juga dicek di middleware). */
+    public function setujui($id)
+    {
+        return $this->approvalResponse(TestingPointApproval::setujui('testing_points', 'id_testing_point', (int) $id, $this->namaPoint($id)));
+    }
+
+    public function tolak(Request $request, $id)
+    {
+        $request->validate(['catatan' => 'required|string|max:1000'], ['catatan.required' => 'Alasan penolakan wajib diisi.']);
+        return $this->approvalResponse(TestingPointApproval::tolak('testing_points', 'id_testing_point', (int) $id, $this->namaPoint($id), (string) $request->catatan));
+    }
+
+    /**
+     * Apakah perubahan ini "struktural" (perlu approval ulang)? Standard, Matriks Sample, Nama, atau isi Testing Item
+     * (tambah/hapus/ubah judul, parameter, unit, nilai, status aktif). Deskripsi, Keterangan, Nomor Halaman,
+     * Attachment, status Aktif titiknya, dan urutan item TIDAK memicu approval ulang.
+     */
+    private function perubahanStruktural(array $beforePoint, array $afterPoint): bool
+    {
+        foreach (['id_testing_standard', 'id_testing_matriks_sample', 'nama'] as $k) {
+            if ((string) ($beforePoint[$k] ?? '') !== (string) ($afterPoint[$k] ?? '')) return true;
+        }
+        $norm = function (array $lines) {
+            return collect($lines)->mapWithKeys(fn ($l) => [(int) $l['id_testing_item'] => [
+                trim((string) $l['judul_indonesia']), trim((string) $l['judul_inggris']),
+                (string) $l['id_testing_parameter'], (string) $l['id_testing_unit'],
+                trim((string) $l['nilai']), (int) $l['is_aktif'],
+            ]])->sortKeys()->all();
+        };
+        return $norm($beforePoint['_lines'] ?? []) !== $norm($afterPoint['_lines'] ?? []);
     }
 
     public function update(Request $request, $id)
     {
-
+        $current = DB::table('testing_points')->where('id_testing_point', $id)->whereNull('deleted_at')->first();
+        if (!$current) {
+            return response()->json(['success' => false, 'message' => 'Testing Point tidak ditemukan'], 404);
+        }
+        if ($current->status_approval === TestingPointApproval::PENDING) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Testing Point sedang menunggu approval dan terkunci. Tarik pengajuan dulu bila ingin mengubahnya.',
+            ], 422);
+        }
 
         $validated = $request->validate([
             'id_testing_standard' => 'required|integer',
@@ -408,13 +488,22 @@ class TestingPointController extends Controller
 
             saveAudit('testing_points', $id, 'update', json_encode($beforePoint), json_encode($afterPoint));
 
+            // Data yang sudah Disetujui lalu diubah secara struktural → otomatis Menunggu Approval
+            $resetApproval = $current->status_approval === TestingPointApproval::APPROVED
+                && $this->perubahanStruktural($beforePoint, $afterPoint)
+                && TestingPointApproval::ajukanOtomatis('testing_points', 'id_testing_point', (int) $id, (string) $afterPoint['nama']);
+
             DB::commit();
         } catch (\Throwable $th) {
             DB::rollBack();
             return response()->json(['success' => false, 'message' => 'Terjadi kesalahan server'], 500);
         }
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'success' => true,
+            'approval_reset' => $resetApproval,
+            'message' => $resetApproval ? 'Tersimpan. Karena ada perubahan pada data inti, Testing Point ini diajukan ulang dan menunggu approval — belum bisa dipakai di BOQ baru sampai disetujui.' : null,
+        ]);
     }
 
     // Clone Testing Point ("Salin Testing Point ini") — full control: user
@@ -476,6 +565,7 @@ class TestingPointController extends Controller
             $newId = DB::table('testing_points')->insertGetId([
                 ...$validated,
                 'attachment'  => null,
+                'status_approval' => TestingPointApproval::DRAFT, // salinan = data baru, perlu approval sendiri
                 'created_at'  => now(),
                 'updated_at'  => now(),
             ]);

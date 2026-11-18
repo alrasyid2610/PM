@@ -161,6 +161,7 @@ return [
             ['slug' => 'wo-budget-close',       'label' => 'Selesaikan Plan Budget WO', 'icon' => 'fa-box-archive'],
             ['slug' => 'fwo-budget-close',      'label' => 'Selesaikan Plan Budget FWO','icon' => 'fa-box-archive'],
             ['slug' => 'sq-approve',            'label' => 'Setujui/Tolak SQ (Approval)', 'icon' => 'fa-circle-check'],
+            ['slug' => 'testing-point-approve', 'label' => 'Setujui/Tolak Testing Point & Paket (Approval)', 'icon' => 'fa-circle-check'],
             ['slug' => 'so-lihat-semua',        'label' => 'Lihat Semua SO (tanpa batas PIC)', 'icon' => 'fa-eye'],
             ['slug' => 'sq-lihat-semua',        'label' => 'Lihat Semua SQ (tanpa batas PIC)', 'icon' => 'fa-eye'],
             ['slug' => 'budget-tanpa-realisasi-semua', 'label' => 'Tandai "Tanpa Realisasi" Budget — semua SQ/SO (pengganti PIC Order)', 'icon' => 'fa-ban'],

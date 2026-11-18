@@ -22,6 +22,12 @@ let pendingPaketFocus = null;        // id_paket yang diklik dari index → buka
 // Kolom "Paket" di index: 1 tombol per paket. Klik → buka Testing Point, langsung ke tab Paket dan expand paket itu.
 // <button> dipakai supaya klik tidak ikut memicu klik baris (tableRowHandler mengabaikan klik di dalam button).
 window.datatableColumnRenderers = {
+    // Kolom Approval: server mengirim label ("Draft" / "Menunggu Approval" / "Disetujui") supaya cari/sortir/export tetap teks
+    approval: function (data, type) {
+        if (type !== 'display') return data || '';
+        const kode = { 'Draft': 'draft', 'Menunggu Approval': 'pending', 'Disetujui': 'approved' }[data] || 'draft';
+        return approvalBadge(kode, 'font-size:11px;');
+    },
     paket: function (data, type, row) {
         if (type !== 'display') return data || '';
         const list = String(row.id_paket_list || '');
@@ -72,25 +78,38 @@ function renderPointPaket() {
     }
     const canEdit = can('testing-points', 'can_update');
     const canDel  = can('testing-points', 'can_delete');
+    const canApprove = can('testing-point-approve', 'can_update');
+    const btnApr = (aksi, id, ikon, warna, judul) =>
+        `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-paket-approval" data-aksi="${aksi}" data-id="${id}" title="${judul}" style="font-size:11px;" data-no-disable><i class="fa-solid ${ikon}" style="color:${warna};"></i></button>`;
     const rows = pointPaketCache.map(function (p, i) {
         const open = pointPaketOpen.has(p.id_paket);
+        const pending = p.status_approval === 'pending';
+        const draft = !p.status_approval || p.status_approval === 'draft';
+        const catatan = (draft && p.catatan_approval)
+            ? `<div class="text-danger fw-normal" style="font-size:11px;margin-left:20px;"><i class="fa-solid fa-circle-xmark me-1"></i>Ditolak${p.approval_oleh_nama ? ' oleh ' + escHtml(p.approval_oleh_nama) : ''}: ${escHtml(p.catatan_approval)}</div>`
+            : '';
         return `<tr class="paket-row" data-id="${p.id_paket}" style="cursor:pointer;">
             <td style="color:#94a3b8;text-align:center;">${i + 1}</td>
-            <td class="fw-semibold"><i class="fa-solid fa-chevron-${open ? 'down' : 'right'} paket-chevron me-2" style="font-size:10px;color:#94a3b8;width:10px;"></i>${escHtml(p.nama)}</td>
+            <td class="fw-semibold"><i class="fa-solid fa-chevron-${open ? 'down' : 'right'} paket-chevron me-2" style="font-size:10px;color:#94a3b8;width:10px;"></i>${escHtml(p.nama)}${catatan}</td>
             <td><span class="pm-badge pm-badge--blue" style="font-size:10px;">${p.jumlah_item} item aktif</span></td>
-            <td class="text-center">
-                ${canEdit ? `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-paket-edit" data-id="${p.id_paket}" title="Ubah" style="font-size:11px;" data-no-disable><i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i></button>` : ''}
+            <td>${approvalBadge(p.status_approval, 'font-size:10px;')}</td>
+            <td class="text-center" style="white-space:nowrap;">
+                ${draft && canEdit ? btnApr('ajukan', p.id_paket, 'fa-paper-plane', '#1e40af', 'Ajukan Approval') : ''}
+                ${pending && p.bisa_tarik ? btnApr('tarik', p.id_paket, 'fa-rotate-left', '#b45309', 'Tarik Pengajuan') : ''}
+                ${pending && canApprove ? btnApr('setujui', p.id_paket, 'fa-circle-check', '#16a34a', 'Setujui Paket') + btnApr('tolak', p.id_paket, 'fa-circle-xmark', '#dc2626', 'Tolak Paket') : ''}
+                ${canEdit && !pending ? `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 btn-paket-edit" data-id="${p.id_paket}" title="Ubah" style="font-size:11px;" data-no-disable><i class="fa-solid fa-pen-to-square" style="color:#1e40af;"></i></button>` : ''}
                 ${canDel ? `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 btn-paket-delete" data-id="${p.id_paket}" data-nama="${escHtml(p.nama)}" title="Hapus" style="font-size:11px;" data-no-disable><i class="fa-solid fa-trash" style="color:#dc2626;"></i></button>` : ''}
             </td>
         </tr>
-        <tr class="paket-detail-row${open ? '' : ' d-none'}" data-id="${p.id_paket}"><td></td><td colspan="3">${paketDetailHtml(p)}</td></tr>`;
+        <tr class="paket-detail-row${open ? '' : ' d-none'}" data-id="${p.id_paket}"><td></td><td colspan="4">${paketDetailHtml(p)}</td></tr>`;
     }).join('');
     $wrap.html(`<div class="table-responsive"><table class="pm-table">
         <thead><tr>
             <th style="width:40px;text-align:center;">No</th>
             <th style="min-width:200px;">Nama Paket</th>
             <th style="min-width:140px;">Jumlah Item</th>
-            <th style="width:100px;text-align:center;">Aksi</th>
+            <th style="min-width:140px;">Approval</th>
+            <th style="width:170px;text-align:center;">Aksi</th>
         </tr></thead>
         <tbody>${rows}</tbody>
     </table></div>`);
@@ -116,6 +135,55 @@ function paketDetailHtml(p) {
             </tr>`;
         }).join('')}</tbody></table>`;
 }
+
+// ── Approval Testing Point & Paket ───────────────────────────────────────────
+// Satu alur untuk dua level: Testing Point (menu ⋮ di action bar) dan Paket (tombol di baris paket).
+// url = testing-points/{id}/{aksi} atau testing-points/{id}/paket/{paket}/{aksi}
+const APPROVAL_TEKS = {
+    ajukan:  { judul: 'Ajukan untuk approval?', html: 'Data akan dikirim ke approver dan <strong>terkunci</strong> selama menunggu keputusan. Setelah disetujui baru bisa dipakai di BOQ; kalau ditolak, kembali Draft beserta alasannya.', tombol: 'Ya, Ajukan' },
+    tarik:   { judul: 'Tarik pengajuan?', html: 'Data kembali ke <strong>Draft</strong> dan bisa diedit lagi. Pengajuan harus dilakukan ulang untuk mendapat approval.', tombol: 'Ya, Tarik' },
+    setujui: { judul: 'Setujui?', html: 'Data menjadi <strong>Disetujui</strong> dan langsung bisa dipakai di BOQ baru.', tombol: 'Ya, Setujui', warna: '#16a34a' },
+    tolak:   { judul: 'Tolak pengajuan?', html: 'Data dikembalikan ke <strong>Draft</strong> agar diperbaiki. Alasan penolakan wajib diisi dan terlihat oleh pengaju.', tombol: 'Ya, Tolak', warna: '#dc2626', alasan: true },
+};
+
+function jalankanApproval(aksi, url, setelah) {
+    const t = APPROVAL_TEKS[aksi];
+    Swal.fire({
+        title: t.judul,
+        html: t.html,
+        icon: t.alasan ? 'warning' : 'question',
+        ...(t.alasan ? {
+            input: 'textarea', inputPlaceholder: 'Alasan penolakan', inputAttributes: { maxlength: 1000 },
+            inputValidator: function (v) { return (v && v.trim()) ? null : 'Alasan penolakan wajib diisi.'; },
+        } : {}),
+        showCancelButton: true,
+        confirmButtonText: t.tombol,
+        cancelButtonText: 'Batal',
+        confirmButtonColor: t.warna,
+        reverseButtons: true,
+    }).then(function (result) {
+        if (!result.isConfirmed) return;
+        $.ajax({
+            url: url, method: 'POST',
+            data: { _token: window.route.csrf, ...(t.alasan ? { catatan: result.value.trim() } : {}) },
+            success: function (res) { Notify.success(res.message || 'Berhasil'); setelah(); },
+            error: function (xhr) { Notify.error((xhr.responseJSON && xhr.responseJSON.message) || 'Aksi gagal diproses.'); },
+        });
+    });
+}
+
+// Dipanggil dari menu ⋮ action bar (form.js) — muat ulang halaman agar status di daftar & detail ikut berubah
+function aksiApprovalPoint(aksi, idPoint) {
+    jalankanApproval(aksi, window.route.paket + idPoint + '/' + aksi, function () {
+        setTimeout(function () { window.location.reload(); }, 700);
+    });
+}
+
+$(document).on('click', '.btn-paket-approval', function (e) {
+    e.stopPropagation();
+    const aksi = $(this).data('aksi'), idPaket = $(this).data('id');
+    jalankanApproval(aksi, pointPaketUrl('/' + idPaket + '/' + aksi), loadPointPaket);
+});
 
 // Klik baris paket → buka/tutup detail item (klik tombol Ubah/Hapus tidak ikut membuka)
 $(document).on('click', '.paket-row', function (e) {
@@ -207,8 +275,9 @@ $(document).on('click', '#btnSavePaket', function () {
         headers: { 'X-CSRF-TOKEN': window.route.csrf },
         contentType: 'application/json',
         data: JSON.stringify({ nama: nama, item_ids: itemIds }),
-        success: function () {
+        success: function (res) {
             Notify.success('Paket tersimpan');
+            if (res && res.approval_reset && res.message) Notify.warning(res.message);
             bootstrap.Modal.getInstance('#modalPaket')?.hide();
             loadPointPaket();
         },

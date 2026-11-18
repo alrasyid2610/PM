@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Support\TestingPointApproval;
 
 /**
  * Paket Testing Point — subset Testing Item milik 1 Testing Point (mis. "parameter 20" dari 50 item).
@@ -19,15 +20,69 @@ class TestingPointPaketController extends Controller
         $items  = $this->itemIdsByPaket($pakets->pluck('id_paket'));
         $aktif  = DB::table('testing_items')->where('id_testing_point', $id)->where('is_aktif', 1)->pluck('id_testing_item')->flip();
 
-        return response()->json($pakets->map(function ($p) use ($items, $aktif) {
+        $users = DB::table('users')->whereIn('id', $pakets->pluck('diajukan_oleh')->merge($pakets->pluck('approval_oleh'))->filter()->unique())->pluck('name', 'id');
+        $approver = userCan(TestingPointApproval::SLUG, 'can_update');
+
+        return response()->json($pakets->map(function ($p) use ($items, $aktif, $users, $approver) {
             $ids = $items->get($p->id_paket, collect());
             return [
                 'id_paket'    => $p->id_paket,
                 'nama'        => $p->nama,
                 'item_ids'    => $ids->values(),
                 'jumlah_item' => $ids->filter(fn ($i) => $aktif->has($i))->count(),
+                'status_approval'    => $p->status_approval,
+                'catatan_approval'   => $p->catatan_approval,
+                'diajukan_oleh_nama' => $users[$p->diajukan_oleh] ?? null,
+                'approval_oleh_nama' => $users[$p->approval_oleh] ?? null,
+                'bisa_tarik'         => $p->status_approval === TestingPointApproval::PENDING
+                    && ((int) $p->diajukan_oleh === (int) auth()->id() || $approver),
             ];
         })->values());
+    }
+
+    // ── Approval Paket (lihat App\Support\TestingPointApproval) ──────────────
+
+    private function paketOf($id, $paket)
+    {
+        return DB::table('testing_point_paket')->where('id_paket', $paket)->where('id_testing_point', $id)->first();
+    }
+
+    private function hasil(array $h)
+    {
+        return response()->json($h[1], $h[0]);
+    }
+
+    public function ajukan($id, $paket)
+    {
+        $row = $this->paketOf($id, $paket);
+        if (!$row) return response()->json(['message' => 'Paket tidak ditemukan'], 404);
+        return $this->hasil(TestingPointApproval::ajukan('testing_point_paket', 'id_paket', (int) $paket, 'Paket ' . $row->nama, ['testing_points', $id]));
+    }
+
+    public function tarik($id, $paket)
+    {
+        if (!$this->paketOf($id, $paket)) return response()->json(['message' => 'Paket tidak ditemukan'], 404);
+        return $this->hasil(TestingPointApproval::tarik('testing_point_paket', 'id_paket', (int) $paket, ['testing_points', $id]));
+    }
+
+    public function setujui($id, $paket)
+    {
+        $row = $this->paketOf($id, $paket);
+        if (!$row) return response()->json(['message' => 'Paket tidak ditemukan'], 404);
+        return $this->hasil(TestingPointApproval::setujui(
+            'testing_point_paket', 'id_paket', (int) $paket, 'Paket ' . $row->nama, ['testing_points', $id],
+            fn () => DB::table('testing_points')->where('id_testing_point', $id)->whereNull('deleted_at')
+                ->where('status_approval', TestingPointApproval::APPROVED)->exists()
+                ? null : 'Paket belum bisa disetujui: Testing Point induknya belum Disetujui.'
+        ));
+    }
+
+    public function tolak(Request $request, $id, $paket)
+    {
+        $request->validate(['catatan' => 'required|string|max:1000'], ['catatan.required' => 'Alasan penolakan wajib diisi.']);
+        $row = $this->paketOf($id, $paket);
+        if (!$row) return response()->json(['message' => 'Paket tidak ditemukan'], 404);
+        return $this->hasil(TestingPointApproval::tolak('testing_point_paket', 'id_paket', (int) $paket, 'Paket ' . $row->nama, (string) $request->catatan, ['testing_points', $id]));
     }
 
     /**
@@ -36,7 +91,10 @@ class TestingPointPaketController extends Controller
      */
     public function byPoint($id)
     {
-        $pakets = DB::table('testing_point_paket')->where('id_testing_point', $id)->orderBy('nama')->get();
+        // Hanya Paket yang sudah Disetujui, dan hanya bila Testing Point induknya juga Disetujui
+        if (TestingPointApproval::namaTidakBisaDipakai([$id])) return response()->json(['data' => []]);
+        $pakets = DB::table('testing_point_paket')->where('id_testing_point', $id)
+            ->where('status_approval', TestingPointApproval::APPROVED)->orderBy('nama')->get();
         $items  = $this->itemIdsByPaket($pakets->pluck('id_paket'));
         $aktif  = DB::table('testing_items')->where('id_testing_point', $id)->where('is_aktif', 1)->pluck('id_testing_item')->flip();
 
@@ -56,7 +114,8 @@ class TestingPointPaketController extends Controller
 
         $idPaket = DB::transaction(function () use ($id, $nama, $itemIds) {
             $idPaket = DB::table('testing_point_paket')->insertGetId([
-                'id_testing_point' => $id, 'nama' => $nama, 'created_at' => now(), 'updated_at' => now(),
+                'id_testing_point' => $id, 'nama' => $nama, 'status_approval' => TestingPointApproval::DRAFT,
+                'created_at' => now(), 'updated_at' => now(),
             ]);
             DB::table('testing_point_paket_items')->insert(array_map(fn ($i) => ['id_paket' => $idPaket, 'id_testing_item' => $i], $itemIds));
             return $idPaket;
@@ -71,11 +130,15 @@ class TestingPointPaketController extends Controller
     {
         $row = DB::table('testing_point_paket')->where('id_paket', $paket)->where('id_testing_point', $id)->first();
         if (!$row) return response()->json(['message' => 'Paket tidak ditemukan'], 404);
+        if ($row->status_approval === TestingPointApproval::PENDING) {
+            return response()->json(['message' => 'Paket sedang menunggu approval dan terkunci. Tarik pengajuan dulu bila ingin mengubahnya.'], 422);
+        }
 
         [$nama, $itemIds, $error] = $this->validated($request, $id, $paket);
         if ($error) return $error;
 
-        $before = json_encode(['nama' => $row->nama, 'jumlah_item' => DB::table('testing_point_paket_items')->where('id_paket', $paket)->count()]);
+        $itemLama = DB::table('testing_point_paket_items')->where('id_paket', $paket)->pluck('id_testing_item')->map(fn ($v) => (int) $v)->sort()->values()->all();
+        $before = json_encode(['nama' => $row->nama, 'jumlah_item' => count($itemLama)]);
 
         DB::transaction(function () use ($paket, $nama, $itemIds) {
             DB::table('testing_point_paket')->where('id_paket', $paket)->update(['nama' => $nama, 'updated_at' => now()]);
@@ -85,7 +148,17 @@ class TestingPointPaketController extends Controller
 
         saveAudit('testing_point_paket', $paket, 'update', $before, json_encode(['nama' => $nama, 'jumlah_item' => count($itemIds)]), ['testing_points', $id]);
 
-        return response()->json(['success' => true]);
+        // Paket yang sudah Disetujui lalu berubah (nama / isi item) → otomatis Menunggu Approval
+        $itemBaru = collect($itemIds)->map(fn ($v) => (int) $v)->sort()->values()->all();
+        $reset = $row->status_approval === TestingPointApproval::APPROVED
+            && ($itemLama !== $itemBaru || $row->nama !== $nama)
+            && TestingPointApproval::ajukanOtomatis('testing_point_paket', 'id_paket', (int) $paket, 'Paket ' . $nama, ['testing_points', $id]);
+
+        return response()->json([
+            'success' => true,
+            'approval_reset' => $reset,
+            'message' => $reset ? 'Paket tersimpan dan diajukan ulang — menunggu approval, belum bisa dipakai di BOQ sampai disetujui.' : null,
+        ]);
     }
 
     public function destroy($id, $paket)
