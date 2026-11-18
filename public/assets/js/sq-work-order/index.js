@@ -567,12 +567,31 @@ function syncSqBoqNewSectionsFromDom() {
 
 function renderSqBoqManageAll() {
     syncSqBoqNewSectionsFromDom();
+
+    // Simpan status buka/tutup tiap section sebelum DOM dirender ulang, supaya section yang
+    // sedang di-collapse user tidak ikut terbuka lagi saat item lain ditambahkan/diubah.
+    const openState = {};
+    $('#sqBoqManageSections .sq-boq-manage-section').each(function () {
+        const $c = $(this);
+        const key = $c.attr('data-tmp-id') ? 't:' + $c.attr('data-tmp-id') : 'e:' + $c.attr('data-id-sq-boq');
+        openState[key] = $c.children('.card-body').css('display') !== 'none';
+    });
+
     const hasAny = sqWoBoqCache.length || sqBoqManageNewSections.length;
     $('#sqBoqManageEmpty').toggleClass('d-none', !!hasAny);
     $('#sqBoqManageSections').html(
         sqWoBoqCache.map((sec) => sqBoqManageSectionHtml(sec, false)).join('') +
         sqBoqManageNewSections.map((sec) => sqBoqManageSectionHtml(sec, true)).join('')
     );
+
+    $('#sqBoqManageSections .sq-boq-manage-section').each(function () {
+        const $c = $(this);
+        const isNew = !!$c.attr('data-tmp-id');
+        const key = isNew ? 't:' + $c.attr('data-tmp-id') : 'e:' + $c.attr('data-id-sq-boq');
+        const open = key in openState ? openState[key] : isNew; // baru: terbuka; lama: tertutup
+        $c.children('.card-body').css('display', open ? 'block' : 'none');
+        $c.find('.btn-sq-boq-manage-toggle').first().toggleClass('rotated', open);
+    });
 
     sqBoqManageNewSections.forEach(function (sec) {
         const $card = $(`.sq-boq-manage-section[data-tmp-id="${sec.tmpId}"]`);
@@ -1009,7 +1028,7 @@ function renderSqWoTambahanTable(rows, jenis) {
         const subtotal = (r.qty || 0) * (r.harga || 0);
         return `<tr data-id="${r.id_sq_boq_tambahan}" data-jenis="${jenis}">
             <td style="font-size:12px;color:#94a3b8;width:36px;">${i + 1}</td>
-            <td style="font-size:12px;">${escHtml(r.nama_item)}</td>
+            <td style="font-size:12px;">${escHtml(r.nama_item)}${Number(r.tampil_di_utama) ? ' <span class="badge" style="font-size:10px;background:#dbeafe;color:#1e40af;" title="Dicetak di bagian utama penawaran">Bagian utama</span>' : ''}</td>
             <td style="font-size:12px;text-align:right;white-space:nowrap;">${r.qty ?? 0} ${escHtml(r.satuan || '')}</td>
             <td style="font-size:12px;text-align:right;white-space:nowrap;">Rp ${Number(r.harga || 0).toLocaleString('id-ID')}</td>
             <td style="font-size:12px;text-align:right;white-space:nowrap;font-weight:600;">Rp ${Number(subtotal).toLocaleString('id-ID')}</td>
@@ -1099,6 +1118,9 @@ function openSqTambahanModal(jenis, row) {
     $modal.find('#sqBoqTambahanModal-qty').val(row ? row.qty : '');
     $modal.find('#sqBoqTambahanModal-harga').val(row ? row.harga : '');
     $modal.find('#sqBoqTambahanModal-keterangan').val(row ? (row.keterangan || '') : '');
+    // Flag "bagian utama penawaran" hanya untuk BOQ Other
+    $modal.find('#sqBoqTambahanModal-utama-wrap').toggleClass('d-none', jenis !== 'lainnya');
+    $modal.find('#sqBoqTambahanModal-utama').prop('checked', !!(row && Number(row.tampil_di_utama)));
     initSatuanSelectSqWo($modal.find('#sqBoqTambahanModal-satuan'), row?.id_satuan || null, row?.satuan || null);
 
     new bootstrap.Modal($modal[0]).show();
@@ -1117,6 +1139,7 @@ $(document).on('click', '#sqBoqTambahanModal-btn-save', function () {
         id_satuan: $modal.find('#sqBoqTambahanModal-satuan').val() || null,
         harga: rawNumVal($modal.find('#sqBoqTambahanModal-harga')[0]),
         keterangan: $modal.find('#sqBoqTambahanModal-keterangan').val().trim() || null,
+        tampil_di_utama: $modal.find('#sqBoqTambahanModal-utama').is(':checked') ? 1 : 0,
     };
     if (!payload.nama_item) { Notify.warning('Nama item wajib diisi.'); return; }
     if (!payload.qty) { Notify.warning('Qty wajib diisi.'); return; }

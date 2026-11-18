@@ -947,7 +947,7 @@ class SalesQuotationController extends Controller
                 ->whereIn('bt.id_sq_wo', $woIds)
                 ->orderBy('bt.id_sq_wo')
                 ->orderBy('bt.id_sq_boq_tambahan')
-                ->select(['bt.id_sq_wo', 'bt.jenis', 'bt.nama_item', 'bt.qty', 'sat.nama as satuan', 'bt.harga'])
+                ->select(['bt.id_sq_wo', 'bt.jenis', 'bt.nama_item', 'bt.qty', 'sat.nama as satuan', 'bt.harga', 'bt.keterangan', 'bt.tampil_di_utama'])
                 ->get()
             : collect();
 
@@ -973,8 +973,27 @@ class SalesQuotationController extends Controller
         });
         $bagianI = self::gabungFreq($bagianI);
 
-        // Section II: BOQ Other + BOQ Sampling (sq_boq_tambahan, jenis 'lainnya' & 'sampling')
-        $bagianII = $tambahan->map(function ($r) use ($siteByWo) {
+        // BOQ Other berflag `tampil_di_utama` (sejak 2026-11-18) dicetak di Section I setelah semua BOQ lab.
+        // Nama = baris tebal, Keterangan = baris kedua. Flag hanya berlaku untuk jenis 'lainnya'.
+        $utama = $tambahan->filter(fn ($r) => $r->jenis === 'lainnya' && (int) $r->tampil_di_utama === 1);
+        $bagianUtama = self::gabungFreq($utama->map(function ($r) use ($siteByWo) {
+            $total = (int) $r->qty * (int) $r->harga;
+            return (object) [
+                'key'       => implode('|', [$siteByWo->get($r->id_sq_wo) ?? 0, mb_strtolower(trim((string) $r->nama_item)), mb_strtolower(trim((string) $r->keterangan)), (int) $r->qty, $r->satuan]),
+                'nama'      => $r->nama_item,
+                'regulasi'  => trim((string) $r->keterangan) !== '' ? trim((string) $r->keterangan) : null,
+                'parameter' => null,
+                'qty'       => (int) $r->qty,
+                'satuan'    => $r->satuan ?: 'Lot',
+                'harga'     => (int) $r->harga,
+                'total'     => $total,
+                'freq'      => 1,
+            ];
+        }));
+        $bagianI = $bagianI->concat($bagianUtama)->values();
+
+        // Section II: BOQ Other (tanpa flag) + BOQ Sampling (sq_boq_tambahan, jenis 'lainnya' & 'sampling')
+        $bagianII = $tambahan->reject(fn ($r) => $utama->contains($r))->map(function ($r) use ($siteByWo) {
             $total = (int) $r->qty * (int) $r->harga;
             return (object) [
                 // Kunci penggabungan antar WO: site + nama item (tanpa beda huruf besar/kecil) + qty + satuan

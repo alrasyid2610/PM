@@ -46,7 +46,10 @@ class SqBoqTambahanController extends Controller
             'id_satuan' => 'nullable|integer|exists:satuan,id_satuan',
             'harga' => 'required|integer|min:0',
             'keterangan' => 'nullable|string',
+            'tampil_di_utama' => 'nullable|boolean',
         ]);
+        // Flag hanya berlaku untuk BOQ Other; BOQ Sampling selalu di "Biaya Sampling"
+        $validated['tampil_di_utama'] = $validated['jenis'] === 'lainnya' && $request->boolean('tampil_di_utama');
 
         $id = DB::table('sq_boq_tambahan')->insertGetId(array_merge($validated, [
             'created_at' => now(),
@@ -69,7 +72,9 @@ class SqBoqTambahanController extends Controller
             'id_satuan' => 'nullable|integer|exists:satuan,id_satuan',
             'harga' => 'required|integer|min:0',
             'keterangan' => 'nullable|string',
+            'tampil_di_utama' => 'nullable|boolean',
         ]);
+        $validated['tampil_di_utama'] = $row->jenis === 'lainnya' && $request->boolean('tampil_di_utama');
 
         $before = $this->rowJson($id);
         DB::table('sq_boq_tambahan')->where('id_sq_boq_tambahan', $id)->update(array_merge($validated, [

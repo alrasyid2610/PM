@@ -178,7 +178,14 @@
                     </div>
                     <div class="col-12">
                         <label class="form-label fw-semibold" style="font-size:12px;">Keterangan</label>
-                        <textarea class="form-control form-control-sm" id="sqBoqTambahanModal-keterangan" rows="2" placeholder="Opsional" data-no-disable></textarea>
+                        <textarea class="form-control form-control-sm" id="sqBoqTambahanModal-keterangan" rows="2" placeholder="Opsional — tercetak sebagai baris kedua di bawah Nama Item" data-no-disable></textarea>
+                    </div>
+                    <div class="col-12" id="sqBoqTambahanModal-utama-wrap">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="sqBoqTambahanModal-utama" data-no-disable>
+                            <label class="form-check-label" for="sqBoqTambahanModal-utama" style="font-size:12px;">Tampilkan di bagian utama penawaran</label>
+                        </div>
+                        <div class="text-muted" style="font-size:11px;">Dicetak bersama BOQ lab (setelah BOQ lab), bukan di "Biaya Sampling".</div>
                     </div>
                 </div>
             </div>

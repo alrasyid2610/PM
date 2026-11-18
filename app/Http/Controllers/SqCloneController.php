@@ -608,6 +608,9 @@ class SqCloneController extends Controller
                     'id_satuan' => $r['id_satuan'] ?? null,
                     'harga' => (int) round((float) ($r['harga'] ?? 0)),
                     'keterangan' => $r['keterangan'] ?? null,
+                    // Flag "bagian utama penawaran" ikut dari baris sumber (baris baru di halaman clone = tidak)
+                    'tampil_di_utama' => ($jenis === 'lainnya' && !empty($r['source_id_boq_tambahan']))
+                        ? (int) ($srcTambahan->get($r['source_id_boq_tambahan'])->tampil_di_utama ?? 0) : 0,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
