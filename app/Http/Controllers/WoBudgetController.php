@@ -12,7 +12,7 @@ class WoBudgetController extends Controller
     use HasAuditHistory;
 
     protected function auditTable(): string { return 'wo_budgets'; }
-    protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_budget']; }
+    protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_budget', 'id_budget_label']; }
 
     /** Nilai acuan persentase budget (lihat App\Support\BudgetBasis). */
     public function basis($id_wo)
@@ -171,7 +171,8 @@ class WoBudgetController extends Controller
 
         $request->validate([
             'id_wo'          => 'required|integer',
-            'label'          => 'required|string|max:255',
+            'id_budget_label'          => 'nullable|integer',
+            'label'          => 'nullable|string|max:255',
             'keterangan'     => 'nullable|string',
             'items'          => 'required|array|min:1',
             'items.*.id_account'      => 'required|integer',
@@ -185,10 +186,16 @@ class WoBudgetController extends Controller
             'items.*.nominal_budget.min' => 'Nominal setiap item harus lebih dari 0.',
         ]);
 
+        // Label dipilih dari Master Label Budget (unik per induk); salinan teks tetap disimpan di kolom label
+        $lbl = \App\Support\BudgetLabel::tentukan($request, 'wo_budgets', (int) $request->id_wo);
+        if (isset($lbl['error'])) return response()->json(['success' => false, 'message' => $lbl['error']], 422);
+        $request->merge(['id_budget_label' => $lbl[0], 'label' => $lbl[1]]);
+
         DB::transaction(function () use ($request, &$id) {
             $id = DB::table('wo_budgets')->insertGetId([
                 'id_wo'           => $request->id_wo,
                 'label'           => $request->label,
+                'id_budget_label'=> $request->id_budget_label,
                 'keterangan'      => $request->keterangan,
                 'tanggal_mulai'   => $request->tanggal_mulai ?: null,
                 'tanggal_selesai' => $request->tanggal_selesai ?: null,
@@ -250,7 +257,8 @@ class WoBudgetController extends Controller
         }
 
         $request->validate([
-            'label'          => 'required|string|max:255',
+            'id_budget_label'          => 'nullable|integer',
+            'label'          => 'nullable|string|max:255',
             'keterangan'     => 'nullable|string',
             'items'          => 'required|array|min:1',
             'items.*.id_account'     => 'required|integer',
@@ -266,9 +274,15 @@ class WoBudgetController extends Controller
 
         $before = $this->budgetJson($id);
 
+        // Label dipilih dari Master Label Budget (unik per induk); salinan teks tetap disimpan di kolom label
+        $lbl = \App\Support\BudgetLabel::tentukan($request, 'wo_budgets', (int) $budget->id_wo, $budget, 'id_budget');
+        if (isset($lbl['error'])) return response()->json(['success' => false, 'message' => $lbl['error']], 422);
+        $request->merge(['id_budget_label' => $lbl[0], 'label' => $lbl[1]]);
+
         DB::transaction(function () use ($request, $id, $budget) {
             DB::table('wo_budgets')->where('id_budget', $id)->update([
                 'label'           => $request->label,
+                'id_budget_label'=> $request->id_budget_label,
                 'keterangan'      => $request->keterangan,
                 'tanggal_mulai'   => $request->tanggal_mulai ?: null,
                 'tanggal_selesai' => $request->tanggal_selesai ?: null,

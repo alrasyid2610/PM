@@ -1742,6 +1742,7 @@ class SalesOrderController extends Controller
                         $newBudgetId = DB::table('wo_budgets')->insertGetId([
                             'id_wo'             => $newWoId,
                             'label'             => $budgetInput['label'] ?? $sourceBudget->label,
+                            'id_budget_label'   => (($budgetInput['label'] ?? $sourceBudget->label) === $sourceBudget->label) ? ($sourceBudget->id_budget_label ?? null) : null,
                             'keterangan'        => $budgetInput['keterangan'] ?? $sourceBudget->keterangan,
                             'tanggal_mulai'     => $budgetInput['tanggal_mulai'] ?? $sourceBudget->tanggal_mulai,
                             'tanggal_selesai'   => $budgetInput['tanggal_selesai'] ?? $sourceBudget->tanggal_selesai,
@@ -2037,6 +2038,7 @@ class SalesOrderController extends Controller
                             $newBudgetId = DB::table('fwo_budgets')->insertGetId([
                                 'id_fwo'            => $newFwoId,
                                 'label'             => $budgetInput['label'] ?? $sourceBudget->label,
+                            'id_budget_label'   => (($budgetInput['label'] ?? $sourceBudget->label) === $sourceBudget->label) ? ($sourceBudget->id_budget_label ?? null) : null,
                                 'keterangan'        => $budgetInput['keterangan'] ?? $sourceBudget->keterangan,
                                 'tanggal_mulai'     => $budgetInput['tanggal_mulai'] ?? $sourceBudget->tanggal_mulai,
                                 'tanggal_selesai'   => $budgetInput['tanggal_selesai'] ?? $sourceBudget->tanggal_selesai,

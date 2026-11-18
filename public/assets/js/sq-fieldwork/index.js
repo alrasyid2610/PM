@@ -410,7 +410,8 @@ function openSqFwoBudgetModal(data, isClone) {
     $('#sqFwoBudgetPlanModalLabel').html(`<i class="fa-solid fa-wallet me-2" style="color:#0f766e;"></i>${isClone ? 'Clone' : (isEdit ? 'Edit' : 'Tambah')} Budget Plan`);
     $('#sqFwoBudgetModal-id').val(isEdit ? data.id_sq_budget : '');
     $('#sqFwoBudgetModal-id-sq-fwo').val(currentSqFwoId);
-    $('#sqFwoBudgetModal-label').val(isClone ? data.label + ' (Salinan)' : (isEdit ? data.label : ''));
+    // Label dipilih dari Master Label Budget; clone = pilih ulang (satu plan per label di tiap induk)
+    BudgetSections.initLabelSelect($('#sqFwoBudgetModal-label'), isEdit ? { id: data.id_budget_label, text: data.label } : null);
     $('#sqFwoBudgetModal-keterangan').val(data ? (data.keterangan || '') : '');
     $('#sqFwoBudgetModal-hari-mulai').val(isEdit ? (data.hari_mulai || '') : '');
     $('#sqFwoBudgetModal-hari-selesai').val(isEdit ? (data.hari_selesai || '') : '');
@@ -439,8 +440,9 @@ $(document).on('input', '#sqFwoBudgetItemsBody .bi-nominal', function () {
 $(document).on('click', '#sqFwoBudgetModal-btn-save', function () {
     const id = $('#sqFwoBudgetModal-id').val();
     const idSqFwo = $('#sqFwoBudgetModal-id-sq-fwo').val();
-    const label = $('#sqFwoBudgetModal-label').val().trim();
-    if (!label) { Notify.warning('Label wajib diisi.'); return; }
+    const lblSel = BudgetSections.labelValue($('#sqFwoBudgetModal-label'));
+    const label = lblSel.text;
+    if (!label) { Notify.warning('Label wajib dipilih dari Master Label Budget.'); return; }
 
     const items = [];
     let valid = true;
@@ -460,6 +462,7 @@ $(document).on('click', '#sqFwoBudgetModal-btn-save', function () {
         _token: window.sqFwoRoute.csrf,
         id_sq_fwo: idSqFwo,
         label: label,
+        id_budget_label: lblSel.id,
         keterangan: $('#sqFwoBudgetModal-keterangan').val(),
         hari_mulai: $('#sqFwoBudgetModal-hari-mulai').val() || null,
         hari_selesai: $('#sqFwoBudgetModal-hari-selesai').val() || null,

@@ -550,8 +550,7 @@ function renderForm(res) {
                     <div class="row g-2 mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Label <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm" id="woBudgetModal-label"
-                                placeholder="cth: Admin Bulan 1, Operasional Q1..." data-no-disable>
+                            <select class="form-select form-select-sm" id="woBudgetModal-label" data-no-disable></select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Keterangan</label>

@@ -38,7 +38,7 @@ trait HasAuditHistory
 
     /** Kolom kunci/teknis tabel anak yang tidak perlu tampil sebagai perubahan. */
     private const AUDIT_EXCLUDE_ANAK = [
-        'id_boq_tambahan', 'id_output_tambahan', 'id_output', 'id_output_judul', 'id_budget', 'id_actual',
+        'id_boq_tambahan', 'id_output_tambahan', 'id_output', 'id_output_judul', 'id_budget_label', 'id_budget', 'id_actual',
         'id_lab_sample', 'id_wo', 'id_budget_item', 'deleted_at', 'akun', 'plan',
         'id_fwo', 'id_fwo_boq', 'id_fwo_boq_tambahan',
         'id_so', 'id_termin', 'id_sq', 'id_sq_wo', 'id_sq_fwo', 'id_sq_boq_tambahan', 'id_sq_budget', 'id_sq_keterangan', 'id_sq_fwo_boq',

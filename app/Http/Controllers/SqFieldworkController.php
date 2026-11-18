@@ -290,7 +290,7 @@ class SqFieldworkController extends Controller
                     'keterangan' => $it['keterangan'] ?? $sourceItem->keterangan,
                 ];
             }
-            $budgetsToCopy[] = ['label' => $plan['label'], 'keterangan' => $plan['keterangan'] ?? null, 'items' => $items];
+            $budgetsToCopy[] = ['label' => $plan['label'], 'id_budget_label' => ((string) $plan['label'] === (string) $sourcePlan->label) ? ($sourcePlan->id_budget_label ?? null) : null, 'keterangan' => $plan['keterangan'] ?? null, 'items' => $items];
         }
 
         $noFwo = null;
@@ -337,6 +337,7 @@ class SqFieldworkController extends Controller
                 $newBudgetId = DB::table('sq_fwo_budgets')->insertGetId([
                     'id_sq_fwo' => $newId,
                     'label' => $plan['label'],
+                    'id_budget_label' => $plan['id_budget_label'],
                     'keterangan' => $plan['keterangan'],
                     'hari_mulai' => null,
                     'hari_selesai' => null,

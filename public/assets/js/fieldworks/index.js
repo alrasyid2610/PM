@@ -656,7 +656,8 @@ function openBudgetModal(idFwo, budgetData, isClone) {
     );
     $('#budgetModal-id').val(isEdit ? budgetData.id_budget : '');
     $('#budgetModal-id-fwo').val(idFwo);
-    $('#budgetModal-label').val(isClone ? budgetData.label + ' (Salinan)' : (isEdit ? budgetData.label : ''));
+    // Label dipilih dari Master Label Budget; clone = pilih ulang (satu plan per label di tiap induk)
+    BudgetSections.initLabelSelect($('#budgetModal-label'), isEdit ? { id: budgetData.id_budget_label, text: budgetData.label } : null);
     $('#budgetModal-keterangan').val(budgetData ? (budgetData.keterangan || '') : '');
 
     // Info rentang tanggal FWO sebagai referensi (cuma informasi, tidak
@@ -742,9 +743,10 @@ $(document).off('input.budget', '#budgetItemsBody .bi-nominal').on('input.budget
 $(document).off('click.budget', '#budgetModal-btn-save').on('click.budget', '#budgetModal-btn-save', function () {
     const id    = $('#budgetModal-id').val();
     const idFwo = $('#budgetModal-id-fwo').val();
-    const label = $('#budgetModal-label').val().trim();
+    const lblSel = BudgetSections.labelValue($('#budgetModal-label'));
+    const label = lblSel.text;
 
-    if (!label) return Swal.fire('Perhatian', 'Label wajib diisi.', 'warning');
+    if (!label) return Swal.fire('Perhatian', 'Label wajib dipilih dari Master Label Budget.', 'warning');
 
     const items = [];
     let valid = true;
@@ -768,6 +770,7 @@ $(document).off('click.budget', '#budgetModal-btn-save').on('click.budget', '#bu
         _token:         window.route.csrf,
         id_fwo:         idFwo,
         label:          label,
+        id_budget_label: lblSel.id,
         keterangan:     $('#budgetModal-keterangan').val(),
         tanggal_mulai:  $('#budgetModal-tgl-mulai').val() || null,
         tanggal_selesai: $('#budgetModal-tgl-selesai').val() || null,

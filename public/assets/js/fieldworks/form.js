@@ -695,8 +695,7 @@ function renderFwoForm(res) {
                     <div class="row g-2 mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Label <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm" id="budgetModal-label"
-                                placeholder="cth: Minggu 1, Tahap 1, Hari Pertama..." data-no-disable>
+                            <select class="form-select form-select-sm" id="budgetModal-label" data-no-disable></select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Keterangan</label>

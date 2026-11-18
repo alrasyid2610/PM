@@ -723,6 +723,8 @@ class FieldworkController extends Controller
 
             $budgetsToCopy[] = [
                 'label' => $plan['label'],
+                // Tautan Master Label Budget ikut hanya bila teks label tidak diubah dari plan sumber
+                'id_budget_label' => ((string) $plan['label'] === (string) $sourcePlan->label) ? ($sourcePlan->id_budget_label ?? null) : null,
                 'keterangan' => $plan['keterangan'] ?? null,
                 'items' => $items,
             ];
@@ -841,6 +843,7 @@ class FieldworkController extends Controller
                 $newBudgetId = DB::table('fwo_budgets')->insertGetId([
                     'id_fwo'            => $newId,
                     'label'             => $plan['label'],
+                    'id_budget_label'   => $plan['id_budget_label'],
                     'keterangan'        => $plan['keterangan'],
                     'tanggal_mulai'     => null,
                     'tanggal_selesai'   => null,

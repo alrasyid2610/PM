@@ -264,7 +264,7 @@ class SqConvertController extends Controller
                     foreach (DB::table('sq_wo_budgets')->where('id_sq_wo', $wo->id_sq_wo)->get() as $bp) {
                         $idBudget = DB::table('wo_budgets')->insertGetId([
                             'id_wo' => $idWo,
-                            'label' => $bp->label,
+                            'label' => $bp->label, 'id_budget_label' => $bp->id_budget_label ?? null,
                             'keterangan' => $bp->keterangan,
                             'tanggal_mulai' => $bp->hari_mulai ? $start->copy()->addDays($bp->hari_mulai - 1)->toDateString() : null,
                             'tanggal_selesai' => $bp->hari_selesai ? $start->copy()->addDays($bp->hari_selesai - 1)->toDateString() : null,
@@ -343,7 +343,7 @@ class SqConvertController extends Controller
                         foreach (DB::table('sq_fwo_budgets')->where('id_sq_fwo', $fwo->id_sq_fwo)->get() as $fbp) {
                             $idFwoBudget = DB::table('fwo_budgets')->insertGetId([
                                 'id_fwo' => $idFwo,
-                                'label' => $fbp->label,
+                                'label' => $fbp->label, 'id_budget_label' => $fbp->id_budget_label ?? null,
                                 'keterangan' => $fbp->keterangan,
                                 // Periode plan harus berada dalam periode FWO — FWO belum dijadwalkan, jadi dikosongkan
                                 // dan diisi bersamaan dengan penjadwalan FWO (sama seperti Clone FWO).

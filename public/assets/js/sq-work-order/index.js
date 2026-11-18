@@ -1359,7 +1359,8 @@ function openSqWoBudgetModal(data, isClone) {
     $('#sqWoBudgetPlanModalLabel').html(`<i class="fa-solid fa-wallet me-2" style="color:#0f766e;"></i>${isClone ? 'Clone' : (isEdit ? 'Edit' : 'Tambah')} Budget Plan`);
     $('#sqWoBudgetModal-id').val(isEdit ? data.id_sq_budget : '');
     $('#sqWoBudgetModal-id-sq-wo').val(currentSqWoId);
-    $('#sqWoBudgetModal-label').val(isClone ? data.label + ' (Salinan)' : (isEdit ? data.label : ''));
+    // Label dipilih dari Master Label Budget; clone = pilih ulang (satu plan per label di tiap induk)
+    BudgetSections.initLabelSelect($('#sqWoBudgetModal-label'), isEdit ? { id: data.id_budget_label, text: data.label } : null);
     $('#sqWoBudgetModal-keterangan').val(data ? (data.keterangan || '') : '');
     $('#sqWoBudgetModal-hari-mulai').val(isEdit ? (data.hari_mulai || '') : '');
     $('#sqWoBudgetModal-hari-selesai').val(isEdit ? (data.hari_selesai || '') : '');
@@ -1388,8 +1389,9 @@ $(document).on('input', '#sqWoBudgetItemsBody .bi-nominal', function () {
 $(document).on('click', '#sqWoBudgetModal-btn-save', function () {
     const id = $('#sqWoBudgetModal-id').val();
     const idSqWo = $('#sqWoBudgetModal-id-sq-wo').val();
-    const label = $('#sqWoBudgetModal-label').val().trim();
-    if (!label) { Notify.warning('Label wajib diisi.'); return; }
+    const lblSel = BudgetSections.labelValue($('#sqWoBudgetModal-label'));
+    const label = lblSel.text;
+    if (!label) { Notify.warning('Label wajib dipilih dari Master Label Budget.'); return; }
 
     const items = [];
     let valid = true;
@@ -1409,6 +1411,7 @@ $(document).on('click', '#sqWoBudgetModal-btn-save', function () {
         _token: window.sqWoRoute.csrf,
         id_sq_wo: idSqWo,
         label: label,
+        id_budget_label: lblSel.id,
         keterangan: $('#sqWoBudgetModal-keterangan').val(),
         hari_mulai: $('#sqWoBudgetModal-hari-mulai').val() || null,
         hari_selesai: $('#sqWoBudgetModal-hari-selesai').val() || null,

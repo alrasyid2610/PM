@@ -518,5 +518,46 @@ window.BudgetSections = (function () {
             $a.prop('disabled', !bisa || !ada);
         });
     }
-    return { tanpaTotal: tanpaTotal, tanpaPenuh: tanpaPenuh, tanpaBadge: tanpaBadge, tanpaCells: tanpaCells, tanpaTh: tanpaTh, tanpaCollect: tanpaCollect, daysFromDates: daysFromDates, daysFromNumbers: daysFromNumbers, detail: detail, rowTotal: nominalOf, applyPct: applyPct, fmtPct: fmtPct, fetchBasis: fetchBasis, loadBasis: loadBasis, load: load, fill: fill, initSelects: initSelects, refresh: refresh, addRow: addRow };
+    // ── Label Budget Plan dari Master Label Budget (sejak 2026-11-19) ──────────────────────────────────────────
+    // Label tidak lagi diketik: dipilih dari master (GET /budget-label/select2, dimuat sekali). Plan lama yang labelnya
+    // teks bebas (id kosong) tampil sebagai opsi "(label lama)" supaya tetap bisa disimpan selama tidak diganti.
+    var labelCache = null;
+    var LABEL_LAMA = '__lama__';
+    function loadLabels() {
+        if (labelCache) return $.Deferred().resolve(labelCache).promise();
+        return $.getJSON('/budget-label/select2').then(function (rows) { labelCache = rows || []; return labelCache; });
+    }
+    // cur = { id, text } plan yang sedang diedit (id kosong = label lama); null untuk plan baru / clone.
+    function initLabelSelect($sel, cur) {
+        return loadLabels().then(function (rows) {
+            if ($sel.hasClass('select2-hidden-accessible')) $sel.select2('destroy');
+            var curId = cur && cur.id ? String(cur.id) : '';
+            var ada = false;
+            $sel.empty().data('lamaText', '').append('<option value=""></option>');
+            rows.forEach(function (r) {
+                var pilih = String(r.id) === curId;
+                if (pilih) ada = true;
+                $sel.append(new Option(r.text, r.id, pilih, pilih));
+            });
+            if (cur && cur.id && !ada) {
+                $sel.append(new Option(cur.text + ' (nonaktif)', cur.id, true, true));
+            } else if (cur && !cur.id && cur.text) {
+                $sel.data('lamaText', cur.text).append(new Option(cur.text + ' (label lama)', LABEL_LAMA, true, true));
+            }
+            $sel.select2({
+                dropdownParent: $sel.closest('.modal'),
+                width: '100%',
+                placeholder: '— Pilih label —',
+                allowClear: false,
+            });
+        });
+    }
+    // Nilai untuk dikirim ke server: { id, text }. Label lama → id kosong + teks aslinya.
+    function labelValue($sel) {
+        var v = $sel.val();
+        if (!v) return { id: '', text: '' };
+        if (v === LABEL_LAMA) return { id: '', text: String($sel.data('lamaText') || '') };
+        return { id: v, text: ($sel.find('option:selected').text() || '').replace(/ \(nonaktif\)$/, '') };
+    }
+    return { tanpaTotal: tanpaTotal, tanpaPenuh: tanpaPenuh, tanpaBadge: tanpaBadge, tanpaCells: tanpaCells, tanpaTh: tanpaTh, tanpaCollect: tanpaCollect, daysFromDates: daysFromDates, daysFromNumbers: daysFromNumbers, detail: detail, rowTotal: nominalOf, applyPct: applyPct, fmtPct: fmtPct, fetchBasis: fetchBasis, loadBasis: loadBasis, load: load, fill: fill, initSelects: initSelects, refresh: refresh, addRow: addRow, initLabelSelect: initLabelSelect, labelValue: labelValue };
 })();

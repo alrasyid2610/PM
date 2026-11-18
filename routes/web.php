@@ -74,6 +74,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PersonnelController;
 use App\Http\Controllers\KendaraanController;
 use App\Http\Controllers\OutputMasterController;
+use App\Http\Controllers\BudgetLabelController;
 use App\Http\Controllers\DocumentationController;
 use Spatie\LaravelPdf\Facades\Pdf;
 
@@ -270,6 +271,20 @@ Route::prefix('personnel')->name('personnel.')->group(function () {
     Route::get('/{id}/history', [PersonnelController::class, 'history'])->name('history')->whereNumber('id');
     Route::post('/{id}/account', [PersonnelController::class, 'createAccount'])->name('create-account')->whereNumber('id');
     Route::delete('/{id}/account', [PersonnelController::class, 'revokeAccount'])->name('revoke-account')->whereNumber('id');
+});
+
+// Master Label Budget — label Budget Plan WO/FWO/SQ WO/SQ FWO dipilih dari sini (izin menu budget-label); select di modal memakai /budget-label/select2
+Route::prefix('budget-label')->name('budget-label.')->group(function () {
+    Route::get('/select2', [BudgetLabelController::class, 'select2'])->name('select2');
+    Route::get('/', [BudgetLabelController::class, 'index'])->name('index');
+    Route::get('/data', [BudgetLabelController::class, 'data'])->name('data');
+    Route::get('/create', [BudgetLabelController::class, 'create'])->name('create');
+    Route::post('/', [BudgetLabelController::class, 'store'])->name('store');
+    Route::get('/{id}', [BudgetLabelController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [BudgetLabelController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [BudgetLabelController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/detail', [BudgetLabelController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::get('/{id}/history', [BudgetLabelController::class, 'history'])->name('history')->whereNumber('id');
 });
 
 // Master Output — daftar judul Output Pekerjaan / Output Other (izin menu `output-master`); select di modal WO/SO memakai /output-judul/select2

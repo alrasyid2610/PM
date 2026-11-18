@@ -712,6 +712,8 @@ class SqCloneController extends Controller
             $newPlanId = DB::table($budgetTable)->insertGetId([
                 $parentCol => $newParentId,
                 'label' => $plabel,
+                // Tautan Master Label Budget ikut hanya bila teks label tidak diubah dari plan sumber
+                'id_budget_label' => ($plabel === (string) $sp->label) ? ($sp->id_budget_label ?? null) : null,
                 'keterangan' => $b['keterangan'] ?? null,
                 'hari_mulai' => $hm,
                 'hari_selesai' => $hs,

@@ -18,7 +18,7 @@ class SqFwoBudgetController extends Controller
     use HasAuditHistory;
 
     protected function auditTable(): string { return 'sq_fwo_budgets'; }
-    protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_sq_budget']; }
+    protected function auditExcludeFields(): array { return ['updated_at', 'created_at', 'id_sq_budget', 'id_budget_label']; }
 
     /** Nilai acuan persentase budget (lihat App\Support\BudgetBasis). */
     public function basis($id_sq_fwo)
@@ -98,7 +98,8 @@ class SqFwoBudgetController extends Controller
         if ($lock = SqLock::byFwo($request->input('id_sq_fwo'))) return $lock;
         $request->validate([
             'id_sq_fwo' => 'required|integer|exists:sq_fieldworks,id_sq_fwo',
-            'label' => 'required|string|max:255',
+            'id_budget_label' => 'nullable|integer',
+            'label' => 'nullable|string|max:255',
             'keterangan' => 'nullable|string',
             'hari_mulai' => 'nullable|integer|min:1',
             'hari_selesai' => 'nullable|integer|min:1',
@@ -112,10 +113,16 @@ class SqFwoBudgetController extends Controller
             'items.*.keterangan' => 'nullable|string',
         ]);
 
+        // Label dipilih dari Master Label Budget (unik per induk); salinan teks tetap disimpan di kolom label
+        $lbl = \App\Support\BudgetLabel::tentukan($request, 'sq_fwo_budgets', (int) $request->id_sq_fwo);
+        if (isset($lbl['error'])) return response()->json(['success' => false, 'message' => $lbl['error']], 422);
+        $request->merge(['id_budget_label' => $lbl[0], 'label' => $lbl[1]]);
+
         $id = DB::transaction(function () use ($request) {
             $id = DB::table('sq_fwo_budgets')->insertGetId([
                 'id_sq_fwo' => $request->id_sq_fwo,
                 'label' => $request->label,
+                'id_budget_label'=> $request->id_budget_label,
                 'keterangan' => $request->keterangan,
                 'hari_mulai' => $request->hari_mulai ?: null,
                 'hari_selesai' => $request->hari_selesai ?: null,
@@ -167,7 +174,8 @@ class SqFwoBudgetController extends Controller
         if (!$budget) return response()->json(['message' => 'Tidak ditemukan'], 404);
 
         $request->validate([
-            'label' => 'required|string|max:255',
+            'id_budget_label' => 'nullable|integer',
+            'label' => 'nullable|string|max:255',
             'keterangan' => 'nullable|string',
             'hari_mulai' => 'nullable|integer|min:1',
             'hari_selesai' => 'nullable|integer|min:1',
@@ -183,9 +191,15 @@ class SqFwoBudgetController extends Controller
 
         $before = $this->budgetJson($id);
 
+        // Label dipilih dari Master Label Budget (unik per induk); salinan teks tetap disimpan di kolom label
+        $lbl = \App\Support\BudgetLabel::tentukan($request, 'sq_fwo_budgets', (int) $budget->id_sq_fwo, $budget, 'id_sq_budget');
+        if (isset($lbl['error'])) return response()->json(['success' => false, 'message' => $lbl['error']], 422);
+        $request->merge(['id_budget_label' => $lbl[0], 'label' => $lbl[1]]);
+
         DB::transaction(function () use ($request, $id, $budget) {
             DB::table('sq_fwo_budgets')->where('id_sq_budget', $id)->update([
                 'label' => $request->label,
+                'id_budget_label'=> $request->id_budget_label,
                 'keterangan' => $request->keterangan,
                 'hari_mulai' => $request->hari_mulai ?: null,
                 'hari_selesai' => $request->hari_selesai ?: null,
