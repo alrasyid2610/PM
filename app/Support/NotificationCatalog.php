@@ -147,6 +147,12 @@ class NotificationCatalog
                 'fields' => ['no_sq', 'judul_order', 'nama_user'],
                 'roles'  => self::ROLES_SQ,
             ],
+            'sq.budget_selesai' => [
+                'label' => 'Budget SQ Ditandai Selesai', 'module' => 'Sales Quotation',
+                'description' => 'Terpicu begitu PIC Order menandai Budget (WO & FWO) SQ sudah selesai diisi/dicek.',
+                'fields' => ['no_sq', 'judul_order', 'nama_user'],
+                'roles'  => self::ROLES_SQ,
+            ],
             'testing_point.diajukan' => [
                 'label' => 'Testing Point / Paket Diajukan (Menunggu Approval)', 'module' => 'Testing Point',
                 'description' => 'Terpicu begitu Testing Point atau Paket diajukan untuk approval (termasuk perubahan pada data yang sudah disetujui). Penerima biasanya "User tertentu" (approver).',

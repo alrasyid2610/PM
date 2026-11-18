@@ -199,6 +199,11 @@ class CheckMenuPermission
             return 'can_update';
         }
 
+        // Syarat Sample per Testing Point (tambah/ubah nilai/hapus) = mengubah data Testing Point yang ada → can_update
+        if (in_array($method, ['POST', 'DELETE'], true) && preg_match('#^testing-points/\d+/syarat#', $path)) {
+            return 'can_update';
+        }
+
         // Ajukan / Tarik approval Testing Point & Paket = mengubah status data yang sudah ada → can_update
         if ($method === 'POST' && preg_match('#^testing-points/\d+/(paket/\d+/)?(ajukan|tarik)$#', $path)) {
             return 'can_update';

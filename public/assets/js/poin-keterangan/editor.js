@@ -8,6 +8,7 @@
 const PoinEditor = (function () {
     const SRC = '\\{([a-z0-9_]+):([a-z]+)(?:=([^{}]*))?\\}';
     const re = () => new RegExp(SRC, 'g');
+    let UNTUK = 'SQ';   // istilah di teks bantuan; init($ta, { untuk }) menggantinya (mis. Syarat Sample)
 
     const TIPE = {
         angka:    { label: 'Angka',         icon: 'fa-hashtag',          nama: 'jumlah',
@@ -147,7 +148,7 @@ const PoinEditor = (function () {
 
     function helpHtml() {
         return `
-        <p class="mb-1">Bagian kalimat yang bisa diubah per SQ ditulis sebagai <b>isian</b>:
+        <p class="mb-1">Bagian kalimat yang bisa diubah per ${UNTUK} ditulis sebagai <b>isian</b>:
         <code>{kunci:tipe}</code> atau <code>{kunci:tipe=nilai awal}</code>.</p>
         <ul>
             <li><b>kunci</b> — nama isian, huruf kecil/angka/_ (mis. <code>hari</code>). Tidak boleh sama dalam 1 teks.</li>
@@ -163,7 +164,12 @@ const PoinEditor = (function () {
     }
 
     // ── Init per textarea ───────────────────────────────────────────────────
-    function init($ta) {
+    // opts.tipe = daftar tipe yang boleh dipakai (default semua); opts.untuk = istilah di teks bantuan (default 'SQ').
+    // Hanya 1 editor per halaman, jadi pembatasan tipe memakai TIPE bersama (tipe lain dibuang).
+    function init($ta, opts) {
+        opts = opts || {};
+        if (opts.untuk) UNTUK = opts.untuk;
+        if (Array.isArray(opts.tipe)) Object.keys(TIPE).forEach(k => { if (!opts.tipe.includes(k)) delete TIPE[k]; });
         $ta = $($ta).first();
         if (!$ta.length || $ta.data('poinEditor')) return;
         $ta.data('poinEditor', true);

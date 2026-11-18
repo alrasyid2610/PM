@@ -75,6 +75,8 @@ use App\Http\Controllers\PersonnelController;
 use App\Http\Controllers\KendaraanController;
 use App\Http\Controllers\OutputMasterController;
 use App\Http\Controllers\BudgetLabelController;
+use App\Http\Controllers\SyaratSampleController;
+use App\Http\Controllers\TestingPointSyaratController;
 use App\Http\Controllers\DocumentationController;
 use Spatie\LaravelPdf\Facades\Pdf;
 
@@ -271,6 +273,20 @@ Route::prefix('personnel')->name('personnel.')->group(function () {
     Route::get('/{id}/history', [PersonnelController::class, 'history'])->name('history')->whereNumber('id');
     Route::post('/{id}/account', [PersonnelController::class, 'createAccount'])->name('create-account')->whereNumber('id');
     Route::delete('/{id}/account', [PersonnelController::class, 'revokeAccount'])->name('revoke-account')->whereNumber('id');
+});
+
+// Master Syarat Sample — syarat pengambilan/penerimaan sample (izin menu `syarat-sample`); dipilih per Testing Point di tab Syarat
+Route::prefix('syarat-sample')->name('syarat-sample.')->group(function () {
+    Route::get('/select2', [SyaratSampleController::class, 'select2'])->name('select2');
+    Route::get('/', [SyaratSampleController::class, 'index'])->name('index');
+    Route::get('/data', [SyaratSampleController::class, 'data'])->name('data');
+    Route::get('/create', [SyaratSampleController::class, 'create'])->name('create');
+    Route::post('/', [SyaratSampleController::class, 'store'])->name('store');
+    Route::get('/{id}', [SyaratSampleController::class, 'show'])->name('show')->whereNumber('id');
+    Route::put('/{id}', [SyaratSampleController::class, 'update'])->name('update')->whereNumber('id');
+    Route::delete('/{id}', [SyaratSampleController::class, 'destroy'])->name('destroy')->whereNumber('id');
+    Route::get('/{id}/detail', [SyaratSampleController::class, 'detail'])->name('detail')->whereNumber('id');
+    Route::get('/{id}/history', [SyaratSampleController::class, 'history'])->name('history')->whereNumber('id');
 });
 
 // Master Label Budget — label Budget Plan WO/FWO/SQ WO/SQ FWO dipilih dari sini (izin menu budget-label); select di modal memakai /budget-label/select2
@@ -538,6 +554,12 @@ Route::prefix('testing-points')
         Route::post('/{id}/paket', [TestingPointPaketController::class, 'store'])->name('paket.store')->whereNumber('id');
         Route::put('/{id}/paket/{paket}', [TestingPointPaketController::class, 'update'])->name('paket.update')->whereNumber(['id', 'paket']);
         Route::delete('/{id}/paket/{paket}', [TestingPointPaketController::class, 'destroy'])->name('paket.destroy')->whereNumber(['id', 'paket']);
+
+        // Syarat Sample per Testing Point (tab "Syarat") — POST/DELETE diperlakukan sebagai can_update (lihat CheckMenuPermission)
+        Route::get('/{id}/syarat', [TestingPointSyaratController::class, 'index'])->name('syarat.index')->whereNumber('id');
+        Route::post('/{id}/syarat', [TestingPointSyaratController::class, 'store'])->name('syarat.store')->whereNumber('id');
+        Route::put('/{id}/syarat/{row}', [TestingPointSyaratController::class, 'update'])->name('syarat.update')->whereNumber(['id', 'row']);
+        Route::delete('/{id}/syarat/{row}', [TestingPointSyaratController::class, 'destroy'])->name('syarat.destroy')->whereNumber(['id', 'row']);
 
         Route::get('/', [TestingPointController::class, 'index'])->name('index');
         Route::get('/data', [TestingPointController::class, 'data'])->name('data');
@@ -889,6 +911,7 @@ Route::prefix('sales-quotations')->name('sales-quotations.')->group(function () 
     Route::get('/{id}/penawaran', [SalesQuotationController::class, 'penawaranPdf'])->name('penawaran')->whereNumber('id');
     Route::post('/{id}/ajukan', [SalesQuotationController::class, 'ajukan'])->name('ajukan')->whereNumber('id');
     Route::post('/{id}/tarik', [SalesQuotationController::class, 'tarik'])->name('tarik')->whereNumber('id');
+    Route::post('/{id}/tandai-budget-selesai', [SalesQuotationController::class, 'tandaiBudgetSelesai'])->name('tandai-budget-selesai')->whereNumber('id');
     Route::post('/{id}/setujui', [SalesQuotationController::class, 'setujui'])->name('setujui')->whereNumber('id');
     Route::post('/{id}/tolak', [SalesQuotationController::class, 'tolak'])->name('tolak')->whereNumber('id');
     Route::post('/{id}/win', [SalesQuotationController::class, 'win'])->name('win')->whereNumber('id');

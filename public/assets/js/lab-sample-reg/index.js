@@ -893,11 +893,16 @@ function renderWoRegFromFwoList(groups) {
     const body = rows.map(function ({ g, s }) {
         const jenisTxt = JENIS_LABEL_WO_SAMPLE[s.jenis_sample] || s.jenis_sample || '';
         const params = g.parameter || [];
-        const searchText = [s.no_sample, jenisTxt, s.titik_lokasi, g.no_fwo, g.kelompok_matriks, g.nama_boq, g.label, params.join(' ')].filter(Boolean).join(' ').toLowerCase();
+        const searchText = [s.no_sample, jenisTxt, s.titik_lokasi, g.no_fwo, g.kelompok_matriks, g.nama_boq, g.label, params.join(' '), (g.syarat || []).join(' ')].filter(Boolean).join(' ').toLowerCase();
         // Parameter: dipotong 3 baris, klik "Lihat semua" untuk membuka penuh
         const paramCell = params.length
             ? `<div class="wo-reg-param" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35;">${params.map(escHtml).join(', ')}</div>`
               + (params.length > 4 ? `<a href="#" class="wo-reg-param-toggle" data-n="${params.length}" style="font-size:11px;">Lihat semua (${params.length})</a>` : '')
+            : dash;
+        // Syarat Sample Testing Point BOQ ini (dari Master Syarat Sample; tampil saja): dipotong 3 baris, tooltip memuat semuanya
+        const syarat = g.syarat || [];
+        const syaratCell = syarat.length
+            ? `<div style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35;" title="${escHtml(syarat.join('\n'))}">${syarat.map((x, i) => (i + 1) + '. ' + escHtml(x)).join('<br>')}</div>`
             : dash;
         return `
         <tr class="wo-reg-from-fwo-row" data-search="${escHtml(searchText)}" data-kelompok="${escHtml(kelKey(g))}" data-fwo="${escHtml(fwoKey(g))}" data-jenis="${escHtml(jenisTxt)}" style="cursor:pointer;">
@@ -910,6 +915,7 @@ function renderWoRegFromFwoList(groups) {
             <td style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(g.kelompok_matriks || '')}">${g.kelompok_matriks ? escHtml(g.kelompok_matriks) : dash}</td>
             <td style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(g.nama_boq || '')}">${escHtml(g.nama_boq || '-')}</td>
             <td style="font-size:12px;overflow:hidden;">${paramCell}</td>
+            <td style="font-size:12px;overflow:hidden;">${syaratCell}</td>
             <td style="font-size:12px;overflow:hidden;">${s.titik_lokasi ? escHtml(s.titik_lokasi) : dash}</td>
             <td style="font-size:12px;white-space:nowrap;">${s.tanggal_pengambilan ? fmtDate(s.tanggal_pengambilan) : dash}</td>
             <td style="font-size:12px;white-space:nowrap;">${s.kondisi_sample ? (KONDISI_LABEL_WO[s.kondisi_sample] || escHtml(s.kondisi_sample)) : dash}</td>
@@ -958,6 +964,7 @@ function renderWoRegFromFwoList(groups) {
                     <th style="${th}width:150px;">Kelompok Matriks</th>
                     <th style="${th}width:240px;">BOQ</th>
                     <th style="${th}width:440px;">Parameter</th>
+                    <th style="${th}width:300px;">Syarat Sample</th>
                     <th style="${th}width:210px;">Titik Lokasi</th>
                     <th style="${th}width:115px;">Tgl Ambil</th>
                     <th style="${th}width:95px;">Kondisi</th>

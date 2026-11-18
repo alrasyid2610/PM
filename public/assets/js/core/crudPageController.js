@@ -104,6 +104,10 @@ class CrudPageController {
                 $('#detailContent').html('');
                 $('#history-tab').addClass('disabled').attr('disabled', true);
                 document.title = self.baseTitle;
+                // Kembali ke entri daftar (tanpa ?open=): pindah ke tab Data. Tanpa ini tab Detail/History
+                // tetap aktif dengan isi kosong (kasus Back / gesture geser 2 jari setelah membuka detail).
+                var $dataTab = $('#data-tab');
+                if ($dataTab.length) new bootstrap.Tab($dataTab[0]).show();
             }
         });
     }

@@ -134,4 +134,5 @@
 
 <script src="{{ asset('assets/js/testing-points/form.js') }}"></script>
 <script src="{{ asset('assets/js/testing-points/index.js') }}"></script>
+<script src="{{ asset('assets/js/testing-points/syarat.js') }}?v={{ @filemtime(public_path('assets/js/testing-points/syarat.js')) }}"></script>
 @endsection

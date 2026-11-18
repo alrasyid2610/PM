@@ -88,11 +88,19 @@ function renderForm(res) {
                         Paket
                     </button>
                 </li>
+                <li role="presentation">
+                    <button class="pm-tab-btn" type="button" role="tab"
+                        data-bs-toggle="tab" data-bs-target="#tabPointSyarat">
+                        <i class="fa-solid fa-clipboard-check me-1" style="color:#0e7490;font-size:11px;"></i>
+                        Syarat
+                    </button>
+                </li>
             </ul>
             <div class="pm-tab-actions">
                 <div id="pointTabActionsInfo" class="d-flex align-items-center gap-2"></div>
                 <div id="pointTabActionsItems" class="d-flex align-items-center gap-2 d-none"></div>
                 <div id="pointTabActionsPaket" class="d-flex align-items-center gap-2 d-none"></div>
+                <div id="pointTabActionsSyarat" class="d-flex align-items-center gap-2 d-none"></div>
             </div>
         </div>
         <div class="pm-tab-body">
@@ -248,6 +256,18 @@ function renderForm(res) {
                         ${formGroup.sectionCard(
                             { icon: 'fa-boxes-stacked', color: 'icon-amber', title: 'Paket', subtitle: 'Kumpulan item pilihan dari Testing Point ini — dipakai sebagai jalan pintas saat membuat BOQ' },
                             `<div id="pointPaketWrap" data-id="${res.id_testing_point}" data-no-disable>
+                                <div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data...</div>
+                            </div>`
+                        )}
+                    </div>
+                </div>
+
+                <!-- TAB: SYARAT — syarat sample dari Master Syarat Sample + angka isiannya; disimpan per baris, tidak ikut tombol Edit/Simpan form -->
+                <div class="tab-pane fade" id="tabPointSyarat" role="tabpanel">
+                    <div class="card card-body">
+                        ${formGroup.sectionCard(
+                            { icon: 'fa-clipboard-check', color: 'icon-teal', title: 'Syarat Sample', subtitle: 'Syarat pengambilan / penerimaan sample untuk Testing Point ini — ditampilkan di Lab Sample Reg' },
+                            `<div id="pointSyaratWrap" data-id="${res.id_testing_point}" data-no-disable>
                                 <div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data...</div>
                             </div>`
                         )}

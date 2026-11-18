@@ -122,6 +122,7 @@ return [
             ['slug' => 'kendaraan', 'label' => 'Kendaraan', 'icon' => 'fa-truck-pickup'],
             ['slug' => 'output-master', 'label' => 'Master Output', 'icon' => 'fa-file-lines'],
             ['slug' => 'budget-label', 'label' => 'Master Label Budget', 'icon' => 'fa-tags'],
+            ['slug' => 'syarat-sample', 'label' => 'Syarat Sample', 'icon' => 'fa-clipboard-check'],
         ],
     ],
     [

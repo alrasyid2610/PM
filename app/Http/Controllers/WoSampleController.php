@@ -332,6 +332,7 @@ class WoSampleController extends Controller
                 DB::raw("CONCAT(fw.no_fwo, ' — ', COALESCE(TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))), b.item_produk_alternate)) as label"),
                 'fw.no_fwo', DB::raw("COALESCE(TRIM(CONCAT_WS(' ', NULLIF(tms.judul_indonesia,''), NULLIF(ts.nomor,''), NULLIF(tp.nama,''))), b.item_produk_alternate) as nama_boq"),
                 'tkms.judul_indonesia as kelompok_matriks',
+                'b.id_testing_point',
             ])
             ->orderBy('fw.no_fwo')
             ->get();
@@ -357,8 +358,15 @@ class WoSampleController extends Controller
                 ->filter()
                 ->values();
 
-            $groups[] = ['label' => $boq->label, 'no_fwo' => $boq->no_fwo, 'nama_boq' => $boq->nama_boq, 'kelompok_matriks' => $boq->kelompok_matriks, 'parameter' => $parameter, 'samples' => $samples];
+            $groups[] = ['label' => $boq->label, 'no_fwo' => $boq->no_fwo, 'nama_boq' => $boq->nama_boq, 'kelompok_matriks' => $boq->kelompok_matriks, 'id_testing_point' => $boq->id_testing_point, 'parameter' => $parameter, 'samples' => $samples];
         }
+
+        // Syarat Sample per Testing Point (master Syarat Sample; tampil saja — cek terpenuhi/tidak menyusul)
+        $syarat = \App\Support\SyaratSample::byPoints(array_column($groups, 'id_testing_point'));
+        foreach ($groups as &$g) {
+            $g['syarat'] = array_column($syarat[(int) ($g['id_testing_point'] ?? 0)] ?? [], 'teks');
+        }
+        unset($g);
 
         // Sejak 2026-11-08 registrasi lab HANYA untuk sample asal FWO — pool BOQ WO-langsung (jalur b) tidak lagi ditawarkan.
         return response()->json(['data' => $groups]);

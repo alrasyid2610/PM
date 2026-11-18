@@ -88,6 +88,21 @@ function renderForm(res) {
            </a>`
         : '';
 
+    // Budget (WO & FWO) sudah ditandai selesai oleh PIC Order? — wajib sebelum Ajukan Approval
+    const budgetSelesai = res.status_budget === 'selesai';
+    const budgetTagTitle = budgetSelesai
+        ? `Ditandai oleh ${escHtml(res.budget_selesai_oleh_nama || '—')}${res.budget_selesai_at ? ' pada ' + new Date(res.budget_selesai_at).toLocaleString('id-ID') : ''}`
+        : 'PIC Order belum menandai Budget selesai';
+    const budgetTag = !isDeleted
+        ? (budgetSelesai
+            ? `<span class="pm-badge" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;" title="${budgetTagTitle}">
+                   <i class="fa-solid fa-circle-check" style="font-size:10px;"></i> Budget Selesai
+               </span>`
+            : `<span class="pm-badge" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;" title="${budgetTagTitle}">
+                   <i class="fa-solid fa-triangle-exclamation" style="font-size:10px;"></i> Budget Belum Selesai
+               </span>`)
+        : '';
+
     return `
 <form id="detailForm">
     <input type="hidden" name="_token" value="${window.route.csrf}">
@@ -100,7 +115,7 @@ function renderForm(res) {
         deleteId: (isDeleted || isWin) ? null : res.id_sq,
         editText: (isDeleted || !isDraft) ? '' : 'Edit SQ',
         statusBadge: sqStatusBadge(res),
-        tags: revBadge + riwayatTag + soTerbitTag + pelangganTag,
+        tags: revBadge + riwayatTag + soTerbitTag + pelangganTag + budgetTag,
         moreActions: [
             {
                 label: "Penawaran (PDF)",
@@ -116,6 +131,11 @@ function renderForm(res) {
                 label: "Bandingkan SQ",
                 icon: "fa-solid fa-code-compare",
                 attrs: `onclick="openCompareSqModal(${res.id_sq}, '${escHtml(res.no_sq ?? '')} Rev.${res.revisi ?? 0}')"`,
+            }] : []),
+            ...(!isDeleted && res.bisa_tandai_budget && !budgetSelesai && can('sales-quotations', 'can_create') ? [{
+                label: "Tandai Budget Selesai",
+                icon: "fa-solid fa-sack-dollar",
+                attrs: `onclick="tandaiBudgetSelesaiSq(${res.id_sq})"`,
             }] : []),
             ...(!isDeleted && isDraft && can('sales-quotations', 'can_update') ? [{
                 label: "Ajukan Approval",

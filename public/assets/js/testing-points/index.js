@@ -3,12 +3,17 @@ let page;
 // ── Tab switch ────────────────────────────────────────────────────────────────
 $(document).on('shown.bs.tab', '#pointDetailTabs button[data-bs-toggle="tab"]', function (e) {
     const target = $(e.target).data('bs-target');
-    $('#pointTabActionsInfo, #pointTabActionsItems, #pointTabActionsPaket').addClass('d-none');
+    $('#pointTabActionsInfo, #pointTabActionsItems, #pointTabActionsPaket, #pointTabActionsSyarat').addClass('d-none');
     if (target === '#tabPointInfo')  $('#pointTabActionsInfo').removeClass('d-none');
     if (target === '#tabPointItems') $('#pointTabActionsItems').removeClass('d-none');
     if (target === '#tabPointPaket') {
         $('#pointTabActionsPaket').removeClass('d-none');
         loadPointPaket();
+    }
+    if (target === '#tabPointSyarat') {
+        $('#pointTabActionsSyarat').removeClass('d-none').html(can('testing-points', 'can_update')
+            ? '<button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 btn-syarat-add" data-no-disable><i class="fa-solid fa-plus me-1"></i> Syarat</button>' : '');
+        loadPointSyarat();
     }
 });
 

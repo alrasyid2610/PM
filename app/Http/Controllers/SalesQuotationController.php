@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Support\DocumentNumber;
 use App\Support\SqLock;
 use App\Support\SqKeterangan;
+use App\Support\SqBudgetSelesai;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Traits\HasAuditHistory;
@@ -38,7 +39,7 @@ class SalesQuotationController extends Controller
 
     protected function auditExcludeFields(): array
     {
-        return ['updated_at', 'created_at', 'id_sq', 'diajukan_oleh', 'approval_oleh'];
+        return ['updated_at', 'created_at', 'id_sq', 'diajukan_oleh', 'approval_oleh', 'budget_selesai_oleh'];
     }
 
     public function index()
@@ -188,6 +189,12 @@ class SalesQuotationController extends Controller
         $sq->bisa_tarik = $sq->status === 'pending'
             && ((int) $sq->diajukan_oleh === (int) auth()->id() || userCan('sq-approve', 'can_update'));
 
+        // Budget: nama penanda + apakah user ini (PIC Order SQ ini, selagi Draft) boleh menandai selesai
+        $sq->budget_selesai_oleh_nama = $sq->budget_selesai_oleh
+            ? DB::table('users')->where('id', $sq->budget_selesai_oleh)->value('name')
+            : null;
+        $sq->bisa_tandai_budget = SqBudgetSelesai::bisaTandai((array) $sq);
+
         $rootId = $sq->id_sq_induk ?: $sq->id_sq;
         $sq->riwayat_revisi = DB::table('sales_quotations')
             ->where(fn($q) => $q->where('id_sq', $rootId)->orWhere('id_sq_induk', $rootId))
@@ -269,6 +276,11 @@ class SalesQuotationController extends Controller
     {
         // Semua syarat dikumpulkan dulu supaya user melihat seluruh kekurangan sekaligus
         $alasan = [];
+
+        $statusBudget = DB::table('sales_quotations')->where('id_sq', $id)->value('status_budget');
+        if ($statusBudget !== SqBudgetSelesai::SELESAI) {
+            $alasan[] = 'PIC Order belum menandai Budget selesai (menu ⋮ → "Tandai Budget Selesai"; boleh Budget kosong, tapi harus ditandai dulu).';
+        }
 
         $woIds = DB::table('sq_work_orders')->where('id_sq', $id)->pluck('id_sq_wo');
         if ($woIds->isEmpty()) {
@@ -355,6 +367,35 @@ class SalesQuotationController extends Controller
 
         $this->notifySq('sq.diajukan', $id, 'SQ diajukan: {{no_sq}}');
         return response()->json(['success' => true, 'message' => 'SQ diajukan untuk approval manager. SQ terkunci sampai ada keputusan.']);
+    }
+
+    /**
+     * PIC Order menandai Budget (WO & FWO) sudah selesai diisi/dicek — boleh Budget kosong (mis. SQ
+     * yang sample-nya diantar langsung ke kantor, tidak perlu Budget). Wajib sebelum Ajukan Approval
+     * (lihat syaratFinalkan()). Reset otomatis ke 'belum' tiap Budget diubah lagi (App\Support\SqBudgetSelesai).
+     */
+    public function tandaiBudgetSelesai($id)
+    {
+        $sq = DB::table('sales_quotations')->where('id_sq', $id)->whereNull('deleted_at')->first();
+        if (!$sq) return response()->json(['message' => 'Sales Quotation tidak ditemukan'], 404);
+        if ($sq->status !== 'draft') {
+            return response()->json(['message' => 'Hanya SQ berstatus Draft yang bisa ditandai.'], 422);
+        }
+        if ((int) $sq->pic_order !== (int) auth()->id()) {
+            return response()->json(['message' => 'Hanya PIC Order SQ ini yang bisa menandai Budget selesai.'], 403);
+        }
+
+        $before = DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson();
+        DB::table('sales_quotations')->where('id_sq', $id)->update([
+            'status_budget' => SqBudgetSelesai::SELESAI,
+            'budget_selesai_oleh' => auth()->id(),
+            'budget_selesai_at' => now(),
+            'updated_at' => now(),
+        ]);
+        saveAudit('sales_quotations', $id, 'update', $before, DB::table('sales_quotations')->where('id_sq', $id)->get()->toJson());
+
+        $this->notifySq('sq.budget_selesai', $id, 'Budget SQ ditandai selesai: {{no_sq}}');
+        return response()->json(['success' => true, 'message' => 'Budget ditandai selesai. Pembuat SQ akan menerima notifikasi.']);
     }
 
     /** Menunggu Approval → Draft, ditarik kembali oleh pengaju (atau approver). */
@@ -519,6 +560,10 @@ class SalesQuotationController extends Controller
             $data['keterangan_status'] = null;
             $data['terkirim_at'] = null;
             $data['diputuskan_at'] = null;
+            // Budget harus ditandai ulang oleh PIC Order di revisi baru (data lama tidak ikut)
+            $data['status_budget'] = SqBudgetSelesai::BELUM;
+            $data['budget_selesai_oleh'] = null;
+            $data['budget_selesai_at'] = null;
             $data['attachment'] = json_encode([]);
             $data['deleted_at'] = null;
             $data['created_at'] = now();

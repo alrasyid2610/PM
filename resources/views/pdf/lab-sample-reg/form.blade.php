@@ -24,6 +24,11 @@
     table.smp tr { page-break-inside: avoid; }
     table.smp td.c { text-align: center; }
     .total { font-size: 10.5px; margin-top: 8px; color: #334155; }
+    .syarat { margin-top: 14px; page-break-inside: avoid; }
+    .syarat .judul { font-size: 10px; font-weight: 700; color: #203864; margin: 6px 0 2px; }
+    .syarat .judul span { font-weight: 400; color: #64748b; }
+    .syarat ol { margin: 0 0 4px 16px; padding: 0; font-size: 9.5px; color: #1f2937; }
+    .syarat li { margin-bottom: 1px; }
 
     table.ttd { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 26px; page-break-inside: avoid; }
     table.ttd td { width: 50%; text-align: center; font-size: 11px; vertical-align: top; }
@@ -106,6 +111,20 @@
         </tbody>
     </table>
     <div class="total">Total: <b>{{ $samples->count() }}</b> sample</div>
+
+    @if (!empty($syaratGroups))
+    <div class="syarat">
+        <h2>Syarat Sample</h2>
+        @foreach ($syaratGroups as $g)
+            <div class="judul">{{ $g['label'] }} <span>({{ $g['jumlah'] }} sample)</span></div>
+            <ol>
+                @foreach ($g['syarat'] as $teks)
+                    <li>{{ $teks }}</li>
+                @endforeach
+            </ol>
+        @endforeach
+    </div>
+    @endif
 
     <table class="ttd">
         <tr>

@@ -149,6 +149,7 @@ class SqWoBudgetController extends Controller
 
         $after = $this->budgetJson($id);
         saveAudit('sq_wo_budgets', $id, 'Create', '', $after, ['sq_work_orders', $request->id_sq_wo]);
+        \App\Support\SqBudgetSelesai::resetByWo($request->id_sq_wo);
 
         return response()->json(['success' => true, 'id' => $id]);
     }
@@ -242,6 +243,7 @@ class SqWoBudgetController extends Controller
 
         $after = $this->budgetJson($id);
         saveAudit('sq_wo_budgets', $id, 'Update', $before, $after, ['sq_work_orders', $budget->id_sq_wo]);
+        \App\Support\SqBudgetSelesai::resetByWo($budget->id_sq_wo);
 
         return response()->json(['success' => true]);
     }
@@ -256,6 +258,7 @@ class SqWoBudgetController extends Controller
         DB::table('sq_wo_budget_items')->where('id_sq_budget', $id)->delete();
         DB::table('sq_wo_budgets')->where('id_sq_budget', $id)->delete();
         saveAudit('sq_wo_budgets', $id, 'Delete', $before, '', ['sq_work_orders', $budget->id_sq_wo]);
+        \App\Support\SqBudgetSelesai::resetByWo($budget->id_sq_wo);
 
         return response()->json(['success' => true]);
     }

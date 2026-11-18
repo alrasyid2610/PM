@@ -176,12 +176,27 @@ class LabSampleRegController extends Controller
             ->groupBy('k')->map(fn ($g) => $g->pluck('judul_indonesia')->filter()->values()->all());
         $parameter = $rows->mapWithKeys(fn ($r) => [$r->id_lab_sample => $r->id_fwo_boq ? ($paramFwo[$r->id_fwo_boq] ?? []) : ($paramBoq[$r->id_boq] ?? [])]);
 
+        // Syarat Sample (master Syarat Sample) per Testing Point dari sample di form ini — dikelompokkan per BOQ/Testing Point
+        $tpByFwoBoq = DB::table('fieldwork_boq as fb')->join('boq as b', 'b.id_boq', '=', 'fb.id_boq')
+            ->whereIn('fb.id_fwo_boq', $rows->pluck('id_fwo_boq')->filter()->unique())->pluck('b.id_testing_point', 'fb.id_fwo_boq');
+        $tpByBoq = DB::table('boq')->whereIn('id_boq', $rows->whereNull('id_fwo_boq')->pluck('id_boq')->filter()->unique())->pluck('id_testing_point', 'id_boq');
+        $tpBySample = $rows->mapWithKeys(fn ($r) => [$r->id_lab_sample => (int) ($r->id_fwo_boq ? ($tpByFwoBoq[$r->id_fwo_boq] ?? 0) : ($tpByBoq[$r->id_boq] ?? 0))]);
+        $syaratByPoint = \App\Support\SyaratSample::byPoints($tpBySample->values()->all());
+        $syaratGroups = [];
+        foreach (collect($samples) as $s) {
+            $tp = $tpBySample[$s->id_lab_sample] ?? 0;
+            if (!$tp || empty($syaratByPoint[$tp])) continue;
+            $syaratGroups[$tp] ??= ['label' => $s->nama_boq ?? '-', 'jumlah' => 0, 'syarat' => array_column($syaratByPoint[$tp], 'teks')];
+            $syaratGroups[$tp]['jumlah']++;
+        }
+
         return Pdf::view('pdf.lab-sample-reg.form', [
             'reg'       => $reg,
             'wo'        => $wo,
             'samples'   => collect($samples),
             'fwoNo'     => $fwoNo,
             'parameter' => $parameter,
+            'syaratGroups' => array_values($syaratGroups),
         ])
             ->headerView('pdf.layouts.sections.header')
             ->footerView('pdf.layouts.sections.footer')

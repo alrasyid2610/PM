@@ -498,6 +498,21 @@ function tarikSq(idSq) {
     });
 }
 
+function tandaiBudgetSelesaiSq(idSq) {
+    Swal.fire({
+        title: 'Tandai Budget selesai?',
+        html: 'Menandai Budget (WO & FWO) SQ ini sudah selesai diisi/dicek — boleh walau Budget-nya kosong. Pembuat SQ akan menerima notifikasi. Status ini otomatis kembali <strong>Belum</strong> kalau Budget diubah lagi.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Tandai Selesai',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#16a34a',
+        reverseButtons: true,
+    }).then(function (result) {
+        if (result.isConfirmed) sqStatusAction('/sales-quotations/' + idSq + '/tandai-budget-selesai', {}, 'Budget ditandai selesai.');
+    });
+}
+
 function setujuiSq(idSq) {
     Swal.fire({
         title: 'Setujui Sales Quotation?',
