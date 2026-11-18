@@ -193,6 +193,11 @@ class CheckMenuPermission
             return 'can_update';
         }
 
+        // Holding BR (tambah/lepas anggota) = mengubah data BR → can_update (bukan create/delete)
+        if (in_array($method, ['POST', 'DELETE'], true) && preg_match('#^business-relations/\d+/holding#', $path)) {
+            return 'can_update';
+        }
+
         if ($method === 'GET') {
             if ($last === 'create') return 'can_create';
             if ($last === 'edit')   return 'can_update';

@@ -1,7 +1,7 @@
 // ─── TAB ACTIONS HELPER ────────────────────────────────────────────────────
 
 function hideAllBrTabActions() {
-    $('#brTabActionsEnv, #brTabActionsWe, #brTabActionsMp, #brTabActionsProduct, #brTabActionsContact, #brTabActionsSiteInfo')
+    $('#brTabActionsEnv, #brTabActionsWe, #brTabActionsMp, #brTabActionsProduct, #brTabActionsContact, #brTabActionsSiteInfo, #brTabActionsHolding')
         .addClass('d-none').removeClass('d-flex');
 }
 
@@ -1990,6 +1990,11 @@ function renderForm(res) {
         editText: 'Edit Business Relation',
         noWrap: true,
         subtitle: `
+            ${(res.rantai_induk || []).length ? `
+            <div class="d-flex align-items-center flex-wrap gap-1" style="margin-bottom:6px;font-size:12px;">
+                <span class="pm-badge" style="background:#f5f3ff;color:#6d28d9;"><i class="fa-solid fa-sitemap" style="font-size:10px;"></i> Induk</span>
+                ${res.rantai_induk.map(p => `<a class="pm-link-record" href="/business-relations?open=${p.id_br}">${escHtml(p.nama)}</a>`).join('<span class="text-muted">›</span>')}
+            </div>` : ''}
             <div class="d-flex align-items-center gap-2 detail-date" style="margin:0;">
                 <span class="badge rounded-pill" style="background:#e0f2fe;color:#0284c7;font-size:11px;font-weight:600;">
                     <i class="fa-solid fa-location-dot me-1" style="font-size:10px;"></i>${res.jumlah_site ?? 0} Site
@@ -2035,6 +2040,15 @@ function renderForm(res) {
                         Site
                     </button>
                 </li>
+                <li role="presentation">
+                    <button class="pm-tab-btn" type="button" role="tab"
+                        data-bs-toggle="tab" data-bs-target="#tabBrsHolding"
+                        data-id-br="${res.id_br}">
+                        <i class="fa-solid fa-sitemap me-1" style="color:#7c3aed;font-size:11px;"></i>
+                        Holding
+                        <span class="pm-badge" style="background:#f5f3ff;color:#6d28d9;font-size:10px;margin-left:4px;">${res.jumlah_anggota ?? 0}</span>
+                    </button>
+                </li>
             </ul>
             <div class="pm-tab-actions">
                 ${can('business-relations', 'can_create') ? `
@@ -2064,6 +2078,15 @@ function renderForm(res) {
                         style="border-color:#0f766e;color:#0f766e;">
                         <i class="fa-solid fa-plus" style="font-size:10px;"></i>
                         <i class="fa-solid fa-box-open" style="font-size:11px;"></i> Tambah
+                    </button>` : ''}
+                </div>
+                <div id="brTabActionsHolding" class="d-none align-items-center gap-2">
+                    ${can('business-relations', 'can_update') ? `
+                    <button type="button" class="pm-btn-pill btn-holding-add"
+                        data-id-br="${res.id_br}" data-no-disable
+                        style="border-color:#7c3aed;color:#7c3aed;">
+                        <i class="fa-solid fa-plus" style="font-size:10px;"></i>
+                        <i class="fa-solid fa-sitemap" style="font-size:11px;"></i> Anggota
                     </button>` : ''}
                 </div>
                 <div id="brTabActionsSiteInfo" class="d-none align-items-center gap-2">
@@ -2199,6 +2222,40 @@ function renderForm(res) {
                     </div>
                 </div>
 
+                <!-- TAB: HOLDING (anggota holding / kepemilikan bertingkat) -->
+                <div class="tab-pane fade" id="tabBrsHolding" role="tabpanel">
+                    <div class="card card-body" id="holding-wrap" data-id-br="${res.id_br}">
+                        <div class="dataTables_wrapper">
+                            <div class="dt-top d-flex align-items-center gap-3 mb-3">
+                                <div class="dataTables_length">
+                                    <label>Show
+                                        <select id="holding-page-size" data-no-disable>
+                                            <option value="10">10</option>
+                                            <option value="25">25</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                        </select>
+                                        entries
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input" type="checkbox" id="holding-semua" data-no-disable>
+                                    <label class="form-check-label" for="holding-semua" style="font-size:12px;">Tampilkan semua turunan</label>
+                                </div>
+                                <div class="ms-auto dataTables_filter">
+                                    <label><input type="search" id="holding-search" class="form-control form-control-sm"
+                                        placeholder="Cari..." data-no-disable></label>
+                                </div>
+                            </div>
+                            <div id="holding-list">
+                                <div class="text-center text-muted py-4">
+                                    <i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- TAB: SITE (picker → workspace per-site) -->
                 <div class="tab-pane fade" id="tabBrsSite" role="tabpanel">
                     ${renderSiteTab(res.id_br)}
@@ -2215,4 +2272,236 @@ function renderForm(res) {
 
 </form>
 `;
+}
+
+// ─── HOLDING / INDUK BR (sejak 2026-11-17) ────────────────────────────────
+// Tab "Holding": daftar anggota langsung BR ini (bisa di-expand per tingkat, dimuat saat di-klik) atau
+// "semua turunan" (daftar rata). Tampilan tabel = gaya DataTables yang sama dengan daftar Site (tab Site):
+// Show entries, cari, info "Showing x to y of z", paginasi — semuanya sisi klien.
+// Tambah/Lepas hanya untuk anggota langsung; anggota tingkat bawah dikelola dari tab Holding BR masing-masing.
+// BR yang sudah punya induk ditolak (server, 422).
+
+const holdingState = { rows: [], q: '', page: 1, size: 10, flat: false };
+
+function holdingVisibleRows() {
+    const q = holdingState.q;
+    if (!q) return holdingState.rows;
+    return holdingState.rows.filter(m => String(m.nama || '').toLowerCase().includes(q));
+}
+
+function renderHoldingRows() {
+    if (!holdingState.rows.length) {
+        return `<div class="text-center text-muted py-4" style="font-size:13px;">
+            <i class="fa-solid fa-sitemap me-1"></i> Belum ada anggota holding. Gunakan tombol <b>+ Anggota</b> untuk menambahkan.
+        </div>`;
+    }
+    const list  = holdingVisibleRows();
+    const total = list.length;
+    if (!total) {
+        return `<div class="text-center text-muted py-4" style="font-size:13px;">
+            <i class="fa-solid fa-magnifying-glass me-1"></i> Tidak ada anggota yang cocok dengan pencarian.
+        </div>`;
+    }
+
+    const size  = holdingState.size;
+    const pages = Math.max(1, Math.ceil(total / size));
+    if (holdingState.page > pages) holdingState.page = pages;
+    const page  = holdingState.page;
+    const start = (page - 1) * size;
+    const slice = list.slice(start, start + size);
+
+    const canUpd = can('business-relations', 'can_update');
+    const badgeAktif = `<span class="badge" style="background:#dcfce7;color:#166534;font-size:10px;font-weight:600;padding:2px 7px;">Aktif</span>`;
+    const badgeNon   = `<span class="badge" style="background:#f1f5f9;color:#64748b;font-size:10px;font-weight:600;padding:2px 7px;">Non-Aktif</span>`;
+    const dash       = '<span class="text-muted">—</span>';
+
+    // Nomor urut hanya untuk anggota langsung (tingkat 0 / daftar rata); baris hasil expand dikosongkan
+    let nomor = list.slice(0, start).filter(m => !m._depth || holdingState.flat).length;
+    const rows = slice.map(function (m) {
+        const depth = holdingState.flat ? 0 : (m._depth || 0);
+        const noCell = (depth === 0) ? ++nomor : '';
+        const caret = (!holdingState.flat && m.jumlah_anggota > 0)
+            ? `<button type="button" class="btn btn-sm btn-link p-0 me-1 holding-expand" data-id="${m.id_br}" title="Lihat anggota" data-no-disable>
+                   <i class="fa-solid ${m._open ? 'fa-caret-down' : 'fa-caret-right'}" style="color:#0369a1;width:12px;"></i></button>`
+            : `<span class="d-inline-block me-1" style="width:18px;"></span>`;
+        const anggota = m.jumlah_anggota > 0
+            ? `<span class="badge" style="background:#f5f3ff;color:#6d28d9;font-size:10px;font-weight:600;padding:2px 7px;">${m.jumlah_anggota} anggota</span>` : dash;
+        const lepas = (canUpd && depth === 0 && (!holdingState.flat || m.tingkat === 1))
+            ? `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 holding-remove" data-id="${m.id_br}" data-nama="${escHtml(m.nama)}" title="Lepas dari holding" style="font-size:11px;" data-no-disable>
+                   <i class="fa-solid fa-link-slash" style="color:#dc2626;"></i></button>` : '';
+        return `
+        <tr>
+            <td style="text-align:center;color:#9ca3af;font-size:12px;">${noCell}</td>
+            <td class="fw-semibold" style="padding-left:${12 + depth * 24}px;">${caret}<a class="pm-link-record" href="/business-relations?open=${m.id_br}">${escHtml(m.nama)}</a>
+                ${holdingState.flat && m.induk_langsung ? `<div class="text-muted fw-normal" style="font-size:11px;margin-left:19px;">Induk: ${escHtml(m.induk_langsung)}</div>` : ''}</td>
+            <td>${m.jumlah_site} Site</td>
+            <td>${anggota}</td>
+            <td>${m.is_aktif ? badgeAktif : badgeNon}</td>
+            <td style="text-align:center;">${lepas}</td>
+        </tr>`;
+    }).join('');
+
+    const btn = function (label, target, cls) {
+        return `<a class="paginate_button ${cls || ''} holding-page-go" href="#" data-page="${target}">${label}</a>`;
+    };
+    const pageBtns = sitePickerPages(pages, page).map(function (n) {
+        if (n === '…') return `<span class="paginate_button disabled" style="border-color:transparent !important;">…</span>`;
+        return btn(n, n, n === page ? 'current' : '');
+    }).join('');
+
+    return `
+    <div class="table-responsive">
+        <table class="table dataTable no-footer" style="width:100%;">
+            <thead>
+                <tr>
+                    <th style="width:44px;text-align:center;">NO</th>
+                    <th>PERUSAHAAN</th>
+                    <th style="width:110px;">SITE</th>
+                    <th style="width:130px;">ANGGOTA</th>
+                    <th style="width:100px;">STATUS</th>
+                    <th style="width:70px;text-align:center;">LEPAS</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </div>
+    <div class="dt-bottom d-flex align-items-center justify-content-between mt-3">
+        <div class="dataTables_info">Showing ${start + 1} to ${Math.min(start + size, total)} of ${total} entries</div>
+        ${pages > 1 ? `
+        <div class="dataTables_paginate">
+            ${btn('&lsaquo;', page - 1, 'previous' + (page === 1 ? ' disabled' : ''))}
+            ${pageBtns}
+            ${btn('&rsaquo;', page + 1, 'next' + (page === pages ? ' disabled' : ''))}
+        </div>` : ''}
+    </div>`;
+}
+
+function redrawHolding() {
+    $('#holding-list').html(renderHoldingRows());
+}
+
+function loadHoldingData(idBr) {
+    holdingState.q = '';
+    holdingState.page = 1;
+    holdingState.flat = $('#holding-semua').is(':checked');
+    $('#holding-search').val('');
+    $('#holding-page-size').val(holdingState.size);
+    $('#holding-list').html('<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat data...</div>');
+    $.get(`/business-relations/${idBr}/holding`, { semua: holdingState.flat ? 1 : 0 })
+        .done(function (res) {
+            holdingState.rows = (res.data || []).map(m => Object.assign(m, { _depth: 0, _open: false }));
+            redrawHolding();
+        })
+        .fail(function () {
+            $('#holding-list').html('<div class="text-center text-danger py-3">Gagal memuat anggota holding.</div>');
+        });
+}
+
+function initHoldingTabEvents() {
+    const $panel = $('#detailContent');
+
+    $panel.on('shown.bs.tab', '[data-bs-target="#tabBrsHolding"]', function () {
+        loadHoldingData($(this).data('id-br'));
+        $('#brTabActionsHolding').removeClass('d-none').addClass('d-flex');
+    });
+
+    $panel.on('change', '#holding-semua', function () {
+        loadHoldingData($('#holding-wrap').data('id-br'));
+    });
+
+    $panel.on('input', '#holding-search', function () {
+        holdingState.q = $(this).val().toLowerCase().trim();
+        holdingState.page = 1;
+        redrawHolding();
+    });
+    $panel.on('click', '.holding-page-go', function (e) {
+        e.preventDefault();
+        if ($(this).hasClass('disabled') || $(this).hasClass('current')) return;
+        holdingState.page = parseInt($(this).data('page'), 10) || 1;
+        redrawHolding();
+    });
+    $panel.on('change', '#holding-page-size', function () {
+        holdingState.size = parseInt($(this).val(), 10) || 10;
+        holdingState.page = 1;
+        redrawHolding();
+    });
+
+    // Expand / collapse anggota tingkat bawah (dimuat saat pertama di-klik; baris disisipkan di bawah induknya)
+    $panel.on('click', '.holding-expand', function () {
+        const id  = Number($(this).data('id'));
+        const idx = holdingState.rows.findIndex(m => Number(m.id_br) === id);
+        if (idx < 0) return;
+        const row = holdingState.rows[idx];
+        if (row._open) {
+            let end = idx + 1;
+            while (end < holdingState.rows.length && holdingState.rows[end]._depth > row._depth) end++;
+            holdingState.rows.splice(idx + 1, end - idx - 1);
+            row._open = false;
+            redrawHolding();
+            return;
+        }
+        $(this).prop('disabled', true);
+        $.get(`/business-relations/${id}/holding`)
+            .done(function (res) {
+                const kids = (res.data || []).map(m => Object.assign(m, { _depth: row._depth + 1, _open: false }));
+                holdingState.rows.splice(idx + 1, 0, ...kids);
+                row._open = true;
+                redrawHolding();
+            })
+            .fail(function () { Swal.fire('Gagal', 'Tidak dapat memuat anggota.', 'error'); })
+            .always(function () { $('.holding-expand').prop('disabled', false); });
+    });
+
+    // + Anggota: pilih BR (yang tidak boleh dipilih tampil abu-abu + alasannya)
+    $panel.on('click', '.btn-holding-add', function () {
+        const idBr = $(this).data('id-br');
+        Swal.fire({
+            title: 'Tambah Anggota Holding',
+            html: '<select id="holding-pick" style="width:100%"></select>',
+            showCancelButton: true, confirmButtonText: 'Tambahkan', cancelButtonText: 'Batal',
+            didOpen: function () {
+                $('#holding-pick').select2({
+                    width: '100%', dropdownParent: $(Swal.getPopup()),
+                    placeholder: 'Cari Business Relation...', minimumInputLength: 0,
+                    ajax: {
+                        url: '/business-relations/select2', delay: 200, dataType: 'json',
+                        data: (p) => ({ q: p.term ?? '', holding_for: idBr }),
+                        processResults: (d) => ({ results: d }),
+                    },
+                });
+            },
+            preConfirm: function () {
+                const v = $('#holding-pick').val();
+                if (!v) { Swal.showValidationMessage('Pilih Business Relation terlebih dahulu.'); return false; }
+                return $.post(`/business-relations/${idBr}/holding`, { _token: window.route.csrf, id_anggota: v })
+                    .catch(function (xhr) {
+                        const errs = xhr.responseJSON?.errors;
+                        Swal.showValidationMessage(errs ? Object.values(errs).flat().join('<br>') : (xhr.responseJSON?.message || 'Terjadi kesalahan.'));
+                        return false;
+                    });
+            },
+        }).then(function (r) {
+            if (r.isConfirmed) {
+                loadHoldingData(idBr);
+                Swal.fire({ icon: 'success', title: 'Anggota ditambahkan', timer: 1200, showConfirmButton: false });
+            }
+        });
+    });
+
+    // Lepas anggota langsung
+    $panel.on('click', '.holding-remove', function () {
+        const idAnggota = $(this).data('id'), nama = $(this).data('nama');
+        const idBr = $('#holding-wrap').data('id-br');
+        Swal.fire({
+            title: 'Lepas dari holding?',
+            html: `<b>${escHtml(nama)}</b> tidak lagi menjadi anggota holding ini. Data BR-nya tidak dihapus.`,
+            icon: 'warning', showCancelButton: true,
+            confirmButtonColor: '#dc2626', confirmButtonText: 'Lepas', cancelButtonText: 'Batal',
+        }).then(function (r) {
+            if (!r.isConfirmed) return;
+            $.ajax({ url: `/business-relations/${idBr}/holding/${idAnggota}`, type: 'DELETE', data: { _token: window.route.csrf } })
+                .done(function () { loadHoldingData(idBr); Swal.fire({ icon: 'success', title: 'Dilepas', timer: 1200, showConfirmButton: false }); })
+                .fail(function (xhr) { Swal.fire('Gagal', xhr.responseJSON?.message || 'Terjadi kesalahan.', 'error'); });
+        });
+    });
 }

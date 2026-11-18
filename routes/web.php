@@ -617,6 +617,14 @@ Route::prefix('business-relations')
             ->name('sites.select2') // ok - select2 ajax
             ->whereNumber('id');  // ok - select2 ajax
 
+        // Holding / induk BR (tab Holding): daftar anggota, tambah, lepas
+        Route::get('/{id}/holding', [BusinessRelationController::class, 'holdingMembers'])
+            ->name('holding.members')->whereNumber('id');
+        Route::post('/{id}/holding', [BusinessRelationController::class, 'holdingAdd'])
+            ->name('holding.add')->whereNumber('id');
+        Route::delete('/{id}/holding/{idAnggota}', [BusinessRelationController::class, 'holdingRemove'])
+            ->name('holding.remove')->whereNumber(['id', 'idAnggota']);
+
         Route::get('/{id}', [BusinessRelationController::class, 'detail'])->name('detail');
         Route::get('/{id}/history', [BusinessRelationController::class, 'history'])->name('history')->whereNumber('id');
 

@@ -21,6 +21,7 @@ $(document).ready(function () {
             initMpTabEvents();
             initContactTabEvents();
             initProductTabEvents();
+            initHoldingTabEvents();
         },
         // initDynamicSelect("#detailContent") (generik, ajax-nya cuma kirim `q`)
         // jalan SETELAH initSelect tapi SEBELUM afterLoad — jadi override select2

@@ -94,10 +94,14 @@ class BusinessRelationController extends Controller
         // =========================
         $query = DB::table('business_relations as br')
             ->leftJoin('entitas as e', 'e.id_entitas', '=', 'br.id_entitas')
+            ->leftJoin('business_relations as ind', 'ind.id_br', '=', 'br.id_br_induk')
+            ->leftJoin('entitas as ie', 'ie.id_entitas', '=', 'ind.id_entitas')
             ->select([
                 'br.id_br',
                 'br.nama',
                 'e.nama as entitas',
+                'ind.nama as induk',
+                'ie.nama as induk_entitas',
                 'br.is_aktif',
                 'br.created_at',
                 DB::raw('(select count(*) from business_relation_sites s where s.id_br = br.id_br and s.deleted_at is null) as jumlah_site'),
@@ -124,6 +128,12 @@ class BusinessRelationController extends Controller
             ->editColumn('nama', function ($row) {
                 return brDisplayName($row->entitas, $row->nama);
             })
+
+            // Induk (holding) + prefix; kolom bantu induk_entitas dibuang
+            ->editColumn('induk', function ($row) {
+                return $row->induk ? brDisplayName($row->induk_entitas, $row->induk) : '';
+            })
+            ->removeColumn('induk_entitas')
 
             // Jumlah Site
             ->editColumn('jumlah_site', function ($row) {
@@ -473,10 +483,156 @@ class BusinessRelationController extends Controller
     }
 
 
+    // ─── HOLDING / INDUK BR (sejak 2026-11-17) ───────────────────────────────
+
+    /** Leluhur dari paling dekat (induk langsung) ke paling atas. Batas 50 tingkat = pengaman data rusak. */
+    private function ancestorIds(int $idBr): array
+    {
+        $ids = [];
+        $cur = DB::table('business_relations')->where('id_br', $idBr)->value('id_br_induk');
+        while ($cur && !in_array((int) $cur, $ids, true) && count($ids) < 50) {
+            $ids[] = (int) $cur;
+            $cur = DB::table('business_relations')->where('id_br', $cur)->value('id_br_induk');
+        }
+        return $ids;
+    }
+
+    /** Semua turunan (anak, cucu, ...) beserta id induk langsungnya, urut per tingkat. */
+    private function descendantRows(int $idBr): array
+    {
+        $rows = [];
+        $seen = [$idBr => true];
+        $frontier = [$idBr];
+        for ($lvl = 1; $frontier && $lvl <= 50; $lvl++) {
+            $kids = DB::table('business_relations as br')
+                ->leftJoin('entitas as e', 'e.id_entitas', '=', 'br.id_entitas')
+                ->whereIn('br.id_br_induk', $frontier)
+                ->orderBy('br.nama')
+                ->get(['br.id_br', 'br.id_br_induk', 'br.nama', 'br.is_aktif', 'e.nama as entitas']);
+            $frontier = [];
+            foreach ($kids as $k) {
+                if (isset($seen[$k->id_br])) continue;
+                $seen[$k->id_br] = true;
+                $k->tingkat = $lvl;
+                $rows[] = $k;
+                $frontier[] = $k->id_br;
+            }
+        }
+        return $rows;
+    }
+
+    private function brLabel(int $idBr): string
+    {
+        $r = DB::table('business_relations as br')
+            ->leftJoin('entitas as e', 'e.id_entitas', '=', 'br.id_entitas')
+            ->where('br.id_br', $idBr)->first(['br.nama', 'e.nama as entitas']);
+        return $r ? brDisplayName($r->entitas, $r->nama) : '-';
+    }
+
+    /** Daftar anggota holding. ?semua=1 → seluruh turunan (rata, ada kolom induk langsung); default → anak langsung. */
+    public function holdingMembers(Request $request, $id)
+    {
+        $id = (int) $id;
+        if (!DB::table('business_relations')->where('id_br', $id)->exists()) {
+            return response()->json(['message' => 'Business Relation tidak ditemukan'], 404);
+        }
+
+        $semua = (bool) $request->query('semua');
+        if ($semua) {
+            $kids = collect($this->descendantRows($id));
+        } else {
+            $kids = DB::table('business_relations as br')
+                ->leftJoin('entitas as e', 'e.id_entitas', '=', 'br.id_entitas')
+                ->where('br.id_br_induk', $id)
+                ->orderBy('br.nama')
+                ->get(['br.id_br', 'br.id_br_induk', 'br.nama', 'br.is_aktif', 'e.nama as entitas']);
+        }
+
+        $ids = $kids->pluck('id_br')->all();
+        $jumlahSite = $ids ? DB::table('business_relation_sites')->whereIn('id_br', $ids)->whereNull('deleted_at')
+            ->selectRaw('id_br, count(*) as n')->groupBy('id_br')->pluck('n', 'id_br') : collect();
+        $jumlahAnak = $ids ? DB::table('business_relations')->whereIn('id_br_induk', $ids)
+            ->selectRaw('id_br_induk, count(*) as n')->groupBy('id_br_induk')->pluck('n', 'id_br_induk') : collect();
+        $namaInduk = [];
+        if ($semua) {
+            foreach ($kids->pluck('id_br_induk')->unique() as $pid) {
+                $namaInduk[$pid] = $pid == $id ? null : $this->brLabel((int) $pid);
+            }
+        }
+
+        return response()->json([
+            'data' => $kids->map(fn($k) => [
+                'id_br'         => $k->id_br,
+                'nama'          => brDisplayName($k->entitas, $k->nama),
+                'is_aktif'      => (int) $k->is_aktif,
+                'jumlah_site'   => (int) ($jumlahSite[$k->id_br] ?? 0),
+                'jumlah_anggota' => (int) ($jumlahAnak[$k->id_br] ?? 0),
+                'tingkat'       => $k->tingkat ?? 1,
+                'induk_langsung' => $semua ? ($namaInduk[$k->id_br_induk] ?? null) : null,
+            ])->values(),
+        ]);
+    }
+
+    /** Tambah 1 BR sebagai anggota holding $id. Ditolak bila: diri sendiri, leluhur (lingkaran), atau sudah punya induk. */
+    public function holdingAdd(Request $request, $id)
+    {
+        $id = (int) $id;
+        $request->validate(['id_anggota' => 'required|integer|exists:business_relations,id_br']);
+        $idAnggota = (int) $request->id_anggota;
+
+        if (!DB::table('business_relations')->where('id_br', $id)->exists()) {
+            return response()->json(['message' => 'Business Relation tidak ditemukan'], 404);
+        }
+        if ($idAnggota === $id) {
+            return response()->json(['message' => 'Business Relation tidak bisa menjadi anggota holding dirinya sendiri.'], 422);
+        }
+        if (in_array($idAnggota, $this->ancestorIds($id), true)) {
+            return response()->json(['message' => 'Tidak bisa ditambahkan: ' . $this->brLabel($idAnggota) . ' adalah induk (di atas) dari BR ini, sehingga akan membentuk lingkaran kepemilikan.'], 422);
+        }
+
+        $before = (array) DB::table('business_relations')->where('id_br', $idAnggota)->first();
+        if (!empty($before['id_br_induk'])) {
+            $msg = (int) $before['id_br_induk'] === $id
+                ? $this->brLabel($idAnggota) . ' sudah menjadi anggota holding ini.'
+                : $this->brLabel($idAnggota) . ' sudah menjadi anggota holding ' . $this->brLabel((int) $before['id_br_induk']) . '. Lepas dulu dari holding tersebut.';
+            return response()->json(['message' => $msg], 422);
+        }
+
+        DB::transaction(function () use ($id, $idAnggota, $before) {
+            DB::table('business_relations')->where('id_br', $idAnggota)->update(['id_br_induk' => $id, 'updated_at' => now()]);
+            $after = (array) DB::table('business_relations')->where('id_br', $idAnggota)->first();
+            saveAudit('business_relations', $idAnggota, 'update', json_encode($before), json_encode($after));
+        });
+
+        return response()->json(['success' => true, 'message' => 'Anggota holding ditambahkan']);
+    }
+
+    /** Lepas anggota dari holding $id (BR anggota tidak dihapus; id_br_induk dikosongkan). */
+    public function holdingRemove($id, $idAnggota)
+    {
+        $before = (array) DB::table('business_relations')->where('id_br', $idAnggota)->first();
+        if (!$before || (int) ($before['id_br_induk'] ?? 0) !== (int) $id) {
+            return response()->json(['message' => 'BR tersebut bukan anggota langsung holding ini.'], 422);
+        }
+
+        DB::transaction(function () use ($idAnggota, $before) {
+            DB::table('business_relations')->where('id_br', $idAnggota)->update(['id_br_induk' => null, 'updated_at' => now()]);
+            $after = (array) DB::table('business_relations')->where('id_br', $idAnggota)->first();
+            saveAudit('business_relations', $idAnggota, 'update', json_encode($before), json_encode($after));
+        });
+
+        return response()->json(['success' => true, 'message' => 'Anggota dilepas dari holding']);
+    }
+
     public function select2(Request $request)
     {
 
         $search = $request->q;
+
+        // Mode pemilih anggota holding (?holding_for={id_br}): BR yang tidak boleh dipilih tetap tampil tapi
+        // disabled + alasannya (diri sendiri, induk/leluhur, atau sudah anggota holding lain).
+        $holdingFor = $request->filled('holding_for') ? (int) $request->holding_for : null;
+        $leluhur = $holdingFor ? $this->ancestorIds($holdingFor) : [];
 
         $data = DB::table('business_relations as br')
             ->leftJoin('entitas as e', 'e.id_entitas', '=', 'br.id_entitas')
@@ -495,10 +651,25 @@ class BusinessRelationController extends Controller
             ->get();
 
         return response()->json(
-            $data->map(function ($item) {
+            $data->map(function ($item) use ($holdingFor, $leluhur) {
+                $text = brDisplayName($item->nama_entitas, $item->nama);
+                $disabled = false;
+                if ($holdingFor) {
+                    if ((int) $item->id_br === $holdingFor) {
+                        $disabled = true; $text .= ' — (BR ini sendiri)';
+                    } elseif (in_array((int) $item->id_br, $leluhur, true)) {
+                        $disabled = true; $text .= ' — (induk di atas BR ini)';
+                    } elseif (!empty($item->id_br_induk)) {
+                        $disabled = true;
+                        $text .= (int) $item->id_br_induk === $holdingFor
+                            ? ' — (sudah anggota holding ini)'
+                            : ' — (sudah anggota holding ' . $this->brLabel((int) $item->id_br_induk) . ')';
+                    }
+                }
                 return [
                     'id'                       => $item->id_br,
-                    'text'                     => brDisplayName($item->nama_entitas, $item->nama),
+                    'disabled'                 => $disabled,
+                    'text'                     => $text,
                     'id_entitas'               => $item->id_entitas,
                     'nama_entitas'             => $item->nama_entitas,
                     'id_kepemilikan'           => $item->id_kepemilikan,
@@ -589,6 +760,11 @@ class BusinessRelationController extends Controller
             // Relation"; kalau di-prefix di sini, prefix-nya bisa ikut kesimpan
             // permanen ke kolom nama saat user save tanpa mengubah field itu.
             $data->nama_display = brDisplayName($data->nama_entitas, $data->nama_br);
+
+            // Holding: rantai induk (paling atas → induk langsung) + jumlah anggota langsung
+            $data->rantai_induk = collect(array_reverse($this->ancestorIds((int) $id)))
+                ->map(fn($pid) => ['id_br' => $pid, 'nama' => $this->brLabel($pid)])->values();
+            $data->jumlah_anggota = DB::table('business_relations')->where('id_br_induk', $id)->count();
         }
 
         return response()->json($data);

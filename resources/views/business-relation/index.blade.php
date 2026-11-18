@@ -39,6 +39,7 @@
     window.datatableHeaderLabels = {
         is_aktif:    'Status',
         jumlah_site: 'Jumlah Site',
+        induk:       'Induk (Holding)',
     };
 </script>
 <script src="{{ asset('assets/vendor/leaflet/leaflet.min.js') }}"></script>
