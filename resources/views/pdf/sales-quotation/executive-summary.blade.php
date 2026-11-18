@@ -65,7 +65,7 @@
 
 <div class="band">
     <span class="tag">Internal — Rahasia</span>
-    <div class="kicker">Executive Summary · Analisa Pendapatan &amp; Biaya Operasional</div>
+    <div class="kicker">Executive Summary · Analisa Penawaran &amp; Biaya Operasional</div>
     <h1>{{ $sq->judul_order ?? '-' }}</h1>
     <table>
         <tr><td class="k">Pelanggan</td><td>{{ $sq->nama_pelanggan_display ?? '-' }}</td><td class="k">No. SQ</td><td>{{ $sq->no_sq }}{{ $sq->revisi > 0 ? ' Rev.' . $sq->revisi : '' }}</td></tr>
@@ -77,33 +77,33 @@
     <table class="kpi">
         <tr>
             <td>
-                <div class="lbl">Pendapatan (bersih)</div>
+                <div class="lbl">Penawaran (bersih)</div>
                 <div class="val" style="color:#203864;">{{ $fmt($pendapatan) }}</div>
                 <div class="sub">BOQ + BOQ Other + Sampling, setelah discount</div>
             </td>
             <td>
                 <div class="lbl">Biaya Operasional</div>
                 <div class="val" style="color:#b7791f;">{{ $fmt($biaya) }}</div>
-                <div class="sub">Total Budget Plan · {{ $pct($biayaPct) }} dari pendapatan</div>
+                <div class="sub">Total Budget Plan · {{ $pct($biayaPct) }} dari penawaran</div>
             </td>
             <td class="hero {{ $good ? 'pos-bg' : 'neg-bg' }}">
                 <div class="lbl">Estimasi Margin</div>
                 <div class="val {{ $good ? 'pos' : 'neg' }}">{{ $neg($margin) }}</div>
-                <div class="sub"><b class="{{ $good ? 'pos' : 'neg' }}">{{ $pct($marginPct) }}</b> dari pendapatan</div>
+                <div class="sub"><b class="{{ $good ? 'pos' : 'neg' }}">{{ $pct($marginPct) }}</b> dari penawaran</div>
             </td>
         </tr>
     </table>
 
     <p class="verdict">
         @if ($pendapatan > 0)
-            Dari pendapatan <b>{{ $fmt($pendapatan) }}</b>, biaya operasional yang direncanakan <b>{{ $fmt($biaya) }}</b> ({{ $pct($biayaPct) }}).
+            Dari penawaran <b>{{ $fmt($pendapatan) }}</b>, biaya operasional yang direncanakan <b>{{ $fmt($biaya) }}</b> ({{ $pct($biayaPct) }}).
             @if ($good)
                 Sisa <b class="pos">{{ $fmt($margin) }}</b> ({{ $pct($marginPct) }}) menjadi estimasi margin.
             @else
-                Biaya <b class="neg">melebihi pendapatan sebesar {{ $fmt(abs($margin)) }}</b>. Perlu ditinjau ulang.
+                Biaya <b class="neg">melebihi penawaran sebesar {{ $fmt(abs($margin)) }}</b>. Perlu ditinjau ulang.
             @endif
         @else
-            Belum ada nilai pendapatan pada SQ ini.
+            Belum ada nilai penawaran pada SQ ini.
         @endif
     </p>
 
@@ -116,7 +116,7 @@
     <table class="two">
         <tr>
             <td>
-                <h2>Rincian Pendapatan</h2>
+                <h2>Rincian Penawaran</h2>
                 <table class="flat">
                     <tr><td>BOQ (sebelum discount)</td><td class="r">{{ $fmt($tot['boq_gross']) }}</td></tr>
                     <tr class="sub"><td>Discount BOQ</td><td class="r">- {{ $fmt($tot['boq_disc']) }}</td></tr>
@@ -124,7 +124,7 @@
                     <tr><td>BOQ Sampling</td><td class="r">{{ $fmt($tot['sampling']) }}</td></tr>
                     <tr class="sub"><td>Subtotal</td><td class="r">{{ $fmt($subtotal) }}</td></tr>
                     <tr class="sub"><td>Discount SQ</td><td class="r">- {{ $fmt($discountSq) }}</td></tr>
-                    <tr class="tot"><td>Pendapatan bersih</td><td class="r">{{ $fmt($pendapatan) }}</td></tr>
+                    <tr class="tot"><td>Penawaran bersih</td><td class="r">{{ $fmt($pendapatan) }}</td></tr>
                 </table>
             </td>
             <td>
@@ -158,7 +158,7 @@
     @else
     <table class="flat">
         <thead>
-            <tr><th>Work Order</th><th class="r">Pendapatan</th><th class="r">Biaya</th><th class="r">Margin</th><th class="r" style="width:70px;">% Margin</th></tr>
+            <tr><th>Work Order</th><th class="r">Penawaran</th><th class="r">Biaya</th><th class="r">Margin</th><th class="r" style="width:70px;">% Margin</th></tr>
         </thead>
         <tbody>
             @foreach ($rows as $r)
@@ -177,8 +177,8 @@
 
     <p class="note">
         Dokumen internal, bukan untuk pelanggan. Angka bersumber dari data SQ yang terkunci (estimasi saat penawaran), bukan realisasi.
-        Pendapatan dihitung bersih setelah discount; biaya operasional adalah total nominal Budget Plan WO.
-        Margin = pendapatan bersih − biaya operasional. Dicetak {{ now()->format('d/m/Y H:i') }}.
+        Penawaran dihitung bersih setelah discount; biaya operasional adalah total nominal Budget Plan WO.
+        Margin = penawaran bersih − biaya operasional. Dicetak {{ now()->format('d/m/Y H:i') }}.
     </p>
 </div>
 @endsection
