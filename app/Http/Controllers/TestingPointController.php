@@ -121,7 +121,10 @@ class TestingPointController extends Controller
                 // 'tms.judul_indonesia as matriks_sample_judul_indonesia',
                 'tp.is_aktif',
                 'tp.created_at'
-            ]);
+            ])
+            // Urut abjad berdasarkan kolom Kode (sejak 2026-11-18); id sebagai pemutus bila Kode kembar
+            ->orderBy('Kode')
+            ->orderBy('tp.id_testing_point');
 
         return DataTables::of($query)
             ->addIndexColumn()
