@@ -101,8 +101,8 @@ class SamplingPointImport implements ImportDefinition
 
     public function validate(array $raw, array &$ctx): array
     {
-        $kode = $this->text($raw['kode'] ?? null);
-        $nama = $this->text($raw['nama'] ?? null);
+        $kode = CoordParser::text($raw['kode'] ?? null);
+        $nama = CoordParser::text($raw['nama'] ?? null);
 
         $gagal = fn(string $m) => ['status' => 'error', 'message' => $m, 'clean' => []];
 
@@ -111,8 +111,8 @@ class SamplingPointImport implements ImportDefinition
         if ($nama === '') return $gagal('Nama wajib diisi.');
         if (mb_strlen($nama) > 255) return $gagal('Nama maksimal 255 karakter.');
 
-        $lat = $this->koordinat($raw['latitude'] ?? null, 'lat', $latErr);
-        $lng = $this->koordinat($raw['longitude'] ?? null, 'lng', $lngErr);
+        $lat = CoordParser::koordinat($raw['latitude'] ?? null, 'lat', $latErr);
+        $lng = CoordParser::koordinat($raw['longitude'] ?? null, 'lng', $lngErr);
         if ($latErr) return $gagal('Latitude: ' . $latErr . ' Pakai desimal (-6.2088) atau derajat (6°12\'31.7"S).');
         if ($lngErr) return $gagal('Longitude: ' . $lngErr . ' Pakai desimal (106.8456) atau derajat (106°13\'8.6"E).');
         if (($lat === null) !== ($lng === null)) return $gagal('Latitude dan Longitude harus diisi berpasangan.');
@@ -121,22 +121,16 @@ class SamplingPointImport implements ImportDefinition
 
         $gedung = $ruangan = $lantai = null;
         if ($this->jenis === 'we') {
-            $gedung  = $this->text($raw['gedung'] ?? null) ?: null;
-            $ruangan = $this->text($raw['ruangan'] ?? null) ?: null;
-            $lantai  = $this->text($raw['lantai'] ?? null) ?: null;
+            $gedung  = CoordParser::text($raw['gedung'] ?? null) ?: null;
+            $ruangan = CoordParser::text($raw['ruangan'] ?? null) ?: null;
+            $lantai  = CoordParser::text($raw['lantai'] ?? null) ?: null;
             if ($gedung !== null && mb_strlen($gedung) > 255) return $gagal('Gedung maksimal 255 karakter.');
             if ($ruangan !== null && mb_strlen($ruangan) > 255) return $gagal('Ruangan maksimal 255 karakter.');
             if ($lantai !== null && mb_strlen($lantai) > 50) return $gagal('Lantai maksimal 50 karakter.');
         }
 
-        $aktifTeks = mb_strtolower($this->text($raw['aktif'] ?? null));
-        if ($aktifTeks === '' || in_array($aktifTeks, ['ya', 'y', 'aktif', '1', 'true'], true)) {
-            $aktif = 1;
-        } elseif (in_array($aktifTeks, ['tidak', 'tdk', 't', 'nonaktif', 'non-aktif', 'tidak aktif', '0', 'false'], true)) {
-            $aktif = 0;
-        } else {
-            return $gagal('Kolom Aktif harus diisi Ya atau Tidak.');
-        }
+        $aktif = CoordParser::yaTidak($raw['aktif'] ?? null);
+        if ($aktif === null) return $gagal('Kolom Aktif harus diisi Ya atau Tidak.');
 
         // Duplikat: dengan data yang sudah ada di site, atau dengan baris lain di file ini
         $kunci = mb_strtolower($kode);
@@ -151,7 +145,7 @@ class SamplingPointImport implements ImportDefinition
         return ['status' => 'valid', 'message' => null, 'clean' => [
             'kode' => $kode, 'nama' => $nama, 'latitude' => $lat, 'longitude' => $lng,
             'gedung' => $gedung, 'ruangan' => $ruangan, 'lantai' => $lantai,
-            'keterangan' => $this->text($raw['keterangan'] ?? null) ?: null, 'is_aktif' => $aktif,
+            'keterangan' => CoordParser::text($raw['keterangan'] ?? null) ?: null, 'is_aktif' => $aktif,
         ]];
     }
 
@@ -176,62 +170,5 @@ class SamplingPointImport implements ImportDefinition
         saveAudit('brs_sampling_points', $id, 'Create', '', DB::table('brs_sampling_points')->where('id_sp', $id)->get()->toJson());
 
         return $id;
-    }
-
-    /** Sel Excel → teks rapi. Angka bulat (mis. kode 1 yang terbaca 1.0) tidak diberi ".0". */
-    private function text($v): string
-    {
-        if ($v === null) return '';
-        if (is_float($v) && floor($v) == $v && abs($v) < 1e15) return (string) (int) $v;
-        return trim((string) $v);
-    }
-
-    /**
-     * Koordinat → desimal (8 digit). Menerima desimal ("-6.2088", "-6,2088", angka Excel) atau derajat-menit-detik
-     * ("6°12'31.7\"S", "6 12 31.7 S", "106°13'8.6\"E", "-6°12'31.7\"") dengan arah N/S/E/W atau LU/LS/BT/BB;
-     * S/W (LS/BB) berarti negatif. Kosong → null tanpa error; tak terbaca → null + $err berisi alasan.
-     */
-    private function koordinat($v, string $jenis, ?string &$err): ?float
-    {
-        $err = null;
-        if ($v === null || trim((string) $v) === '') return null;
-        if (is_int($v) || is_float($v)) return round((float) $v, 8);
-
-        $s = trim((string) $v);
-        // Samakan simbol derajat/menit/detik "cantik" hasil copy dari web atau Excel
-        $s = str_replace(['º', '˚', '′', '’', '‘', '`', '´', '″', '”', '“'], ['°', '°', "'", "'", "'", "'", "'", '"', '"', '"'], $s);
-        $s = str_replace("''", '"', $s);
-
-        $arah = null;
-        $pola = '/(?<![A-Za-z])(LU|LS|BT|BB|N|S|E|W)(?![A-Za-z])/i';
-        if (preg_match($pola, $s, $m)) {
-            $arah = strtoupper($m[1]);
-            $s = trim(preg_replace($pola, ' ', $s, 1));
-        }
-        if ($arah !== null) {
-            $cocok = $jenis === 'lat' ? in_array($arah, ['N', 'S', 'LU', 'LS'], true) : in_array($arah, ['E', 'W', 'BT', 'BB'], true);
-            if (!$cocok) {
-                $err = $jenis === 'lat' ? 'arah harus U/S (N/S), bukan ' . $arah . '.' : 'arah harus T/B (E/W), bukan ' . $arah . '.';
-                return null;
-            }
-        }
-        $negArah = in_array($arah, ['S', 'LS', 'W', 'BB'], true);
-
-        // Sisa harus hanya angka dan pemisah derajat/menit/detik, maksimal 3 angka (derajat, menit, detik)
-        if (!preg_match_all('/\d+(?:[.,]\d+)?/', $s, $t) || preg_match('/[^\d\s.,°\'"+\-]/u', $s) || count($t[0]) > 3) {
-            $err = 'format tidak dikenali.';
-            return null;
-        }
-        $angka = array_map(fn($x) => (float) str_replace(',', '.', $x), $t[0]);
-        [$d, $mnt, $dt] = [$angka[0], $angka[1] ?? 0.0, $angka[2] ?? 0.0];
-        if (count($angka) > 1 && ($mnt >= 60 || $dt >= 60)) {
-            $err = 'menit dan detik harus di bawah 60.';
-            return null;
-        }
-
-        $nilai = $d + $mnt / 60 + $dt / 3600;
-        // Minus di depan ATAU arah S/W sama-sama berarti negatif (keduanya sekaligus tidak saling meniadakan)
-        if (preg_match('/^\s*-/', $s) === 1 || $negArah) $nilai = -$nilai;
-        return round($nilai, 8);
     }
 }

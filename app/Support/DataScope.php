@@ -5,7 +5,8 @@ namespace App\Support;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Segregasi data SO & SQ (sejak 2026-11-01); WO & FWO beserta turunannya mengikuti SO induknya (sejak 2026-11-12).
+ * Segregasi data SO & SQ (sejak 2026-11-01); WO & FWO beserta turunannya mengikuti SO induknya (sejak 2026-11-12);
+ * Termin juga mengikuti SO induknya (sejak 2026-11-21).
  * Pemilik data = PIC Order + PIC Input. User melihat data miliknya dan milik seluruh bawahannya
  * (hierarki `users.id_atasan`, bertingkat ke bawah). Pemegang Aksi Khusus `so-lihat-semua` /
  * `sq-lihat-semua` melihat semuanya. Approver SQ (`sq-approve`) juga melihat SQ berstatus pending.
@@ -91,6 +92,20 @@ class DataScope
         return $query->whereIn($p . 'id_wo', self::wo(DB::table('work_orders')->select('id_wo')));
     }
 
+    /**
+     * Batasi query Termin: Termin boleh dilihat bila SO induknya boleh dilihat user (aturan & hak `so-lihat-semua` sama dengan SO).
+     * Termin tanpa `id_so` hanya terlihat oleh pemegang hak "lihat semua". $alias = alias tabel termin ('' bila tanpa alias).
+     */
+    public static function termin($query, string $alias = '')
+    {
+        if (self::seeAllSo()) {
+            return $query;
+        }
+        $p = $alias === '' ? '' : $alias . '.';
+
+        return $query->whereIn($p . 'id_so', self::so(DB::table('sales_orders')->select('id_so')));
+    }
+
     /** Batasi query SQ. Approver juga melihat SQ pending. */
     public static function sq($query, string $alias = '')
     {
@@ -138,6 +153,16 @@ class DataScope
 
         return !DB::table('work_orders')->where('id_wo', $idWo)->exists()
             || self::wo(DB::table('work_orders')->where('id_wo', $idWo))->exists();
+    }
+
+    public static function canSeeTermin($idTermin): bool
+    {
+        if (!$idTermin || self::seeAllSo()) {
+            return true;
+        }
+
+        return !DB::table('termin')->where('id_termin', $idTermin)->exists()
+            || self::termin(DB::table('termin')->where('id_termin', $idTermin))->exists();
     }
 
     public static function canSeeFwo($idFwo): bool

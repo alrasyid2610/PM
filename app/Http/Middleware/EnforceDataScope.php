@@ -28,6 +28,7 @@ class EnforceDataScope
         $sq  = [];
         $wo  = [];
         $fwo = [];
+        $termin = [];
 
         switch ($prefix) {
             case 'sales-orders':
@@ -74,10 +75,19 @@ class EnforceDataScope
                 [$so2, $wo, $fwo] = $this->opsViaRoute($prefix, $route->getName(), $p, $request);
                 $so = array_merge($so, $so2);
                 break;
+            // ── Termin — mengikuti SO induk, sejak 2026-11-21 ──
+            case 'termin':
+                [$so, $wo, $termin] = $this->terminViaRoute($p, $request);
+                break;
             default:
                 return $next($request);
         }
 
+        foreach (array_unique(array_filter($termin)) as $id) {
+            if (!DataScope::canSeeTermin($id)) {
+                return $this->deny($request);
+            }
+        }
         foreach (array_unique(array_filter($so)) as $id) {
             if (!DataScope::canSeeSo($id)) {
                 return $this->deny($request);
@@ -236,6 +246,28 @@ class EnforceDataScope
         }
 
         return [$so, $wo, $fwo];
+    }
+
+    /**
+     * Termin: turunkan parameter rute / body ke [id_so[], id_wo[], id_termin[]] yang harus boleh dilihat user.
+     * `{id_so}` (by-so, outputs-by-so, check-dp) dan `id_so` di query/body (create, store, update) = SO;
+     * `{id}` = Termin. Id Output Pekerjaan yang dipasang ke Termin (`selected_outputs`, `ids`) diturunkan ke WO-nya
+     * supaya output milik SO orang lain tidak bisa ditagihkan lewat Termin sendiri.
+     */
+    private function terminViaRoute(array $p, Request $request): array
+    {
+        $so = [$p['id_so'] ?? null, $request->input('id_so'), $request->query('id_so')];
+        $wo = [];
+
+        $outputIds = array_merge(
+            (array) $request->input('selected_outputs', []),
+            (array) $request->input('ids', [])
+        );
+        foreach (array_unique(array_filter(array_map('intval', $outputIds))) as $idOutput) {
+            $wo[] = $this->val('output_pekerjaan', 'id_output', $idOutput, 'id_wo');
+        }
+
+        return [$so, $wo, [$p['id'] ?? null]];
     }
 
     /** id_sq dari parameter rute / body untuk rute anak SQ WO / SQ FWO / budget. */

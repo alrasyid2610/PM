@@ -153,7 +153,10 @@ class DashboardController extends Controller
 
     private function kpiTerminOutstanding(): array
     {
-        $n = DB::table('termin')->where('status', '!=', 'selesai')->count();
+        $n = DB::table('termin')
+            ->tap(fn ($q) => DataScope::termin($q))
+            ->where('status', '!=', 'selesai')
+            ->count();
 
         return ['value' => $n, 'sub' => 'belum selesai'];
     }
@@ -744,6 +747,7 @@ class DashboardController extends Controller
 
         } else {
             $rows = DB::table('termin as t')
+                ->tap(fn ($q) => DataScope::termin($q, 't'))
                 ->leftJoin('sales_orders as s', 's.id_so', '=', 't.id_so')
                 ->leftJoin('business_relations as br', 'br.id_br', '=', 's.id_pelanggan')
                 ->where('t.status', '!=', 'selesai')

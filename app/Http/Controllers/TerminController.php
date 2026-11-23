@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DataScope;
 use App\Support\ListFilter\Sets\TerminFilters;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -46,6 +47,7 @@ class TerminController extends Controller
                 'nilai',
                 'tanggal',
             ])
+            ->tap(fn ($q) => DataScope::termin($q, 't'))
             ->when(!$isSearching, fn($q) => $q->where('t.status', '!=', 'selesai'))
             ->tap(fn ($q) => $set->apply($q, $filters))
             ->orderBy('id_termin', 'desc')

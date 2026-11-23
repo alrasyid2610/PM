@@ -11,6 +11,7 @@ class ImportRegistry
     public static function all(): array
     {
         $defs = [
+            new BrSiteImport(),
             new SamplingPointImport('env'),
             new SamplingPointImport('we'),
         ];
