@@ -74,6 +74,7 @@ return [
         'type'    => 'submenu',
         'items'   => [
             ['slug' => 'report-kelengkapan', 'label' => 'Kelengkapan SO & SQ', 'icon' => 'fa-list-check'],
+            ['slug' => 'export-data-points', 'label' => 'Export Data Points', 'icon' => 'fa-file-excel'],
         ],
     ],
     [

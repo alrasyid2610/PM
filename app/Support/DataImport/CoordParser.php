@@ -67,10 +67,9 @@ class CoordParser
         }
         $angka = array_map(fn($x) => (float) str_replace(',', '.', $x), $t[0]);
         [$d, $mnt, $dt] = [$angka[0], $angka[1] ?? 0.0, $angka[2] ?? 0.0];
-        if (count($angka) > 1 && ($mnt >= 60 || $dt >= 60)) {
-            $err = 'menit dan detik harus di bawah 60.';
-            return null;
-        }
+        // Menit/detik >= 60 tetap dihitung (sama seperti input DMS manual di modal Sampling Point,
+        // lihat spDmsToDecimal() di business-relations/form.js) — rumus derajat+menit/60+detik/3600
+        // tetap menghasilkan nilai yang benar meski formatnya tidak standar.
 
         $nilai = $d + $mnt / 60 + $dt / 3600;
         // Minus di depan ATAU arah S/W sama-sama berarti negatif (keduanya sekaligus tidak saling meniadakan)

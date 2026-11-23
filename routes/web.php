@@ -4,6 +4,7 @@ use App\Http\Controllers\BusinessRelationController;
 use App\Http\Controllers\BusinessRelationSiteController;
 use App\Http\Controllers\SiteDirectoryController;
 use App\Http\Controllers\ReportKelengkapanController;
+use App\Http\Controllers\ExportDataPointsController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BoqController;
@@ -724,6 +725,14 @@ Route::prefix('report-kelengkapan')
     ->group(function () {
         Route::get('/', [ReportKelengkapanController::class, 'index'])->name('index');
         Route::get('/data', [ReportKelengkapanController::class, 'data'])->name('data');
+    });
+
+// Export Data Points — Kelompok Matriks/Matriks/Standard/Testing Points/Item (read-only, sejak 2026-11-23).
+Route::prefix('export-data-points')
+    ->name('export-data-points.')
+    ->group(function () {
+        Route::get('/', [ExportDataPointsController::class, 'index'])->name('index');
+        Route::get('/export', [ExportDataPointsController::class, 'export'])->name('export');
     });
 
 
