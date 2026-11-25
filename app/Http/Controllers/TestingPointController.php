@@ -150,8 +150,6 @@ class TestingPointController extends Controller
             ->leftJoin('testing_matriks_samples as tms', 'tp.id_testing_matriks_sample', '=', 'tms.id_testing_matriks_sample')
             ->leftJoin('testing_standards as ts', 'tp.id_testing_standard', '=', 'ts.id_testing_standard')
             ->whereNull('tp.deleted_at')
-            // Hanya Testing Point yang sudah Disetujui yang boleh dipilih untuk BOQ
-            ->where('tp.status_approval', TestingPointApproval::APPROVED)
             ->where(function ($q) use ($search) {
                 $q->where('tp.nama', 'like', "%{$search}%")
                   ->orWhere('tms.judul_indonesia', 'like', "%{$search}%")

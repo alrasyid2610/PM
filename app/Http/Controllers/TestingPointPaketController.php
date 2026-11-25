@@ -91,7 +91,7 @@ class TestingPointPaketController extends Controller
      */
     public function byPoint($id)
     {
-        // Hanya Paket yang sudah Disetujui, dan hanya bila Testing Point induknya juga Disetujui
+        // Hanya Paket yang sudah Disetujui (status induk tidak lagi mengunci sejak 2026-11-25; induk hanya harus ada)
         if (TestingPointApproval::namaTidakBisaDipakai([$id])) return response()->json(['data' => []]);
         $pakets = DB::table('testing_point_paket')->where('id_testing_point', $id)
             ->where('status_approval', TestingPointApproval::APPROVED)->orderBy('nama')->get();

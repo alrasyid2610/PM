@@ -36,8 +36,9 @@ class TestingPointApproval
     // ── Pemakaian di BOQ ─────────────────────────────────────────────────────
 
     /**
-     * Nama Testing Point (dari daftar id) yang BELUM boleh dipakai di BOQ baru:
-     * belum Disetujui, terhapus, atau tidak ada. Kosong = semua boleh dipakai.
+     * Nama Testing Point (dari daftar id) yang TIDAK boleh dipakai di BOQ baru: terhapus atau tidak ada.
+     * Sejak 2026-11-25 status approval TIDAK lagi mengunci pemakaian di BOQ (Draft/Menunggu Approval boleh dipakai);
+     * workflow approval tetap jalan sebagai penanda verifikasi saja. Kosong = semua boleh dipakai.
      * @return string[]
      */
     public static function namaTidakBisaDipakai(iterable $ids): array
@@ -46,7 +47,7 @@ class TestingPointApproval
         if ($ids->isEmpty()) return [];
 
         $ok  = DB::table('testing_points')->whereIn('id_testing_point', $ids)
-            ->whereNull('deleted_at')->where('status_approval', self::APPROVED)
+            ->whereNull('deleted_at')
             ->pluck('id_testing_point')->map(fn ($v) => (int) $v);
         $bad = $ids->diff($ok);
         if ($bad->isEmpty()) return [];
@@ -60,8 +61,7 @@ class TestingPointApproval
     {
         $nama = self::namaTidakBisaDipakai($ids);
         if (!$nama) return null;
-        return 'Testing Point berikut belum disetujui sehingga belum bisa dipakai: ' . implode(', ', $nama)
-            . '. Ajukan & setujui dulu di menu Testing Points.';
+        return 'Testing Point berikut tidak ditemukan atau sudah dihapus sehingga tidak bisa dipakai: ' . implode(', ', $nama) . '.';
     }
 
     // ── Transisi status ──────────────────────────────────────────────────────
