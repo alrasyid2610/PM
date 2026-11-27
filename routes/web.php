@@ -677,8 +677,9 @@ Route::prefix('business-relations')
 
         // Route::get('/{id}', [BusinessRelationController::class, 'show'])
         //     ->name('show');
-        // Catatan: hapus BR (bukan Site) belum didukung — business_relations tidak
-        // punya kolom deleted_at. Hapus record dilakukan per-Site lewat sites.destroy.
+        // Hapus BR (soft delete, sejak 2026-11-26; butuh migration kolom deleted_at). Hapus 1 Site tetap lewat sites.destroy.
+        Route::delete('/{id}', [BusinessRelationController::class, 'destroyBr'])
+            ->name('destroy')->whereNumber('id');
     });
 
 Route::prefix('business-relation-sites')

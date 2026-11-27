@@ -107,6 +107,7 @@ class BrSiteImport implements ImportDefinition
         $byName = [];
         $rows = DB::table('business_relations as br')
             ->leftJoin('entitas as e', 'e.id_entitas', '=', 'br.id_entitas')
+            ->whereNull('br.deleted_at')
             ->get(['br.id_br', 'br.nama', 'br.npwp', 'e.nama as entitas']);
         foreach ($rows as $r) {
             $kandidat = ['id_br' => (int) $r->id_br, 'npwp' => (string) $r->npwp];

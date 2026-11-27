@@ -96,6 +96,7 @@ class BusinessRelationController extends Controller
             ->leftJoin('entitas as e', 'e.id_entitas', '=', 'br.id_entitas')
             ->leftJoin('business_relations as ind', 'ind.id_br', '=', 'br.id_br_induk')
             ->leftJoin('entitas as ie', 'ie.id_entitas', '=', 'ind.id_entitas')
+            ->whereNull('br.deleted_at')
             ->select([
                 'br.id_br',
                 'br.nama',
@@ -161,7 +162,7 @@ class BusinessRelationController extends Controller
         // VALIDASI
         // =========================
         $validated = $request->validate([
-            'id_br'   => 'nullable|exists:business_relations,id_br',
+            'id_br'   => 'nullable|exists:business_relations,id_br,deleted_at,NULL',
             // 'site_id' => 'nullable|exists:business_relation_sites,id_site',
 
             'nama_br' => 'required|string|max:255',
@@ -319,6 +320,7 @@ class BusinessRelationController extends Controller
         $br = DB::table('business_relations as br')
             ->leftJoin('entitas as ent', 'ent.id_entitas', '=', 'br.id_entitas')
             ->where('br.id_br', $idBr)
+            ->whereNull('br.deleted_at')
             ->select(['br.id_br', 'br.nama', 'ent.nama as entitas'])
             ->first();
 
@@ -341,7 +343,7 @@ class BusinessRelationController extends Controller
     /** Simpan Site baru ke BR yang sudah ada. Data BR tidak disentuh sama sekali. */
     public function storeSite(Request $request, $id)
     {
-        $br = DB::table('business_relations')->where('id_br', $id)->first();
+        $br = DB::table('business_relations')->where('id_br', $id)->whereNull('deleted_at')->first();
         if (!$br) {
             return response()->json(['success' => false, 'message' => 'Business Relation tidak ditemukan'], 404);
         }
@@ -405,7 +407,7 @@ class BusinessRelationController extends Controller
     public function update(Request $request)
     {
         $request->validate([
-            'id_br'   => 'nullable|exists:business_relations,id_br',
+            'id_br'   => 'nullable|exists:business_relations,id_br,deleted_at,NULL',
             'nama_br' => 'required|string|max:255',
             'id_entitas' => 'nullable|integer|exists:entitas,id_entitas',
             'id_kepemilikan' => 'nullable|integer|exists:kepemilikan,id_kepemilikan',
@@ -462,7 +464,7 @@ class BusinessRelationController extends Controller
 
     public function show($id)
     {
-        $data = DB::table('business_relations')->where('id_br', $id)->first();
+        $data = DB::table('business_relations')->where('id_br', $id)->whereNull('deleted_at')->first();
 
         if (!$data) {
             return response()->json([
@@ -471,6 +473,43 @@ class BusinessRelationController extends Controller
         }
 
         return response()->json($data);
+    }
+
+    /**
+     * Hapus Business Relation (soft delete, sejak 2026-11-26). Ikut di-soft-delete: Site, Contact, Product milik BR ini
+     * (sampling point & man power ikut tersembunyi karena induknya Site). Ditolak bila BR masih punya anggota Holding.
+     * SO/SQ/WO/Contract yang memakai BR ini TIDAK dicegah dan datanya tidak diubah (join nama pelanggan tetap jalan).
+     */
+    public function destroyBr($id)
+    {
+        $id = (int) $id;
+        $br = DB::table('business_relations')->where('id_br', $id)->whereNull('deleted_at')->first();
+        if (!$br) {
+            return response()->json(['success' => false, 'message' => 'Business Relation tidak ditemukan'], 404);
+        }
+
+        $anggota = DB::table('business_relations')->where('id_br_induk', $id)->whereNull('deleted_at')->count();
+        if ($anggota > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => "Business Relation tidak dapat dihapus karena masih punya {$anggota} anggota Holding. Lepas anggotanya dulu di tab Holding.",
+            ], 422);
+        }
+
+        DB::transaction(function () use ($id, $br) {
+            $now = now();
+            $before = json_encode((array) $br);
+
+            foreach (['business_relation_sites', 'business_relation_contacts', 'br_products'] as $tabel) {
+                DB::table($tabel)->where('id_br', $id)->whereNull('deleted_at')->update(['deleted_at' => $now]);
+            }
+            DB::table('business_relations')->where('id_br', $id)->update(['deleted_at' => $now]);
+
+            $after = json_encode((array) DB::table('business_relations')->where('id_br', $id)->first());
+            saveAudit('business_relations', $id, 'delete', $before, $after);
+        });
+
+        return response()->json(['success' => true, 'message' => 'Business Relation berhasil dihapus']);
     }
 
     public function destroy($id)
@@ -507,6 +546,7 @@ class BusinessRelationController extends Controller
             $kids = DB::table('business_relations as br')
                 ->leftJoin('entitas as e', 'e.id_entitas', '=', 'br.id_entitas')
                 ->whereIn('br.id_br_induk', $frontier)
+                ->whereNull('br.deleted_at')
                 ->orderBy('br.nama')
                 ->get(['br.id_br', 'br.id_br_induk', 'br.nama', 'br.is_aktif', 'e.nama as entitas']);
             $frontier = [];
@@ -533,7 +573,7 @@ class BusinessRelationController extends Controller
     public function holdingMembers(Request $request, $id)
     {
         $id = (int) $id;
-        if (!DB::table('business_relations')->where('id_br', $id)->exists()) {
+        if (!DB::table('business_relations')->where('id_br', $id)->whereNull('deleted_at')->exists()) {
             return response()->json(['message' => 'Business Relation tidak ditemukan'], 404);
         }
 
@@ -544,6 +584,7 @@ class BusinessRelationController extends Controller
             $kids = DB::table('business_relations as br')
                 ->leftJoin('entitas as e', 'e.id_entitas', '=', 'br.id_entitas')
                 ->where('br.id_br_induk', $id)
+                ->whereNull('br.deleted_at')
                 ->orderBy('br.nama')
                 ->get(['br.id_br', 'br.id_br_induk', 'br.nama', 'br.is_aktif', 'e.nama as entitas']);
         }
@@ -551,7 +592,7 @@ class BusinessRelationController extends Controller
         $ids = $kids->pluck('id_br')->all();
         $jumlahSite = $ids ? DB::table('business_relation_sites')->whereIn('id_br', $ids)->whereNull('deleted_at')
             ->selectRaw('id_br, count(*) as n')->groupBy('id_br')->pluck('n', 'id_br') : collect();
-        $jumlahAnak = $ids ? DB::table('business_relations')->whereIn('id_br_induk', $ids)
+        $jumlahAnak = $ids ? DB::table('business_relations')->whereIn('id_br_induk', $ids)->whereNull('deleted_at')
             ->selectRaw('id_br_induk, count(*) as n')->groupBy('id_br_induk')->pluck('n', 'id_br_induk') : collect();
         $namaInduk = [];
         if ($semua) {
@@ -577,10 +618,10 @@ class BusinessRelationController extends Controller
     public function holdingAdd(Request $request, $id)
     {
         $id = (int) $id;
-        $request->validate(['id_anggota' => 'required|integer|exists:business_relations,id_br']);
+        $request->validate(['id_anggota' => 'required|integer|exists:business_relations,id_br,deleted_at,NULL']);
         $idAnggota = (int) $request->id_anggota;
 
-        if (!DB::table('business_relations')->where('id_br', $id)->exists()) {
+        if (!DB::table('business_relations')->where('id_br', $id)->whereNull('deleted_at')->exists()) {
             return response()->json(['message' => 'Business Relation tidak ditemukan'], 404);
         }
         if ($idAnggota === $id) {
@@ -639,6 +680,7 @@ class BusinessRelationController extends Controller
             ->leftJoin('kepemilikan as k', 'k.id_kepemilikan', '=', 'br.id_kepemilikan')
             ->leftJoin('kategori_bisnis as kb', 'kb.id_kategori_bisnis', '=', 'br.id_kategori_bisnis')
             ->leftJoin('sub_kategori_bisnis as skb', 'skb.id_sub_kategori_bisnis', '=', 'br.id_sub_kategori_bisnis')
+            ->whereNull('br.deleted_at')
             ->where('br.nama', 'like', "%{$search}%")
             ->select([
                 'br.*',
@@ -728,6 +770,7 @@ class BusinessRelationController extends Controller
             ->leftJoin('kategori_bisnis as kb', 'kb.id_kategori_bisnis', '=', 'br.id_kategori_bisnis')
             ->leftJoin('sub_kategori_bisnis as skb', 'skb.id_sub_kategori_bisnis', '=', 'br.id_sub_kategori_bisnis')
             ->where('br.id_br', $id)
+            ->whereNull('br.deleted_at')
             ->select([
                 'br.id_br',
                 'br.nama as nama_br',
@@ -764,7 +807,7 @@ class BusinessRelationController extends Controller
             // Holding: rantai induk (paling atas → induk langsung) + jumlah anggota langsung
             $data->rantai_induk = collect(array_reverse($this->ancestorIds((int) $id)))
                 ->map(fn($pid) => ['id_br' => $pid, 'nama' => $this->brLabel($pid)])->values();
-            $data->jumlah_anggota = DB::table('business_relations')->where('id_br_induk', $id)->count();
+            $data->jumlah_anggota = DB::table('business_relations')->where('id_br_induk', $id)->whereNull('deleted_at')->count();
         }
 
         return response()->json($data);
@@ -837,7 +880,10 @@ class BusinessRelationController extends Controller
             ]);
 
         if (!empty($id_br)) {
+            // Cari by id sengaja TANPA filter terhapus: SO/WO lama yang memakai BR yang sudah dihapus tetap bisa menampilkan namanya
             $data->where('br.id_br', $id_br);
+        } else {
+            $data->whereNull('br.deleted_at');
         }
 
         $br = $data->get();

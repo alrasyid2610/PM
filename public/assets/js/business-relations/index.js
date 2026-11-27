@@ -43,6 +43,34 @@ $(document).ready(function () {
         },
     });
 
+    // Hapus Business Relation (soft delete; Site/Contact/Product ikut tersembunyi). Beda dengan "Hapus Site" di sub-tab Site.
+    $(document).on('click', '.btn-delete-br', function () {
+        const id = $(this).data('id');
+        Swal.fire({
+            title: 'Hapus Business Relation?',
+            html: 'Business Relation ini beserta <b>semua Site, Contact, dan Product</b>-nya tidak akan tampil lagi.<br><small class="text-muted">SO/SQ/WO/Contract yang sudah memakainya tetap menampilkan nama pelanggan.</small>',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            confirmButtonText: 'Hapus',
+            cancelButtonText: 'Batal',
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+            $.ajax({
+                url: window.route.update + id,
+                method: 'POST',
+                data: { _token: window.route.csrf, _method: 'DELETE' },
+                success: function (res) {
+                    Notify.success(res.message || 'Data berhasil dihapus');
+                    setTimeout(function () { window.location.href = window.location.pathname; }, 1000);
+                },
+                error: function (xhr) {
+                    Notify.error(xhr.responseJSON?.message || 'Terjadi kesalahan');
+                },
+            });
+        });
+    });
+
     // Sub Kategori Bisnis harus ikut Kategori Bisnis yang dipilih — override
     // select2 generik (formGroup.select ajax mode cuma kirim `q`, tidak tahu
     // soal filter id_kategori_bisnis).

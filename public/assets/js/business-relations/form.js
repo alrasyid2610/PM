@@ -1988,6 +1988,9 @@ function renderForm(res) {
     ${formGroup.actionBar({
         number: escHtml(res.nama_display ?? res.nama_br ?? '—'),
         editText: 'Edit Business Relation',
+        deleteId: can('business-relations', 'can_delete') ? res.id_br : null,
+        deleteClass: 'btn-delete-br',
+        deleteText: 'Hapus BR',
         noWrap: true,
         subtitle: `
             ${(res.rantai_induk || []).length ? `
